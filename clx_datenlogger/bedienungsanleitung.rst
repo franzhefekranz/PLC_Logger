@@ -53,6 +53,8 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
      - Kleine Hilfsfunktionen (Formatierung, Achsenteilung, Datenreduktion).
    * - ``clx_db.py``
      - Aufzeichnung in SQLite, MariaDB oder TimescaleDB/PostgreSQL (eigener Schreib-Thread).
+   * - ``clx_db_dialog.py``
+     - Lesemodus: Zeitraum aus der Datenbank wählen und im Logger anzeigen.
    * - ``clx_events.py``
      - Trigger und Ereignisprotokoll (Auswertung, Datei, Quittierung).
    * - ``clx_event_viewer.py``
@@ -1512,6 +1514,73 @@ Beispielabfragen:
   der Installationsdatei sind beide enthalten.
 * Für Grafana: Datenquelle *MySQL* bzw. *PostgreSQL* anlegen; die Zeitspalte ist
   ``zeit`` (UTC). SQLite-Dateien lassen sich mit dem SQLite-Plugin von Grafana lesen.
+
+
+.. _db-lesen:
+
+Lesemodus: Aufzeichnungen aus der Datenbank anzeigen
+----------------------------------------------------------------------
+
+Im Logger lädt **Datei › Aus Datenbank laden …** (``Strg+D``) einen frei wählbaren
+Zeitraum aus der Datenbank und zeigt ihn im **Offline-Modus** an – mit Linealen,
+Wertetabelle, Screenshots und PID-Optimierung wie bei einer geladenen CSV-Datei.
+Gelesen wird aus der Datenbank der geladenen Konfiguration; die Datenbank wird nur
+gelesen, eine laufende Aufzeichnung (auch eines anderen Loggers) kann dabei
+weiterschreiben.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Bereich
+     - Bedeutung
+   * - Datenbank
+     - Zeigt die Quelle. **SQLite-Datei wählen …** liest stattdessen eine beliebige
+       SQLite-Datei (z. B. eine Kopie von einem anderen Rechner);
+       **Datenbank der Konfiguration** kehrt zurück.
+   * - Projekt
+     - Projektname, unter dem die Werte gespeichert wurden (Vorgabe: Projekt der
+       Konfiguration). *(alle Projekte)* fasst gleichnamige Variablen aller
+       Projekte zusammen.
+   * - Variablen
+     - Alle Variablen in der Datenbank mit erstem und letztem Zeitpunkt und Anzahl
+       der Werte. Angehakt sind zunächst die Variablen der aktuellen Konfiguration.
+       **Alle**, **Keine**, **Wie Konfiguration** und das Filterfeld helfen bei
+       vielen Variablen.
+   * - Zeitraum
+     - **Von** / **Bis** (Ortszeit) mit Kalender, oder per Knopf: *Letzte Stunde*,
+       *Letzte 24 h*, *Letzte 7 Tage*, *Letzte 30 Tage* (jeweils bis zum letzten
+       gespeicherten Wert der gewählten Variablen), *Heute*, *Gestern*, *Alles*.
+   * - Auflösung
+     - *Automatisch*: Rohdaten, solange es höchstens 20 000 Punkte je Variable sind,
+       sonst Mittelwerte in einem passenden Raster (1 s, 2 s, 5 s … 1 Tag).
+       *Rohdaten*: jeder gespeicherte Wert. *Mittelwert je 1 s … je Tag*: feste
+       Raster. Die Mittelwerte berechnet die Datenbank selbst – auch Monate an Daten
+       lassen sich so schnell überblicken.
+   * - Fehlende Werte mit dem letzten Wert füllen
+     - Für Aufzeichnungen mit **Nur Änderungen schreiben** (dort voreingestellt):
+       Ein fehlender Wert bedeutet „unverändert“, die Kurve läuft durchgehend.
+       Ohne Haken erscheinen Lücken.
+   * - Werte zählen
+     - Ermittelt die genaue Zahl der Werte im Zeitraum (darüber steht eine
+       Schätzung aus der Variablenliste).
+
+**Laden und anzeigen** liest die Werte im Hintergrund; der Fortschritt steht unten im
+Fenster, **Abbrechen** beendet das Lesen. Danach wechselt der Logger in den
+Offline-Modus. Farben, Diagramme und Achsen kommen aus der Konfiguration;
+Variablen, die dort fehlen, erscheinen im ersten Diagramm. Die Statuszeile nennt
+Quelle, Zeitraum und Auflösung. Eine laufende Aufzeichnung wird beim Laden beendet
+(wie beim Laden einer CSV-Datei); mit **▶ Start** beginnt eine neue.
+
+Hinweise:
+
+* Zeitstempel stehen in der Datenbank in UTC; angezeigt wird in Ortszeit.
+* Beim Mittelwert liegt der Zeitstempel in der Mitte des Rasters (z. B. 10:00:30
+  für 10:00:00 bis 10:00:59). Minimum und Maximum innerhalb eines Rasters sind
+  nicht zu sehen – für kurze Spitzen Rohdaten oder ein feineres Raster wählen.
+* Zum Schutz des Speichers liest der Logger höchstens 20 Millionen Werte auf einmal;
+  darüber erscheint ein Hinweis, einen kürzeren Zeitraum oder Mittelwerte zu wählen.
+* Bei MariaDB und PostgreSQL braucht der Benutzer nur das Recht SELECT.
 
 
 .. _ereignisse:

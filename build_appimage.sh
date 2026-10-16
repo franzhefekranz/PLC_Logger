@@ -106,7 +106,7 @@ echo "[3/6] PyInstaller ..."
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
     --hidden-import s7_block_dialog --hidden-import s7_branding --hidden-import s7_browser \
-    --hidden-import s7_common --hidden-import s7_config --hidden-import s7_db --hidden-import s7_event_viewer \
+    --hidden-import s7_common --hidden-import s7_config --hidden-import s7_db --hidden-import s7_db_dialog --hidden-import s7_event_viewer \
     --hidden-import s7_events --hidden-import s7_formula --hidden-import s7_formula_dialog \
     --hidden-import s7_gui --hidden-import s7_headless --hidden-import s7_i18n --hidden-import s7_pid \
     --hidden-import s7_pid_dialog --hidden-import s7_recorder --hidden-import s7_splash --hidden-import s7_svg \

@@ -123,7 +123,7 @@ echo "[3/6] PyInstaller ..."
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
     --hidden-import plc_block_dialog --hidden-import plc_branding --hidden-import plc_common \
-    --hidden-import plc_config --hidden-import plc_db --hidden-import plc_event_viewer \
+    --hidden-import plc_config --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_event_viewer \
     --hidden-import plc_events --hidden-import plc_formula --hidden-import plc_formula_dialog \
     --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_i18n --hidden-import plc_pid \
     --hidden-import plc_pid_dialog --hidden-import plc_recorder --hidden-import plc_splash \

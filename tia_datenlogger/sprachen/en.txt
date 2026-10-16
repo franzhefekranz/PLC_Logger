@@ -889,6 +889,227 @@
 @ Verbindung fehlgeschlagen: {0}
 > Connection failed: {0}
 
+@ In der Konfiguration ist keine Datenbank eingestellt.
+> No database is configured.
+
+@ Datenbankdatei nicht gefunden: {0}
+> Database file not found: {0}
+
+@ Keine Variable gewählt.
+> No variable selected.
+
+@ Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.
+> More than {0} values – please choose a shorter period or averages.
+
+# ---------------- tia_db_dialog.py
+
+@ Automatisch (höchstens {0} Punkte je Variable)
+> Automatic (at most {0} points per variable)
+
+@ Rohdaten (jeder gespeicherte Wert)
+> Raw data (every stored value)
+
+@ Mittelwert je 1 s
+> Average per 1 s
+
+@ Mittelwert je 10 s
+> Average per 10 s
+
+@ Mittelwert je 1 min
+> Average per 1 min
+
+@ Mittelwert je 10 min
+> Average per 10 min
+
+@ Mittelwert je 1 h
+> Average per 1 h
+
+@ Mittelwert je Tag
+> Average per day
+
+@ {0:g} s
+> {0:g} s
+
+@ {0:g} min
+> {0:g} min
+
+@ {0:g} h
+> {0:g} h
+
+@ {0:g} Tage
+> {0:g} days
+
+@ Aus Datenbank laden
+> Load from database
+
+@ SQLite-Datei wählen …
+> Choose SQLite file …
+
+@ Eine andere SQLite-Datei lesen (z. B. Kopie einer Aufzeichnung)
+> Read a different SQLite file (e.g. a copy of a recording)
+
+@ Datenbank der Konfiguration
+> Database of the configuration
+
+@ Variablen
+> Variables
+
+@ Projekt:
+> Project:
+
+@ Filter …
+> Filter …
+
+@ Variable
+> Variable
+
+@ Erster Wert
+> First value
+
+@ Letzter Wert
+> Last value
+
+@ Werte
+> Values
+
+@ Alle
+> All
+
+@ Wie Konfiguration
+> As in configuration
+
+@ Zeitraum
+> Time range
+
+@ Von:
+> From:
+
+@ Bis:
+> To:
+
+@ Letzte Stunde
+> Last hour
+
+@ Die letzte Stunde vor dem letzten gespeicherten Wert
+> The last hour before the latest stored value
+
+@ Letzte 24 h
+> Last 24 h
+
+@ Die letzten 24 Stunden vor dem letzten gespeicherten Wert
+> The last 24 hours before the latest stored value
+
+@ Heute
+> Today
+
+@ Gestern
+> Yesterday
+
+@ Letzte 7 Tage
+> Last 7 days
+
+@ Die letzten 7 Tage vor dem letzten gespeicherten Wert
+> The last 7 days before the latest stored value
+
+@ Letzte 30 Tage
+> Last 30 days
+
+@ Die letzten 30 Tage vor dem letzten gespeicherten Wert
+> The last 30 days before the latest stored value
+
+@ Alles
+> All
+
+@ Vom ersten bis zum letzten Wert der gewählten Variablen
+> From the first to the last value of the selected variables
+
+@ Darstellung
+> Display
+
+@ Mittelwerte werden von der Datenbank berechnet – für lange Zeiträume deutlich schneller und speichersparender als Rohdaten.
+> Averages are calculated by the database – much faster and more memory-efficient than raw data for long periods.
+
+@ Auflösung:
+> Resolution:
+
+@ Fehlende Werte mit dem letzten Wert füllen
+> Fill missing values with the last value
+
+@ Sinnvoll, wenn die Aufzeichnung „nur Änderungen“ schreibt: ein fehlender Wert bedeutet dann „unverändert“.
+> Useful when the recording writes "changes only": a missing value then means "unchanged".
+
+@ Werte zählen
+> Count values
+
+@ Anzahl der Werte im gewählten Zeitraum ermitteln
+> Determine the number of values in the selected period
+
+@ Laden und anzeigen
+> Load and display
+
+@  – {0} Werte gelesen
+>  – {0} values read
+
+@ Abgebrochen.
+> Cancelled.
+
+@ Abbrechen
+> Cancel
+
+@ Breche ab …
+> Cancelling …
+
+@ SQLite-Datei wählen
+> Choose SQLite file
+
+@ Mit „SQLite-Datei wählen …“ kann eine Datei direkt gelesen werden.
+> Use "Choose SQLite file …" to read a file directly.
+
+@ (alle Projekte)
+> (all projects)
+
+@ (ohne Projektname)
+> (no project name)
+
+@ Verbinde …
+> Connecting …
+
+@ Keine Werte in der Datenbank (Tabelle leer oder anderes Projekt).
+> No values in the database (table empty or different project).
+
+@ Lese Variablenliste …
+> Reading variable list …
+
+@ „Bis“ muss nach „Von“ liegen.
+> "To" must be after "From".
+
+@ Rohdaten
+> Raw data
+
+@ Mittelwert je {0}
+> Average per {0}
+
+@ {0} Variablen, Zeitraum {1} ({2}), Auflösung: {3}, geschätzt ca. {4} Werte
+> {0} variables, period {1} ({2}), resolution: {3}, approx. {4} values
+
+@ {0} Werte im gewählten Zeitraum ({1} je Variable im Mittel).
+> {0} values in the selected period ({1} per variable on average).
+
+@ Zähle Werte …
+> Counting values …
+
+@ Bitte mindestens eine Variable wählen.
+> Please select at least one variable.
+
+@ Im gewählten Zeitraum sind keine Werte vorhanden.
+> There are no values in the selected period.
+
+@ Datenbank {0}, {1} – {2}, {3}
+> Database {0}, {1} – {2}, {3}
+
+@ Lade Werte …
+> Loading values …
+
 # ---------------- tia_event_viewer.py
 
 @ Kommt
@@ -1244,9 +1465,6 @@
 @ Die Konfiguration konnte nicht gelesen werden:\n{0}\n\n{1}
 > The configuration could not be read:\n{0}\n\n{1}
 
-@ Werte
-> Values
-
 @ ▶ Start
 > ▶ Start
 
@@ -1255,6 +1473,12 @@
 
 @ CSV laden
 > Load CSV
+
+@ Aus Datenbank laden …
+> Load from database …
+
+@ Zeitraum aus der Datenbank wählen und offline anzeigen
+> Choose a period from the database and display it offline
 
 @ Konfig-Editor
 > Config editor
@@ -1415,9 +1639,6 @@
 @ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}\n\n(in die Zwischenablage kopiert)
 > Address for tablet/smartphone in the same network:\n\n{0}\n\n(copied to the clipboard)
 
-@ Variable
-> Variable
-
 @ Aktuell
 > Current
 
@@ -1465,6 +1686,9 @@
 
 @ Geladen: {0} ({1} Zeilen)
 > Loaded: {0} ({1} rows)
+
+@ Geladen: {0} ({1} Zeitpunkte)
+> Loaded: {0} ({1} time points)
 
 @ Screenshot – {0}
 > Screenshot – {0}

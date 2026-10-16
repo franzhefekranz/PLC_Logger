@@ -109,7 +109,7 @@ echo [4/6] PyInstaller: PLCLogger ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCLogger --icon app.ico ^
     --distpath build\p1 --workpath build\w1 ^
     --collect-submodules plc_treiber --add-data "plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import plc_db --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
     --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_recorder ^
     --hidden-import plc_web --hidden-import plc_svg --hidden-import plc_util ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
@@ -119,7 +119,7 @@ echo [5/6] PyInstaller: PLCKonfiguration ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCKonfiguration --icon app.ico ^
     --distpath build\p2 --workpath build\w2 ^
     --collect-submodules plc_treiber --add-data "plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import plc_db --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
     plc_config.py || goto :fail
 
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die

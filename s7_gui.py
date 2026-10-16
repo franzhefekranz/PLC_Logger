@@ -1050,6 +1050,10 @@ class MainWindow(QMainWindow):
         self.act_online.toggled.connect(self.set_online)
         act_load = QAction(tr("CSV laden"), self)
         act_load.triggered.connect(self.load_csv)
+        act_load_db = QAction(tr("Aus Datenbank laden …"), self)
+        act_load_db.setShortcut("Ctrl+D")
+        act_load_db.setToolTip(tr("Zeitraum aus der Datenbank wählen und offline anzeigen"))
+        act_load_db.triggered.connect(self.load_db)
         act_cfg = QAction(tr("Konfig-Editor"), self)
         act_cfg.setToolTip(tr("Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen"))
         act_cfg.triggered.connect(self.open_config)
@@ -1143,6 +1147,7 @@ class MainWindow(QMainWindow):
             m_file.addAction(a)
         m_file.addSeparator()
         m_file.addAction(act_load)
+        m_file.addAction(act_load_db)
         m_file.addAction(act_web)
         act_events = QAction(tr("Ereignisprotokoll …"), self)
         act_events.setShortcut("Ctrl+E")
@@ -2020,6 +2025,28 @@ class MainWindow(QMainWindow):
         if not t:
             QMessageBox.information(self, tr("Leer"), tr("Die Datei enthält keine Daten."))
             return
+        self._show_loaded(names, t, cols, "csv", tr("Geladen: {0} ({1} Zeilen)").format(path, len(t)))
+
+    def load_db(self):
+        """Lesemodus Datenbank: Zeitraum und Variablen wählen, Werte laden und offline anzeigen."""
+        from s7_db_dialog import DbLoadDialog
+        conn = self.conn
+        names = [v.name for v in self.vars]
+        try:
+            conn, _charts, cfg_vars = load_config(self.config_path)
+            names = [v.name for v in cfg_vars]
+        except Exception:
+            pass
+        dlg = DbLoadDialog(self, conn, names, conn.get("projekt", ""))
+        if not dlg.exec() or dlg.result is None:
+            return
+        t, names, cols, label = dlg.result
+        if self.rec is not None and self.rec.running:
+            self.act_run.setChecked(False)  # stoppt das Logging (Laden ersetzt die Daten im Speicher)
+        self._show_loaded(names, list(t), cols, "db", tr("Geladen: {0} ({1} Zeitpunkte)").format(label, len(t)))
+
+    def _show_loaded(self, names, t, cols, source, message):
+        """Geladene Daten (CSV oder Datenbank) offline anzeigen."""
         # Farben, Diagramm- und Achsenzuordnung der Variablen kommen aus der aktuellen Konfiguration, soweit der Name dort vorkommt;
         # unbekannte Variablen erscheinen auf der ersten Achse des ersten Diagramms.
         _conn, charts, cfg_vars = load_config(self.config_path)
@@ -2027,11 +2054,11 @@ class MainWindow(QMainWindow):
         self.charts = charts
         self.vars = [ref.get(n) or Variable(name=n, color=PALETTE[k % len(PALETTE)])
                      for k, n in enumerate(names)]
-        self.t, self.y = np.asarray(t), np.asarray(cols)
-        self.source = "csv"
+        self.t, self.y = np.asarray(t, dtype=float), np.asarray(cols, dtype=float).reshape(len(names), len(t))
+        self.source = source
         # Anzeige für die geladenen Variablen neu aufbauen.
         self._rebuild()
-        self.statusBar().showMessage(tr("Geladen: {0} ({1} Zeilen)").format(path, len(t)))
+        self.statusBar().showMessage(message)
         # In den Offline-Modus wechseln (löst enter_offline aus) bzw. die Anzeige direkt aktualisieren, wenn schon offline.
         if self.act_online.isChecked():
             self.act_online.setChecked(False)  # ruft enter_offline() auf

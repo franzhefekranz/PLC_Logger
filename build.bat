@@ -91,7 +91,7 @@ echo [4/6] PyInstaller: S7Logger ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name S7Logger --icon app.ico ^
     --distpath build\p1 --workpath build\w1 ^
     --collect-all snap7 --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import s7_db --hidden-import s7_events --hidden-import s7_event_viewer --hidden-import s7_trigger_dialog --hidden-import s7_pid --hidden-import s7_pid_dialog --hidden-import s7_i18n --hidden-import s7_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
+    --hidden-import s7_db --hidden-import s7_db_dialog --hidden-import s7_events --hidden-import s7_event_viewer --hidden-import s7_trigger_dialog --hidden-import s7_pid --hidden-import s7_pid_dialog --hidden-import s7_i18n --hidden-import s7_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
     --hidden-import s7_gui --hidden-import s7_headless --hidden-import s7_recorder ^
     --hidden-import s7_web --hidden-import s7_svg --hidden-import s7_util ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
@@ -101,7 +101,7 @@ echo [5/6] PyInstaller: S7Konfiguration ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name S7Konfiguration --icon app.ico ^
     --distpath build\p2 --workpath build\w2 ^
     --collect-all snap7 --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import s7_db --hidden-import s7_events --hidden-import s7_event_viewer --hidden-import s7_trigger_dialog --hidden-import s7_pid --hidden-import s7_pid_dialog --hidden-import s7_i18n --hidden-import s7_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
+    --hidden-import s7_db --hidden-import s7_db_dialog --hidden-import s7_events --hidden-import s7_event_viewer --hidden-import s7_trigger_dialog --hidden-import s7_pid --hidden-import s7_pid_dialog --hidden-import s7_i18n --hidden-import s7_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
     s7_config.py || goto :fail
 
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die

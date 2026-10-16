@@ -107,7 +107,7 @@ echo [4/6] PyInstaller: CLXLogger ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name CLXLogger --icon app.ico ^
     --distpath build\p1 --workpath build\w1 ^
     --collect-all pycomm3 --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import clx_db --hidden-import clx_events --hidden-import clx_event_viewer --hidden-import clx_trigger_dialog --hidden-import clx_pid --hidden-import clx_pid_dialog --hidden-import clx_i18n --hidden-import clx_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    --hidden-import clx_db --hidden-import clx_db_dialog --hidden-import clx_events --hidden-import clx_event_viewer --hidden-import clx_trigger_dialog --hidden-import clx_pid --hidden-import clx_pid_dialog --hidden-import clx_i18n --hidden-import clx_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
     --hidden-import clx_gui --hidden-import clx_headless --hidden-import clx_recorder ^
     --hidden-import clx_web --hidden-import clx_svg --hidden-import clx_util --hidden-import clx_io ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
@@ -117,7 +117,7 @@ echo [5/6] PyInstaller: CLXKonfiguration ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name CLXKonfiguration --icon app.ico ^
     --distpath build\p2 --workpath build\w2 ^
     --collect-all pycomm3 --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import clx_db --hidden-import clx_events --hidden-import clx_event_viewer --hidden-import clx_trigger_dialog --hidden-import clx_pid --hidden-import clx_pid_dialog --hidden-import clx_i18n --hidden-import clx_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    --hidden-import clx_db --hidden-import clx_db_dialog --hidden-import clx_events --hidden-import clx_event_viewer --hidden-import clx_trigger_dialog --hidden-import clx_pid --hidden-import clx_pid_dialog --hidden-import clx_i18n --hidden-import clx_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
     clx_config.py || goto :fail
 
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die

@@ -106,7 +106,7 @@ echo "[3/6] PyInstaller ..."
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
     --hidden-import tia_block_dialog --hidden-import tia_branding --hidden-import tia_browser \
-    --hidden-import tia_common --hidden-import tia_config --hidden-import tia_db \
+    --hidden-import tia_common --hidden-import tia_config --hidden-import tia_db --hidden-import tia_db_dialog \
     --hidden-import tia_event_viewer --hidden-import tia_events --hidden-import tia_formula \
     --hidden-import tia_formula_dialog --hidden-import tia_gui --hidden-import tia_headless \
     --hidden-import tia_i18n --hidden-import tia_io --hidden-import tia_pid --hidden-import tia_pid_dialog \

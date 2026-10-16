@@ -92,7 +92,7 @@ echo [4/6] PyInstaller: TIALogger ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name TIALogger --icon app.ico ^
     --distpath build\p1 --workpath build\w1 ^
     --collect-all s7commplus --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import tia_db --hidden-import tia_events --hidden-import tia_event_viewer --hidden-import tia_trigger_dialog --hidden-import tia_pid --hidden-import tia_pid_dialog --hidden-import tia_i18n --hidden-import tia_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
+    --hidden-import tia_db --hidden-import tia_db_dialog --hidden-import tia_events --hidden-import tia_event_viewer --hidden-import tia_trigger_dialog --hidden-import tia_pid --hidden-import tia_pid_dialog --hidden-import tia_i18n --hidden-import tia_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
     --hidden-import tia_gui --hidden-import tia_headless --hidden-import tia_recorder ^
     --hidden-import tia_web --hidden-import tia_svg --hidden-import tia_util --hidden-import tia_io --hidden-import tia_taglist ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
@@ -102,7 +102,7 @@ echo [5/6] PyInstaller: TIAKonfiguration ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name TIAKonfiguration --icon app.ico ^
     --distpath build\p2 --workpath build\w2 ^
     --collect-all s7commplus --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import tia_db --hidden-import tia_events --hidden-import tia_event_viewer --hidden-import tia_trigger_dialog --hidden-import tia_pid --hidden-import tia_pid_dialog --hidden-import tia_i18n --hidden-import tia_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
+    --hidden-import tia_db --hidden-import tia_db_dialog --hidden-import tia_events --hidden-import tia_event_viewer --hidden-import tia_trigger_dialog --hidden-import tia_pid --hidden-import tia_pid_dialog --hidden-import tia_i18n --hidden-import tia_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
     tia_config.py || goto :fail
 
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die

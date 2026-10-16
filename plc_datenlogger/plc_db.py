@@ -290,3 +290,271 @@ class DbWriter(threading.Thread):
         """Restliche Werte schreiben und den Thread beenden."""
         self.stop_evt.set()
         self.join(timeout)
+
+
+# ---------------------------------------------------------------------------------------
+# Lesemodus: Aufzeichnungen aus der Datenbank wieder laden (Logger › Datei › Aus Datenbank laden …)
+# ---------------------------------------------------------------------------------------
+# Zeitstempel werden in der Datenbank als Unix-Zeit (Sekunden, UTC) berechnet, damit alle drei Typen dieselbe Zeitbasis
+# liefern. Lange Zeiträume lassen sich serverseitig zu Mittelwerten je Zeitraster zusammenfassen (weniger Daten über das
+# Netz, flüssige Anzeige).
+MAX_LOAD_VALUES = 20_000_000    # Höchstzahl gelesener Werte (Speicherschutz); darüber -> Mittelwerte wählen
+AUTO_POINTS = 20_000            # "Automatisch": Ziel-Höchstzahl Punkte je Variable
+RASTER_STEPS = (1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400)
+
+
+class LoadCancelled(Exception):
+    """Laden wurde abgebrochen."""
+
+
+def nice_raster(span_s, points=AUTO_POINTS):
+    """Kleinstes "rundes" Zeitraster (s), mit dem ein Zeitraum höchstens ``points`` Punkte ergibt (0 = Rohdaten)."""
+    need = span_s / max(points, 1)
+    if need <= 0.5:
+        return 0
+    for step in RASTER_STEPS:
+        if step >= need:
+            return step
+    return int(math.ceil(need / 86400.0)) * 86400
+
+
+class _ReadSql:
+    """SQL-Bausteine je Datenbanktyp für das Lesen (Platzhalter, Unix-Zeit, Zeitgrenzen)."""
+    ph = "?"
+
+    def epoch(self):                # Ausdruck: Unix-Zeit der Spalte zeit (float, Sekunden)
+        raise NotImplementedError
+
+    def bound(self, epoch):         # Python-Wert für einen Vergleich mit der Spalte zeit
+        raise NotImplementedError
+
+    def table(self, t):
+        return t
+
+    def floor(self, expr):          # ganzzahliger Anteil (Zeit >= 0)
+        return f"FLOOR({expr})"
+
+
+class _SqliteSql(_ReadSql):
+    ph = "?"
+
+    def floor(self, expr):          # FLOOR fehlt in manchen SQLite-Versionen; CAST schneidet ab (für Zeiten >= 0 gleich)
+        return f"CAST({expr} AS INTEGER)"
+
+    def epoch(self):
+        # exakt auf Millisekunden (julianday wäre als Gleitkommazahl um einige µs ungenau)
+        return "(CAST(strftime('%s', zeit) AS INTEGER) + CAST(substr(zeit, 21, 3) AS INTEGER) / 1000.0)"
+
+    def bound(self, epoch):
+        z = datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc)
+        return z.strftime("%Y-%m-%d %H:%M:%S.") + f"{z.microsecond // 1000:03d}"
+
+
+class _MariaSql(_ReadSql):
+    ph = "%s"
+
+    def epoch(self):
+        return "UNIX_TIMESTAMP(zeit)"            # Sitzungszeitzone wird auf UTC gestellt (siehe DbReader.connect)
+
+    def bound(self, epoch):
+        return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).replace(tzinfo=None)
+
+    def table(self, t):
+        return f"`{t}`"
+
+
+class _PgSql(_ReadSql):
+    ph = "%s"
+
+    def epoch(self):
+        return "EXTRACT(EPOCH FROM zeit)::double precision"
+
+    def bound(self, epoch):
+        return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc)
+
+    def table(self, t):
+        return f'"{t}"'
+
+
+_READ_SQL = {"sqlite": _SqliteSql, "mariadb": _MariaSql, "timescale": _PgSql}
+
+
+class DbReader:
+    """Liest Aufzeichnungen aus der Datenbank der Konfiguration (nur lesend, legt nichts an).
+
+    Ablauf: ``connect()``, ``projects()``, ``variables(projekt)`` (Name, erster/letzter Zeitpunkt, Anzahl),
+    ``count(...)`` und ``load(...)`` -> (Zeiten, Namen, Spalten) wie beim Laden einer CSV-Datei; ``close()``.
+    ``conn`` ist das Verbindungs-Dict der Konfiguration; ``sqlite_file`` liest stattdessen eine andere SQLite-Datei."""
+
+    def __init__(self, conn, sqlite_file=None):
+        s = dict(db_settings(conn))
+        if sqlite_file:
+            s["typ"], s["datei"] = "sqlite", sqlite_file
+        if not s["typ"]:
+            raise ValueError(tr("In der Konfiguration ist keine Datenbank eingestellt."))
+        if not check_table_name(s["tabelle"]):
+            raise ValueError(tr("Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)").format(s['tabelle']))
+        self.s = s
+        self.sql = _READ_SQL[s["typ"]]()
+        self.t = self.sql.table(s["tabelle"])
+        self.con = None
+
+    def describe(self):
+        return describe(self.s)
+
+    def connect(self):
+        s = self.s
+        if s["typ"] == "sqlite":
+            if not os.path.exists(s["datei"]):
+                raise FileNotFoundError(tr("Datenbankdatei nicht gefunden: {0}").format(s["datei"]))
+            # nur lesend öffnen (die Aufzeichnung darf gleichzeitig weiterschreiben)
+            uri = "file:" + s["datei"].replace("\\", "/").replace("?", "%3F").replace("#", "%23") + "?mode=ro"
+            self.con = sqlite3.connect(uri, uri=True, timeout=10, check_same_thread=False)
+        elif s["typ"] == "mariadb":
+            import pymysql
+            self.con = pymysql.connect(host=s["host"], port=s["port"], user=s["user"], password=s["passwort"],
+                                       database=s["name"], charset="utf8mb4", connect_timeout=5)
+            with self.con.cursor() as cur:
+                cur.execute("SET time_zone = '+00:00'")
+        else:
+            import psycopg
+            self.con = psycopg.connect(host=s["host"], port=s["port"], dbname=s["name"], user=s["user"] or None,
+                                       password=s["passwort"] or None, connect_timeout=5, autocommit=True)
+        return self
+
+    def close(self):
+        if self.con is not None:
+            try:
+                self.con.close()
+            except Exception:
+                pass
+            self.con = None
+
+    def _query(self, sql, params=(), each=None, cancel=None):
+        """SQL ausführen; mit ``each`` werden die Zeilen stückweise übergeben (Speicher sparen), sonst als Liste."""
+        cur = self.con.cursor()
+        try:
+            cur.execute(sql, tuple(params))
+            if each is None:
+                return list(cur.fetchall())
+            while True:
+                if cancel is not None and cancel():
+                    raise LoadCancelled()
+                chunk = cur.fetchmany(20000)
+                if not chunk:
+                    return None
+                each(chunk)
+        finally:
+            try:
+                cur.close()
+            except Exception:
+                pass
+
+    def _where(self, project, t0=None, t1=None, names=None):
+        ph, cond, params = self.sql.ph, [], []
+        if project is not None:
+            cond.append(f"projekt = {ph}")
+            params.append(project)
+        if t0 is not None:
+            cond.append(f"zeit >= {ph}")
+            params.append(self.sql.bound(t0))
+        if t1 is not None:
+            cond.append(f"zeit <= {ph}")
+            params.append(self.sql.bound(t1))
+        if names:
+            cond.append("variable IN (" + ", ".join([ph] * len(names)) + ")")
+            params.extend(names)
+        return (" WHERE " + " AND ".join(cond)) if cond else "", params
+
+    # ---- Übersicht
+    def projects(self):
+        """Projektnamen in der Tabelle (leerer Name möglich)."""
+        rows = self._query(f"SELECT DISTINCT projekt FROM {self.t}")
+        return sorted("" if r[0] is None else str(r[0]) for r in rows)
+
+    def variables(self, project=None):
+        """[(Name, erster Zeitpunkt, letzter Zeitpunkt, Anzahl Werte)] (Zeit als Unix-Zeit); project=None: alle."""
+        where, params = self._where(project)
+        ep = self.sql.epoch()
+        rows = self._query(f"SELECT variable, MIN({ep}), MAX({ep}), COUNT(*) FROM {self.t}{where} "
+                           f"GROUP BY variable ORDER BY variable", params)
+        return [(str(n), float(a), float(b), int(c)) for n, a, b, c in rows if a is not None]
+
+    def count(self, names, t0, t1, project=None):
+        """Anzahl Werte der gewählten Variablen im Zeitraum."""
+        where, params = self._where(project, t0, t1, names)
+        return int(self._query(f"SELECT COUNT(*) FROM {self.t}{where}", params)[0][0] or 0)
+
+    # ---- Laden
+    def load(self, names, t0, t1, project=None, raster_s=0, hold=False, cancel=None, progress=None):
+        """Werte der Variablen ``names`` im Zeitraum [t0, t1] (Unix-Zeit) laden.
+
+        raster_s > 0: Mittelwert je Zeitraster (Sekunden), Zeitstempel = Mitte des Rasters. hold: fehlende Werte mit
+        dem letzten Wert füllen (für Aufzeichnungen mit "nur Änderungen"). Rückgabe: (Zeiten, Namen, Spalten) als
+        numpy-Arrays bzw. Liste; Spalten[k][i] = Wert von names[k] zur Zeit i (NaN = kein Wert)."""
+        import numpy as np
+        names = list(dict.fromkeys(names))
+        if not names:
+            raise ValueError(tr("Keine Variable gewählt."))
+        where, params = self._where(project, t0, t1, names)
+        ep = self.sql.epoch()
+        if raster_s and raster_s > 0:
+            r = float(raster_s)
+            bucket = self.sql.floor(f"{ep} / {r!r}")
+            sql = (f"SELECT {bucket} AS b, variable, AVG(wert) FROM {self.t}{where} "
+                   f"GROUP BY b, variable ORDER BY b")
+        else:
+            r = 0.0
+            sql = f"SELECT {ep} AS e, variable, wert FROM {self.t}{where} ORDER BY e"
+        col_of = {n: k for k, n in enumerate(names)}
+        times, idx, vals = [], [], []        # Zeitachse; je Wert (Zeilenindex, Spalte, Wert)
+        state = {"last": None, "n": 0}
+
+        def each(chunk):
+            for key, var, val in chunk:
+                k = col_of.get(var)
+                if k is None or key is None:
+                    continue
+                key = float(key)
+                ts = (key + 0.5) * r if r else round(key, 3)
+                if ts != state["last"]:
+                    times.append(ts)
+                    state["last"] = ts
+                idx.append(len(times) - 1)
+                vals.append((k, float("nan") if val is None else float(val)))
+            state["n"] += len(chunk)
+            if state["n"] > MAX_LOAD_VALUES:
+                raise MemoryError(tr("Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.")
+                                  .format(f"{MAX_LOAD_VALUES:,}".replace(",", ".")))
+            if progress is not None:
+                progress(state["n"])
+
+        self._query(sql, params, each=each, cancel=cancel)
+        t = np.asarray(times, dtype=float)
+        cols = np.full((len(names), len(times)), np.nan)
+        if vals:
+            rows = np.asarray(idx, dtype=np.int64)
+            ks = np.fromiter((k for k, _v in vals), dtype=np.int64, count=len(vals))
+            vs = np.fromiter((v for _k, v in vals), dtype=float, count=len(vals))
+            cols[ks, rows] = vs
+        if hold and len(times):
+            cols = _hold(cols)
+        return t, names, cols
+
+
+def _hold(cols):
+    """Fehlende Werte (NaN) je Zeile mit dem zuletzt gültigen Wert füllen (vor dem ersten Wert bleibt NaN)."""
+    import numpy as np
+    out = cols.copy()
+    n = out.shape[1]
+    for k in range(out.shape[0]):
+        row = out[k]
+        valid = ~np.isnan(row)
+        if not valid.any():
+            continue
+        pos = np.where(valid, np.arange(n), 0)
+        np.maximum.accumulate(pos, out=pos)
+        filled = row[pos]
+        filled[: int(np.argmax(valid))] = np.nan
+        out[k] = filled
+    return out

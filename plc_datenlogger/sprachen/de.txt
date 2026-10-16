@@ -618,9 +618,6 @@
 @ Die Namen der Steuerungen müssen eindeutig sein und dürfen kein ; [ ] enthalten.
 > 
 
-@ Jede Steuerung braucht eine IP-Adresse.
-> 
-
 @ Namen prüfen
 > 
 
@@ -755,6 +752,230 @@
 @ Verbindung fehlgeschlagen: {0}
 > 
 
+@ In der Konfiguration ist keine Datenbank eingestellt.
+> 
+
+@ Datenbankdatei nicht gefunden: {0}
+> 
+
+@ Keine Variable gewählt.
+> 
+
+@ Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.
+> 
+
+# ---------------- plc_db_dialog.py
+
+@ Automatisch (höchstens {0} Punkte je Variable)
+> 
+
+@ Rohdaten (jeder gespeicherte Wert)
+> 
+
+@ Mittelwert je 1 s
+> 
+
+@ Mittelwert je 10 s
+> 
+
+@ Mittelwert je 1 min
+> 
+
+@ Mittelwert je 10 min
+> 
+
+@ Mittelwert je 1 h
+> 
+
+@ Mittelwert je Tag
+> 
+
+@ {0:g} s
+> 
+
+@ {0:g} min
+> 
+
+@ {0:g} h
+> 
+
+@ {0:g} Tage
+> 
+
+@ Aus Datenbank laden
+> 
+
+@ SQLite-Datei wählen …
+> 
+
+@ Eine andere SQLite-Datei lesen (z. B. Kopie einer Aufzeichnung)
+> 
+
+@ Datenbank der Konfiguration
+> 
+
+@ Variablen
+> 
+
+@ Projekt:
+> 
+
+@ Filter …
+> 
+
+@ Variable
+> 
+
+@ Erster Wert
+> 
+
+@ Letzter Wert
+> 
+
+@ Werte
+> 
+
+@ Alle
+> 
+
+@ Wie Konfiguration
+> 
+
+@ Zeitraum
+> 
+
+@ Von:
+> 
+
+@ Bis:
+> 
+
+@ Letzte Stunde
+> 
+
+@ Die letzte Stunde vor dem letzten gespeicherten Wert
+> 
+
+@ Letzte 24 h
+> 
+
+@ Die letzten 24 Stunden vor dem letzten gespeicherten Wert
+> 
+
+@ Heute
+> 
+
+@ Gestern
+> 
+
+@ Letzte 7 Tage
+> 
+
+@ Die letzten 7 Tage vor dem letzten gespeicherten Wert
+> 
+
+@ Letzte 30 Tage
+> 
+
+@ Die letzten 30 Tage vor dem letzten gespeicherten Wert
+> 
+
+@ Alles
+> 
+
+@ Vom ersten bis zum letzten Wert der gewählten Variablen
+> 
+
+@ Darstellung
+> 
+
+@ Mittelwerte werden von der Datenbank berechnet – für lange Zeiträume deutlich schneller und speichersparender als Rohdaten.
+> 
+
+@ Auflösung:
+> 
+
+@ Fehlende Werte mit dem letzten Wert füllen
+> 
+
+@ Sinnvoll, wenn die Aufzeichnung „nur Änderungen“ schreibt: ein fehlender Wert bedeutet dann „unverändert“.
+> 
+
+@ Werte zählen
+> 
+
+@ Anzahl der Werte im gewählten Zeitraum ermitteln
+> 
+
+@ Laden und anzeigen
+> 
+
+@  – {0} Werte gelesen
+> 
+
+@ Abgebrochen.
+> 
+
+@ Abbrechen
+> 
+
+@ Schließen
+> 
+
+@ Breche ab …
+> 
+
+@ SQLite-Datei wählen
+> 
+
+@ Mit „SQLite-Datei wählen …“ kann eine Datei direkt gelesen werden.
+> 
+
+@ (alle Projekte)
+> 
+
+@ (ohne Projektname)
+> 
+
+@ Verbinde …
+> 
+
+@ Keine Werte in der Datenbank (Tabelle leer oder anderes Projekt).
+> 
+
+@ Lese Variablenliste …
+> 
+
+@ „Bis“ muss nach „Von“ liegen.
+> 
+
+@ Rohdaten
+> 
+
+@ Mittelwert je {0}
+> 
+
+@ {0} Variablen, Zeitraum {1} ({2}), Auflösung: {3}, geschätzt ca. {4} Werte
+> 
+
+@ {0} Werte im gewählten Zeitraum ({1} je Variable im Mittel).
+> 
+
+@ Zähle Werte …
+> 
+
+@ Bitte mindestens eine Variable wählen.
+> 
+
+@ Im gewählten Zeitraum sind keine Werte vorhanden.
+> 
+
+@ Datenbank {0}, {1} – {2}, {3}
+> 
+
+@ Lade Werte …
+> 
+
 # ---------------- plc_event_viewer.py
 
 @ Kommt
@@ -833,9 +1054,6 @@
 > 
 
 @ Datei öffnen …
-> 
-
-@ Schließen
 > 
 
 @ Ereignisprotokoll – {0}
@@ -1113,9 +1331,6 @@
 @ Die Konfiguration konnte nicht gelesen werden:\n{0}\n\n{1}
 > 
 
-@ Werte
-> 
-
 @ ▶ Start
 > 
 
@@ -1123,6 +1338,12 @@
 > 
 
 @ CSV laden
+> 
+
+@ Aus Datenbank laden …
+> 
+
+@ Zeitraum aus der Datenbank wählen und offline anzeigen
 > 
 
 @ Konfig-Editor
@@ -1287,9 +1508,6 @@
 @ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}\n\n(in die Zwischenablage kopiert)
 > 
 
-@ Variable
-> 
-
 @ Aktuell
 > 
 
@@ -1336,6 +1554,9 @@
 > 
 
 @ Geladen: {0} ({1} Zeilen)
+> 
+
+@ Geladen: {0} ({1} Zeitpunkte)
 > 
 
 @ Screenshot – {0}

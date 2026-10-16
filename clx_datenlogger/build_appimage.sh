@@ -123,7 +123,7 @@ echo "[3/6] PyInstaller ..."
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
     --hidden-import clx_block_dialog --hidden-import clx_branding --hidden-import clx_browser \
-    --hidden-import clx_common --hidden-import clx_config --hidden-import clx_db \
+    --hidden-import clx_common --hidden-import clx_config --hidden-import clx_db --hidden-import clx_db_dialog \
     --hidden-import clx_event_viewer --hidden-import clx_events --hidden-import clx_formula \
     --hidden-import clx_formula_dialog --hidden-import clx_gui --hidden-import clx_headless \
     --hidden-import clx_i18n --hidden-import clx_io --hidden-import clx_pid --hidden-import clx_pid_dialog \
