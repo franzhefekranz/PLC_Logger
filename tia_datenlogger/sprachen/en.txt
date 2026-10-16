@@ -1,0 +1,1908 @@
+# TIA Datenlogger – Sprachdatei
+# Sprache: English
+#
+# Neue Sprache: diese Datei kopieren und nach dem Sprachkürzel benennen (z. B. fr.txt, it.txt, es.txt),
+# oben hinter "Sprache:" den Namen der Sprache eintragen und hinter jedem ">" die Übersetzung schreiben.
+#   @ = deutscher Originaltext (nicht ändern)     > = Übersetzung (leer lassen = deutscher Text bleibt)
+#   \n = Zeilenumbruch. Platzhalter wie {0} oder {1:.1f} müssen in der Übersetzung erhalten bleiben.
+#   & vor einem Buchstaben = Tastenkürzel im Menü (Alt + Buchstabe); && = ein einzelnes &-Zeichen.
+# Die Datei muss UTF-8 kodiert bleiben. Gesucht wird im Ordner "sprachen" im Datenordner und im Programmordner.
+# Umschalten: Menü "Sprache" (gilt nach einem Neustart).
+
+# ---------------- tia_block_dialog.py
+
+@ Name
+> Name
+
+@ Steuerung
+> Controller
+
+@ Array
+> Array
+
+@ Erster Index
+> First index
+
+@ Format
+> Format
+
+@ Anzahl
+> Count
+
+@ Diagramm › Y-Achse
+> Chart › Y axis
+
+@ Farbe
+> Colour
+
+@ Werteanzeige
+> Value display
+
+@ Balken
+> Bars
+
+@ Bereich
+> Area
+
+@ Ein <b>Block</b> liest <i>Anzahl</i> aufeinanderfolgende Elemente eines <b>Arrays</b> ab dem <i>ersten Index</i> (wie in TIA Portal, z. B. 1 bei Array[1..100]) gemeinsam in einer Anfrage. Das Array ohne Index angeben, z. B. <code>Mess_DB.Werte</code>; das <i>Format</i> dient der Anzeige (dekodiert wird nach dem Typ, den die Steuerung meldet). Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>). In der letzten Spalte des Baums kann jedes Element einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zugeordnet werden (<i>wie Block</i> = Ziel des Blocks); gelesen werden alle Elemente weiterhin gemeinsam mit einer Anfrage.
+> A <b>block</b> reads <i>Count</i> consecutive elements of an <b>array</b> starting at the <i>first index</i> (as in TIA Portal, e.g. 1 for Array[1..100]) together in one request. Specify the array without index, e.g. <code>Mess_DB.Werte</code>; the <i>format</i> is used for display (decoding uses the type reported by the controller). Each element becomes the variable <code>Name[0]</code>, <code>Name[1]</code>, … and can be used in formulas. In the <b>tree</b> below, the <b>names of the individual elements</b> can be changed by double-click (empty = default name <code>Name[i]</code>). In the last column of the tree, each element can be assigned to <b>another chart or another Y axis</b> (<i>as block</i> = target of the block); all elements are still read together with one request.
+
+@ Blöcke (Blocklesemodus)
+> Blocks (block read mode)
+
+@ Block / Element
+> Block / element
+
+@ Name (Doppelklick = ändern)
+> Name (double-click = edit)
+
+@ Adresse
+> Address
+
+@ Block hinzufügen
+> Add block
+
+@ Entfernen
+> Remove
+
+@ Markierten Block testen
+> Test selected block
+
+@ Liest den Block einmal aus der SPS und zeigt die ersten Werte und die Lesezeit
+> Reads the block once from the PLC and shows the first values and the read time
+
+@ <b>Elemente der Blöcke</b> – Namen und Ziel (Diagramm › Y-Achse) der einzelnen Werte bearbeiten
+> <b>Block elements</b> – edit names and target (chart › Y axis) of the individual values
+
+@ (wie Block)
+> (as block)
+
+@ Für alle Elemente des markierten Blocks setzen
+> Set for all elements of the selected block
+
+@ Ziel:
+> Target:
+
+@ Array ohne Index, z. B. Mess_DB.Werte oder Anlage_DB.Motor[1].Historie
+> Array without index, e.g. Mess_DB.Werte or Anlage_DB.Motor[1].Historie
+
+@ {0}   ({1} Bytes)
+> {0}   ({1} bytes)
+
+@ Ziel setzen
+> Set target
+
+@ Bitte zuerst einen Block markieren.
+> Please select a block first.
+
+@ Block testen
+> Test block
+
+@ s7commplus ist nicht verfügbar (pip install s7commplus):\n{0}
+> s7commplus is not available (pip install s7commplus):\n{0}
+
+@ Lesen fehlgeschlagen:\n{0}
+> Read failed:\n{0}
+
+@ {0} (Anzahl {1}):\n
+> {0} (count {1}):\n
+
+@ {0}: {1} Werte ({2} Bytes) in {3:.1f} ms gelesen (einschließlich Verbindungsaufbau).\n\nErste Werte: {4}
+> {0}: {1} values ({2} bytes) read in {3:.1f} ms (including connection setup).\n\nFirst values: {4}
+
+@ „{0}“: Array „{1}“ ist leer oder ungültig (ohne Index angeben).
+> “{0}”: array “{1}” is empty or invalid (specify without index).
+
+@ „{0}“: Name darf nicht leer sein und keines der Zeichen ; {{ }} [ ] enthalten.
+> “{0}”: name must not be empty and must not contain any of the characters ; {{ }} [ ].
+
+@ Blocknamen müssen eindeutig sein.
+> Block names must be unique.
+
+@ {0}: Elementname „{1}“ darf keines der Zeichen ; {{ }} enthalten.
+> {0}: element name “{1}” must not contain any of the characters ; {{ }}.
+
+@ Elementname „{0}“ kommt mehrfach vor.
+> Element name “{0}” occurs more than once.
+
+@ {0}: Name kollidiert mit vorhandenen Variablen ({1}).
+> {0}: name collides with existing variables ({1}).
+
+@ Blöcke prüfen
+> Check blocks
+
+# ---------------- tia_browser.py
+
+@ Array als Block übernehmen
+> Add array as block
+
+@ <b>{0}</b> (Array[{1}..{2}] of {3})
+> <b>{0}</b> (Array[{1}..{2}] of {3})
+
+@ Erster Index:
+> First index:
+
+@ Anzahl (max. 1000):
+> Count (max. 1000):
+
+@ Variablen aus der Steuerung wählen – {0}
+> Select variables from the controller – {0}
+
+@ Steuerung <b>{0}</b> – {1}:{2}, TLS {3}
+> Controller <b>{0}</b> – {1}:{2}, TLS {3}
+
+@ . Variablennamen und Datentypen kommen direkt aus der Steuerung (S7CommPlus); optimierte Datenbausteine werden symbolisch gelesen.
+> . Variable names and data types come directly from the controller (S7CommPlus); optimized data blocks are read symbolically.
+
+@ Variablenliste aus Steuerung laden
+> Load variable list from controller
+
+@ Nach einer Programmänderung in der Steuerung neu laden (dauert einige Sekunden)
+> Reload after a program change in the controller (takes a few seconds)
+
+@ Markiertes Array als Block…
+> Selected array as block…
+
+@ Array aus Zahlen mit einer einzigen Leseanfrage übernehmen (auch per Doppelklick)
+> Add an array of numbers with a single read request (also by double-click)
+
+@ Filter (Name, ab 2 Zeichen)…
+> Filter (name, from 2 characters)…
+
+@ Datentyp
+> Data type
+
+@ Variablenname
+> Variable name
+
+@ Hinweis
+> Note
+
+@ Auswahl übernehmen
+> Apply selection
+
+@ Schließen
+> Close
+
+@ Neue Variablen anlegen in:
+> Create new variables in:
+
+@ zwischengespeicherte Liste – mit „Variablenliste laden“ aktualisieren
+> cached list – update with “Load variable list”
+
+@ Noch keine Variablenliste vorhanden – sie wird aus der Steuerung geladen …
+> No variable list available yet – it is being loaded from the controller …
+
+@ Lade Variablenliste von {0} …
+> Loading variable list from {0} …
+
+@ Lade Variablenliste von {0} … {1:.0f} s
+> Loading variable list from {0} … {1:.0f} s
+
+@ \n\nDas Python-Paket s7commplus fehlt (pip install s7commplus).
+> \n\nThe Python package s7commplus is missing (pip install s7commplus).
+
+@ \n\nIP-Adresse, Port, TLS-Einstellung und Passwort prüfen (TCP-Port 102 muss erreichbar sein).
+> \n\nCheck IP address, port, TLS setting and password (TCP port 102 must be reachable).
+
+@ Variablenliste konnte nicht geladen werden: {0}
+> Variable list could not be loaded: {0}
+
+@ Variablenliste
+> Variable list
+
+@ aus der Steuerung geladen
+> loaded from the controller
+
+@ Protokoll V{0}
+> Protocol V{0}
+
+@ {0} Variablen ({1})
+> {0} variables ({1})
+
+@ Mehr als 2000 Treffer – bitte den Filter verfeinern.
+> More than 2000 matches – please refine the filter.
+
+@ als Block lesbar (Doppelklick)
+> readable as block (double-click)
+
+@ zeigt die ersten {0} Elemente
+> shows the first {0} elements
+
+@ bereits in der Liste
+> already in the list
+
+@ Typ wird nicht aufgezeichnet
+> Type is not recorded
+
+@ {0} Variablen
+> {0} variables
+
+@ , {0} Blöcke
+> , {0} blocks
+
+@  gewählt
+>  selected
+
+@ Als Block übernehmen
+> Add as block
+
+@ Bitte ein eindimensionales Array aus Zahlen oder BOOL markieren (z. B. Array[1..100] of Real).
+> Please select a one-dimensional array of numbers or BOOL (e.g. Array[1..100] of Real).
+
+@ als Block vorgemerkt ({0} Elemente ab [{1}])
+> marked as block ({0} elements from [{1}])
+
+@ Auswahl
+> Selection
+
+@ Es sind keine neuen Variablen angehakt und keine Blöcke vorgemerkt.
+> No new variables are checked and no blocks are marked.
+
+# ---------------- tia_common.py
+
+@ Automatisch
+> Automatic
+
+@ Aus
+> Off
+
+@ An (TLS erzwingen)
+> On (enforce TLS)
+
+@ HMI (Standard)
+> HMI (default)
+
+@ Engineering
+> Engineering
+
+@ PG
+> PG
+
+@ Untereinander
+> Stacked
+
+@ Nebeneinander
+> Side by side
+
+@ Tabs
+> Tabs
+
+@ Raster (Grid)
+> Grid
+
+# ---------------- tia_config.py
+
+@ Variable in der Steuerung
+> Variable in the controller
+
+@ Typ
+> Type
+
+@ Testwert
+> Test value
+
+@ Formel
+> Formula
+
+@ IP-Adresse
+> IP address
+
+@ Port
+> Port
+
+@ TLS
+> TLS
+
+@ Passwort
+> Password
+
+@ Rolle
+> Role
+
+@ Intervall
+> Interval
+
+@ Aktiv
+> Active
+
+@ Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)
+> Configuration (*.ini *.txt *.cfg);;All files (*)
+
+@ z. B. Prüfstand 3
+> e.g. Test bench 3
+
+@ Projektname: erscheint in den Fenstertiteln, im Webserver und in der Logdatei
+> Project name: appears in window titles, in the web server and in the log file
+
+@ + Steuerung
+> + Controller
+
+@ Steuerung entfernen
+> Remove controller
+
+@ Projektname:
+> Project name:
+
+@ Dateiname-Präfix und Name des Archiv-Unterordners
+> File name prefix and name of the archive subfolder
+
+@ unbegrenzt
+> unlimited
+
+@ Ist die Anzahl erreicht, wird die Datei gepackt, archiviert und eine neue begonnen (0 = unbegrenzt)
+> When the count is reached, the file is zipped, archived and a new one is started (0 = unlimited)
+
+@ Beim Beenden des Loggers die aktuelle CSV-Datei archivieren
+> Archive the current CSV file when the logger is closed
+
+@ CSV-Datei schreiben
+> Write CSV file
+
+@ Ausgeschaltet: keine CSV-Datei (z. B. nur Datenbank, Reiter „Datenbank“)
+> Switched off: no CSV file (e.g. database only, tab “Database”)
+
+@ CSV-Ordner:
+> CSV folder:
+
+@ CSV-Name:
+> CSV name:
+
+@ Max. Datensätze je Datei:
+> Max. records per file:
+
+@ Archiv-Ordner:
+> Archive folder:
+
+@ Bilddatei (PNG/SVG/JPG), wird im Logger rechts oben angezeigt
+> Image file (PNG/SVG/JPG), shown in the logger at the top right
+
+@ Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon
+> Program icon (PNG/ICO/SVG); empty = logo or default icon
+
+@ Logo wählen
+> Choose logo
+
+@ Programm-Icon wählen
+> Choose program icon
+
+@ Automatisch (wie Standard-Anordnung)
+> Automatic (like default layout)
+
+@ automatisch
+> automatic
+
+@ Anzahl der Spalten bei der Anordnung „Raster“ (0 = automatisch aus der Diagrammzahl)
+> Number of columns for the “Grid” layout (0 = automatic from the number of charts)
+
+@ Balken für Aktualwerte anzeigen
+> Show bars for current values
+
+@ Anzeigefenster (online):
+> Display window (online):
+
+@ Standard-Anordnung der Seiten:
+> Default page layout:
+
+@ Diagramme auf einer Seite:
+> Charts on one page:
+
+@ Raster-Spalten:
+> Grid columns:
+
+@ Logo (rechts oben):
+> Logo (top right):
+
+@ Programm-Icon:
+> Program icon:
+
+@ Webserver starten (Diagramme im Browser, z. B. mit Tablet/Smartphone)
+> Start web server (charts in the browser, e.g. on a tablet/smartphone)
+
+@ 0.0.0.0 = erreichbar im ganzen Netzwerk, 127.0.0.1 = nur auf diesem Rechner
+> 0.0.0.0 = reachable in the whole network, 127.0.0.1 = only on this computer
+
+@ leer = ohne Zugriffsschutz
+> empty = no access protection
+
+@ Zugriffscode: die Seite wird mit ?token=CODE aufgerufen
+> Access code: the page is opened with ?token=CODE
+
+@ Headless-Modus: ohne Diagramme starten, nur aufzeichnen
+> Headless mode: start without charts, record only
+
+@ Der Logger läuft ohne Fenster (z. B. als Dienst); Webserver und Archivierung bleiben aktiv. Mit dem Startparameter --gui lässt sich trotzdem die Oberfläche öffnen.
+> The logger runs without a window (e.g. as a service); web server and archiving remain active. With the start parameter --gui the user interface can still be opened.
+
+@ Adresse (Host):
+> Address (host):
+
+@ Port:
+> Port:
+
+@ Zugriffscode:
+> Access code:
+
+@ Aktualisierung im Browser:
+> Browser refresh:
+
+@ Projekt && Steuerungen
+> Project && controllers
+
+@ Aufzeichnung
+> Recording
+
+@ Anzeige
+> Display
+
+@ Webserver && Headless
+> Web server && headless
+
+@ Datenbank
+> Database
+
+@ Trigger && Ereignisse
+> Triggers && events
+
+@ Auto-Skalierung
+> Auto scaling
+
+@ leer = Standardseite
+> empty = default page
+
+@ Diagramme mit gleichem Seitennamen werden gemeinsam in einem Tab/Dock angezeigt
+> Charts with the same page name are shown together in one tab/dock
+
+@ Eigenschaften der Auswahl (Diagramm / Y-Achse)
+> Properties of the selection (chart / Y axis)
+
+@ Name:
+> Name:
+
+@ Seite (Tab):
+> Page (tab):
+
+@ Y min:
+> Y min:
+
+@ Y max:
+> Y max:
+
+@ PID-Regler-Optimierung
+> PID controller tuning
+
+@ Im Logger lassen sich für dieses Diagramm aus Soll-, Ist- und Stellwert die PID-Parameter berechnen
+> In the logger, the PID parameters for this chart can be calculated from setpoint, process value and controller output
+
+@ Einstellen …
+> Settings …
+
+@ Regler:
+> Controller:
+
+@ + Diagramm
+> + Chart
+
+@ + Y-Achse
+> + Y axis
+
+@ <b>Diagramme › Y-Achsen › Variablen</b><br>Variable auf eine Y-Achse oder auf eine andere Variable ziehen
+> <b>Charts › Y axes › Variables</b><br>Drag a variable onto a Y axis or onto another variable
+
+@ <b>Variablen</b>
+> <b>Variables</b>
+
+@ Aus Variablenliste wählen…
+> Select from variable list…
+
+@ Blöcke (Blocklesemodus)…
+> Blocks (block read mode)…
+
+@ Berechnete Variable…
+> Calculated variable…
+
+@ Variable hinzufügen
+> Add variable
+
+@ Verbindung testen
+> Test connection
+
+@ Öffnen…
+> Open…
+
+@ Speichern
+> Save
+
+@ Speichern unter…
+> Save as…
+
+@ &Datei
+> &File
+
+@ &Neu
+> &New
+
+@ &Öffnen …
+> &Open …
+
+@ &Speichern
+> &Save
+
+@ Speichern &unter …
+> Save &as …
+
+@ Logger mit dieser Konfiguration &starten
+> &Start logger with this configuration
+
+@ &Beenden
+> E&xit
+
+@ Sprache
+> Language
+
+@ ohne Projektname
+> no project name
+
+@ neu, nicht gespeichert
+> new, not saved
+
+@ TIA Konfiguration – {0} – {1}
+> TIA Configuration – {0} – {1}
+
+@ ISO-on-TCP-Port der Steuerung (Standard 102)
+> ISO-on-TCP port of the controller (default 102)
+
+@ Automatisch: TLS verwenden, wenn die Steuerung es anbietet (ab TIA V17 / Firmware mit PG/HMI-Kommunikation über TLS); An: nur mit TLS; Aus: ohne TLS
+> Automatic: use TLS if the controller offers it (from TIA V17 / firmware with PG/HMI communication via TLS); On: TLS only; Off: without TLS
+
+@ leer = ohne
+> empty = none
+
+@ Passwort der Zugriffsstufe, falls die CPU lesenden Zugriff schützt. Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.
+> Password of the access level if the CPU protects read access. Note: it is stored in plain text in the configuration file.
+
+@ Bitte eine Steuerung markieren; mindestens eine muss bleiben.
+> Please select a controller; at least one must remain.
+
+@ Steuerung entfernt – ihre Variablen und Blöcke gehören jetzt zur ersten Steuerung.
+> Controller removed – its variables and blocks now belong to the first controller.
+
+@ Trigger bearbeiten …
+> Edit triggers …
+
+@ Bedingungen festlegen, bei denen ein Eintrag ins Ereignisprotokoll geschrieben wird
+> Define conditions that write an entry to the event log
+
+@ Ereignisprotokoll anzeigen …
+> Show event log …
+
+@ Ereignisse anzeigen und quittieren
+> Show and acknowledge events
+
+@ leer = <CSV-Ordner>/<CSV-Name>_ereignisse.csv
+> empty = <CSV folder>/<CSV name>_ereignisse.csv
+
+@ Textdatei (CSV, Semikolon) mit allen Ereignissen und Quittierungen
+> Text file (CSV, semicolon) with all events and acknowledgements
+
+@ Ereignisdatei
+> Event file
+
+@ Ereignisprotokoll (*.csv)
+> Event log (*.csv)
+
+@ Trigger:
+> Triggers:
+
+@ Ereignisdatei:
+> Event file:
+
+@ Ein Trigger schreibt einen Eintrag mit Zeitstempel ins Ereignisprotokoll, sobald seine Bedingung erfüllt ist (z. B. <code>{Temperatur} &gt; 80</code>). Offene Ereignisse zeigt der Logger in der Statusleiste an; quittiert wird im Ereignis-Viewer.
+> A trigger writes a time-stamped entry to the event log as soon as its condition is met (e.g. <code>{Temperatur} &gt; 80</code>). The logger shows open events in the status bar; they are acknowledged in the event viewer.
+
+@ keine Trigger angelegt
+> no triggers defined
+
+@ {0} Trigger, davon {1} aktiv ({2})
+> {0} triggers, {1} of them active ({2})
+
+@ Trigger geändert – wirksam nach dem Speichern und Neustart der Aufzeichnung.
+> Triggers changed – effective after saving and restarting the recording.
+
+@ Standard
+> Default
+
+@ 0 = Standard (MariaDB 3306, PostgreSQL/TimescaleDB 5432)
+> 0 = default (MariaDB 3306, PostgreSQL/TimescaleDB 5432)
+
+@ Wird im Klartext in der Konfigurationsdatei gespeichert
+> Stored in plain text in the configuration file
+
+@ Tabellenname (Buchstaben, Ziffern, _); wird bei Bedarf angelegt
+> Table name (letters, digits, _); created if necessary
+
+@ SQLite-Datei; relativ = im Datenordner des Programms
+> SQLite file; relative = in the program's data folder
+
+@ SQLite-Datenbank
+> SQLite database
+
+@ SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)
+> SQLite (*.db *.sqlite *.sqlite3);;All files (*)
+
+@ Nur Änderungen schreiben (spätestens jede Minute)
+> Write changes only (at least every minute)
+
+@ Spart Platz: ein Wert wird nur geschrieben, wenn er sich geändert hat
+> Saves space: a value is only written when it has changed
+
+@ Datenbank testen
+> Test database
+
+@ Verbindung prüfen und die Tabelle anlegen
+> Check the connection and create the table
+
+@ Datenbank:
+> Database:
+
+@ Server / Port:
+> Server / port:
+
+@ Datenbankname:
+> Database name:
+
+@ SQLite-Datei:
+> SQLite file:
+
+@ Benutzer / Passwort:
+> User / password:
+
+@ Tabelle:
+> Table:
+
+@ Standard ({0})
+> Default ({0})
+
+@ Der Datenbanktreiber fehlt:\n{0}\n\nMariaDB: pip install PyMySQL\nTimescaleDB/PostgreSQL: pip install "psycopg[binary]"
+> The database driver is missing:\n{0}\n\nMariaDB: pip install PyMySQL\nTimescaleDB/PostgreSQL: pip install "psycopg[binary]"
+
+@ Verbindung fehlgeschlagen:\n{0}
+> Connection failed:\n{0}
+
+@ Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)
+> Images (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;All files (*)
+
+@ Auto
+> Auto
+
+@  ({0} in anderen Diagrammen)
+>  ({0} in other charts)
+
+@ {0}: Ist {1}, Stell {2}
+> {0}: PV {1}, CV {2}
+
+@ , Soll {0}
+> , SP {0}
+
+@ Zuordnung einzelner Block-Elemente: „Blöcke (Blocklesemodus)…“.
+> Assignment of individual block elements: “Blocks (block read mode)…”.
+
+@ Datentyp der Variable (bei Übernahme aus der Variablenliste automatisch); Zeiten (TIME …) werden in Millisekunden aufgezeichnet
+> Data type of the variable (automatic when taken from the variable list); times (TIME …) are recorded in milliseconds
+
+@ Symbolischer Name: Datenbaustein.Variable, z. B. Anlage_DB.Motor[2].Drehzahl; Merker/Ein-/Ausgänge: MArea.<Name>, IArea.<Name>, QArea.<Name>
+> Symbolic name: DataBlock.Variable, e.g. Anlage_DB.Motor[2].Drehzahl; memory/inputs/outputs: MArea.<Name>, IArea.<Name>, QArea.<Name>
+
+@ Berechnete Variable – Doppelklick zum Bearbeiten
+> Calculated variable – double-click to edit
+
+@ berechnet
+> calculated
+
+@ {0} Blöcke mit {1} Variablen – werden mit je einer Anfrage gelesen.
+> {0} blocks with {1} variables – each read with a single request.
+
+@ Archiv-Ordner wählen
+> Choose archive folder
+
+@ CSV-Ordner wählen
+> Choose CSV folder
+
+@ Steuerung wählen
+> Choose controller
+
+@ Variablen aus Steuerung:
+> Variables from controller:
+
+@ {0} Variablen und {1} Blöcke übernommen – mit „Verbindung testen“ prüfen.
+> {0} variables and {1} blocks added – check with “Test connection”.
+
+@ CSV-Name
+> CSV name
+
+@ Der CSV-Name darf keines der Zeichen \\ / : * ? " < > | enthalten.
+> The CSV name must not contain any of the characters \\ / : * ? " < > |.
+
+@ Steuerungen prüfen
+> Check controllers
+
+@ Die Namen der Steuerungen müssen eindeutig sein und dürfen kein ; [ ] enthalten.
+> Controller names must be unique and must not contain ; [ ].
+
+@ Jede Steuerung braucht eine IP-Adresse.
+> Each controller needs an IP address.
+
+@ Namen prüfen
+> Check names
+
+@ Variablennamen müssen eindeutig, nicht leer und ohne ';' sein.
+> Variable names must be unique, not empty and without ';'.
+
+@ Variablennamen prüfen
+> Check variable names
+
+@ Ungültige oder leere Variablennamen der Steuerung:\n
+> Invalid or empty variable names of the controller:\n
+
+@ {0}: unbekannte oder später definierte Variablen: 
+> {0}: unknown or later defined variables: 
+
+@ Formeln prüfen
+> Check formulas
+
+@ Y-Skalierung
+> Y scaling
+
+@ {0} › {1}: Y max muss größer als Y min sein.
+> {0} › {1}: Y max must be greater than Y min.
+
+@ Der Tabellenname darf nur Buchstaben, Ziffern und _ enthalten und muss mit einem Buchstaben beginnen.
+> The table name may only contain letters, digits and _ and must start with a letter.
+
+@ Weder CSV-Datei noch Datenbank sind eingeschaltet – die Messwerte werden nur angezeigt, aber nicht gespeichert. Trotzdem speichern?
+> Neither CSV file nor database is switched on – the measured values are only displayed, not saved. Save anyway?
+
+@ PID-Optimierung
+> PID tuning
+
+@ Unbekannte Variablen in der PID-Optimierung:\n\n
+> Unknown variables in the PID tuning:\n\n
+
+@ \n\nTrotzdem speichern?
+> \n\nSave anyway?
+
+@ Trigger prüfen
+> Check triggers
+
+@ Fehlerhafte Trigger (werden beim Aufzeichnen übersprungen):\n\n
+> Faulty triggers (skipped during recording):\n\n
+
+@ Die Datei konnte nicht geschrieben werden:\n{0}
+> The file could not be written:\n{0}
+
+@ Gespeichert: {0}
+> Saved: {0}
+
+@ Konfiguration speichern unter
+> Save configuration as
+
+@ Konfiguration laden
+> Load configuration
+
+@ {0}\n\nDie Datei konnte nicht gelesen werden:\n{1}
+> {0}\n\nThe file could not be read:\n{1}
+
+@ Trigger
+> Trigger
+
+@ Die Trigger konnten nicht gelesen werden:\n{0}
+> The triggers could not be read:\n{0}
+
+@ Geladen: {0}
+> Loaded: {0}
+
+@ Konfiguration öffnen
+> Open configuration
+
+@ Logger starten
+> Start logger
+
+@ Der Logger konnte nicht gestartet werden:\n{0}
+> The logger could not be started:\n{0}
+
+@ Logger gestartet.
+> Logger started.
+
+@ s7commplus
+> s7commplus
+
+@ Die Bibliothek s7commplus fehlt (pip install s7commplus):\n{0}
+> The s7commplus library is missing (pip install s7commplus):\n{0}
+
+@ Fehler: keine Verbindung
+> Error: no connection
+
+@ Fehler: {0}
+> Error: {0}
+
+@ Verbindung fehlgeschlagen
+> Connection failed
+
+# ---------------- tia_db.py
+
+@ Keine
+> None
+
+@ SQLite (Datei)
+> SQLite (file)
+
+@ MariaDB / MySQL
+> MariaDB / MySQL
+
+@ TimescaleDB / PostgreSQL
+> TimescaleDB / PostgreSQL
+
+@ Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)
+> Invalid table name: {0!r} (letters, digits, _ only)
+
+@ normale PostgreSQL-Tabelle, TimescaleDB nicht verfügbar: {0}
+> regular PostgreSQL table, TimescaleDB not available: {0}
+
+@ Keine Datenbank gewählt.
+> No database selected.
+
+@ Verbindung erfolgreich: {0}
+> Connection successful: {0}
+
+@ [Datenbank] {0}
+> [Database] {0}
+
+@  – {0} Werte geschrieben
+>  – {0} values written
+
+@ , {0} verworfen (Puffer voll)
+> , {0} discarded (buffer full)
+
+@ Verbinde mit {0} …
+> Connecting to {0} …
+
+@ Verbindung fehlgeschlagen: {0}
+> Connection failed: {0}
+
+# ---------------- tia_event_viewer.py
+
+@ Kommt
+> Raised
+
+@ Geht
+> Cleared
+
+@ Priorität
+> Priority
+
+@ Meldung
+> Message
+
+@ Quittiert
+> Acknowledged
+
+@ Notiz ins Ereignisprotokoll
+> Note to the event log
+
+@ Zeitpunkt, auf den sich die Notiz bezieht (Standard: jetzt)
+> Point in time the note refers to (default: now)
+
+@ z. B. Ventil V12 getauscht, Sollwert auf 65 °C geändert …
+> e.g. valve V12 replaced, setpoint changed to 65 °C …
+
+@ Zeit:
+> Time:
+
+@ Notiz:
+> Note:
+
+@ Verfasser:
+> Author:
+
+@ Notiz
+> Note
+
+@ Bitte einen Text eingeben.
+> Please enter a text.
+
+@ Die Notiz konnte nicht gespeichert werden:\n{0}
+> The note could not be saved:\n{0}
+
+@ nur offene
+> open only
+
+@ alle Prioritäten
+> all priorities
+
+@ nur Notizen
+> notes only
+
+@ Suchen (Trigger oder Meldung) …
+> Search (trigger or message) …
+
+@ Notiz hinzufügen …
+> Add note …
+
+@ Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben
+> Write your own time-stamped entry to the event log
+
+@ Markierte quittieren
+> Acknowledge selected
+
+@ Ausgewählte offene Ereignisse quittieren (auch Doppelklick auf eine Zeile)
+> Acknowledge selected open events (also by double-clicking a row)
+
+@ Alle quittieren
+> Acknowledge all
+
+@ Ordner öffnen
+> Open folder
+
+@ Ordner der Ereignisdatei im Explorer öffnen
+> Open the folder of the event file in the file manager
+
+@ Datei öffnen …
+> Open file …
+
+@ Ereignisprotokoll – {0}
+> Event log – {0}
+
+@ Datei nicht lesbar: {0}
+> File not readable: {0}
+
+@ Notiz von {0}
+> Note by {0}
+
+@ offen
+> open
+
+@ – (ohne Quittierung)
+> – (no acknowledgement)
+
+@  (angezeigt: die neuesten {0})
+>  (showing: the latest {0})
+
+@ {0} Ereignisse, davon {1} offen · {2} Notizen · {3} nach Filter{4}
+> {0} events, {1} of them open · {2} notes · {3} after filter{4}
+
+@ Alle quittieren ({0})
+> Acknowledge all ({0})
+
+@ Quittieren
+> Acknowledge
+
+@ Keine offenen Ereignisse ausgewählt.
+> No open events selected.
+
+@ Die Ereignisdatei ist nicht beschreibbar:\n{0}
+> The event file is not writable:\n{0}
+
+@ {0} offene Ereignisse quittieren?
+> Acknowledge {0} open events?
+
+@ Ordner
+> Folder
+
+@ Der Ordner existiert noch nicht:\n{0}\n\nEr wird beim ersten Ereignis angelegt.
+> The folder does not exist yet:\n{0}\n\nIt will be created with the first event.
+
+@ Ereignisprotokoll öffnen
+> Open event log
+
+@ Ereignisprotokoll (*.csv);;Alle Dateien (*)
+> Event log (*.csv);;All files (*)
+
+# ---------------- tia_events.py
+
+@ Info
+> Info
+
+@ Warnung
+> Warning
+
+@ Alarm
+> Alarm
+
+@ Name fehlt oder enthält ';'
+> Name missing or contains ';'
+
+@ unbekannte Variablen: 
+> unknown variables: 
+
+@ Meldetext: unbekannte Variablen 
+> Message text: unknown variables 
+
+@ Die Notiz ist leer.
+> The note is empty.
+
+@ Trigger {0} übersprungen: {1}
+> Trigger {0} skipped: {1}
+
+# ---------------- tia_formula.py
+
+@ abs(x) – Betrag
+> abs(x) – absolute value
+
+@ min(a, b, …) – kleinster Wert
+> min(a, b, …) – smallest value
+
+@ max(a, b, …) – größter Wert
+> max(a, b, …) – largest value
+
+@ sqrt(x) – Quadratwurzel
+> sqrt(x) – square root
+
+@ sin(x) – Sinus (Bogenmaß)
+> sin(x) – sine (radians)
+
+@ cos(x) – Kosinus (Bogenmaß)
+> cos(x) – cosine (radians)
+
+@ tan(x) – Tangens (Bogenmaß)
+> tan(x) – tangent (radians)
+
+@ asin(x) – Arkussinus
+> asin(x) – arc sine
+
+@ acos(x) – Arkuskosinus
+> acos(x) – arc cosine
+
+@ atan(x) – Arkustangens
+> atan(x) – arc tangent
+
+@ atan2(y, x) – Arkustangens zweier Werte
+> atan2(y, x) – arc tangent of two values
+
+@ exp(x) – e hoch x
+> exp(x) – e to the power of x
+
+@ ln(x) – natürlicher Logarithmus
+> ln(x) – natural logarithm
+
+@ log10(x) – Zehnerlogarithmus
+> log10(x) – common logarithm
+
+@ log(x, basis) – Logarithmus
+> log(x, base) – logarithm
+
+@ floor(x) – abrunden
+> floor(x) – round down
+
+@ ceil(x) – aufrunden
+> ceil(x) – round up
+
+@ round(x, stellen) – runden
+> round(x, digits) – round
+
+@ hypot(a, b) – √(a²+b²)
+> hypot(a, b) – √(a²+b²)
+
+@ radians(grad) – Grad in Bogenmaß
+> radians(deg) – degrees to radians
+
+@ degrees(rad) – Bogenmaß in Grad
+> degrees(rad) – radians to degrees
+
+@ sign(x) – Vorzeichen (-1, 0, 1)
+> sign(x) – sign (-1, 0, 1)
+
+@ clamp(x, min, max) – auf Bereich begrenzen
+> clamp(x, min, max) – limit to range
+
+@ ddt(x) – Ableitung nach der Zeit (pro Sekunde)
+> ddt(x) – time derivative (per second)
+
+@ integ(x) – Integral über die Zeit (x · s)
+> integ(x) – integral over time (x · s)
+
+@ avg(x, n) – gleitender Mittelwert über n Messwerte
+> avg(x, n) – moving average over n samples
+
+@ Nicht erlaubtes Element in der Formel: {0}
+> Element not allowed in the formula: {0}
+
+@ Nur Zahlen sind als Konstanten erlaubt
+> Only numbers are allowed as constants
+
+@ „{0}“ ist eine Funktion und braucht Klammern: {1}(…)
+> “{0}” is a function and needs parentheses: {1}(…)
+
+@ Unbekannter Name „{0}“ – Variablen in {{geschweiften Klammern}} angeben
+> Unknown name “{0}” – specify variables in {{curly braces}}
+
+@ Unbekannte Funktion in der Formel
+> Unknown function in the formula
+
+@ {0}(): Schlüsselwort-Argumente sind nicht erlaubt
+> {0}(): keyword arguments are not allowed
+
+@ {0}(): falsche Anzahl von Argumenten
+> {0}(): wrong number of arguments
+
+@ Die Formel ist leer
+> The formula is empty
+
+@ Die Formel ist zu lang (max. {0} Zeichen)
+> The formula is too long (max. {0} characters)
+
+@ Leere Variablenangabe {}
+> Empty variable reference {}
+
+@ Unpaarige geschweifte Klammer
+> Unmatched curly brace
+
+@ Die Formel ist zu komplex
+> The formula is too complex
+
+# ---------------- tia_formula_dialog.py
+
+@ <b>Variablen</b> in geschweiften Klammern: <code>{Name}</code> (Doppelklick in der Liste fügt ein). Operatoren: <code>+ - * / // % **</code>, Vergleiche <code>&lt; &gt; == !=</code>, <code>and or not</code>, Bedingung: <code>a if {x} &gt; 5 else b</code>. Konstanten: 
+> <b>Variables</b> in curly braces: <code>{Name}</code> (double-click in the list inserts). Operators: <code>+ - * / // % **</code>, comparisons <code>&lt; &gt; == !=</code>, <code>and or not</code>, condition: <code>a if {x} &gt; 5 else b</code>. Constants: 
+
+@ . Berechnete Variablen dürfen früher definierte berechnete Variablen verwenden.
+> . Calculated variables may use calculated variables defined earlier.
+
+@ Berechnete Variable
+> Calculated variable
+
+@ Name der berechneten Variable
+> Name of the calculated variable
+
+@ z. B.  ({Temp_Vorlauf} + {Temp_Ruecklauf}) / 2
+> e.g.  ({Temp_Vorlauf} + {Temp_Ruecklauf}) / 2
+
+@ Verwendete Variable
+> Variable used
+
+@ Prüfen / Berechnen
+> Check / calculate
+
+@ Variablen filtern…
+> Filter variables…
+
+@ <b>Variablen</b> (Doppelklick = einfügen)
+> <b>Variables</b> (double-click = insert)
+
+@ <b>Funktionen</b> (Doppelklick = einfügen)
+> <b>Functions</b> (double-click = insert)
+
+@ <b>Formel</b>
+> <b>Formula</b>
+
+@ Diese Variable existiert nicht (oder ist erst später definiert)
+> This variable does not exist (or is defined later)
+
+@ ✓ Formel gültig. Ergebnis mit den Testwerten: 
+> ✓ Formula valid. Result with the test values: 
+
+@ nicht berechenbar (z. B. Division durch 0 oder fehlender Testwert)
+> cannot be calculated (e.g. division by 0 or missing test value)
+
+@ <br>⚠ Unbekannte Variablen: {0}
+> <br>⚠ Unknown variables: {0}
+
+@ Bitte einen Namen ohne ';' eingeben.
+> Please enter a name without ';'.
+
+@ Der Name „{0}“ ist bereits vergeben.
+> The name “{0}” is already taken.
+
+@ Die Formel ist ungültig oder leer.
+> The formula is invalid or empty.
+
+@ Unbekannte oder erst später definierte Variablen:\n
+> Unknown or later defined variables:\n
+
+@ Die Formel darf sich nicht auf sich selbst beziehen.
+> The formula must not refer to itself.
+
+# ---------------- tia_gui.py
+
+@ Das Archiv enthält keine CSV-Datei.
+> The archive contains no CSV file.
+
+@ Zum Umordnen ziehen und auf die Titelzeile eines anderen Diagramms ablegen
+> Drag to reorder and drop onto the title bar of another chart
+
+@ Kurve ausblenden
+> Hide curve
+
+@ Kurve einblenden
+> Show curve
+
+@ Alle Kurven dieses Diagramms einblenden
+> Show all curves of this chart
+
+@ Konfiguration
+> Configuration
+
+@ Die Konfiguration konnte nicht gelesen werden:\n{0}\n\n{1}
+> The configuration could not be read:\n{0}\n\n{1}
+
+@ Werte
+> Values
+
+@ ▶ Start
+> ▶ Start
+
+@ Online
+> Online
+
+@ CSV laden
+> Load CSV
+
+@ Konfig-Editor
+> Config editor
+
+@ Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen
+> Open the configuration program with this configuration file
+
+@ Config laden …
+> Load config …
+
+@ Andere Konfigurationsdatei laden (beliebiger Dateiname)
+> Load another configuration file (any file name)
+
+@ Konfiguration neu laden
+> Reload configuration
+
+@ Webserver-Adresse …
+> Web server address …
+
+@ Beenden
+> Exit
+
+@ Lineale zurücksetzen
+> Reset rulers
+
+@ Demo
+> Demo
+
+@ Simulierte Werte statt SPS-Verbindung (vor dem Start wählen)
+> Simulated values instead of PLC connection (choose before starting)
+
+@ Bool im Diagramm
+> Bool in chart
+
+@ BOOL-Kurven zusätzlich im Diagramm zeichnen (sonst nur als Linie/Streifen neben dem Namen in der Legende)
+> Also draw BOOL curves in the chart (otherwise only as line/band next to the name in the legend)
+
+@ Y-Auto
+> Y auto
+
+@ Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)
+> Scale all Y axes automatically (overrides fixed ranges)
+
+@ Screenshot
+> Screenshot
+
+@ Heller Hintergrund (für Berichte/Druck)
+> Light background (for reports/printing)
+
+@   Fenster [s]: 
+>   Window [s]: 
+
+@ Einzelnes Diagramm als PNG oder SVG speichern
+> Save a single chart as PNG or SVG
+
+@ Zeit
+> Time
+
+@ Datei
+> File
+
+@ Ereignisprotokoll …
+> Event log …
+
+@ Ereignisse der Trigger anzeigen und quittieren
+> Show and acknowledge trigger events
+
+@ Notiz ins Ereignisprotokoll …
+> Note to the event log …
+
+@ Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben (offline: Zeitpunkt von Lineal 1)
+> Write your own time-stamped entry to the event log (offline: time of ruler 1)
+
+@ Startbild beim Programmstart zeigen
+> Show start screen at program start
+
+@ Ansicht
+> View
+
+@ Anordnung
+> Layout
+
+@ Diagramme auf der Seite
+> Charts on the page
+
+@ Raster-Spalten
+> Grid columns
+
+@ Seiten / Diagramme
+> Pages / charts
+
+@ Analyse
+> Analysis
+
+@ Bereit
+> Ready
+
+@ Diagramme
+> Charts
+
+@ PID-Optimierung: {0} …
+> PID tuning: {0} …
+
+@ PID-Regler optimieren …
+> Tune PID controller …
+
+@ PID-Optimierung (im Konfigurationsprogramm beim Diagramm einschalten)
+> PID tuning (enable for the chart in the configuration program)
+
+@ {0}: nicht verbunden ({1})
+> {0}: not connected ({1})
+
+@ Datenbank: nicht verbunden
+> Database: not connected
+
+@ \nZykluszeit {0:.0f} ms
+> \nCycle time {0:.0f} ms
+
+@ Es sind noch keine (oder zu wenige) Messdaten vorhanden. Bitte aufzeichnen oder eine CSV-Datei laden.
+> There are no (or too few) measured values yet. Please record or load a CSV file.
+
+@ Zwischen Lineal 1 und 2
+> Between ruler 1 and 2
+
+@ Sichtbarer Bereich
+> Visible range
+
+@ Alle Daten
+> All data
+
+@ 🔔 {0} offen
+> 🔔 {0} open
+
+@ {0} offene (nicht quittierte) Ereignisse\n{1}\nKlicken: Ereignisprotokoll öffnen und quittieren
+> {0} open (unacknowledged) events\n{1}\nClick: open the event log and acknowledge
+
+@ Notiz gespeichert.
+> Note saved.
+
+@ Konfiguration geladen: {0}
+> Configuration loaded: {0}
+
+@ Webserver nicht gestartet: {0}
+> Web server not started: {0}
+
+@ Web: {0}   
+> Web: {0}   
+
+@ Webserver
+> Web server
+
+@ Der Webserver ist nicht aktiviert.\nAktivierung: Konfigurationsprogramm → Webserver.
+> The web server is not enabled.\nEnable it: configuration program → Web server.
+
+@ ?token={0}
+> ?token={0}
+
+@ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}\n\n(in die Zwischenablage kopiert)
+> Address for tablet/smartphone in the same network:\n\n{0}\n\n(copied to the clipboard)
+
+@ Variable
+> Variable
+
+@ Aktuell
+> Current
+
+@ Lineal 1
+> Ruler 1
+
+@ Lineal 2
+> Ruler 2
+
+@ Keine Variablen
+> No variables
+
+@ Bitte zuerst im Konfigurationsprogramm Variablen anlegen.
+> Please create variables in the configuration program first.
+
+@ Fehler in Formeln
+> Errors in formulas
+
+@ \n\nDiese berechneten Variablen bleiben ohne Wert.
+> \n\nThese calculated variables remain without a value.
+
+@ CSV-Datei
+> CSV file
+
+@ Die CSV-Datei konnte nicht angelegt werden:\n{0}
+> The CSV file could not be created:\n{0}
+
+@ ■ Stop
+> ■ Stop
+
+@ Offline
+> Offline
+
+@ CSV/ZIP (*.csv *.zip);;Alle Dateien (*)
+> CSV/ZIP (*.csv *.zip);;All files (*)
+
+@ Fehler beim Laden
+> Error while loading
+
+@ Leer
+> Empty
+
+@ Die Datei enthält keine Daten.
+> The file contains no data.
+
+@ Geladen: {0} ({1} Zeilen)
+> Loaded: {0} ({1} rows)
+
+@ Screenshot – {0}
+> Screenshot – {0}
+
+@ PNG-Bild (*.png);;SVG-Vektorgrafik (*.svg)
+> PNG image (*.png);;SVG vector graphic (*.svg)
+
+@ Screenshot fehlgeschlagen
+> Screenshot failed
+
+@ Screenshot gespeichert: {0}
+> Screenshot saved: {0}
+
+@ Datei konnte nicht geschrieben werden:\n{0}
+> File could not be written:\n{0}
+
+@ Konfigurationsprogramm
+> Configuration program
+
+@ Das Programm konnte nicht gestartet werden:\n{0}
+> The program could not be started:\n{0}
+
+@ Beende … (Aufzeichnung stoppen, CSV archivieren)
+> Closing … (stopping recording, archiving CSV)
+
+# ---------------- tia_io.py
+
+@ Variable in der Steuerung nicht gefunden
+> Variable not found in the controller
+
+@ Lesefehler (Variable nicht lesbar oder geändert)
+> Read error (variable not readable or changed)
+
+# ---------------- tia_logger.py
+
+@ Neue Konfiguration
+> New configuration
+
+@ Lade Oberfläche (Diagramme) …
+> Loading user interface (charts) …
+
+# ---------------- tia_pid.py
+
+@ SIMC (Skogestad)
+> SIMC (Skogestad)
+
+@ IMC / Lambda
+> IMC / Lambda
+
+@ AMIGO
+> AMIGO
+
+@ CHR (aperiodisch)
+> CHR (aperiodic)
+
+@ Ziegler-Nichols
+> Ziegler-Nichols
+
+@ schnell (aggressiv)
+> fast (aggressive)
+
+@ normal
+> normal
+
+@ robust (langsam, sicher)
+> robust (slow, safe)
+
+@ <b>Übernahme:</b> PID_Compact/PID_3Step: Retain.CtrlParams.Gain = Kp, .Ti = Ti [s], .Td = Td [s] (PI: Td = 0), TdFiltRatio z. B. 0.2; bei negativem Kp „Regelsinn invertieren“. CONT_C (FB 41): GAIN, TI, TD als TIME. Die Werte gelten für die Standardform u = Kp·(e + 1/Ti·∫e dt + Td·de/dt) in den aufgezeichneten Einheiten (Kp = Stellwert-Einheit je Istwert-Einheit, z. B. %/°C). Rechnet der Regler mit normierten Werten: Kp_norm = Kp · Istwert-Spanne / Stellwert-Spanne. Negatives Kp: Wirksinn umkehren und den Betrag eintragen. Die Simulation berücksichtigt keine Stellwertbegrenzung.
+> <b>Applying the values:</b> PID_Compact/PID_3Step: Retain.CtrlParams.Gain = Kp, .Ti = Ti [s], .Td = Td [s] (PI: Td = 0), TdFiltRatio e.g. 0.2; with negative Kp “invert control logic”. CONT_C (FB 41): GAIN, TI, TD as TIME. The values apply to the standard form u = Kp·(e + 1/Ti·∫e dt + Td·de/dt) in the recorded units (Kp = output unit per process value unit, e.g. %/°C). If the controller works with normalized values: Kp_norm = Kp · PV span / CV span. Negative Kp: invert the control direction and enter the absolute value. The simulation does not take output limits into account.
+
+@ I-Strecke mit Totzeit: Ki = {0:.4g} 1/s, Totzeit θ = {1:.3g} s – Übereinstimmung {2:.0f} %
+> Integrating process with dead time: Ki = {0:.4g} 1/s, dead time θ = {1:.3g} s – fit {2:.0f} %
+
+@ PT1 mit Totzeit: K = {0:.4g}, T = {1:.3g} s, Totzeit θ = {2:.3g} s – Übereinstimmung {3:.0f} %
+> First order with dead time: K = {0:.4g}, T = {1:.3g} s, dead time θ = {2:.3g} s – fit {3:.0f} %
+
+@ Zu wenige gültige Messwerte im Zeitbereich (mindestens 20 nötig).
+> Too few valid values in the time range (at least 20 required).
+
+@ Der Zeitbereich ist leer.
+> The time range is empty.
+
+@ Der Stellwert ändert sich im gewählten Zeitbereich nicht – ohne Anregung lässt sich die Strecke nicht bestimmen.\nBitte einen Bereich mit Stellwertsprung (Handbetrieb) oder Sollwertsprung wählen.
+> The controller output does not change in the selected time range – without excitation the process cannot be identified.\nPlease choose a range with a step of the output (manual mode) or a setpoint step.
+
+@ Der Istwert ändert sich im gewählten Zeitbereich nicht.
+> The process value does not change in the selected time range.
+
+@ Kein Zusammenhang zwischen Stellwert und Istwert erkennbar.
+> No relationship between controller output and process value detectable.
+
+@ Die Zeitkonstante ist länger als der Zeitbereich – für ein genaueres Modell einen längeren Bereich wählen (bis der Istwert eingeschwungen ist).
+> The time constant is longer than the time range – choose a longer range for a more accurate model (until the process value has settled).
+
+@ Das Modell passt nur mäßig zu den Daten ({0:.0f} %). Ursachen: Störungen, Nichtlinearität, Stellwertbegrenzung oder zu wenig Anregung. Die Parameter vorsichtig verwenden.
+> The model fits the data only moderately ({0:.0f} %). Causes: disturbances, non-linearity, output limits or too little excitation. Use the parameters with care.
+
+@ Totzeit nicht messbar (kleiner als die Abtastzeit). Für die Berechnung wird eine kleine Ersatztotzeit angenommen.
+> Dead time not measurable (smaller than the sampling time). A small substitute dead time is assumed for the calculation.
+
+@ Negative Streckenverstärkung (Istwert sinkt bei steigendem Stellwert, z. B. Kühlung): die Reglerverstärkung ist negativ – in der Steuerung den Wirksinn umkehren und den Betrag verwenden.
+> Negative process gain (process value falls when the output rises, e.g. cooling): the controller gain is negative – invert the control direction in the PLC and use the absolute value.
+
+@ Lambda-Regel für I-Strecken (PI)
+> Lambda rule for integrating processes (PI)
+
+@ schwach gedämpft
+> weakly damped
+
+@ instabil
+> unstable
+
+@ ∞ (kein I-Anteil)
+> ∞ (no integral action)
+
+@ {0}: Kp = {1:.4g}, Ti = {2}, Td = {3}; Parallelform Ki = {4:.4g} 1/s, Kd = {5:.4g} s
+> {0}: Kp = {1:.4g}, Ti = {2}, Td = {3}; parallel form Ki = {4:.4g} 1/s, Kd = {5:.4g} s
+
+# ---------------- tia_pid_dialog.py
+
+@ (keiner)
+> (none)
+
+@ {0} (unbekannt)
+> {0} (unknown)
+
+@ PID-Optimierung – {0}
+> PID tuning – {0}
+
+@ Sollwert:
+> Setpoint:
+
+@ Istwert (Regelgröße):
+> Process value (controlled variable):
+
+@ Stellwert (Reglerausgang):
+> Controller output (manipulated variable):
+
+@ Reglertyp:
+> Controller type:
+
+@ Regelverhalten:
+> Control behaviour:
+
+@ Im Logger öffnet <b>Analyse › PID-Optimierung</b> (oder Rechtsklick ins Diagramm) die Berechnung. Sie bestimmt aus einem Zeitbereich der Aufzeichnung das Streckenmodell und daraus die Reglerparameter. Der Bereich muss eine deutliche Änderung des Stellwerts enthalten (Sollwertsprung oder Stellwertsprung im Handbetrieb). Der Sollwert dient nur der Anzeige.
+> In the logger, <b>Analysis › PID tuning</b> (or right-click in the chart) opens the calculation. It identifies the process model from a time range of the recording and derives the controller parameters from it. The range must contain a clear change of the controller output (setpoint step or output step in manual mode). The setpoint is only used for display.
+
+@ Bitte Istwert und Stellwert (zwei verschiedene Variablen) auswählen.
+> Please select process value and controller output (two different variables).
+
+@ Einstellregel
+> Tuning rule
+
+@ Überschwingen
+> Overshoot
+
+@ Ausregelzeit
+> Settling time
+
+@ PID-Regler-Optimierung – {0}
+> PID controller tuning – {0}
+
+@ Strecke bestimmen und berechnen
+> Identify process and calculate
+
+@ Istwert:
+> Process value:
+
+@ Stellwert:
+> Controller output:
+
+@ Zeitbereich:
+> Time range:
+
+@ Zeitbereich wählen und „Strecke bestimmen und berechnen“ klicken.
+> Choose a time range and click “Identify process and calculate”.
+
+@ Messung und Streckenmodell
+> Measurement and process model
+
+@ Stellwert
+> Controller output
+
+@ Simulierter Sollwertsprung (Modell + Regler)
+> Simulated setpoint step (model + controller)
+
+@ Ergebnis kopieren
+> Copy result
+
+@ Modell und alle Parameter als Text in die Zwischenablage
+> Model and all parameters as text to the clipboard
+
+@ Bitte Istwert und Stellwert auswählen.
+> Please select process value and controller output.
+
+@ Unbekannte Variable(n): 
+> Unknown variable(s): 
+
+@ <b>Streckenmodell:</b> {0}<br>Auswertung mit {1} Punkten im Abstand {2:.3g} s.
+> <b>Process model:</b> {0}<br>Evaluated with {1} points at intervals of {2:.3g} s.
+
+@ Sollwert
+> Setpoint
+
+@ Modell
+> Model
+
+@ Simulierter Sollwertsprung: {0} (grau: übrige Regeln)
+> Simulated setpoint step: {0} (grey: other rules)
+
+@ ; Überschwingen {0}, Ausregelzeit {1}
+> ; overshoot {0}, settling time {1}
+
+# ---------------- tia_recorder.py
+
+@ Archiv ist fehlerhaft
+> Archive is corrupt
+
+@ ⚠ Archivierung von {0} fehlgeschlagen: {1} (CSV-Datei bleibt erhalten)
+> ⚠ Archiving of {0} failed: {1} (CSV file is kept)
+
+@ Demo-Modus (simulierte Werte)
+> Demo mode (simulated values)
+
+@ Verbunden mit {0} ({1} Variablen)
+> Connected to {0} ({1} variables)
+
+@ Verbindung zu {0} fehlgeschlagen: {1}
+> Connection to {0} failed: {1}
+
+@ Lesefehler: {0} – neuer Verbindungsversuch
+> Read error: {0} – trying to reconnect
+
+@ [{0}] Variable {1}: {2}
+> [{0}] Variable {1}: {2}
+
+@ Getrennt
+> Disconnected
+
+@ deaktiviert
+> disabled
+
+@ keine Variablen zugeordnet
+> no variables assigned
+
+@ Starte …
+> Starting …
+
+@ Aufzeichnung gestartet → 
+> Recording started → 
+
+@ nur Anzeige (weder CSV noch Datenbank)
+> display only (neither CSV nor database)
+
+@ {0} Trigger aktiv → Ereignisprotokoll {1}
+> {0} triggers active → event log {1}
+
+@ ⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden
+> ⚠ Database: {0} values could no longer be written
+
+@ gestoppt
+> stopped
+
+@ Gestoppt
+> Stopped
+
+@  – gespeichert in {0}
+>  – saved in {0}
+
+@ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
+> ⚠ Event log not writable: {0}
+
+@ ⚠ CSV-Fehler: {0}
+> ⚠ CSV error: {0}
+
+# ---------------- tia_splash.py
+
+@ Never change a running system – außer, die Regelparameter sind von Ziegler-Nichols.
+> Never change a running system – unless the controller parameters are from Ziegler-Nichols.
+
+@ Es ist nicht kaputt. Es befindet sich in einem undefinierten Zustand.
+> It's not broken. It is in an undefined state.
+
+@ Ein Datenlogger vergisst nie. Außer, die CSV-Datei wurde nicht archiviert.
+> A data logger never forgets. Unless the CSV file was not archived.
+
+@ Totzeit ist die Zeit, in der man auf die Totzeit wartet.
+> Dead time is the time you spend waiting for the dead time.
+
+@ Funktioniert auf der Anlage – und das zählt.
+> Works on the plant – and that's what counts.
+
+@ Bit 0.0 hat heute gute Laune.
+> Bit 0.0 is in a good mood today.
+
+@ Ohne Messung ist alles nur eine Meinung.
+> Without measurement, everything is just an opinion.
+
+@ Wer misst, misst Mist – wer viel misst, loggt viel Mist. Darum: Trigger setzen.
+> Garbage in, garbage logged – that's why you set triggers.
+
+@ Der PID-Regler sagt: Ich schwinge nicht, ich zeige Begeisterung.
+> The PID controller says: I'm not oscillating, I'm showing enthusiasm.
+
+@ Über {0} – psst …
+> About {0} – psst …
+
+@ <div style='font-size:18pt;font-weight:bold'>{0}</div><div style='color:{1}'>Version {2} · Du hast das Geheimnis gefunden! 🎉</div>
+> <div style='font-size:18pt;font-weight:bold'>{0}</div><div style='color:{1}'>Version {2} · You found the secret! 🎉</div>
+
+@ Qt {0} · PyQt {1}
+> Qt {0} · PyQt {1}
+
+@ Python {0} · {1} · {2} {3}<br>Datenordner: {4}<br>Seit dem Start vergangen: {5} s
+> Python {0} · {1} · {2} {3}<br>Data folder: {4}<br>Time since start: {5} s
+
+@ Noch eine Weisheit
+> Another bit of wisdom
+
+@ Zurück an die Arbeit
+> Back to work
+
+@ Version {0}
+> Version {0}
+
+@ Aufzeichnung & Analyse
+> Recording & analysis
+
+@ Konfiguration wählen
+> Choose configuration
+
+@ Zuletzt benutzt:
+> Recently used:
+
+@ Öffnen
+> Open
+
+@ Durchsuchen …
+> Browse …
+
+@ Neue Konfiguration …
+> New configuration …
+
+@ Mit simulierten Werten starten (ohne Steuerung)
+> Start with simulated values (without a controller)
+
+@ Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
+> Do not show at startup (open the last used file)
+
+@ Noch keine Konfiguration benutzt – „Neue Konfiguration …“ oder „Durchsuchen …“.
+> No configuration used yet – “New configuration …” or “Browse …”.
+
+@ Neue Konfiguration anlegen
+> Create new configuration
+
+@ Wird geladen …
+> Loading …
+
+# ---------------- tia_taglist.py
+
+@ Merker (MArea)
+> Memory (MArea)
+
+@ Eingänge (IArea)
+> Inputs (IArea)
+
+@ Ausgänge (QArea)
+> Outputs (QArea)
+
+@ Zeiten (S7Timers)
+> Timers (S7Timers)
+
+@ Zähler (S7Counters)
+> Counters (S7Counters)
+
+# ---------------- tia_trigger_dialog.py
+
+@ Bedingung
+> Condition
+
+@ Meldetext
+> Message text
+
+@ Verzögerung
+> Delay
+
+@ Gehen
+> Clear
+
+@ <b>Bedingung</b> wie eine Formel, z. B. <code>{Temperatur} &gt; 80</code>, <code>{Druck} &lt; 2 and {Pumpe} == 1</code>, <code>abs(ddt({Füllstand})) &gt; 5</code>. Wird sie wahr, <i>kommt</i> das Ereignis (ein Eintrag im Ereignisprotokoll), wird sie wieder falsch, <i>geht</i> es. <b>Meldetext</b>: <code>{Name}</code> wird durch den aktuellen Wert ersetzt (leer = Bedingung). <b>Verzögerung</b>: so lange muss die Bedingung ununterbrochen erfüllt sein. <b>Quittieren</b>: das Ereignis zählt in der Statusleiste des Loggers, bis es im Ereignis-Viewer quittiert wird.
+> <b>Condition</b> like a formula, e.g. <code>{Temperatur} &gt; 80</code>, <code>{Druck} &lt; 2 and {Pumpe} == 1</code>, <code>abs(ddt({Füllstand})) &gt; 5</code>. When it becomes true, the event is <i>raised</i> (an entry in the event log); when it becomes false again, it <i>clears</i>. <b>Message text</b>: <code>{Name}</code> is replaced by the current value (empty = condition). <b>Delay</b>: the condition must be met continuously for this time. <b>Acknowledge</b>: the event is counted in the logger's status bar until it is acknowledged in the event viewer.
+
+@ Trigger (Ereignisse)
+> Triggers (events)
+
+@ + Trigger
+> + Trigger
+
+@ Neuen Trigger anlegen
+> Create new trigger
+
+@ Bedingung bearbeiten …
+> Edit condition …
+
+@ Bedingung im Formeleditor bearbeiten (mit Variablenliste und Testwerten); auch Doppelklick
+> Edit the condition in the formula editor (with variable list and test values); also double-click
+
+@ Duplizieren
+> Duplicate
+
+@ Ausgewählten Trigger kopieren
+> Copy the selected trigger
+
+@ Ausgewählten Trigger löschen
+> Delete the selected trigger
+
+@ nach oben
+> move up
+
+@ nach unten
+> move down
+
+@ Trigger-Bedingung (wahr = Ergebnis ungleich 0)
+> Trigger condition (true = result not equal to 0)
+
+@ Name doppelt vergeben
+> Name used twice
+
+@ {0} Trigger, davon {1} aktiv.
+> {0} triggers, {1} of them active.
+
+# ---------------- tia_i18n.py
+
+@ Ordner mit Sprachdateien öffnen …
+> Open folder with language files …
+
+@ Eigene Übersetzung: de.txt kopieren, umbenennen (z. B. fr.txt) und übersetzen
+> Own translation: copy de.txt, rename it (e.g. fr.txt) and translate it
+
+@ Die Sprache wird beim nächsten Start übernommen.\nJetzt neu starten?
+> The language will be applied at the next start.\nRestart now?

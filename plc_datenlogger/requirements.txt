@@ -1,0 +1,20 @@
+# Abhaengigkeiten fuer Betrieb und Erzeugung der Installationsdatei
+# Treiber (jeweils nur fuer den eigenen Steuerungstyp noetig; fehlt eine Bibliothek, ist nur dieser Treiber gesperrt):
+#   s7     Siemens S7 PUT/GET
+python-snap7>=1.3
+#   tia    Siemens S7-1200/1500 symbolisch (reines Python, Python 3.10 oder neuer)
+s7commplus
+#   clx    Allen-Bradley Logix: Tag-Liste; libplctag ist KEIN pip-Paket (plctag.dll bzw. libplctag.so,
+#          siehe Bedienungsanleitung; build.bat laedt plctag.dll, build_appimage.sh baut libplctag.so)
+pycomm3>=1.2
+#   modbus Modbus TCP: keine Zusatzbibliothek
+PyQt6>=6.4
+pyqtgraph>=0.13
+numpy>=1.24
+Flask>=3.0
+# Datenbanktreiber (nur fuer die jeweilige Datenbank noetig; SQLite ist in Python enthalten)
+PyMySQL>=1.1
+psycopg[binary]>=3.1
+# nur fuer den Build (build.bat, build_appimage.sh)
+pyinstaller>=6.0
+docutils>=0.20

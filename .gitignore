@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Build-Ergebnisse
+build/
+dist/
+installer/
+*.spec
+*.AppImage
+appimage_build/
+bedienungsanleitung.html
+app.ico
+
+# Laufzeitdaten (Konfiguration, Aufzeichnungen, Einstellungen)
+*_last.txt
+*_einstellungen.json
+settings.json
+*.ini
+!**/sprachen/*
+logs/
+archiv/
+ereignisse/
+taglisten/
+treiber/
+web_static/
+*.log
+*.csv
+*.sqlite
+*.db
+!**/*.db.py
+portable.txt
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,1834 @@
+# S7 Datenlogger – Sprachdatei
+# Sprache: Deutsch
+#
+# Neue Sprache: diese Datei kopieren und nach dem Sprachkürzel benennen (z. B. fr.txt, it.txt, es.txt),
+# oben hinter "Sprache:" den Namen der Sprache eintragen und hinter jedem ">" die Übersetzung schreiben.
+#   @ = deutscher Originaltext (nicht ändern)     > = Übersetzung (leer lassen = deutscher Text bleibt)
+#   \n = Zeilenumbruch. Platzhalter wie {0} oder {1:.1f} müssen in der Übersetzung erhalten bleiben.
+#   & vor einem Buchstaben = Tastenkürzel im Menü (Alt + Buchstabe); && = ein einzelnes &-Zeichen.
+# Die Datei muss UTF-8 kodiert bleiben. Gesucht wird im Ordner "sprachen" im Datenordner und im Programmordner.
+# Umschalten: Menü "Sprache" (gilt nach einem Neustart).
+
+# ---------------- s7_block_dialog.py
+
+@ Name
+> 
+
+@ Steuerung
+> 
+
+@ Bereich
+> 
+
+@ Startadresse
+> 
+
+@ Bit
+> 
+
+@ Format
+> 
+
+@ Anzahl
+> 
+
+@ Diagramm › Y-Achse
+> 
+
+@ Farbe
+> 
+
+@ Werteanzeige
+> 
+
+@ Balken
+> 
+
+@ Adressbereich
+> 
+
+@ Ein <b>Block</b> liest <i>Anzahl</i> aufeinanderfolgende Werte gleichen <i>Formats</i> ab der <i>Startadresse</i> mit einer einzigen Anfrage (schneller als einzelne Variablen). Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Bei <b>BOOL</b> sind Startadresse und Bit der erste Bit-Wert; die weiteren Bits folgen fortlaufend. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>). In der letzten Spalte des Baums kann jedes Element einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zugeordnet werden (<i>wie Block</i> = Ziel des Blocks); gelesen werden alle Elemente weiterhin gemeinsam mit einer Anfrage.
+> 
+
+@ Blöcke (Blocklesemodus)
+> 
+
+@ Block / Element
+> 
+
+@ Name (Doppelklick = ändern)
+> 
+
+@ Adresse
+> 
+
+@ Block hinzufügen
+> 
+
+@ Entfernen
+> 
+
+@ Markierten Block testen
+> 
+
+@ Liest den Block einmal aus der SPS und zeigt die ersten Werte und die Lesezeit
+> 
+
+@ <b>Elemente der Blöcke</b> – Namen und Ziel (Diagramm › Y-Achse) der einzelnen Werte bearbeiten
+> 
+
+@ (wie Block)
+> 
+
+@ Für alle Elemente des markierten Blocks setzen
+> 
+
+@ Ziel:
+> 
+
+@ {0}   ({1} Bytes)
+> 
+
+@ Ziel setzen
+> 
+
+@ Bitte zuerst einen Block markieren.
+> 
+
+@ Block testen
+> 
+
+@ Lesen fehlgeschlagen:\n{0}
+> 
+
+@ {0}: {1} Werte ({2} Bytes) in {3:.1f} ms gelesen.\n\nErste Werte: {4}
+> 
+
+@ „{0}“: Name darf nicht leer sein und keines der Zeichen ; {{ }} [ ] enthalten.
+> 
+
+@ Blocknamen müssen eindeutig sein.
+> 
+
+@ {0}: Elementname „{1}“ darf keines der Zeichen ; {{ }} enthalten.
+> 
+
+@ Elementname „{0}“ kommt mehrfach vor.
+> 
+
+@ {0}: Name kollidiert mit vorhandenen Variablen ({1}).
+> 
+
+@ Blöcke prüfen
+> 
+
+# ---------------- s7_browser.py
+
+@ Variablen aus SPS-Symbolen wählen
+> 
+
+@ Die SPS liefert über S7-Kommunikation <b>keine Variablennamen</b> – diese stehen nur im Projekt. Importieren Sie daher die DB-Quelle(n): TIA Portal: Rechtsklick auf den Baustein › <i>Quelle aus Bausteinen generieren</i> (.db/.scl); STEP 7: .db/.awl. Die Adressen werden für <b>nicht optimierte</b> Bausteine berechnet. UDTs bitte ebenfalls importieren.
+> 
+
+@ DB-Quelle importieren…
+> 
+
+@ Quelle entfernen
+> 
+
+@ Quelle des markierten DBs aus der Liste entfernen
+> 
+
+@ Mit SPS abgleichen
+> 
+
+@ DB-Nummern und -Größen aus der SPS lesen und vergleichen
+> 
+
+@ Filter (Name)…
+> 
+
+@ Typ
+> 
+
+@ Hinweis
+> 
+
+@ Auswahl übernehmen
+> 
+
+@ Schließen
+> 
+
+@ Neue Variablen anlegen in:
+> 
+
+@ Nicht lesbare Quellen: 
+> 
+
+@ Größe unbekannt
+> 
+
+@ nur in der SPS ({0}) – keine Symbolinformation, Quelle importieren
+> 
+
+@ SPS: {0} Datenbausteine gefunden.
+> 
+
+@ {0} Bytes (aus Quelle)
+> 
+
+@  · ⚠ DB in der SPS nicht gefunden
+> 
+
+@  · SPS: {0} Bytes ⚠ Größe weicht ab
+> 
+
+@ Typ wird nicht unterstützt
+> 
+
+@ bereits in der Liste
+> 
+
+@ DB-/UDT-Quellen importieren
+> 
+
+@ Quelldateien (*.db *.scl *.awl *.src *.udt *.txt);;Alle Dateien (*)
+> 
+
+@ DB-Nummer
+> 
+
+@ Nummer des Datenbausteins „{0}“ in der SPS\n(TIA-Quellen enthalten keine Nummer):
+> 
+
+@ Import
+> 
+
+@ Bitte zuerst einen Datenbaustein mit importierter Quelle markieren.
+> 
+
+@ SPS-Abgleich fehlgeschlagen
+> 
+
+@ {0}\n\nHinweis: Bei S7-1200/1500 muss PUT/GET erlaubt sein; die Bausteinliste kann durch die Schutzstufe gesperrt sein.
+> 
+
+@ SPS-Abgleich
+> 
+
+@ In der SPS wurden keine Datenbausteine gefunden.
+> 
+
+@ Auswahl
+> 
+
+@ Es sind keine neuen Variablen angehakt.
+> 
+
+# ---------------- s7_common.py
+
+@ Untereinander
+> 
+
+@ Nebeneinander
+> 
+
+@ Tabs
+> 
+
+@ Raster (Grid)
+> 
+
+# ---------------- s7_config.py
+
+@ Byte
+> 
+
+@ Testwert
+> 
+
+@ Formel
+> 
+
+@ IP-Adresse
+> 
+
+@ Rack
+> 
+
+@ Slot
+> 
+
+@ Intervall
+> 
+
+@ Aktiv
+> 
+
+@ Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)
+> 
+
+@ z. B. Prüfstand 3
+> 
+
+@ Projektname: erscheint in den Fenstertiteln, im Webserver und in der Logdatei
+> 
+
+@ + Steuerung
+> 
+
+@ Steuerung entfernen
+> 
+
+@ Projektname:
+> 
+
+@ Dateiname-Präfix und Name des Archiv-Unterordners
+> 
+
+@ unbegrenzt
+> 
+
+@ Ist die Anzahl erreicht, wird die Datei gepackt, archiviert und eine neue begonnen (0 = unbegrenzt)
+> 
+
+@ Beim Beenden des Loggers die aktuelle CSV-Datei archivieren
+> 
+
+@ CSV-Datei schreiben
+> 
+
+@ Ausgeschaltet: keine CSV-Datei (z. B. nur Datenbank, Reiter „Datenbank“)
+> 
+
+@ CSV-Ordner:
+> 
+
+@ CSV-Name:
+> 
+
+@ Max. Datensätze je Datei:
+> 
+
+@ Archiv-Ordner:
+> 
+
+@ Bilddatei (PNG/SVG/JPG), wird im Logger rechts oben angezeigt
+> 
+
+@ Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon
+> 
+
+@ Logo wählen
+> 
+
+@ Programm-Icon wählen
+> 
+
+@ Automatisch (wie Standard-Anordnung)
+> 
+
+@ automatisch
+> 
+
+@ Anzahl der Spalten bei der Anordnung „Raster“ (0 = automatisch aus der Diagrammzahl)
+> 
+
+@ Balken für Aktualwerte anzeigen
+> 
+
+@ Anzeigefenster (online):
+> 
+
+@ Standard-Anordnung der Seiten:
+> 
+
+@ Diagramme auf einer Seite:
+> 
+
+@ Raster-Spalten:
+> 
+
+@ Logo (rechts oben):
+> 
+
+@ Programm-Icon:
+> 
+
+@ Webserver starten (Diagramme im Browser, z. B. mit Tablet/Smartphone)
+> 
+
+@ 0.0.0.0 = erreichbar im ganzen Netzwerk, 127.0.0.1 = nur auf diesem Rechner
+> 
+
+@ leer = ohne Zugriffsschutz
+> 
+
+@ Zugriffscode: die Seite wird mit ?token=CODE aufgerufen
+> 
+
+@ Headless-Modus: ohne Diagramme starten, nur aufzeichnen
+> 
+
+@ Der Logger läuft ohne Fenster (z. B. als Dienst); Webserver und Archivierung bleiben aktiv. Mit dem Startparameter --gui lässt sich trotzdem die Oberfläche öffnen.
+> 
+
+@ Adresse (Host):
+> 
+
+@ Port:
+> 
+
+@ Zugriffscode:
+> 
+
+@ Aktualisierung im Browser:
+> 
+
+@ Projekt && Steuerungen
+> 
+
+@ Aufzeichnung
+> 
+
+@ Anzeige
+> 
+
+@ Webserver && Headless
+> 
+
+@ Datenbank
+> 
+
+@ Trigger && Ereignisse
+> 
+
+@ Auto-Skalierung
+> 
+
+@ leer = Standardseite
+> 
+
+@ Diagramme mit gleichem Seitennamen werden gemeinsam in einem Tab/Dock angezeigt
+> 
+
+@ Eigenschaften der Auswahl (Diagramm / Y-Achse)
+> 
+
+@ Name:
+> 
+
+@ Seite (Tab):
+> 
+
+@ Y min:
+> 
+
+@ Y max:
+> 
+
+@ PID-Regler-Optimierung
+> 
+
+@ Im Logger lassen sich für dieses Diagramm aus Soll-, Ist- und Stellwert die PID-Parameter berechnen
+> 
+
+@ Einstellen …
+> 
+
+@ Regler:
+> 
+
+@ + Diagramm
+> 
+
+@ + Y-Achse
+> 
+
+@ <b>Diagramme › Y-Achsen › Variablen</b><br>Variable auf eine Y-Achse oder auf eine andere Variable ziehen
+> 
+
+@ <b>Variablen</b>
+> 
+
+@ Aus SPS/DB-Quelle wählen…
+> 
+
+@ Blöcke (Blocklesemodus)…
+> 
+
+@ Berechnete Variable…
+> 
+
+@ Variable hinzufügen
+> 
+
+@ Verbindung testen
+> 
+
+@ Öffnen…
+> 
+
+@ Speichern
+> 
+
+@ Speichern unter…
+> 
+
+@ &Datei
+> 
+
+@ &Neu
+> 
+
+@ &Öffnen …
+> 
+
+@ &Speichern
+> 
+
+@ Speichern &unter …
+> 
+
+@ Logger mit dieser Konfiguration &starten
+> 
+
+@ &Beenden
+> 
+
+@ Sprache
+> 
+
+@ ohne Projektname
+> 
+
+@ neu, nicht gespeichert
+> 
+
+@ S7 Konfiguration – {0} – {1}
+> 
+
+@ Bitte eine Steuerung markieren; mindestens eine muss bleiben.
+> 
+
+@ Steuerung entfernt – ihre Variablen und Blöcke gehören jetzt zur ersten Steuerung.
+> 
+
+@ Trigger bearbeiten …
+> 
+
+@ Bedingungen festlegen, bei denen ein Eintrag ins Ereignisprotokoll geschrieben wird
+> 
+
+@ Ereignisprotokoll anzeigen …
+> 
+
+@ Ereignisse anzeigen und quittieren
+> 
+
+@ leer = <CSV-Ordner>/<CSV-Name>_ereignisse.csv
+> 
+
+@ Textdatei (CSV, Semikolon) mit allen Ereignissen und Quittierungen
+> 
+
+@ Ereignisdatei
+> 
+
+@ Ereignisprotokoll (*.csv)
+> 
+
+@ Trigger:
+> 
+
+@ Ereignisdatei:
+> 
+
+@ Ein Trigger schreibt einen Eintrag mit Zeitstempel ins Ereignisprotokoll, sobald seine Bedingung erfüllt ist (z. B. <code>{Temperatur} &gt; 80</code>). Offene Ereignisse zeigt der Logger in der Statusleiste an; quittiert wird im Ereignis-Viewer.
+> 
+
+@ keine Trigger angelegt
+> 
+
+@ {0} Trigger, davon {1} aktiv ({2})
+> 
+
+@ Trigger geändert – wirksam nach dem Speichern und Neustart der Aufzeichnung.
+> 
+
+@ Standard
+> 
+
+@ 0 = Standard (MariaDB 3306, PostgreSQL/TimescaleDB 5432)
+> 
+
+@ Wird im Klartext in der Konfigurationsdatei gespeichert
+> 
+
+@ Tabellenname (Buchstaben, Ziffern, _); wird bei Bedarf angelegt
+> 
+
+@ SQLite-Datei; relativ = im Datenordner des Programms
+> 
+
+@ SQLite-Datenbank
+> 
+
+@ SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)
+> 
+
+@ Nur Änderungen schreiben (spätestens jede Minute)
+> 
+
+@ Spart Platz: ein Wert wird nur geschrieben, wenn er sich geändert hat
+> 
+
+@ Datenbank testen
+> 
+
+@ Verbindung prüfen und die Tabelle anlegen
+> 
+
+@ Datenbank:
+> 
+
+@ Server / Port:
+> 
+
+@ Datenbankname:
+> 
+
+@ SQLite-Datei:
+> 
+
+@ Benutzer / Passwort:
+> 
+
+@ Tabelle:
+> 
+
+@ Standard ({0})
+> 
+
+@ Der Datenbanktreiber fehlt:\n{0}\n\nMariaDB: pip install PyMySQL\nTimescaleDB/PostgreSQL: pip install "psycopg[binary]"
+> 
+
+@ Verbindung fehlgeschlagen:\n{0}
+> 
+
+@ Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)
+> 
+
+@ Auto
+> 
+
+@  ({0} in anderen Diagrammen)
+> 
+
+@ {0}: Ist {1}, Stell {2}
+> 
+
+@ , Soll {0}
+> 
+
+@ Zuordnung einzelner Block-Elemente: „Blöcke (Blocklesemodus)…“.
+> 
+
+@ Berechnete Variable – Doppelklick zum Bearbeiten
+> 
+
+@ berechnet
+> 
+
+@ {0} Blöcke mit {1} Variablen – werden mit je einer Anfrage gelesen.
+> 
+
+@ Archiv-Ordner wählen
+> 
+
+@ CSV-Ordner wählen
+> 
+
+@ Steuerung wählen
+> 
+
+@ Symbole aus Steuerung:
+> 
+
+@ {0} Variablen übernommen – bitte Adressen mit „Verbindung testen“ prüfen.
+> 
+
+@ CSV-Name
+> 
+
+@ Der CSV-Name darf keines der Zeichen \\ / : * ? " < > | enthalten.
+> 
+
+@ Steuerungen prüfen
+> 
+
+@ Die Namen der Steuerungen müssen eindeutig sein und dürfen kein ; [ ] enthalten.
+> 
+
+@ Jede Steuerung braucht eine IP-Adresse.
+> 
+
+@ Namen prüfen
+> 
+
+@ Variablennamen müssen eindeutig, nicht leer und ohne ';' sein.
+> 
+
+@ {0}: unbekannte oder später definierte Variablen: 
+> 
+
+@ Formeln prüfen
+> 
+
+@ Y-Skalierung
+> 
+
+@ {0} › {1}: Y max muss größer als Y min sein.
+> 
+
+@ Der Tabellenname darf nur Buchstaben, Ziffern und _ enthalten und muss mit einem Buchstaben beginnen.
+> 
+
+@ Weder CSV-Datei noch Datenbank sind eingeschaltet – die Messwerte werden nur angezeigt, aber nicht gespeichert. Trotzdem speichern?
+> 
+
+@ PID-Optimierung
+> 
+
+@ Unbekannte Variablen in der PID-Optimierung:\n\n
+> 
+
+@ \n\nTrotzdem speichern?
+> 
+
+@ Trigger prüfen
+> 
+
+@ Fehlerhafte Trigger (werden beim Aufzeichnen übersprungen):\n\n
+> 
+
+@ Die Datei konnte nicht geschrieben werden:\n{0}
+> 
+
+@ Gespeichert: {0}
+> 
+
+@ Konfiguration speichern unter
+> 
+
+@ Konfiguration laden
+> 
+
+@ {0}\n\nDie Datei konnte nicht gelesen werden:\n{1}
+> 
+
+@ Trigger
+> 
+
+@ Die Trigger konnten nicht gelesen werden:\n{0}
+> 
+
+@ Geladen: {0}
+> 
+
+@ Konfiguration öffnen
+> 
+
+@ Logger starten
+> 
+
+@ Der Logger konnte nicht gestartet werden:\n{0}
+> 
+
+@ Logger gestartet.
+> 
+
+@ Fehler: keine Verbindung
+> 
+
+@ Fehler: {0}
+> 
+
+@ Verbindung fehlgeschlagen
+> 
+
+# ---------------- s7_db.py
+
+@ Keine
+> 
+
+@ SQLite (Datei)
+> 
+
+@ MariaDB / MySQL
+> 
+
+@ TimescaleDB / PostgreSQL
+> 
+
+@ Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)
+> 
+
+@ normale PostgreSQL-Tabelle, TimescaleDB nicht verfügbar: {0}
+> 
+
+@ Keine Datenbank gewählt.
+> 
+
+@ Verbindung erfolgreich: {0}
+> 
+
+@ [Datenbank] {0}
+> 
+
+@  – {0} Werte geschrieben
+> 
+
+@ , {0} verworfen (Puffer voll)
+> 
+
+@ Verbinde mit {0} …
+> 
+
+@ Verbindung fehlgeschlagen: {0}
+> 
+
+# ---------------- s7_event_viewer.py
+
+@ Kommt
+> 
+
+@ Geht
+> 
+
+@ Priorität
+> 
+
+@ Meldung
+> 
+
+@ Quittiert
+> 
+
+@ Notiz ins Ereignisprotokoll
+> 
+
+@ Zeitpunkt, auf den sich die Notiz bezieht (Standard: jetzt)
+> 
+
+@ z. B. Ventil V12 getauscht, Sollwert auf 65 °C geändert …
+> 
+
+@ Zeit:
+> 
+
+@ Notiz:
+> 
+
+@ Verfasser:
+> 
+
+@ Notiz
+> 
+
+@ Bitte einen Text eingeben.
+> 
+
+@ Die Notiz konnte nicht gespeichert werden:\n{0}
+> 
+
+@ nur offene
+> 
+
+@ alle Prioritäten
+> 
+
+@ nur Notizen
+> 
+
+@ Suchen (Trigger oder Meldung) …
+> 
+
+@ Notiz hinzufügen …
+> 
+
+@ Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben
+> 
+
+@ Markierte quittieren
+> 
+
+@ Ausgewählte offene Ereignisse quittieren (auch Doppelklick auf eine Zeile)
+> 
+
+@ Alle quittieren
+> 
+
+@ Ordner öffnen
+> 
+
+@ Ordner der Ereignisdatei im Explorer öffnen
+> 
+
+@ Datei öffnen …
+> 
+
+@ Ereignisprotokoll – {0}
+> 
+
+@ Datei nicht lesbar: {0}
+> 
+
+@ Notiz von {0}
+> 
+
+@ offen
+> 
+
+@ – (ohne Quittierung)
+> 
+
+@  (angezeigt: die neuesten {0})
+> 
+
+@ {0} Ereignisse, davon {1} offen · {2} Notizen · {3} nach Filter{4}
+> 
+
+@ Alle quittieren ({0})
+> 
+
+@ Quittieren
+> 
+
+@ Keine offenen Ereignisse ausgewählt.
+> 
+
+@ Die Ereignisdatei ist nicht beschreibbar:\n{0}
+> 
+
+@ {0} offene Ereignisse quittieren?
+> 
+
+@ Ordner
+> 
+
+@ Der Ordner existiert noch nicht:\n{0}\n\nEr wird beim ersten Ereignis angelegt.
+> 
+
+@ Ereignisprotokoll öffnen
+> 
+
+@ Ereignisprotokoll (*.csv);;Alle Dateien (*)
+> 
+
+# ---------------- s7_events.py
+
+@ Info
+> 
+
+@ Warnung
+> 
+
+@ Alarm
+> 
+
+@ Name fehlt oder enthält ';'
+> 
+
+@ unbekannte Variablen: 
+> 
+
+@ Meldetext: unbekannte Variablen 
+> 
+
+@ Die Notiz ist leer.
+> 
+
+@ Trigger {0} übersprungen: {1}
+> 
+
+# ---------------- s7_formula.py
+
+@ abs(x) – Betrag
+> 
+
+@ min(a, b, …) – kleinster Wert
+> 
+
+@ max(a, b, …) – größter Wert
+> 
+
+@ sqrt(x) – Quadratwurzel
+> 
+
+@ sin(x) – Sinus (Bogenmaß)
+> 
+
+@ cos(x) – Kosinus (Bogenmaß)
+> 
+
+@ tan(x) – Tangens (Bogenmaß)
+> 
+
+@ asin(x) – Arkussinus
+> 
+
+@ acos(x) – Arkuskosinus
+> 
+
+@ atan(x) – Arkustangens
+> 
+
+@ atan2(y, x) – Arkustangens zweier Werte
+> 
+
+@ exp(x) – e hoch x
+> 
+
+@ ln(x) – natürlicher Logarithmus
+> 
+
+@ log10(x) – Zehnerlogarithmus
+> 
+
+@ log(x, basis) – Logarithmus
+> 
+
+@ floor(x) – abrunden
+> 
+
+@ ceil(x) – aufrunden
+> 
+
+@ round(x, stellen) – runden
+> 
+
+@ hypot(a, b) – √(a²+b²)
+> 
+
+@ radians(grad) – Grad in Bogenmaß
+> 
+
+@ degrees(rad) – Bogenmaß in Grad
+> 
+
+@ sign(x) – Vorzeichen (-1, 0, 1)
+> 
+
+@ clamp(x, min, max) – auf Bereich begrenzen
+> 
+
+@ ddt(x) – Ableitung nach der Zeit (pro Sekunde)
+> 
+
+@ integ(x) – Integral über die Zeit (x · s)
+> 
+
+@ avg(x, n) – gleitender Mittelwert über n Messwerte
+> 
+
+@ Nicht erlaubtes Element in der Formel: {0}
+> 
+
+@ Nur Zahlen sind als Konstanten erlaubt
+> 
+
+@ „{0}“ ist eine Funktion und braucht Klammern: {1}(…)
+> 
+
+@ Unbekannter Name „{0}“ – Variablen in {{geschweiften Klammern}} angeben
+> 
+
+@ Unbekannte Funktion in der Formel
+> 
+
+@ {0}(): Schlüsselwort-Argumente sind nicht erlaubt
+> 
+
+@ {0}(): falsche Anzahl von Argumenten
+> 
+
+@ Die Formel ist leer
+> 
+
+@ Die Formel ist zu lang (max. {0} Zeichen)
+> 
+
+@ Leere Variablenangabe {}
+> 
+
+@ Unpaarige geschweifte Klammer
+> 
+
+@ Die Formel ist zu komplex
+> 
+
+# ---------------- s7_formula_dialog.py
+
+@ <b>Variablen</b> in geschweiften Klammern: <code>{Name}</code> (Doppelklick in der Liste fügt ein). Operatoren: <code>+ - * / // % **</code>, Vergleiche <code>&lt; &gt; == !=</code>, <code>and or not</code>, Bedingung: <code>a if {x} &gt; 5 else b</code>. Konstanten: 
+> 
+
+@ . Berechnete Variablen dürfen früher definierte berechnete Variablen verwenden.
+> 
+
+@ Berechnete Variable
+> 
+
+@ Name der berechneten Variable
+> 
+
+@ z. B.  ({Temp_Vorlauf} + {Temp_Ruecklauf}) / 2
+> 
+
+@ Verwendete Variable
+> 
+
+@ Prüfen / Berechnen
+> 
+
+@ Variablen filtern…
+> 
+
+@ <b>Variablen</b> (Doppelklick = einfügen)
+> 
+
+@ <b>Funktionen</b> (Doppelklick = einfügen)
+> 
+
+@ <b>Formel</b>
+> 
+
+@ Diese Variable existiert nicht (oder ist erst später definiert)
+> 
+
+@ ✓ Formel gültig. Ergebnis mit den Testwerten: 
+> 
+
+@ nicht berechenbar (z. B. Division durch 0 oder fehlender Testwert)
+> 
+
+@ <br>⚠ Unbekannte Variablen: {0}
+> 
+
+@ Bitte einen Namen ohne ';' eingeben.
+> 
+
+@ Der Name „{0}“ ist bereits vergeben.
+> 
+
+@ Die Formel ist ungültig oder leer.
+> 
+
+@ Unbekannte oder erst später definierte Variablen:\n
+> 
+
+@ Die Formel darf sich nicht auf sich selbst beziehen.
+> 
+
+# ---------------- s7_gui.py
+
+@ Das Archiv enthält keine CSV-Datei.
+> 
+
+@ Zum Umordnen ziehen und auf die Titelzeile eines anderen Diagramms ablegen
+> 
+
+@ Kurve ausblenden
+> 
+
+@ Kurve einblenden
+> 
+
+@ Alle Kurven dieses Diagramms einblenden
+> 
+
+@ Konfiguration
+> 
+
+@ Die Konfiguration konnte nicht gelesen werden:\n{0}\n\n{1}
+> 
+
+@ Werte
+> 
+
+@ ▶ Start
+> 
+
+@ Online
+> 
+
+@ CSV laden
+> 
+
+@ Konfig-Editor
+> 
+
+@ Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen
+> 
+
+@ Config laden …
+> 
+
+@ Andere Konfigurationsdatei laden (beliebiger Dateiname)
+> 
+
+@ Konfiguration neu laden
+> 
+
+@ Webserver-Adresse …
+> 
+
+@ Beenden
+> 
+
+@ Lineale zurücksetzen
+> 
+
+@ Demo
+> 
+
+@ Simulierte Werte statt SPS-Verbindung (vor dem Start wählen)
+> 
+
+@ Bool im Diagramm
+> 
+
+@ BOOL-Kurven zusätzlich im Diagramm zeichnen (sonst nur als Linie/Streifen neben dem Namen in der Legende)
+> 
+
+@ Y-Auto
+> 
+
+@ Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)
+> 
+
+@ Screenshot
+> 
+
+@ Heller Hintergrund (für Berichte/Druck)
+> 
+
+@   Fenster [s]: 
+> 
+
+@ Einzelnes Diagramm als PNG oder SVG speichern
+> 
+
+@ Zeit
+> 
+
+@ Datei
+> 
+
+@ Ereignisprotokoll …
+> 
+
+@ Ereignisse der Trigger anzeigen und quittieren
+> 
+
+@ Notiz ins Ereignisprotokoll …
+> 
+
+@ Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben (offline: Zeitpunkt von Lineal 1)
+> 
+
+@ Startbild beim Programmstart zeigen
+> 
+
+@ Ansicht
+> 
+
+@ Anordnung
+> 
+
+@ Diagramme auf der Seite
+> 
+
+@ Raster-Spalten
+> 
+
+@ Automatisch
+> 
+
+@ Seiten / Diagramme
+> 
+
+@ Analyse
+> 
+
+@ Bereit
+> 
+
+@ Diagramme
+> 
+
+@ PID-Optimierung: {0} …
+> 
+
+@ PID-Regler optimieren …
+> 
+
+@ PID-Optimierung (im Konfigurationsprogramm beim Diagramm einschalten)
+> 
+
+@ {0}: nicht verbunden ({1})
+> 
+
+@ Datenbank: nicht verbunden
+> 
+
+@ \nZykluszeit {0:.0f} ms
+> 
+
+@ Es sind noch keine (oder zu wenige) Messdaten vorhanden. Bitte aufzeichnen oder eine CSV-Datei laden.
+> 
+
+@ Zwischen Lineal 1 und 2
+> 
+
+@ Sichtbarer Bereich
+> 
+
+@ Alle Daten
+> 
+
+@ 🔔 {0} offen
+> 
+
+@ {0} offene (nicht quittierte) Ereignisse\n{1}\nKlicken: Ereignisprotokoll öffnen und quittieren
+> 
+
+@ Notiz gespeichert.
+> 
+
+@ Konfiguration geladen: {0}
+> 
+
+@ Webserver nicht gestartet: {0}
+> 
+
+@ Web: {0}   
+> 
+
+@ Webserver
+> 
+
+@ Der Webserver ist nicht aktiviert.\nAktivierung: Konfigurationsprogramm → Webserver.
+> 
+
+@ ?token={0}
+> 
+
+@ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}\n\n(in die Zwischenablage kopiert)
+> 
+
+@ Variable
+> 
+
+@ Aktuell
+> 
+
+@ Lineal 1
+> 
+
+@ Lineal 2
+> 
+
+@ Keine Variablen
+> 
+
+@ Bitte zuerst im Konfigurationsprogramm Variablen anlegen.
+> 
+
+@ Fehler in Formeln
+> 
+
+@ \n\nDiese berechneten Variablen bleiben ohne Wert.
+> 
+
+@ CSV-Datei
+> 
+
+@ Die CSV-Datei konnte nicht angelegt werden:\n{0}
+> 
+
+@ ■ Stop
+> 
+
+@ Offline
+> 
+
+@ CSV/ZIP (*.csv *.zip);;Alle Dateien (*)
+> 
+
+@ Fehler beim Laden
+> 
+
+@ Leer
+> 
+
+@ Die Datei enthält keine Daten.
+> 
+
+@ Geladen: {0} ({1} Zeilen)
+> 
+
+@ Screenshot – {0}
+> 
+
+@ PNG-Bild (*.png);;SVG-Vektorgrafik (*.svg)
+> 
+
+@ Screenshot fehlgeschlagen
+> 
+
+@ Screenshot gespeichert: {0}
+> 
+
+@ Datei konnte nicht geschrieben werden:\n{0}
+> 
+
+@ Konfigurationsprogramm
+> 
+
+@ Das Programm konnte nicht gestartet werden:\n{0}
+> 
+
+@ Beende … (Aufzeichnung stoppen, CSV archivieren)
+> 
+
+# ---------------- s7_logger.py
+
+@ Neue Konfiguration
+> 
+
+@ Lade Oberfläche (Diagramme) …
+> 
+
+# ---------------- s7_pid.py
+
+@ SIMC (Skogestad)
+> 
+
+@ IMC / Lambda
+> 
+
+@ AMIGO
+> 
+
+@ CHR (aperiodisch)
+> 
+
+@ Ziegler-Nichols
+> 
+
+@ schnell (aggressiv)
+> 
+
+@ normal
+> 
+
+@ robust (langsam, sicher)
+> 
+
+@ <b>Übernahme:</b> S7-1200/1500 PID_Compact: Retain.CtrlParams.Gain = Kp, .Ti = Ti [s], .Td = Td [s] (PI: Td = 0). S7-300/400 CONT_C (FB 41): GAIN = Kp, TI = Ti, TD = Td als TIME (z. B. T#32S), TM_LAG ≈ Td/5. Die Werte gelten für die Standardform u = Kp·(e + 1/Ti·∫e dt + Td·de/dt) in den aufgezeichneten Einheiten (Kp = Stellwert-Einheit je Istwert-Einheit, z. B. %/°C). Rechnet der Regler mit normierten Werten: Kp_norm = Kp · Istwert-Spanne / Stellwert-Spanne. Negatives Kp: Wirksinn umkehren und den Betrag eintragen. Die Simulation berücksichtigt keine Stellwertbegrenzung.
+> 
+
+@ I-Strecke mit Totzeit: Ki = {0:.4g} 1/s, Totzeit θ = {1:.3g} s – Übereinstimmung {2:.0f} %
+> 
+
+@ PT1 mit Totzeit: K = {0:.4g}, T = {1:.3g} s, Totzeit θ = {2:.3g} s – Übereinstimmung {3:.0f} %
+> 
+
+@ Zu wenige gültige Messwerte im Zeitbereich (mindestens 20 nötig).
+> 
+
+@ Der Zeitbereich ist leer.
+> 
+
+@ Der Stellwert ändert sich im gewählten Zeitbereich nicht – ohne Anregung lässt sich die Strecke nicht bestimmen.\nBitte einen Bereich mit Stellwertsprung (Handbetrieb) oder Sollwertsprung wählen.
+> 
+
+@ Der Istwert ändert sich im gewählten Zeitbereich nicht.
+> 
+
+@ Kein Zusammenhang zwischen Stellwert und Istwert erkennbar.
+> 
+
+@ Die Zeitkonstante ist länger als der Zeitbereich – für ein genaueres Modell einen längeren Bereich wählen (bis der Istwert eingeschwungen ist).
+> 
+
+@ Das Modell passt nur mäßig zu den Daten ({0:.0f} %). Ursachen: Störungen, Nichtlinearität, Stellwertbegrenzung oder zu wenig Anregung. Die Parameter vorsichtig verwenden.
+> 
+
+@ Totzeit nicht messbar (kleiner als die Abtastzeit). Für die Berechnung wird eine kleine Ersatztotzeit angenommen.
+> 
+
+@ Negative Streckenverstärkung (Istwert sinkt bei steigendem Stellwert, z. B. Kühlung): die Reglerverstärkung ist negativ – in der Steuerung den Wirksinn umkehren und den Betrag verwenden.
+> 
+
+@ Lambda-Regel für I-Strecken (PI)
+> 
+
+@ schwach gedämpft
+> 
+
+@ instabil
+> 
+
+@ ∞ (kein I-Anteil)
+> 
+
+@ {0}: Kp = {1:.4g}, Ti = {2}, Td = {3}; Parallelform Ki = {4:.4g} 1/s, Kd = {5:.4g} s
+> 
+
+# ---------------- s7_pid_dialog.py
+
+@ (keiner)
+> 
+
+@ {0} (unbekannt)
+> 
+
+@ PID-Optimierung – {0}
+> 
+
+@ Sollwert:
+> 
+
+@ Istwert (Regelgröße):
+> 
+
+@ Stellwert (Reglerausgang):
+> 
+
+@ Reglertyp:
+> 
+
+@ Regelverhalten:
+> 
+
+@ Im Logger öffnet <b>Analyse › PID-Optimierung</b> (oder Rechtsklick ins Diagramm) die Berechnung. Sie bestimmt aus einem Zeitbereich der Aufzeichnung das Streckenmodell und daraus die Reglerparameter. Der Bereich muss eine deutliche Änderung des Stellwerts enthalten (Sollwertsprung oder Stellwertsprung im Handbetrieb). Der Sollwert dient nur der Anzeige.
+> 
+
+@ Bitte Istwert und Stellwert (zwei verschiedene Variablen) auswählen.
+> 
+
+@ Einstellregel
+> 
+
+@ Überschwingen
+> 
+
+@ Ausregelzeit
+> 
+
+@ PID-Regler-Optimierung – {0}
+> 
+
+@ Strecke bestimmen und berechnen
+> 
+
+@ Istwert:
+> 
+
+@ Stellwert:
+> 
+
+@ Zeitbereich:
+> 
+
+@ Zeitbereich wählen und „Strecke bestimmen und berechnen“ klicken.
+> 
+
+@ Messung und Streckenmodell
+> 
+
+@ Stellwert
+> 
+
+@ Simulierter Sollwertsprung (Modell + Regler)
+> 
+
+@ Ergebnis kopieren
+> 
+
+@ Modell und alle Parameter als Text in die Zwischenablage
+> 
+
+@ Bitte Istwert und Stellwert auswählen.
+> 
+
+@ Unbekannte Variable(n): 
+> 
+
+@ <b>Streckenmodell:</b> {0}<br>Auswertung mit {1} Punkten im Abstand {2:.3g} s.
+> 
+
+@ Sollwert
+> 
+
+@ Modell
+> 
+
+@ Simulierter Sollwertsprung: {0} (grau: übrige Regeln)
+> 
+
+@ ; Überschwingen {0}, Ausregelzeit {1}
+> 
+
+# ---------------- s7_recorder.py
+
+@ Archiv ist fehlerhaft
+> 
+
+@ ⚠ Archivierung von {0} fehlgeschlagen: {1} (CSV-Datei bleibt erhalten)
+> 
+
+@ Demo-Modus (simulierte Werte)
+> 
+
+@ Verbunden mit {0}
+> 
+
+@ Verbindung zu {0} fehlgeschlagen: {1}
+> 
+
+@ Lesefehler: {0} – neuer Verbindungsversuch
+> 
+
+@ Getrennt
+> 
+
+@ deaktiviert
+> 
+
+@ keine Variablen zugeordnet
+> 
+
+@ Starte …
+> 
+
+@ Aufzeichnung gestartet → 
+> 
+
+@ nur Anzeige (weder CSV noch Datenbank)
+> 
+
+@ {0} Trigger aktiv → Ereignisprotokoll {1}
+> 
+
+@ ⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden
+> 
+
+@ gestoppt
+> 
+
+@ Gestoppt
+> 
+
+@  – gespeichert in {0}
+> 
+
+@ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
+> 
+
+@ ⚠ CSV-Fehler: {0}
+> 
+
+# ---------------- s7_splash.py
+
+@ Never change a running system – außer, die Regelparameter sind von Ziegler-Nichols.
+> 
+
+@ Es ist nicht kaputt. Es befindet sich in einem undefinierten Zustand.
+> 
+
+@ Ein Datenlogger vergisst nie. Außer, die CSV-Datei wurde nicht archiviert.
+> 
+
+@ Totzeit ist die Zeit, in der man auf die Totzeit wartet.
+> 
+
+@ Funktioniert auf der Anlage – und das zählt.
+> 
+
+@ Bit 0.0 hat heute gute Laune.
+> 
+
+@ Ohne Messung ist alles nur eine Meinung.
+> 
+
+@ Wer misst, misst Mist – wer viel misst, loggt viel Mist. Darum: Trigger setzen.
+> 
+
+@ Der PID-Regler sagt: Ich schwinge nicht, ich zeige Begeisterung.
+> 
+
+@ Über {0} – psst …
+> 
+
+@ <div style='font-size:18pt;font-weight:bold'>{0}</div><div style='color:{1}'>Version {2} · Du hast das Geheimnis gefunden! 🎉</div>
+> 
+
+@ Qt {0} · PyQt {1}
+> 
+
+@ Python {0} · {1} · {2} {3}<br>Datenordner: {4}<br>Seit dem Start vergangen: {5} s
+> 
+
+@ Noch eine Weisheit
+> 
+
+@ Zurück an die Arbeit
+> 
+
+@ Version {0}
+> 
+
+@ Aufzeichnung & Analyse
+> 
+
+@ Konfiguration wählen
+> 
+
+@ Zuletzt benutzt:
+> 
+
+@ Öffnen
+> 
+
+@ Durchsuchen …
+> 
+
+@ Neue Konfiguration …
+> 
+
+@ Mit simulierten Werten starten (ohne Steuerung)
+> 
+
+@ Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
+> 
+
+@ Noch keine Konfiguration benutzt – „Neue Konfiguration …“ oder „Durchsuchen …“.
+> 
+
+@ Neue Konfiguration anlegen
+> 
+
+@ Wird geladen …
+> 
+
+# ---------------- s7_symbols.py
+
+@ Unerwartetes Dateiende
+> 
+
+@ Zahl erwartet, gefunden: „{0}“
+> 
+
+@ UDT „{0}“ ohne STRUCT
+> 
+
+@ Unerwartetes Dateiende in der Deklaration
+> 
+
+@ Ungültige Array-Grenzen {0}..{1}
+> 
+
+@ UDT-Verschachtelung zu tief (zyklische Definition?)
+> 
+
+@ Unbekannter Typ „{0}“ – UDT-Quelle ebenfalls importieren (Instanz-DBs von Funktionsbausteinen werden nicht unterstützt)
+> 
+
+@ … {0} weitere Elemente
+> 
+
+@ Keine DATA_BLOCK- oder TYPE-Definition gefunden
+> 
+
+@ {0} › {1}: DB-Nummer fehlt
+> 
+
+@ {0} › {1}: keine Deklaration gefunden
+> 
+
+@ optimierter Zugriff – Adressen für PUT/GET nicht nutzbar
+> 
+
+@ {0} › {1}: DB{2} ist doppelt vorhanden ({3})
+> 
+
+# ---------------- s7_trigger_dialog.py
+
+@ Bedingung
+> 
+
+@ Meldetext
+> 
+
+@ Verzögerung
+> 
+
+@ Gehen
+> 
+
+@ <b>Bedingung</b> wie eine Formel, z. B. <code>{Temperatur} &gt; 80</code>, <code>{Druck} &lt; 2 and {Pumpe} == 1</code>, <code>abs(ddt({Füllstand})) &gt; 5</code>. Wird sie wahr, <i>kommt</i> das Ereignis (ein Eintrag im Ereignisprotokoll), wird sie wieder falsch, <i>geht</i> es. <b>Meldetext</b>: <code>{Name}</code> wird durch den aktuellen Wert ersetzt (leer = Bedingung). <b>Verzögerung</b>: so lange muss die Bedingung ununterbrochen erfüllt sein. <b>Quittieren</b>: das Ereignis zählt in der Statusleiste des Loggers, bis es im Ereignis-Viewer quittiert wird.
+> 
+
+@ Trigger (Ereignisse)
+> 
+
+@ + Trigger
+> 
+
+@ Neuen Trigger anlegen
+> 
+
+@ Bedingung bearbeiten …
+> 
+
+@ Bedingung im Formeleditor bearbeiten (mit Variablenliste und Testwerten); auch Doppelklick
+> 
+
+@ Duplizieren
+> 
+
+@ Ausgewählten Trigger kopieren
+> 
+
+@ Ausgewählten Trigger löschen
+> 
+
+@ nach oben
+> 
+
+@ nach unten
+> 
+
+@ Trigger-Bedingung (wahr = Ergebnis ungleich 0)
+> 
+
+@ Name doppelt vergeben
+> 
+
+@ {0} Trigger, davon {1} aktiv.
+> 
+
+# ---------------- s7_i18n.py
+
+@ Ordner mit Sprachdateien öffnen …
+> 
+
+@ Eigene Übersetzung: de.txt kopieren, umbenennen (z. B. fr.txt) und übersetzen
+> 
+
+@ Die Sprache wird beim nächsten Start übernommen.\nJetzt neu starten?
+> 

@@ -1,0 +1,102 @@
+"""CLX Datenlogger – Startprogramm.
+
+Dieses kleine Programm entscheidet, WIE der Logger läuft, bevor schwere Bibliotheken geladen werden:
+
+* mit Oberfläche (Diagramme, Online/Offline, Lineale ...)  -> clx_gui.py (PyQt6 + pyqtgraph)
+* ohne Oberfläche (Headless, nur Aufzeichnung)             -> clx_headless.py (kein Qt nötig)
+
+Der Headless-Modus wird in der Konfiguration eingestellt (Option „Headless“) oder per Parameter erzwungen.
+
+Aufruf
+------
+    clx_logger.py [Konfigurationsdatei] [--config DATEI] [--headless | --gui] [--demo]
+    clx_logger.py --ereignisse [Konfigurationsdatei | Ereignisdatei.csv]
+    clx_logger.py --konfig [Konfigurationsdatei]     (Konfigurationsprogramm, z. B. im Linux-AppImage)
+
+Ohne Dateiangabe wird die zuletzt benutzte Konfiguration geöffnet (Standard: clx_config.ini). ``--gui`` öffnet die
+Oberfläche auch dann, wenn die Konfiguration den Headless-Modus verlangt; ``--headless`` erzwingt ihn.
+``--ereignisse`` öffnet nur den Ereignis-Viewer (Ereignisse der Trigger anzeigen und quittieren), z. B. neben einem
+Headless-Logger.
+"""
+import argparse
+import os
+import sys
+
+from clx_common import last_config_path, load_config, remember_config_path
+
+
+def parse_args(argv):
+    ap = argparse.ArgumentParser(description="CLX Datenlogger")
+    ap.add_argument("config", nargs="?", help="Konfigurationsdatei (INI/TXT)")
+    ap.add_argument("--config", dest="config_opt", help="Konfigurationsdatei (wie das Positionsargument)")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--headless", action="store_true", help="ohne Oberfläche, nur Aufzeichnung")
+    mode.add_argument("--gui", action="store_true", help="Oberfläche auch bei eingestelltem Headless-Modus")
+    mode.add_argument("--konfig", action="store_true",
+                      help="Konfigurationsprogramm öffnen (eine Programmdatei für alles, z. B. AppImage)")
+    mode.add_argument("--ereignisse", action="store_true",
+                      help="nur den Ereignis-Viewer öffnen (Ereignisse anzeigen und quittieren)")
+    ap.add_argument("--demo", action="store_true", help="simulierte Werte statt SPS-Verbindung")
+    return ap.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    explicit = args.config_opt or args.config
+    if args.konfig:
+        from clx_config import main as config_main
+        return config_main([explicit] if explicit else [])
+    if args.ereignisse:
+        from clx_event_viewer import run_viewer
+        return run_viewer(explicit)
+    path = os.path.abspath(explicit) if explicit else last_config_path()
+    if explicit and os.path.exists(path):
+        remember_config_path(path)                    # die nächste Sitzung öffnet dieselbe Datei
+    # Nur die Verbindungs-/Optionswerte lesen, um den Headless-Schalter zu kennen. Eine fehlerhafte Datei
+    # meldet später die jeweilige Betriebsart selbst.
+    try:
+        headless = bool(load_config(path)[0].get("headless", 0))
+    except Exception:
+        headless = False
+    if args.headless:
+        headless = True
+    if args.gui:
+        headless = False
+    if headless:
+        from clx_headless import run
+        return run(path, demo=args.demo)
+    return run_with_start_window(path, bool(explicit), args.demo)
+
+
+def run_with_start_window(path, explicit, demo):
+    """Oberfläche starten: zuerst das Startbild (Auswahl der Konfiguration, danach Lade-Anzeige), dann das
+    Hauptfenster. Das Startbild erscheint, bevor die großen Bibliotheken (pyqtgraph) geladen werden."""
+    from PyQt6.QtWidgets import QApplication, QMessageBox
+    from clx_branding import set_windows_app_id
+    from clx_i18n import install_qt, tr
+    set_windows_app_id()
+    app = QApplication.instance() or QApplication(sys.argv[:1])
+    install_qt(app)
+    from clx_splash import choose
+    win, res = choose("logger", path, explicit=explicit)
+    if res is None:
+        return 0
+    path = res["path"] or path
+    demo = demo or res["demo"]
+    if res["new"]:                                    # neue Konfiguration: Datei anlegen, Konfigurationsprogramm öffnen
+        import subprocess
+        from clx_common import Chart, default_connection, program_command, save_config
+        try:
+            save_config(default_connection(), [Chart()], [], path)
+            subprocess.Popen(program_command("config", path))
+        except OSError as e:
+            QMessageBox.warning(win, tr("Neue Konfiguration"), str(e))
+    if os.path.exists(path):
+        remember_config_path(path)
+    win.set_loading(tr("Lade Oberfläche (Diagramme) …"))
+    from clx_gui import run_gui
+    return run_gui(path, demo=demo, splash=win)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

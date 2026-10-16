@@ -1,0 +1,2224 @@
+======================================================================
+CLX Datenlogger – Bedienungsanleitung
+======================================================================
+
+.. contents:: Inhalt
+   :depth: 2
+   :local:
+
+
+Überblick
+======================================================================
+
+Der CLX Datenlogger liest zyklisch Tags aus einer oder **mehreren**
+Rockwell-/Allen-Bradley-Steuerungen (**ControlLogix**, **CompactLogix**,
+**Micro800**) über EtherNet/IP (CIP), speichert alle Messwerte in einer CSV-Datei
+und zeigt sie als y-t-Diagramm an – in der Oberfläche, im Browser (Webserver) oder
+gar nicht (Headless-Betrieb, nur Aufzeichnung).
+
+* Gelesen wird mit **libplctag** (C-Bibliothek, angesprochen über ``ctypes``).
+  Alle Tags einer Steuerung werden je Messzyklus gleichzeitig angestoßen; libplctag
+  fasst sie zu gemeinsamen CIP-Anfragen zusammen.
+* Die **Tag-Liste** (Namen, Datentypen, Strukturen, Arrays) holt **pycomm3**
+  direkt aus der Steuerung – es müssen keine Projektdateien exportiert werden.
+
+Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Datei
+     - Aufgabe
+   * - ``clx_config.py``
+     - Konfigurationsprogramm: Projekt, Steuerungen, Diagramme, Y-Achsen und
+       Variablen festlegen. Speichert in eine INI-Datei mit beliebigem Namen
+       (Standard ``clx_config.ini``).
+   * - ``clx_logger.py``
+     - Startprogramm des Loggers: wählt anhand der Konfiguration bzw. der
+       Parameter die Betriebsart (Oberfläche oder Headless).
+   * - ``clx_gui.py``
+     - Oberfläche des Loggers: Diagramme, Online-/Offline-Modus, Lineale,
+       Status-LEDs. Wird von ``clx_logger.py`` geladen.
+   * - ``clx_headless.py``
+     - Betrieb ohne Oberfläche (nur Aufzeichnung, benötigt kein Qt).
+   * - ``clx_recorder.py``
+     - Aufzeichnungskern ohne Oberfläche: je Steuerung ein Lese-Thread, ein
+       Sammler-Thread für Zusammenführung, Formeln, Datenpuffer, CSV und Archiv.
+   * - ``clx_web.py``
+     - Webserver (Flask) mit Chart.js-Seite zum Ansehen der Diagramme im Browser.
+   * - ``clx_svg.py``
+     - SVG-Export eines Diagramms (unabhängig von Qt).
+   * - ``clx_util.py``
+     - Kleine Hilfsfunktionen (Formatierung, Achsenteilung, Datenreduktion).
+   * - ``clx_db.py``
+     - Aufzeichnung in SQLite, MariaDB oder TimescaleDB/PostgreSQL (eigener Schreib-Thread).
+   * - ``clx_events.py``
+     - Trigger und Ereignisprotokoll (Auswertung, Datei, Quittierung).
+   * - ``clx_event_viewer.py``
+     - Ereignis-Viewer (Anzeigen und Quittieren); auch allein startbar.
+   * - ``clx_trigger_dialog.py``
+     - Trigger-Editor des Konfigurationsprogramms.
+   * - ``clx_pid.py``
+     - PID-Regler-Optimierung: Streckenmodell, Einstellregeln, Simulation (ohne Oberfläche).
+   * - ``clx_pid_dialog.py``
+     - Fenster der PID-Optimierung (Logger) und Einstellungen dazu (Konfigurationsprogramm).
+   * - ``clx_i18n.py``, ``sprachen/``
+     - Sprachumschaltung und Sprachdateien (``de.txt`` = Vorlage, ``en.txt`` = Englisch).
+   * - ``clx_splash.py``
+     - Startbild (Auswahl der Konfiguration, Lade-Anzeige).
+   * - ``build_appimage.sh``, ``tools/extract_tr.py``
+     - Linux-AppImage bauen; Sprachdateien nach Programmänderungen aktualisieren.
+   * - ``clx_common.py``
+     - Datenmodell und INI-Datei. Wird nicht direkt gestartet.
+   * - ``clx_io.py``
+     - Lesen der Tags mit libplctag (asynchron, Blöcke als Array-Ausschnitt).
+   * - ``clx_taglist.py``
+     - Tag-Liste der Steuerung mit pycomm3 (mit Zwischenspeicher).
+   * - ``build.bat``, ``installer.iss``, ``make_icon.py``, ``requirements.txt``
+     - Erzeugung der Windows-Installationsdatei (siehe :ref:`installer`).
+   * - ``clx_block_dialog.py``
+     - Editor für Blöcke (Blocklesemodus), vom Konfigurationsprogramm geöffnet.
+   * - ``clx_formula.py``
+     - Auswertung der Formeln berechneter Variablen. Wird nicht direkt gestartet.
+   * - ``clx_formula_dialog.py``
+     - Editor für berechnete Variablen (vom Konfigurationsprogramm geöffnet).
+   * - ``clx_branding.py``
+     - Programm-Icon und Logo. Wird nicht direkt gestartet.
+   * - ``clx_browser.py``
+     - Dialog zur Auswahl von Tags aus der Tag-Liste der Steuerung. Wird vom
+       Konfigurationsprogramm geöffnet.
+
+Funktionsumfang:
+
+* Aufzeichnung beliebig vieler Variablen in einstellbarem Abtastintervall
+* **Mehrere Steuerungen gleichzeitig:** je Steuerung ein eigener Lese-Thread mit
+  eigenem Abtastintervall; die Oberfläche bleibt dadurch flüssig
+* **Status-LEDs** für jede Verbindung (grau, gelb, grün, rot)
+* Projektname und Konfigurationsdateien mit beliebigem Namen (Öffnen-Dialog)
+* **Webserver** zum Ansehen der Diagramme im Browser (Tablet, Smartphone)
+* **Headless-Betrieb** (ohne Diagramme, nur Aufzeichnung), in der Konfiguration
+  einstellbar
+* Beim Beenden wird die aktuelle CSV-Datei archiviert
+* Diagramme einer Seite untereinander, nebeneinander oder als **Raster (Grid)**
+* Elemente eines Blocks können auf verschiedene Diagramme verteilt werden
+* CSV-Protokoll mit Zeitstempel in Millisekunden
+* Begrenzung der CSV-Dateigröße (Datensätze) mit automatischer ZIP-Archivierung
+  in einer Verzeichnisstruktur Name/Jahr/Monat/Tag
+* Variablenauswahl aus der Tag-Liste der Steuerung (Controller- und Programm-Tags,
+  UDTs, Arrays), mit Filter
+* Berechnete Variablen aus Formeln (z. B. Mittelwert, Differenz, Integral)
+* Blocklesemodus: Ausschnitte von Array-Tags (erster Index, Anzahl) mit einer
+  einzigen Anfrage lesen
+* Mehrere Diagramme, je Diagramm mehrere Y-Achsen mit eigener Skalierung;
+  mehrere Diagramme je Seite/Tab mit Mindesthöhe und Scrollleiste
+* Legende mit Livewerten; Kurven per Rechtsklick auf den Namen ausblenden
+* Eigenes Logo (rechts oben) und Programm-Icon
+* Online-Modus (fortlaufende Anzeige) und Offline-Modus (zurückscrollen, Lineale)
+* Schmale Balken für Aktualwerte, optionale Werteanzeige
+* Screenshots einzelner Diagramme als PNG oder SVG
+* Demo-Modus mit simulierten Werten (ohne SPS)
+
+
+Installation und Start
+======================================================================
+
+Voraussetzungen
+----------------------------------------------------------------------
+
+* Python 3.9 oder neuer
+* Bibliotheken installieren:
+
+  .. code-block:: console
+
+     pip install pycomm3 PyQt6 pyqtgraph numpy Flask
+
+  Der Headless-Betrieb braucht kein PyQt6 und kein pyqtgraph; Flask wird nur für
+  den Webserver und pycomm3 nur für die Tag-Liste im Konfigurationsprogramm benötigt.
+* **libplctag** ist kein pip-Paket. Benötigt wird nur die Bibliothek ``plctag.dll``
+  (Windows, 64 Bit). Sie liegt dem Programm bei; sonst aus dem offiziellen Release
+  https://github.com/libplctag/libplctag/releases das Paket
+  ``libplctag_<Version>_windows_x64.zip`` laden und daraus ``plctag.dll`` **neben die
+  Programmdateien** (``clx_*.py``) legen. Alternativ kann ihr Pfad in der
+  Umgebungsvariablen ``CLX_PLCTAG_LIB`` stehen. Die DLL braucht keine weiteren
+  Laufzeitbibliotheken; Python muss die 64-Bit-Version sein. Unter Linux wird
+  entsprechend ``libplctag.so`` verwendet (Paket ``…_ubuntu_x64.zip``).
+* libplctag steht unter MPL 2.0 bzw. LGPL 2 (wahlweise); bei Weitergabe der DLL die
+  Lizenzhinweise des Projekts beachten.
+
+Programme starten
+----------------------------------------------------------------------
+
+.. code-block:: console
+
+   python clx_config.py [datei.ini]     # Konfiguration
+   python clx_logger.py [datei.ini]     # Logger (Oberfläche oder Headless)
+
+Ohne Dateiangabe wird die **zuletzt benutzte** Konfigurationsdatei geöffnet
+(Standard: ``clx_config.ini``). Der Name der Datei ist beliebig. Weitere Parameter
+des Loggers:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Wirkung
+   * - ``datei.ini`` oder ``--config datei.ini``
+     - Konfigurationsdatei, die verwendet wird (und beim nächsten Start ohne
+       Angabe wieder geöffnet wird).
+   * - ``--headless``
+     - Ohne Oberfläche starten, nur aufzeichnen (überstimmt die Konfiguration).
+   * - ``--gui``
+     - Oberfläche öffnen, auch wenn die Konfiguration *Headless* verlangt.
+   * - ``--demo``
+     - Simulierte Werte statt SPS-Verbindung (siehe :ref:`demo-modus`).
+
+Der Logger kann das Konfigurationsprogramm auch selbst öffnen
+(**Konfig-Editor** in der Werkzeugleiste), und das Konfigurationsprogramm kann den
+Logger starten (**Datei › Logger mit dieser Konfiguration starten**).
+
+Vorbereitung der Steuerung
+----------------------------------------------------------------------
+
+Der Logger liest nur; in der Steuerung ist nichts einzurichten. Zu beachten:
+
+* **Verbindungspfad (CIP-Pfad):** Weg vom Ethernet-Modul zur CPU in der Schreibweise
+  von libplctag, ``Port,Adresse``. Für die Backplane ist der Port ``1``, die
+  Adresse der Steckplatz der CPU.
+
+  .. list-table::
+     :header-rows: 1
+     :widths: 45 20 35
+
+     * - Steuerung
+       - Typ
+       - CIP-Pfad
+     * - ControlLogix, CPU in Steckplatz 0
+       - ControlLogix
+       - ``1,0``
+     * - ControlLogix, CPU in Steckplatz 3
+       - ControlLogix
+       - ``1,3``
+     * - CompactLogix (5370/5380/5480)
+       - CompactLogix
+       - ``1,0``
+     * - Micro800 (Micro820/850/870)
+       - Micro800
+       - leer
+
+  Die IP-Adresse ist die des Ethernet-Moduls (z. B. 1756-EN2T) bzw. der CPU mit
+  eingebautem Ethernet.
+* **External Access** der Tags muss *Read/Write* oder *Read Only* sein; Tags mit
+  *None* sind von außen nicht lesbar.
+* Die Firewall des PCs muss Verbindungen zur Steuerung auf **TCP-Port 44818**
+  (EtherNet/IP) zulassen.
+* Jede Steuerung erlaubt nur eine begrenzte Zahl gleichzeitiger CIP-Verbindungen.
+  Der Logger verwendet eine Verbindung je Steuerung.
+
+
+.. _startbild:
+
+Startbild
+----------------------------------------------------------------------
+
+Beim Start von Logger und Konfigurationsprogramm erscheint das **Startbild**:
+
+.. figure:: images/startbild.png
+   :alt: Startbild
+   :width: 80%
+   :align: center
+
+   Startbild mit den zuletzt benutzten Konfigurationen.
+
+* **Zuletzt benutzt**: die zuletzt geöffneten Konfigurationen mit Ordner und Änderungsdatum.
+  Doppelklick oder **Öffnen** (Eingabetaste) startet mit der markierten Datei.
+* **Durchsuchen …**: beliebige Konfigurationsdatei wählen.
+* **Neue Konfiguration …**: im Logger wird nach einem Dateinamen gefragt, eine leere
+  Konfiguration angelegt und zusätzlich das Konfigurationsprogramm geöffnet; im
+  Konfigurationsprogramm beginnt eine neue, noch ungespeicherte Konfiguration.
+* **Demo** (nur Logger): mit simulierten Werten starten.
+* **Beim Start nicht mehr anzeigen**: künftig sofort mit der zuletzt benutzten Datei
+  starten. Wieder einschalten: im Logger **Datei → Startbild beim Programmstart zeigen**.
+
+Nach der Auswahl zeigt das Startbild den Ladefortschritt, bis das Hauptfenster bereit ist.
+Wird beim Aufruf eine Konfigurationsdatei angegeben (z. B. ``S7Logger.exe anlage.ini``),
+entfällt die Auswahl. Das Fenster lässt sich mit der Maus verschieben; **Esc** oder ✕ beendet.
+
+
+Schnellstart
+======================================================================
+
+#. ``clx_config.py`` starten.
+#. Im Reiter *Projekt & Steuerungen* einen Projektnamen vergeben und die
+   Steuerung(en) eintragen (Name, IP-Adresse, CIP-Pfad, Typ, Intervall).
+#. Mit **Aus Tag-Liste wählen…** Tags aus der Steuerung übernehmen (oder mit
+   **Variable hinzufügen** den Tag-Namen von Hand eintragen).
+#. Mit **Verbindung testen** prüfen, ob die Werte korrekt gelesen werden.
+#. **Speichern** (bzw. **Speichern unter…** mit eigenem Dateinamen) und das
+   Konfigurationsprogramm schließen.
+#. ``clx_logger.py`` starten und **▶ Start** drücken.
+
+.. tip::
+
+   Ohne SPS können Sie das Programm mit dem **Demo**-Modus ausprobieren
+   (siehe :ref:`demo-modus`).
+
+
+Konfigurationsprogramm (``clx_config.py``)
+======================================================================
+
+.. figure:: images/config_gesamt.png
+   :alt: Konfigurationsprogramm
+   :width: 90%
+   :align: center
+
+   Das Konfigurationsprogramm: Reiter oben, Zuordnungsbaum links, Variablentabelle rechts.
+
+Projekt, Steuerungen und Einstellungen
+----------------------------------------------------------------------
+
+Der obere Fensterbereich ist in vier Reiter gegliedert.
+
+**Reiter „Projekt & Steuerungen“**
+
+.. figure:: images/config_projekt_steuerungen.png
+   :alt: Reiter Projekt und Steuerungen
+   :width: 80%
+   :align: center
+
+   Reiter „Projekt & Steuerungen“.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Feld
+     - Bedeutung
+   * - Projektname
+     - Frei wählbarer Name des Projekts. Er erscheint in den Fenstertiteln, im
+       Webserver und im Log.
+   * - Steuerungen (Tabelle)
+     - Eine Zeile je Steuerung: **Name** (eindeutig, auch für die Status-LED),
+       **IP-Adresse**, **CIP-Pfad** (siehe Tabelle oben), **Typ** (ControlLogix,
+       CompactLogix oder Micro800), **Intervall** (Zeit zwischen zwei Messungen dieser Steuerung, 10 bis
+       60000 ms) und **Aktiv** (abgeschaltete Steuerungen werden nicht gelesen).
+       Mit **+ Steuerung** und **Steuerung entfernen** ändern Sie die Liste; beim
+       Entfernen wandern deren Variablen und Blöcke zur ersten Steuerung.
+
+Jede Steuerung wird im Logger von einem **eigenen Thread** gelesen. Das
+Intervall gilt je Steuerung; eine langsame oder ausgefallene Steuerung bremst
+die anderen nicht. Die Messwerte aller Steuerungen werden in einer gemeinsamen
+CSV-Datei zusammengeführt (eine Spalte je Variable).
+
+**Reiter „Aufzeichnung“**
+
+.. figure:: images/config_aufzeichnung.png
+   :alt: Reiter Aufzeichnung
+   :width: 80%
+   :align: center
+
+   Reiter „Aufzeichnung“.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Feld
+     - Bedeutung
+   * - CSV-Datei schreiben
+     - Schaltet die CSV-Datei ein oder aus (z. B. aus, wenn nur in eine Datenbank
+       aufgezeichnet werden soll; siehe :ref:`datenbank`).
+   * - CSV-Ordner
+     - Zielordner für die Protokolldateien. Ein relativer Pfad bezieht sich
+       auf den Programmordner.
+   * - CSV-Name
+     - Name der Aufzeichnung. Er ist Präfix der Dateinamen und Name des
+       Archiv-Unterordners (Standard: ``log``). Die Zeichen
+       ``\ / : * ? " < > |`` sind nicht erlaubt.
+   * - Max. Datensätze je Datei
+     - Obergrenze für die Anzahl der Datensätze (Zeilen) je CSV-Datei.
+       ``0`` = unbegrenzt. Ist die Zahl erreicht, wird die Datei gepackt und
+       archiviert (siehe :ref:`csv-archiv`).
+   * - Archiv-Ordner
+     - Basisordner des Archivs (Standard: ``archiv``). Ein relativer Pfad
+       bezieht sich auf den Programmordner.
+   * - Beim Beenden archivieren
+     - Ist das Häkchen gesetzt (Standard), wird beim Beenden des Loggers auch die
+       aktuelle, noch nicht volle CSV-Datei gepackt und archiviert.
+
+**Reiter „Anzeige“**
+
+.. figure:: images/config_anzeige.png
+   :alt: Reiter Anzeige
+   :width: 80%
+   :align: center
+
+   Reiter „Anzeige“.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Feld
+     - Bedeutung
+   * - Anzeigefenster (online)
+     - Breite des sichtbaren Zeitfensters im Online-Modus in Sekunden.
+   * - Standard-Anordnung der Seiten
+     - Anordnung beim Start: *Untereinander*, *Nebeneinander* oder *Tabs*.
+   * - Diagramme auf einer Seite
+     - *Automatisch* (wie die Standard-Anordnung), *Untereinander*,
+       *Nebeneinander* oder *Raster (Grid)*.
+   * - Raster-Spalten
+     - Spaltenzahl bei *Raster*; *automatisch* wählt sie aus der Diagrammzahl.
+   * - Balken für Aktualwerte anzeigen
+     - Schaltet die schmalen Balken neben den Diagrammen standardmäßig ein.
+   * - Logo (rechts oben)
+     - Bilddatei (PNG, SVG, JPG), die im Logger rechts oben in der Menüleiste
+       angezeigt wird (auf 28 Pixel Höhe skaliert). Ein relativer Pfad bezieht
+       sich auf den Programmordner. Ohne Angabe wird ein Standard-Symbol gezeigt.
+   * - Programm-Icon
+     - Icon für Fenster und Taskleiste (PNG, ICO oder SVG). Ohne Angabe wird das
+       Logo bzw. das Standard-Symbol verwendet.
+
+**Reiter „Datenbank“**
+
+Auswahl und Zugangsdaten einer Datenbank, in die zusätzlich oder statt der
+CSV-Datei aufgezeichnet wird (SQLite, MariaDB/MySQL, TimescaleDB/PostgreSQL), mit
+dem Knopf **Datenbank testen**. Einzelheiten im Kapitel :ref:`datenbank`.
+
+**Reiter „Webserver & Headless“**
+
+.. figure:: images/config_web_headless.png
+   :alt: Reiter Webserver und Headless
+   :width: 80%
+   :align: center
+
+   Reiter „Webserver & Headless“.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Feld
+     - Bedeutung
+   * - Webserver starten
+     - Startet mit dem Logger einen Webserver (siehe :ref:`webserver`).
+   * - Adresse (Host) / Port
+     - ``0.0.0.0`` macht den Server im ganzen Netzwerk erreichbar, ``127.0.0.1``
+       nur auf dem eigenen Rechner. Standard-Port: 8080.
+   * - Zugriffscode
+     - Optional. Ist ein Code gesetzt, muss er beim Aufruf mit ``?token=CODE``
+       angegeben werden.
+   * - Aktualisierung im Browser
+     - Wie oft die Browserseite neue Daten abholt (200 bis 60000 ms).
+   * - Headless-Modus
+     - Der Logger startet ohne Oberfläche und zeichnet nur auf (siehe
+       :ref:`headless`).
+
+Aufbau: Diagramme, Y-Achsen und Variablen
+----------------------------------------------------------------------
+
+Die Anzeige ist hierarchisch aufgebaut:
+
+.. code-block:: text
+
+   Diagramm
+   ├── Y-Achse 1 (links)
+   │   ├── Variable A
+   │   └── Variable B
+   └── Y-Achse 2 (rechts)
+       └── Variable C
+
+* Jedes **Diagramm** erscheint im Logger als eigenes, verschiebbares Fenster.
+* Jedes Diagramm hat mindestens eine **Y-Achse**. Die erste Achse liegt links,
+  alle weiteren liegen rechts. Jede Achse skaliert unabhängig.
+* Jede **Variable** gehört zu genau einer Y-Achse eines Diagramms.
+
+Der Baum auf der linken Seite zeigt diese Struktur. Darunter befinden sich die
+Schaltflächen:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Schaltfläche
+     - Wirkung
+   * - **+ Diagramm**
+     - Legt ein neues Diagramm mit einer Y-Achse an.
+   * - **+ Y-Achse**
+     - Fügt dem ausgewählten Diagramm (bzw. dem Diagramm der Auswahl) eine
+       weitere Y-Achse hinzu.
+   * - **Entfernen**
+     - Entfernt das ausgewählte Diagramm, die ausgewählte Y-Achse oder die
+       ausgewählte Variable. Betroffene Variablen wandern dabei auf die erste
+       Achse bzw. das erste Diagramm. Das letzte Diagramm und die letzte Achse
+       eines Diagramms können nicht entfernt werden.
+
+Eigenschaften von Diagramm und Y-Achse
+----------------------------------------------------------------------
+
+.. figure:: images/config_eigenschaften.png
+   :alt: Eigenschaften von Diagramm und Y-Achse
+   :width: 90%
+   :align: center
+
+   Eigenschaften des gewählten Diagramms bzw. der gewählten Y-Achse.
+
+Wählen Sie im Baum ein Diagramm oder eine Y-Achse aus. Im Bereich
+*Eigenschaften* darunter können Sie ändern:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Feld
+     - Bedeutung
+   * - Name
+     - Bezeichnung des Diagramms bzw. der Y-Achse (wird als Titel bzw.
+       Achsenbeschriftung angezeigt).
+   * - Seite (Tab)
+     - *Nur bei Diagrammen.* Diagramme mit gleichem Seitennamen werden
+       gemeinsam auf einer Seite (Tab bzw. Dock) angezeigt, z. B. ``Prozess``
+       oder ``Alarme``. Leer = Standardseite (siehe :ref:`seiten`).
+   * - Regler
+     - *Nur bei Diagrammen.* Haken **PID-Regler-Optimierung** und **Einstellen …**:
+       Soll-, Ist- und Stellwert für die Berechnung der Reglerparameter im Logger
+       festlegen (siehe :ref:`pid-optimierung`).
+   * - Auto-Skalierung
+     - *Nur bei Y-Achsen.* Aktiv: Die Achse passt sich automatisch an die
+       sichtbaren Daten an. Inaktiv: Es gelten die festen Grenzen
+       *Y min* und *Y max*.
+   * - Y min / Y max
+     - Feste Achsengrenzen. *Y max* muss größer als *Y min* sein.
+
+Variablen anlegen
+----------------------------------------------------------------------
+
+.. figure:: images/config_variablen.png
+   :alt: Variablentabelle
+   :width: 90%
+   :align: center
+
+   Die Variablentabelle mit Steuerung, Tag-Name, Typ, Farbe und Formel.
+
+Jede Zeile der Variablentabelle beschreibt einen Tag der Steuerung:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Spalte
+     - Bedeutung
+   * - Name
+     - Eindeutiger Name (wird auch als CSV-Spaltenüberschrift verwendet).
+       Das Zeichen ``;`` ist nicht erlaubt.
+   * - Steuerung
+     - Steuerung, aus der die Variable gelesen wird (Auswahl aus der Tabelle der
+       Steuerungen).
+   * - Diagramm › Y-Achse
+     - Zuordnung der Variablen (Auswahlliste oder Drag & Drop, siehe unten).
+   * - Tag-Name
+     - Name des Tags wie in Studio 5000 bzw. Connected Components Workbench, z. B.
+       ``Temp_Kessel`` (Controller-Tag), ``Program:Main.Druck`` (Programm-Tag),
+       ``Anlage.Motor[2].Drehzahl`` (Strukturglied in einem Array) oder
+       ``Status.3`` (Bit 3 eines Integers).
+   * - Typ
+     - Datentyp des Tags: ``BOOL``, ``SINT``, ``INT``, ``DINT``, ``LINT``, ``USINT``,
+       ``UINT``, ``UDINT``, ``ULINT``, ``REAL`` oder ``LREAL``. Für ein Bit eines
+       Integers (``Tag.n``) ``BOOL`` wählen. Bit-Strings ``DWORD``/``WORD`` werden
+       als ``UDINT``/``UINT`` gelesen.
+   * - Farbe
+     - Linienfarbe; Klick öffnet die Farbauswahl.
+   * - Werteanzeige
+     - Aktiv: Die Variable erscheint in der Werte-/Lineal-Tabelle des Loggers.
+   * - Balken
+     - Aktiv: Für die Variable wird ein schmaler Balken neben dem Diagramm
+       angezeigt.
+   * - Testwert
+     - Ergebnis von **Verbindung testen**.
+   * - Formel
+     - Nur bei berechneten Variablen: die Formel (Doppelklick öffnet den Editor).
+
+Zuordnung per Drag & Drop
+----------------------------------------------------------------------
+
+.. figure:: images/config_dragdrop.png
+   :alt: Drag & Drop im Zuordnungsbaum
+   :width: 90%
+   :align: center
+
+   Variablen im Baum auf eine Y-Achse ziehen.
+
+Variablen können im Baum mit der Maus verschoben werden:
+
+* **Auf eine Y-Achse ziehen:** Die Variable gehört danach zu dieser Achse.
+* **Auf eine andere Variable ziehen:** Die Variable übernimmt die Y-Achse (und
+  damit das Diagramm) der Zielvariable.
+* **Auf ein Diagramm ziehen:** Die Variable wird der ersten Y-Achse dieses
+  Diagramms zugeordnet.
+
+Die Auswahlliste *Diagramm › Y-Achse* in der Tabelle und der Baum sind immer
+synchron.
+
+.. _berechnete-variablen:
+
+Berechnete Variablen (Formeln)
+----------------------------------------------------------------------
+
+.. figure:: images/formeleditor.png
+   :alt: Formeleditor
+   :width: 90%
+   :align: center
+
+   Der Editor für berechnete Variablen.
+
+Neben den aus der SPS gelesenen Variablen können Sie **berechnete Variablen**
+anlegen, deren Werte der Logger bei jeder Messung aus anderen Variablen
+berechnet. Sie erscheinen wie normale Variablen in Diagrammen, Balken,
+Legende, Wertetabelle und in der CSV-Datei.
+
+Mit **Berechnete Variable…** öffnet sich der Editor:
+
+* **Name** der neuen Variable.
+* **Formel** im Textfeld. Variablen werden in geschweiften Klammern
+  angegeben, z. B. ``({Temp_Vorlauf} + {Temp_Ruecklauf}) / 2``. Ein
+  Doppelklick in der Variablenliste fügt den Namen ein, ein Doppelklick in
+  der Funktionsliste die Funktion.
+* **Prüfen / Berechnen:** Der Editor prüft die Formel (Syntax, bekannte
+  Variablen) und berechnet sie mit frei eingebbaren **Testwerten**. Das
+  Ergebnis erscheint direkt darunter.
+
+Die neue Variable wird dem ausgewählten Diagramm bzw. der ausgewählten Y-Achse
+zugeordnet (änderbar wie bei jeder Variable). Ein Doppelklick auf die Spalte
+*Formel* öffnet den Editor erneut.
+
+Erlaubt sind:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Element
+     - Beispiel / Bedeutung
+   * - Rechenoperatoren
+     - ``+  -  *  /  //  %  **``
+   * - Vergleiche, Logik
+     - ``<  >  <=  >=  ==  !=``, ``and``, ``or``, ``not``
+   * - Bedingung
+     - ``100 if {Druck} > 5 else 0``
+   * - Konstanten
+     - ``pi``, ``e``, ``tau``
+   * - Mathematik
+     - ``abs, min, max, sqrt, sin, cos, tan, asin, acos, atan, atan2, exp, ln,
+       log10, log, floor, ceil, round, hypot, radians, degrees, sign, clamp``
+   * - Zeitfunktionen
+     - ``ddt(x)`` Ableitung pro Sekunde, ``integ(x)`` Integral (x · s),
+       ``avg(x, n)`` gleitender Mittelwert über *n* Messwerte
+
+Beispiele:
+
+.. code-block:: text
+
+   {Prozess.Temperatur} * 1.8 + 32               Umrechnung °C in °F
+   {Druck_Ein} - {Druck_Aus}                     Differenzdruck
+   avg({Durchfluss}, 20)                         geglätteter Durchfluss
+   integ({Durchfluss}) / 3600                    Summenmenge (bei Durchfluss in 1/h)
+   clamp({Fuellstand}, 0, 100)                   auf 0 bis 100 begrenzt
+
+Hinweise:
+
+* Ist ein Wert nicht berechenbar (Division durch 0, fehlende Messung,
+  ungültiger Bereich wie ``sqrt`` einer negativen Zahl), ist das Ergebnis
+  *kein Wert* (leeres CSV-Feld, Lücke in der Kurve).
+* Eine berechnete Variable darf nur Variablen verwenden, die **weiter oben**
+  in der Tabelle stehen (echte Variablen immer, berechnete nur wenn früher
+  definiert). Das wird beim Speichern geprüft.
+* Wird eine Variable umbenannt, müssen Formeln, die sie verwenden, angepasst
+  werden. Der Name in der Formel muss exakt übereinstimmen.
+* Aus Sicherheitsgründen wird kein beliebiger Programmcode ausgeführt, nur die
+  oben aufgeführten Elemente.
+* ``ddt``, ``integ`` und ``avg`` merken sich ihren Zustand während der
+  Aufzeichnung und beginnen bei jedem **▶ Start** neu.
+* Berechnete Variablen werden nicht aus der SPS gelesen und fehlen beim
+  **Verbindung testen**.
+
+.. _blocklesemodus:
+
+Blocklesemodus
+----------------------------------------------------------------------
+
+.. figure:: images/blockeditor.png
+   :alt: Blockeditor
+   :width: 90%
+   :align: center
+
+   Der Blockeditor mit Blocktabelle und Elementbaum (Namen und Ziel je Element).
+
+Jeder Tag ist eine eigene Leseanfrage (libplctag fasst gleichzeitig angestoßene
+Anfragen zwar zu gemeinsamen Paketen zusammen, die Steuerung bearbeitet sie aber
+einzeln). Bei vielen Werten eines Arrays ist der **Blocklesemodus** schneller:
+Ein Ausschnitt eines Array-Tags wird mit **einer einzigen Anfrage** gelesen; die
+Werte werden danach einzeln zugewiesen.
+
+Mit **Blöcke (Blocklesemodus)…** öffnet sich der Editor. Jede Zeile ist ein
+Block mit folgenden Angaben:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Feld
+     - Bedeutung
+   * - Name
+     - Name des Blocks. Jedes Element wird zur Variable ``Name[0]``,
+       ``Name[1]``, …, ``Name[n-1]``. Nicht erlaubt: ``; { } [ ]``.
+   * - Steuerung
+     - Steuerung, aus der der Block gelesen wird.
+   * - Array-Tag
+     - Name des Arrays **ohne Index**, z. B. ``Messwerte``,
+       ``Program:Main.Temp`` oder ``Motor[1].Historie``.
+   * - Erster Index
+     - Index des ersten gelesenen Elements.
+   * - Format
+     - Datentyp der Array-Elemente: ``SINT``, ``INT``, ``DINT``, ``LINT``,
+       ``USINT``, ``UINT``, ``UDINT``, ``ULINT``, ``REAL`` oder ``LREAL``. Er muss
+       dem Datentyp des Arrays entsprechen. BOOL-Arrays sind in der Steuerung
+       bitweise gepackt und lassen sich nicht als Block lesen.
+   * - Anzahl
+     - Anzahl der Werte (1 bis 1000).
+   * - Diagramm › Y-Achse
+     - Zuordnung aller Elemente des Blocks (einzelne Elemente lassen sich im Baum
+       abweichend zuordnen, siehe unten).
+   * - Farbe
+     - Das erste Element erhält diese Farbe, die weiteren unterscheiden sich
+       im Farbton.
+   * - Werteanzeige / Balken
+     - Gilt für alle Elemente des Blocks (Balken sind standardmäßig aus).
+   * - Bereich
+     - Berechnete Anzeige, z. B. ``Messwerte[0] … Messwerte[19] (80 Bytes)``.
+
+Beispiel: Array-Tag ``Messwerte`` (``REAL[100]``), erster Index 10, Anzahl 20 liest
+``Messwerte[10]`` bis ``Messwerte[29]`` mit einer Anfrage und erzeugt die Variablen
+``Block[0]`` bis ``Block[19]`` (Name des Blocks mit Elementnummer ab 0).
+
+Arrays lassen sich auch direkt im Dialog **Aus Tag-Liste wählen…** als Block
+übernehmen (Array markieren, **Markiertes Array als Block…** oder Doppelklick).
+
+**Markierten Block testen** liest den Block einmal aus der Steuerung und zeigt die
+ersten Werte sowie die Lesezeit an.
+
+Hinweise:
+
+* Die Block-Elemente sind normale Variablen: Sie erscheinen in Diagrammen,
+  Legende, Wertetabelle, Balken und CSV-Datei und können in **Formeln**
+  verwendet werden, z. B. ``{Messwerte[3]} - {Messwerte[4]}``.
+* **Elementnamen ändern:** Im unteren Teil des Blockeditors zeigt ein **Baum**
+  alle Blöcke mit ihren Elementen (Block aufklappen; ein markierter Block wird
+  automatisch aufgeklappt). Per Doppelklick auf die Spalte *Name* erhält ein
+  Element einen eigenen Namen, z. B. ``Druck Vorlauf`` statt ``Messwerte[1]``.
+  Ein leerer Name stellt den Standardnamen wieder her. Die Namen müssen
+  eindeutig sein und dürfen ``; { }`` nicht enthalten. In der INI-Datei stehen
+  sie als ``elem_<Index> = Name`` im Abschnitt des Blocks.
+* **Elemente in verschiedenen Diagrammen:** Im Baum des Blockeditors hat jedes
+  Element in der letzten Spalte *Diagramm › Y-Achse* eine Auswahlliste. Der Eintrag
+  *(wie Block)* verwendet das Ziel des Blocks, jeder andere Eintrag stellt dieses
+  Element in einem anderen Diagramm bzw. an einer anderen Y-Achse dar. Mit
+  **Für alle Elemente des markierten Blocks setzen** wird das gewählte Ziel für
+  alle Elemente auf einmal übernommen. Gelesen wird der Block weiterhin mit
+  **einer** Anfrage; in der INI-Datei stehen abweichende Ziele als
+  ``elemziel_<Index> = Diagramm,Achse``. Im Variablenbaum der Konfiguration
+  erscheinen die abweichend zugeordneten Elemente zusätzlich unter der Achse, in
+  der sie dargestellt werden.
+* Im Variablenbaum der Konfiguration erscheint jeder Block als eine Zeile
+  (``▦ Block …``) unter seiner Y-Achse. Mit **Entfernen** wird der markierte
+  Block gelöscht. Wird ein Diagramm oder eine Y-Achse entfernt, wandern die
+  zugehörigen Blöcke wie Variablen auf die erste Achse.
+* Auch große Blöcke werden mit einer Anfrage ausgelöst; libplctag teilt Bereiche,
+  die größer als ein Telegramm sind, selbstständig auf (fragmentiertes Lesen).
+  Der Ausschnitt muss vollständig im Array liegen, sonst schlägt das Lesen des
+  Blocks fehl (die übrigen Tags werden weiter gelesen).
+* Viele Elemente bedeuten viele Kurven: Teilen Sie große Blöcke auf mehrere
+  Diagramme bzw. Y-Achsen auf oder schalten Sie *Werteanzeige* ab.
+
+Tags aus der Steuerung wählen
+----------------------------------------------------------------------
+
+.. figure:: images/symbolbaum.png
+   :alt: Tag-Liste
+   :width: 90%
+   :align: center
+
+   Auswahl von Tags aus der Tag-Liste der Steuerung.
+
+Mit **Aus Tag-Liste wählen…** öffnet sich die Tag-Liste der Steuerung (bei
+mehreren Steuerungen wird zuerst gefragt, welche). Eine Logix-Steuerung kennt die
+Namen, Datentypen und Strukturen ihrer Tags selbst; **pycomm3** liest sie aus.
+
+#. **Tag-Liste laden.** Beim ersten Öffnen wird die Liste automatisch aus der
+   Steuerung geladen, später mit **Tag-Liste aus Steuerung laden** aktualisiert.
+   *Programm-Tags* lädt zusätzlich die Tags aller Programme
+   (``Program:Name.Tag``); das dauert bei großen Projekten länger. Das Laden läuft
+   im Hintergrund, der Dialog bleibt bedienbar.
+#. **Suchen.** Der Baum zeigt *Controller-Tags* und je Programm einen Bereich.
+   Strukturen (UDTs, TIMER, COUNTER …) und Arrays lassen sich aufklappen. Ab zwei
+   Zeichen im **Filter** erscheint eine Trefferliste aller passenden Tag-Namen,
+   auch innerhalb von Strukturen.
+#. **Auswählen.** Lesbare Werte (Zahlen und BOOL) anhaken. Bereits angelegte Tags
+   sind angehakt und ausgegraut. Die Auswahl bleibt beim Filtern erhalten.
+#. **Arrays als Block.** Ein Array aus Zahlen markieren und **Markiertes Array als
+   Block…** wählen (oder doppelklicken), dann ersten Index und Anzahl festlegen.
+#. **Übernehmen.** Unter *Neue Variablen anlegen in* das Diagramm bzw. die Y-Achse
+   wählen und **Auswahl übernehmen** drücken. Name der neuen Variablen ist der
+   Tag-Name; Blöcke erhalten den Namen des Arrays.
+#. **Prüfen.** Mit **Verbindung testen** die gelesenen Werte kontrollieren.
+
+Hinweise:
+
+* Die geladene Liste wird je Steuerung zwischengespeichert (Ordner ``taglisten``
+  im Datenordner) und beim nächsten Öffnen sofort angezeigt – auch ohne
+  Verbindung.
+* Nicht aufzeichenbare Typen (z. B. ``STRING``) sind grau dargestellt.
+* Von großen Arrays werden höchstens 500 Elemente einzeln aufgeführt; größere
+  Bereiche übernehmen Sie als Block.
+* Mehrdimensionale Arrays erscheinen mit Indizes wie ``[1,2]``; als Block lesbar
+  sind nur eindimensionale Arrays.
+
+Verbindung testen
+----------------------------------------------------------------------
+
+**Verbindung testen** verbindet sich nacheinander mit jeder Steuerung, liest
+deren Variablen einmal und trägt das Ergebnis in die Spalte *Testwert* ein.
+Fehler einzelner Tags werden dort im Klartext angezeigt (Meldung von libplctag,
+z. B. Tag nicht gefunden oder falscher Datentyp); kann eine Steuerung nicht
+erreicht werden, meldet das ein Hinweisfenster mit Name, IP-Adresse und Pfad.
+
+Beim Speichern werden die Tag-Namen formal geprüft (erlaubte Zeichen, Indizes,
+``Program:``-Präfix). Ob es einen Tag tatsächlich gibt, zeigt erst der
+Verbindungstest.
+
+Speichern und Laden
+----------------------------------------------------------------------
+
+Das Menü **Datei** des Konfigurationsprogramms enthält:
+
+* **Neu** – leere Konfiguration mit einer Steuerung; der Dateiname wird beim
+  ersten Speichern abgefragt.
+* **Öffnen…** (``Strg+O``) – lädt eine INI- oder TXT-Datei mit **beliebigem
+  Namen**. Ältere Konfigurationen mit nur einer Steuerung und ohne Y-Achsen
+  werden übernommen.
+* **Speichern** (``Strg+S``) und **Speichern unter…** (``Strg+Umschalt+S``) –
+  schreiben in die aktuelle bzw. eine neue Datei (ohne Endung wird ``.ini``
+  ergänzt). Vor dem Speichern wird geprüft, dass Steuerungs- und
+  Variablennamen eindeutig und nicht leer sind, jede Steuerung eine
+  IP-Adresse hat, die Formeln gültig sind und bei festen Y-Achsen *Y max* größer
+  als *Y min* ist.
+* **Logger mit dieser Konfiguration starten** (``Strg+R``) – speichert und
+  startet den Logger mit dieser Datei.
+
+Der Titel des Fensters zeigt Projektname und Dateiname. Die zuletzt benutzte
+Datei wird gemerkt (Datei ``clx_last.txt``); Logger und Konfigurationsprogramm
+öffnen sie beim nächsten Start ohne Parameter wieder.
+
+.. note::
+
+   Der Logger liest die Konfiguration bei jedem **Start**. Änderungen wirken
+   daher erst nach erneutem Drücken von **▶ Start**.
+
+Aufbau der INI-Datei
+----------------------------------------------------------------------
+
+Die Datei kann bei Bedarf auch von Hand bearbeitet werden:
+
+.. code-block:: ini
+
+   [Verbindung]
+   projekt = Prüfstand 3
+   ip = 192.168.1.10
+   pfad = 1,0
+   cpu = controllogix
+   intervall_ms = 200
+   csv_ordner = logs
+   csv_name = log
+   max_records = 100000
+   archiv_ordner = archiv
+   fenster_s = 60
+   anordnung = untereinander
+   balken = 1
+   logo = C:/Firma/logo.png
+   icon = C:/Firma/icon.ico
+   archiv_beenden = 1
+   seite_anordnung = raster
+   raster_spalten = 2
+   web_aktiv = 1
+   web_host = 0.0.0.0
+   web_port = 8080
+   web_token = geheim
+   web_intervall_ms = 1000
+   headless = 0
+
+   [Steuerungen]
+   anzahl = 2
+
+   [Steuerung1]
+   name = Kessel
+   ip = 192.168.1.10
+   pfad = 1,0
+   cpu = controllogix
+   intervall_ms = 200
+   timeout_ms = 2000
+   aktiv = 1
+
+   [Steuerung2]
+   name = Pumpe
+   ip = 192.168.1.20
+   pfad =
+   cpu = micro800
+   intervall_ms = 500
+   timeout_ms = 2000
+   aktiv = 1
+
+   [Diagramme]
+   anzahl = 1
+
+   [Diagramm1]
+   name = Prozess
+   achsen = 2
+   seite = Prozess
+
+   [Diagramm1_Achse1]
+   name = Temperatur
+   auto = 1
+   y_min = 0.0
+   y_max = 100.0
+
+   [Diagramm1_Achse2]
+   name = Druck
+   auto = 0
+   y_min = 0.0
+   y_max = 10.0
+
+   [Variablen]
+   anzahl = 1
+
+   [Var1]
+   name = Temperatur_Kessel
+   tag = Program:Kessel.Temperatur
+   typ = REAL
+   farbe = #d62728
+   wert_anzeigen = 1
+   diagramm = 1
+   achse = 1
+   balken = 1
+   formel =
+   steuerung = 1
+
+   [Bloecke]
+   anzahl = 1
+
+   [Block1]
+   name = Messwerte
+   tag = Messwerte
+   start = 0
+   typ = REAL
+   anzahl = 20
+   diagramm = 1
+   achse = 1
+   farbe = #1f77b4
+   wert_anzeigen = 1
+   balken = 0
+   steuerung = 2
+   elemziel_3 = 2,1
+
+``diagramm``, ``achse`` und ``steuerung`` sind jeweils 1-basiert. Im Abschnitt
+``[Verbindung]`` spiegeln ``ip``, ``pfad``, ``cpu`` und ``intervall_ms`` die erste
+Steuerung; fehlt ``[Steuerungen]``, entsteht daraus genau eine Steuerung. ``cpu`` ist
+``controllogix``, ``compactlogix`` oder ``micro800``; ``timeout_ms`` ist die
+Wartezeit je Lesezyklus (Standard 2000 ms, nur in der Datei einstellbar). Bei Blöcken
+ist ``tag`` der Array-Tag ohne Index und ``start`` der erste Index. ``seite_anordnung`` ist leer (automatisch), ``untereinander``,
+``nebeneinander`` oder ``raster``; ``raster_spalten = 0`` wählt die Spaltenzahl
+automatisch. Die Variablen eines Blocks
+(``Messwerte[0]`` …) werden beim Laden erzeugt und stehen nicht als ``[VarN]``
+in der Datei.
+
+
+Logger (``clx_logger.py``)
+======================================================================
+
+Bedienelemente
+----------------------------------------------------------------------
+
+.. figure:: images/logger_hauptfenster.png
+   :alt: Hauptfenster des Loggers
+   :width: 90%
+   :align: center
+
+   Das Hauptfenster des Loggers mit Werkzeugleiste, Diagrammen, Wertetabelle und Statusleiste.
+
+Werkzeugleiste (oben):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Element
+     - Funktion
+   * - **▶ Start / ■ Stop**
+     - Startet bzw. beendet Aufzeichnung und CSV-Logging.
+   * - **Online / Offline**
+     - Schaltet zwischen fortlaufender Anzeige und Rückblick um.
+   * - **CSV laden**
+     - Öffnet eine gespeicherte CSV-Datei zur Ansicht (Offline-Modus).
+   * - **Konfiguration**
+     - Startet das Konfigurationsprogramm.
+   * - **Werteanzeige**
+     - Blendet die Wertetabelle (rechts) ein oder aus.
+   * - **Balken**
+     - Blendet die schmalen Balken neben den Diagrammen ein oder aus.
+   * - **Y-Auto**
+     - Aktiv: alle Y-Achsen werden automatisch skaliert und überschreiben feste
+       Bereiche. Inaktiv: Es gelten die Einstellungen der Konfiguration.
+   * - **Bool im Diagramm**
+     - Zeichnet BOOL-Variablen zusätzlich als gefüllte Treppenlinie im Diagramm
+       (abhängig von der Y-Achse). Standard: aus, BOOLs erscheinen nur als
+       Streifen in der Legende.
+   * - **Lineale zurücksetzen**
+     - Setzt die beiden Lineale (Offline) auf ein Drittel und zwei Drittel des
+       sichtbaren Zeitbereichs.
+   * - **Demo**
+     - Simulierte Werte statt SPS (siehe :ref:`demo-modus`).
+   * - **Screenshot**
+     - Öffnet eine Liste der Diagramme; das gewählte Diagramm wird als PNG
+       oder SVG gespeichert (siehe :ref:`screenshots`).
+   * - **Fenster [s]**
+     - Breite des sichtbaren Zeitfensters in Sekunden (1 bis 604800).
+
+Am unteren Fensterrand befindet sich die **Zeit-Scrollleiste** (nur im
+Offline-Modus aktiv). Die Statuszeile zeigt Verbindungsmeldungen und den
+Pfad der gespeicherten CSV-Datei.
+
+Das Menü **Ansicht** enthält die Anordnung der Diagramme, eine Liste zum
+Ein- und Ausblenden einzelner Diagramme sowie die Schalter für Werteanzeige
+und Balken.
+
+Aufzeichnung starten und beenden
+----------------------------------------------------------------------
+
+#. **▶ Start** drücken. Der Logger lädt die Konfiguration neu, baut die
+   Diagramme auf und verbindet sich mit den Steuerungen.
+#. Jede Steuerung wird in ihrem eigenen Intervall gelesen. Die Messwerte werden
+   zu Zeilen zusammengeführt und in die CSV-Datei geschrieben.
+#. **■ Stop** beendet die Aufzeichnung und schließt die Datei. Beim Beenden des
+   Programms wird automatisch gestoppt und – bei gesetzter Option – die
+   aktuelle CSV-Datei archiviert (siehe :ref:`csv-archiv`).
+
+Bei Verbindungsverlust versucht der Logger selbstständig, die Verbindung
+wiederherzustellen, und meldet dies in der Statuszeile. Während der Pause
+entstehen Lücken in den Daten – nur bei den Variablen der betroffenen
+Steuerung, die übrigen laufen weiter.
+
+Das Lesen, die Berechnung der Formeln und das Schreiben der CSV-Datei laufen in
+eigenen Threads, getrennt von der Oberfläche. Die Anzeige holt sich nur etwa
+zehnmal pro Sekunde einen Ausschnitt der Daten und zeichnet unsichtbare Kurven
+nicht neu; dadurch bleibt die Bedienung auch bei vielen Variablen flüssig.
+
+Menü **Datei** des Loggers: **Config laden …** (``Strg+O``, Dateidialog für eine
+beliebig benannte Konfigurationsdatei), **Konfiguration neu laden** (``F5``),
+**Konfig-Editor**, **CSV laden**, **Webserver-Adresse …** und **Beenden**.
+Der Fenstertitel zeigt den Projektnamen und die Konfigurationsdatei.
+
+.. _status-led:
+
+Status-LEDs der Verbindungen
+----------------------------------------------------------------------
+
+.. figure:: images/status_leds.png
+   :alt: Status-LEDs
+   :width: 70%
+   :align: center
+
+   Status-LEDs in der Statusleiste: grün, gelb, rot, grau.
+
+In der Statusleiste zeigt für jede Steuerung eine **LED** mit ihrem Namen den
+Verbindungszustand:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Farbe
+     - Bedeutung
+   * - grau
+     - Steuerung nicht aktiv (abgeschaltet oder Aufzeichnung gestoppt).
+   * - gelb
+     - Verbindung wird aufgebaut.
+   * - grün
+     - Verbindung steht, es wird gelesen.
+   * - rot
+     - Verbindungs- oder Lesefehler; der Logger versucht es erneut.
+
+Der Tooltip der LED zeigt die Statusmeldung (bei Fehlern den Fehlertext) und die
+Zykluszeit der letzten Leseanfrage.
+Im Webserver erscheinen dieselben LEDs.
+
+Online-Modus
+----------------------------------------------------------------------
+
+.. figure:: images/logger_online.png
+   :alt: Online-Modus
+   :width: 90%
+   :align: center
+
+   Online-Modus: fortlaufende Anzeige der letzten Sekunden.
+
+Im Online-Modus läuft die Zeitachse mit den neuesten Daten mit. Es werden
+immer die letzten *N* Sekunden angezeigt (Einstellung **Fenster [s]**). Die
+Wertetabelle zeigt in der Spalte *Aktuell* den jeweils letzten Messwert.
+Die Aufzeichnung läuft unabhängig von der Anzeige weiter.
+
+Offline-Modus
+----------------------------------------------------------------------
+
+.. figure:: images/logger_offline.png
+   :alt: Offline-Modus
+   :width: 90%
+   :align: center
+
+   Offline-Modus: Rückblick mit Scrollleiste.
+
+Im Offline-Modus wird die Anzeige eingefroren, und Sie können in der Zeit
+zurückblättern:
+
+* **Zeit-Scrollleiste** unten: durch die aufgezeichneten Daten blättern.
+* **Maus:** Im Diagramm mit gedrückter Maustaste ziehen, um die Zeitachse zu
+  verschieben, und mit dem Mausrad zoomen. Scrollleiste und
+  *Fenster [s]* folgen automatisch.
+* **Fenster [s]:** Breite des sichtbaren Zeitbereichs.
+
+.. note::
+
+   Beim Wechsel in den Offline-Modus wird eine Momentaufnahme aller bis dahin
+   gemessenen Daten erstellt. Läuft die Aufzeichnung weiter, erscheinen neuere
+   Daten erst, wenn Sie erneut von *Online* auf *Offline* umschalten.
+
+Der Speicher im Programm ist auf etwa 300 000 Messpunkte begrenzt; ältere
+Punkte werden dann aus der Anzeige entfernt. Die CSV-Datei enthält immer alle
+Daten.
+
+Lineale (Offline)
+----------------------------------------------------------------------
+
+.. figure:: images/logger_lineale.png
+   :alt: Lineale im Offline-Modus
+   :width: 90%
+   :align: center
+
+   Zwei Lineale mit Zeit- und Differenzanzeige.
+
+Im Offline-Modus erscheinen in allen Diagrammen zwei senkrechte Lineale:
+**L1** (gelb) und **L2** (cyan). Beide lassen sich mit der Maus verschieben
+und sind über alle Diagramme hinweg synchron.
+
+Die Wertetabelle zeigt dann:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Spalte
+     - Inhalt
+   * - Lineal 1
+     - Wert jeder Variable am Zeitpunkt von L1.
+   * - Lineal 2
+     - Wert jeder Variable am Zeitpunkt von L2.
+   * - Δ (L2 − L1)
+     - Differenz der beiden Werte.
+
+Über der Tabelle werden die Zeitpunkte von L1 und L2 sowie die Zeitdifferenz
+**Δt** in Sekunden angezeigt. Verwendet wird jeweils der zeitlich nächste
+Messwert (ohne Interpolation).
+
+.. _seiten:
+
+Seiten, Diagramme und Anordnung
+----------------------------------------------------------------------
+
+.. figure:: images/anordnung_raster.png
+   :alt: Diagramme im Raster
+   :width: 90%
+   :align: center
+
+   Diagramme einer Seite als Raster (Grid) angeordnet.
+
+Die Diagramme liegen auf **Seiten**. Eine Seite ist ein Dock-Fenster bzw. ein
+Tab und kann **mehrere Diagramme** enthalten:
+
+* Ohne Seitenangaben in der Konfiguration liegen alle Diagramme auf einer
+  gemeinsamen Seite *Diagramme*. Im Modus *Tabs* erhält dann jedes Diagramm
+  einen eigenen Tab.
+* Mit dem Feld **Seite (Tab)** in der Konfiguration bestimmen Sie selbst, welche
+  Diagramme zusammen auf einer Seite liegen (gleicher Seitenname = gleiche
+  Seite). So können Sie z. B. die Tabs *Prozess* und *Alarme* mit je mehreren
+  Diagrammen bilden.
+
+**Mindesthöhe und Scrollleiste:** Jedes Diagramm hat eine Mindesthöhe. Passen
+nicht alle Diagramme einer Seite ins Fenster, erscheint an der Seite eine
+Scrollleiste. Im Modus *Nebeneinander* gilt entsprechend eine Mindestbreite mit
+waagerechter Scrollleiste.
+
+**Anordnung der Seiten** (Menü **Ansicht › Anordnung**):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Modus
+     - Wirkung
+   * - Untereinander
+     - Seiten liegen übereinander; die Diagramme einer Seite stehen
+       untereinander.
+   * - Nebeneinander
+     - Seiten liegen nebeneinander; die Diagramme einer Seite stehen ebenfalls
+       nebeneinander.
+   * - Tabs
+     - Jede Seite ist ein Tab; die Diagramme einer Seite stehen untereinander.
+
+**Anordnung der Diagramme auf einer Seite** (Menü **Ansicht › Diagramme auf der
+Seite**): *Automatisch* richtet sich nach der Anordnung der Seiten; *Untereinander*
+und *Nebeneinander* erzwingen eine Spalte bzw. eine Zeile; **Raster (Grid)** legt
+die Diagramme in Zeilen und Spalten. Die Spaltenzahl stellt **Ansicht › Raster-Spalten**
+ein (*Automatisch* wählt etwa die Wurzel der Diagrammzahl, bei sechs Diagrammen
+also drei Spalten). Ein letztes einzelnes Diagramm füllt die Restzeile. Die
+Voreinstellung steht in der Konfiguration (Reiter *Anzeige*).
+
+Per **Drag & Drop** lässt sich die Anordnung weiter anpassen:
+
+* **Seiten:** An der Titelleiste einer Seite anfassen und an den Rand einer
+  anderen Seite ziehen (daneben bzw. darüber) oder auf deren Mitte ziehen (als
+  Tab). Ein Doppelklick auf die Titelleiste löst die Seite als frei schwebendes
+  Fenster.
+* **Diagramme innerhalb einer Seite:** Die Titelzeile eines Diagramms (fett,
+  über dem Diagramm) fassen und auf die Titelzeile eines anderen Diagramms
+  derselben Seite ziehen. Das Diagramm wird an dieser Position eingefügt.
+
+Seiten lassen sich über **Ansicht › Seiten / Diagramme** aus- und wieder
+einblenden. Die per Drag & Drop angepasste Anordnung der Seiten bleibt bei
+erneutem Start innerhalb derselben Programmsitzung erhalten, solange die
+Seitennamen und der Modus gleich bleiben. Nach einem Programmneustart gilt
+wieder die Standard-Anordnung.
+
+Alle Diagramme teilen sich dieselbe Zeitachse.
+
+Legende mit Livewerten
+----------------------------------------------------------------------
+
+.. figure:: images/legende.png
+   :alt: Legende
+   :width: 90%
+   :align: center
+
+   Legende mit Livewerten; eine Kurve ist hervorgehoben, eine ausgeblendet.
+
+Die Legende in jedem Diagramm zeigt hinter dem Namen jeder Variable den
+**aktuellen Wert** in der Farbe der Variable, z. B. ``Temperatur: 51.234``.
+Online ist das der letzte Messwert, offline der Wert am Lineal 1.
+
+**Kurve hervorheben:** Ein **Linksklick** auf den Namen (oder das Muster) einer
+Kurve in der Legende hebt sie hervor: Die Kurve wird dicker gezeichnet und liegt
+im Vordergrund, der Name erscheint **fett**, alle übrigen Kurven des Diagramms
+werden abgeblendet. Ein erneuter Klick auf denselben Namen hebt die Hervorhebung
+wieder auf; ein Klick auf einen anderen Namen verschiebt sie.
+
+**Kurve aus- und einblenden:** Rechtsklick auf den Namen einer Kurve in der
+Legende öffnet ein Menü mit *Kurve ausblenden* bzw. *Kurve einblenden* sowie
+*Alle Kurven dieses Diagramms einblenden*. Ausgeblendete Kurven erscheinen in
+der Legende grau mit dem Zusatz *(aus)*. Das Häkchen in der Wertetabelle bleibt
+damit synchron. Die Auswahl bleibt beim Wechseln der Anordnung erhalten.
+
+.. _screenshots:
+
+Screenshots von Diagrammen
+----------------------------------------------------------------------
+
+.. figure:: images/screenshot_menue.png
+   :alt: Screenshot-Menü
+   :width: 70%
+   :align: center
+
+   Menü „Screenshot“ mit Auswahl des Diagramms und heller Hintergrund.
+
+Einzelne Diagramme lassen sich als Bild speichern:
+
+#. In der Werkzeugleiste auf **Screenshot** klicken (oder im Menü
+   **Screenshot**) und das gewünschte Diagramm auswählen.
+#. Im Speichern-Dialog Dateinamen und Format wählen: **PNG** (Pixelbild) oder
+   **SVG** (Vektorgrafik). Das Format ergibt sich aus der Dateiendung bzw.
+   dem gewählten Dateityp.
+
+Der Screenshot enthält das Diagramm genau so, wie es angezeigt wird: Kurven,
+alle Y-Achsen, Legende, Balken und im Offline-Modus auch die Lineale.
+PNG-Dateien werden mit doppelter Auflösung erzeugt. Die **SVG-Datei** wird aus den
+Messdaten selbst gezeichnet (Achsen mit Teilung, Raster, Zeitachse, Kurven, BOOL-Verläufe,
+Lineale mit Beschriftung und Legende mit Werten) und lässt sich verlustfrei
+skalieren und z. B. in Inkscape oder Office-Programmen weiter bearbeiten. Liegt das Diagramm in einem verdeckten Tab, wird es dafür
+automatisch in den Vordergrund geholt.
+
+Für Berichte und Ausdrucke lässt sich im Menü **Screenshot** die Option
+**Heller Hintergrund (für Berichte/Druck)** einschalten. Der Screenshot wird
+dann mit weißem Hintergrund und dunkler Schrift gespeichert; Lineale werden
+dafür in dunkleren Farben gezeichnet. Die Bildschirmanzeige selbst bleibt
+unverändert. Die Einstellung gilt für die laufende Programmsitzung.
+
+Wertetabelle (Werteanzeige)
+----------------------------------------------------------------------
+
+.. figure:: images/wertetabelle.png
+   :alt: Wertetabelle
+   :width: 90%
+   :align: center
+
+   Wertetabelle mit Aktualwerten (online) bzw. Linealwerten (offline).
+
+Die Tabelle am rechten Rand listet alle Variablen, bei denen in der
+Konfiguration *Werteanzeige* aktiviert ist.
+
+* Der Name wird in der Variablenfarbe dargestellt. Ein Mauszeiger über dem
+  Namen zeigt den Tag-Namen.
+* Mit dem **Häkchen** vor dem Namen blenden Sie die Kurve der Variable im
+  Diagramm aus oder ein (alternativ per Rechtsklick in der Legende).
+* Die Spalten wechseln je nach Modus (*Aktuell* online, *Lineal 1 / Lineal 2 /
+  Δ* offline).
+
+Y-Achsen und Skalierung
+----------------------------------------------------------------------
+
+* Jede Y-Achse ist in der Farbe ihrer ersten Variable beschriftet.
+* Achsen mit **Auto-Skalierung** passen sich an die im Zeitfenster sichtbaren
+  Daten an. Achsen mit festen Grenzen behalten ihren Bereich.
+* Der Schalter **Y-Auto** in der Werkzeugleiste überschreibt vorübergehend alle
+  festen Bereiche. Wird er wieder ausgeschaltet, gelten die Einstellungen der
+  Konfiguration.
+
+Balken für Aktualwerte
+----------------------------------------------------------------------
+
+Neben jedem Diagramm zeigt je Variable ein schmaler Balken den aktuellen
+Wert. Die Skalierung entspricht der Y-Achse der Variable. Im Offline-Modus
+zeigen die Balken die Werte am Lineal 1. Fahren Sie mit der Maus über die
+Balken, um Namen und Werte als Tooltip zu sehen.
+
+BOOL-Variablen
+----------------------------------------------------------------------
+
+.. figure:: images/bool_signale.png
+   :alt: BOOL-Signale
+   :width: 90%
+   :align: center
+
+   BOOL-Signale: Linie bei 0, nach oben gehender Streifen bei 1, neben den Legendenzeilen.
+
+Boolesche Variablen werden unabhängig von den Y-Achsen dargestellt:
+
+* **In der Legende** stehen Name und Wert wie bei den analogen Kurven untereinander.
+  Neben jedem BOOL-Eintrag, in der Höhe seiner Legendenzeile, läuft über die
+  **Breite des Diagramms** wie bei einem digitalen Signal eine **Linie** auf der
+  Grundlinie (Wert 0) bzw. ein **nach oben gehender Streifen** (Wert 1) in der
+  Variablenfarbe. Wie eine Kurve deckt sie den dargestellten Zeitbereich ab
+  (online die letzten *N* Sekunden, offline den sichtbaren Ausschnitt). So lassen
+  sich mehrere BOOL-Variablen auf einen Blick vergleichen, ohne das Diagramm zu
+  verdecken.
+* **Als Kurve** werden BOOLs standardmäßig nicht gezeichnet (sie hängen sonst
+  an einer Y-Achse). Mit **Bool im Diagramm** in der Werkzeugleiste erscheinen
+  sie zusätzlich als transparent gefüllte Treppenlinie.
+* **In der Wertetabelle** ist die Zelle bei Wert 1 in der Variablenfarbe
+  **gefüllt**, bei Wert 0 leer.
+
+Ausgeblendete BOOLs (Rechtsklick in der Legende) und hervorgehobene BOOLs
+(Linksklick) werden abgeblendet bzw. mit dickerem Streifen gezeichnet. Der SVG-Export und der
+Webserver (dort steht der Name in der Zeile des Streifens) zeigen die BOOL-Signale ebenso.
+
+
+.. _demo-modus:
+
+Demo-Modus
+======================================================================
+
+Der Demo-Modus erzeugt simulierte Werte, ohne dass eine SPS verbunden sein
+muss:
+
+#. In der Werkzeugleiste **Demo** aktivieren.
+#. **▶ Start** drücken.
+
+Die Variablen aus Ihrer Konfiguration werden dabei mit Testsignalen versorgt
+(REAL: Sinus mit Rauschen, BOOL: Rechteck, Ganzzahlen: Sägezahn). Ist noch
+nichts konfiguriert, legt der Demo-Modus zwei Beispiel-Diagramme mit mehreren
+Y-Achsen und einem BOOL-Signal an. Der Schalter ist während der Aufzeichnung
+gesperrt und wird nicht gespeichert. Die Demo-Daten werden als
+``demo_JJJJMMTT_HHMMSS.csv`` abgelegt.
+
+
+.. _webserver:
+
+Webserver (Diagramme im Browser)
+======================================================================
+
+.. figure:: images/web_tablet.png
+   :alt: Webseite auf dem Tablet
+   :width: 90%
+   :align: center
+
+   Die Diagramme im Browser eines Tablets.
+
+Mit der Option **Webserver starten** (Reiter *Webserver & Headless*) stellt der
+Logger die Diagramme als Webseite bereit. Sie lässt sich mit jedem Browser im
+Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Betrieb.
+
+* **Adresse:** ``http://<IP-Adresse des Rechners>:<Port>/`` (Standard-Port 8080).
+  Die Adresse zeigt im Logger **Datei › Webserver-Adresse …**; beim Start steht sie
+  außerdem im Log. Gegebenenfalls muss die Firewall den Port freigeben.
+* **Zugriffscode:** Ist im Reiter ein Code eingetragen, wird die Seite mit
+  ``http://…:8080/?token=CODE`` aufgerufen. Ohne Code kann jeder im Netzwerk
+  zusehen; die Seite ist nur lesend, es gibt keine Steuerfunktion. Für Zugriffe
+  aus dem Internet gehört der Server hinter einen Reverse-Proxy mit HTTPS.
+* **Darstellung:** Die Seite zeigt je Seite (Tab) die Diagramme mit Chart.js, mit
+  mehreren Y-Achsen, BOOL-Signalen als Treppenlinie und Status-LEDs der
+  Steuerungen. Die Anzeige passt sich der Bildschirmgröße an.
+* **Bedienung:** *Live* zeigt das letzte Zeitfenster; mit **◀ ▶** blättert man in
+  der Zeit zurück (Verlauf), **Pause** hält die Anzeige an. Antippen eines
+  Legendeneintrags hebt eine Kurve hervor, langes Drücken oder Doppelklick blendet
+  sie aus.
+* **Chart.js:** Die Bibliothek wird aus ``web_static/chart.umd.js`` ausgeliefert
+  (die Installationsdatei enthält sie). Fehlt die Datei, lädt der Browser sie ersatzweise
+  aus dem Internet (jsdelivr); im geschlossenen Netzwerk daher die Datei
+  ``chart.umd.js`` (Chart.js 4) manuell in den Ordner ``web_static`` legen.
+
+Der Server überträgt nur die sichtbaren Daten, auf die Bildschirmbreite reduziert
+(Minimum und Maximum je Abschnitt bleiben erhalten), und komprimiert sie.
+
+.. _headless:
+
+Headless-Betrieb (nur Aufzeichnung)
+======================================================================
+
+Ohne Oberfläche zeichnet der Logger nur auf: Lesen aus den Steuerungen, Formeln,
+CSV-Datei, Archivierung und – falls aktiviert – Webserver. Das spart Ressourcen und
+eignet sich für Dauerbetrieb, z. B. als Autostart-Programm auf einem Industrie-PC.
+
+* **Einschalten:** Option *Headless-Modus* im Reiter *Webserver & Headless* der
+  Konfiguration, oder Startparameter ``--headless``. Mit ``--gui`` lässt sich trotz
+  eingestelltem Headless-Modus die Oberfläche öffnen.
+* **Meldungen** (Verbindung, Fehler, Archivierung) stehen in der Logdatei
+  ``clx_logger.log`` im Programm- bzw. Datenordner (rotierend, mehrere Dateien).
+* **Beenden:** Mit ``Strg+C`` im Konsolenfenster bzw. durch das Signal SIGTERM
+  (Dienst beenden, Windows: Fenster schließen) wird sauber beendet: Die
+  CSV-Datei wird geschlossen und – bei gesetzter Option – archiviert.
+* Die installierte Version enthält im Startmenü die Verknüpfung
+  *CLX Datenlogger (Headless, nur Aufzeichnung)*.
+
+
+
+.. _datenbank:
+
+Datenbank (SQLite, MariaDB, TimescaleDB)
+======================================================================
+
+Die Messwerte lassen sich **zusätzlich oder statt** der CSV-Datei in eine Datenbank
+schreiben – etwa zur Auswertung mit SQL oder zur Anzeige in Grafana. Die Einstellungen
+stehen im Konfigurationsprogramm im Reiter **Datenbank**; die CSV-Datei schaltet der
+Haken **CSV-Datei schreiben** im Reiter *Aufzeichnung* ein oder aus.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Feld
+     - Bedeutung
+   * - Datenbank
+     - *Keine*, *SQLite (Datei)*, *MariaDB / MySQL* oder *TimescaleDB / PostgreSQL*.
+   * - Server / Port
+     - Rechnername oder IP-Adresse des Datenbankservers; Port *Standard* = 3306
+       (MariaDB) bzw. 5432 (PostgreSQL/TimescaleDB).
+   * - Datenbankname
+     - Name der Datenbank auf dem Server. Sie muss bereits existieren; die Tabelle
+       legt das Programm selbst an.
+   * - Benutzer / Passwort
+     - Zugangsdaten. Der Benutzer braucht die Rechte CREATE (beim ersten Start) und
+       INSERT. Das Passwort steht im Klartext in der Konfigurationsdatei.
+   * - SQLite-Datei
+     - Dateiname der SQLite-Datenbank; ein relativer Pfad gilt im Datenordner des
+       Programms.
+   * - Tabelle
+     - Name der Tabelle (Standard ``messwerte``; Buchstaben, Ziffern, ``_``).
+   * - Nur Änderungen schreiben
+     - Ein Wert wird nur geschrieben, wenn er sich geändert hat, spätestens aber
+       jede Minute. Spart bei langsam veränderlichen Werten viel Platz.
+   * - Datenbank testen
+     - Verbindet sich, legt die Tabelle an und meldet das Ergebnis.
+
+**Tabellenaufbau** (eine Zeile je Wert, „schmales“ Format):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 30 50
+
+   * - Spalte
+     - Typ
+     - Inhalt
+   * - ``zeit``
+     - SQLite: Text, MariaDB: ``DATETIME(3)``, PostgreSQL: ``TIMESTAMPTZ``
+     - Zeitpunkt der Messung in **UTC** mit Millisekunden
+   * - ``projekt``
+     - Text
+     - Projektname aus der Konfiguration (mehrere Logger können eine Tabelle teilen)
+   * - ``variable``
+     - Text
+     - Name der Variable
+   * - ``wert``
+     - Gleitkommazahl
+     - Messwert (BOOL als 0/1)
+
+Ungültige Werte (z. B. während eines Verbindungsausfalls) werden nicht geschrieben.
+Ein Index über ``variable, zeit`` beschleunigt Abfragen einzelner Variablen. Bei
+**TimescaleDB** wird die Tabelle automatisch zur *Hypertable* (zeitlich partitioniert);
+ist die Erweiterung nicht installiert, entsteht eine normale PostgreSQL-Tabelle und die
+Statuszeile meldet das.
+
+Beispielabfragen:
+
+.. code-block:: sql
+
+   -- Verlauf einer Variable der letzten Stunde (PostgreSQL/TimescaleDB)
+   SELECT zeit, wert FROM messwerte
+    WHERE variable = 'Temperatur' AND zeit > now() - interval '1 hour' ORDER BY zeit;
+
+   -- Minutenmittel (TimescaleDB)
+   SELECT time_bucket('1 minute', zeit) AS minute, avg(wert)
+     FROM messwerte WHERE variable = 'Temperatur' GROUP BY minute ORDER BY minute;
+
+   -- Letzte Werte aller Variablen (MariaDB / SQLite)
+   SELECT variable, MAX(zeit) FROM messwerte GROUP BY variable;
+
+**Betrieb:**
+
+* Geschrieben wird in einem eigenen Thread etwa einmal pro Sekunde in Stapeln; die
+  Anzeige und das Lesen aus der Steuerung werden dadurch nicht gebremst.
+* In der Statusleiste (und im Webserver) zeigt eine eigene **LED „Datenbank“** den
+  Zustand; der Tooltip nennt die Zahl der geschriebenen Werte.
+* Ist die Datenbank nicht erreichbar, bleiben die Werte im Speicher (bis etwa
+  2 Millionen Werte) und werden nach dem erneuten Verbinden nachgetragen. Beim
+  Beenden noch nicht geschriebene Werte meldet die Statuszeile.
+* **Treiber:** SQLite ist in Python enthalten. MariaDB braucht ``PyMySQL``,
+  TimescaleDB/PostgreSQL ``psycopg`` (``pip install PyMySQL "psycopg[binary]"``); in
+  der Installationsdatei sind beide enthalten.
+* Für Grafana: Datenquelle *MySQL* bzw. *PostgreSQL* anlegen; die Zeitspalte ist
+  ``zeit`` (UTC). SQLite-Dateien lassen sich mit dem SQLite-Plugin von Grafana lesen.
+
+
+.. _ereignisse:
+
+Trigger und Ereignisprotokoll
+======================================================================
+
+Ein **Trigger** überwacht eine Bedingung über die Variablen, z. B.
+``{Temperatur} > 80``. Sobald sie erfüllt ist, schreibt der Logger einen Eintrag
+mit Zeitstempel in das **Ereignisprotokoll** (eine Textdatei). Die Zahl der noch
+nicht quittierten Ereignisse steht in der Statusleiste des Loggers; quittiert wird
+im **Ereignis-Viewer**.
+
+Trigger anlegen
+----------------------------------------------------------------------
+
+Konfigurationsprogramm, Reiter **Trigger & Ereignisse** → **Trigger bearbeiten …**.
+
+.. figure:: images/trigger_editor.png
+   :alt: Trigger-Editor
+   :width: 90%
+   :align: center
+
+   Der Trigger-Editor: eine Zeile je Trigger, fehlerhafte Zeilen sind rot markiert.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 78
+
+   * - Spalte
+     - Bedeutung
+   * - Aktiv
+     - Nur aktive Trigger werden ausgewertet. Ausgeschaltete Trigger dürfen auch
+       fehlerhaft sein (z. B. nach dem Umbenennen einer Variable).
+   * - Name
+     - Name des Triggers (eindeutig, ohne ``;``); steht im Ereignisprotokoll.
+   * - Bedingung
+     - Ausdruck wie bei den :ref:`berechneten Variablen <berechnete-variablen>`.
+       Ergebnis ungleich 0 = erfüllt. Beispiele: ``{Temperatur} > 80``,
+       ``{Druck} < 2 and {Pumpe} == 1``, ``abs(ddt({Füllstand})) > 5``,
+       ``{Störung} == 1``. Variablen ohne Wert (keine Verbindung) gelten als
+       *nicht erfüllt*. **Bedingung bearbeiten …** (oder Doppelklick) öffnet den
+       Formeleditor mit Variablenliste und Testwerten.
+   * - Meldetext
+     - Text des Eintrags. ``{Name}`` wird durch den Wert der Variable zum Zeitpunkt
+       des Ereignisses ersetzt, z. B. ``Temperatur zu hoch: {Temperatur} °C``.
+       Leer = die Bedingung selbst.
+   * - Priorität
+     - *Info*, *Warnung* oder *Alarm* (Farbe im Viewer, Filter).
+   * - Verzögerung
+     - So viele Sekunden muss die Bedingung **ununterbrochen** erfüllt sein, bevor das
+       Ereignis kommt (unterdrückt kurze Spitzen). 0 = sofort.
+   * - Gehen
+     - Auch das Ende des Ereignisses (Bedingung wieder falsch) eintragen.
+   * - Quittieren
+     - Das Ereignis muss quittiert werden und zählt bis dahin in der Statusleiste.
+       Ohne Haken wird es nur protokolliert.
+
+Ein Trigger löst **einmal je Flanke** aus: Erst wenn die Bedingung wieder falsch und
+dann erneut wahr wird, entsteht ein neues Ereignis. Die Trigger werden mit jedem
+Messzyklus geprüft – also auch im Headless-Betrieb – und gelten ab dem nächsten Start
+der Aufzeichnung. Im Demo-Modus ohne eigene Trigger gibt es zwei Beispiel-Trigger
+(*Übertemperatur*, *Druck niedrig*).
+
+Ereignisdatei
+----------------------------------------------------------------------
+
+Feld **Ereignisdatei** im selben Reiter; leer = ``<CSV-Ordner>/<CSV-Name>_ereignisse.csv``.
+Die Datei wird nur fortgeschrieben (nie geändert oder archiviert) und lässt sich mit
+Excel öffnen (Semikolon, UTF-8):
+
+.. code-block:: text
+
+   ID;Zeit;Art;Trigger;Priorität;Text;Benutzer
+   17;2026-10-15 16:20:01.250;KOMMT;Übertemperatur;Alarm;Temperatur zu hoch: 81.37 °C;
+   17;2026-10-15 16:22:40.100;GEHT;Übertemperatur;Alarm;;
+   17;2026-10-15 16:25:12.000;QUITTIERT;Übertemperatur;Alarm;;mmuster
+
+*Art* ist ``KOMMT``, ``GEHT`` oder ``QUITTIERT``; Zeilen mit derselben *ID* gehören
+zum selben Ereignis. Bei ``QUITTIERT`` steht in *Benutzer* der Windows-Benutzername.
+``-`` in der Spalte *Benutzer* einer ``KOMMT``-Zeile bedeutet „keine Quittierung nötig“.
+
+Anzeige in der Statusleiste
+----------------------------------------------------------------------
+
+.. figure:: images/ereignis_statusleiste.png
+   :alt: Ereigniszähler in der Statusleiste
+   :align: center
+
+   Rot hinterlegt: drei Ereignisse sind noch nicht quittiert.
+
+Rechts in der Statusleiste zeigt der Knopf **🔔** die Zahl der offenen (nicht
+quittierten) Ereignisse; bei offenen Ereignissen ist er rot. Ein Klick darauf – oder
+**Datei → Ereignisprotokoll …** (Strg+E) – öffnet den Viewer. Jedes neue Ereignis
+erscheint außerdem als Meldung in der Statusleiste (``⚠ Alarm: …``). Der Zähler gilt
+auch ohne laufende Aufzeichnung, z. B. wenn ein Headless-Logger auf demselben Rechner
+in die Datei schreibt. Im Webserver steht oben „🔔 n offen“ (Tooltip: die offenen
+Ereignisse); quittiert wird nur im Viewer.
+
+Ereignis-Viewer und Quittieren
+----------------------------------------------------------------------
+
+.. figure:: images/ereignis_viewer.png
+   :alt: Ereignis-Viewer
+   :width: 90%
+   :align: center
+
+   Der Ereignis-Viewer: offene Ereignisse farbig nach Priorität, erledigte grau.
+
+* Die Tabelle zeigt die neuesten Ereignisse oben: Nummer, Kommt, Geht, Priorität,
+  Trigger, Meldung und Quittierung (Zeit und Benutzer bzw. **offen**).
+* Filter: **nur offene**, Priorität, Suchfeld (Trigger oder Meldung).
+* **Markierte quittieren** (oder Doppelklick auf eine Zeile) quittiert die
+  ausgewählten Ereignisse, **Alle quittieren** alle offenen.
+* Die Anzeige aktualisiert sich selbst, sobald neue Ereignisse kommen (F5 = sofort).
+* **Ordner öffnen** zeigt die Ereignisdatei im Explorer.
+
+Der Viewer lässt sich auch **allein** starten – etwa neben einem Headless-Logger oder an
+einem anderen Rechner mit Zugriff auf die Datei (Netzlaufwerk):
+
+.. code-block:: text
+
+   CLXLogger.exe --ereignisse                        (Ereignisprotokoll der zuletzt benutzten Konfiguration)
+   CLXLogger.exe --ereignisse anlage.ini             (Ereignisprotokoll dieser Konfiguration)
+   CLXLogger.exe --ereignisse D:\logs\log_ereignisse.csv
+
+Die installierte Version hat dafür im Startmenü die Verknüpfung *CLX Ereignisprotokoll*.
+Im Konfigurationsprogramm öffnet **Ereignisprotokoll anzeigen …** denselben Viewer.
+
+
+.. _notizen:
+
+Notizen (eigene Einträge)
+----------------------------------------------------------------------
+
+Neben den Triggern lassen sich **Notizen von Hand** ins Ereignisprotokoll schreiben,
+z. B. „Ventil V12 getauscht“ oder „Sollwert auf 65 °C geändert“ – so steht später in
+derselben Datei, warum sich ein Verlauf geändert hat.
+
+* Im Logger: **Datei → Notiz ins Ereignisprotokoll …** (Strg+M). Im Offline-Modus ist
+  die Zeit von **Lineal 1** vorgegeben – so lässt sich eine Stelle im Verlauf nachträglich
+  kommentieren.
+* Im Ereignis-Viewer: **Notiz hinzufügen …**.
+
+.. figure:: images/notiz.png
+   :alt: Notiz eintragen
+   :align: center
+
+   Zeit, Text und Verfasser einer Notiz.
+
+Zeit (Standard: jetzt), Text (auch mehrzeilig) und Verfasser (Standard: Windows- bzw.
+Linux-Benutzername) sind frei wählbar. Notizen stehen als Art ``NOTIZ`` in der Datei,
+erscheinen im Viewer grün hinterlegt mit 📝 und müssen nicht quittiert werden. Der Filter
+**nur Notizen** zeigt nur sie.
+
+.. code-block:: text
+
+   18;2026-10-16 09:12:00.000;NOTIZ;Notiz;Notiz;Ventil V12 getauscht;mmuster
+
+
+.. _pid-optimierung:
+
+PID-Regler-Optimierung
+======================================================================
+
+Zeigt ein Diagramm einen Regelkreis – **Sollwert**, **Istwert** und **Stellwert** –,
+berechnet der Logger aus den aufgezeichneten Daten passende Reglerparameter
+(Kp, Ti, Td). Dazu bestimmt er zuerst ein Modell der Regelstrecke und wendet darauf
+bewährte Einstellregeln an.
+
+Einschalten (Konfigurationsprogramm)
+----------------------------------------------------------------------
+
+Im Zuordnungsbaum das Diagramm auswählen und unter *Eigenschaften der Auswahl* den
+Haken **PID-Regler-Optimierung** setzen. Im Fenster **Einstellen …** werden festgelegt:
+
+.. figure:: images/pid_einstellen.png
+   :alt: PID-Optimierung einstellen
+   :align: center
+
+   Soll-, Ist- und Stellwert des Diagramms zuordnen.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Feld
+     - Bedeutung
+   * - Sollwert
+     - Variable mit dem Sollwert (optional, nur zur Anzeige).
+   * - Istwert
+     - Regelgröße (Messwert), z. B. Temperatur.
+   * - Stellwert
+     - Reglerausgang, z. B. Ventilstellung oder Heizleistung in %.
+   * - Reglertyp
+     - *PI* (meist ausreichend, unempfindlich gegen Messrauschen) oder *PID*.
+   * - Regelverhalten
+     - *schnell* (aggressiv, kleine Reserve), *normal* oder *robust* (langsam, sicher
+       auch bei schwankender Strecke).
+
+Die Zuordnung wird anhand üblicher Namen (Soll/SP, Ist/PV, Stell/CV/Out …) vorgeschlagen.
+
+Daten aufzeichnen
+----------------------------------------------------------------------
+
+Die Berechnung braucht einen Zeitbereich, in dem sich der **Stellwert deutlich
+ändert** und der Istwert darauf reagiert:
+
+* **Stellwertsprung im Handbetrieb** (am besten): Regler auf Hand, Prozess zur Ruhe
+  kommen lassen, Stellwert um 5 … 20 % springen lassen und warten, bis der Istwert
+  wieder ruhig ist.
+* **Sollwertsprung im Automatikbetrieb**: geht ebenso, solange der Regler nicht zu
+  träge ist und der Stellwert nicht dauerhaft an der Grenze (0 / 100 %) steht.
+
+Der Bereich sollte mit ruhigem Prozess beginnen und keine großen Störungen enthalten.
+
+Berechnen (Logger)
+----------------------------------------------------------------------
+
+Menü **Analyse → PID-Optimierung: <Diagramm> …** oder Rechtsklick in das Diagramm →
+**PID-Regler optimieren …**.
+
+.. figure:: images/pid_optimierung.png
+   :alt: Fenster PID-Regler-Optimierung
+   :width: 95%
+   :align: center
+
+   Links Modell und Parameter, rechts Messung/Modell, Stellwert und simulierter Sollwertsprung.
+
+1. **Zeitbereich** wählen: *Zwischen Lineal 1 und 2* (Offline-Modus, Lineale vorher um
+   den Sprung legen), *Sichtbarer Bereich* oder *Alle Daten*.
+2. **Strecke bestimmen und berechnen** klicken. Oben steht das Streckenmodell:
+
+   * *PT1 mit Totzeit* – Verstärkung K, Zeitkonstante T, Totzeit θ (Temperatur, Druck,
+     Durchfluss, Drehzahl …);
+   * *I-Strecke mit Totzeit* – Integrierbeiwert Ki (z. B. Füllstand).
+
+   Die **Übereinstimmung** gibt an, wie gut das Modell die Messung trifft (100 % =
+   perfekt). Unter etwa 50 % sind die Parameter unsicher; Hinweise darunter nennen
+   mögliche Ursachen. Im Diagramm rechts liegt die Modellkurve (orange) über dem
+   gemessenen Istwert (grau).
+3. Die **Tabelle** zeigt die Parameter nach mehreren Einstellregeln; die erste
+   (fett) ist die empfohlene:
+
+   .. list-table::
+      :header-rows: 1
+      :widths: 28 72
+
+      * - Regel
+        - Eigenschaften
+      * - SIMC (Skogestad)
+        - Empfehlung: gute Führung und Störunterdrückung, geringes Überschwingen.
+      * - IMC / Lambda
+        - Ruhig, praktisch ohne Überschwingen; schont Stellglieder.
+      * - AMIGO
+        - Robust (Åström/Hägglund), gute Störunterdrückung.
+      * - CHR (aperiodisch)
+        - Chien-Hrones-Reswick, Führungsverhalten ohne Überschwingen.
+      * - Ziegler-Nichols
+        - Klassisch, schnell, aber schwach gedämpft – nur zum Vergleich.
+
+   Spalten: **Kp** (Verstärkung), **Ti** und **Td** in Sekunden (Standardform
+   ``u = Kp·(e + 1/Ti·∫e dt + Td·de/dt)``), dazu die Parallelform **Ki** = Kp/Ti und
+   **Kd** = Kp·Td sowie **Überschwingen** und **Ausregelzeit** (2-%-Band) aus der
+   Simulation.
+4. Unten rechts ist der **simulierte Sollwertsprung** mit der markierten Regel zu sehen
+   (rot; grau die übrigen). Reglertyp und Regelverhalten lassen sich im Fenster
+   umschalten – die Tabelle wird sofort neu berechnet.
+5. **Ergebnis kopieren** legt Modell und alle Parameter als Text in die Zwischenablage.
+
+Hinweise
+----------------------------------------------------------------------
+
+* Kp gilt in den aufgezeichneten Einheiten (Stellwert-Einheit je Istwert-Einheit, z. B.
+  %/°C). Rechnet der Regler in der Steuerung mit normierten Werten, umrechnen:
+  ``Kp_norm = Kp · Istwert-Spanne / Stellwert-Spanne``.
+* Ein **negatives Kp** bedeutet: Der Istwert sinkt bei steigendem Stellwert (z. B.
+  Kühlung). In der Steuerung den Wirksinn umkehren und den Betrag eintragen.
+* Die Simulation berücksichtigt keine Stellwertbegrenzung. Neue Parameter vorsichtig
+  einführen und den Regelkreis beobachten.
+* Im **Demo-Modus** enthält die Beispielkonfiguration das Diagramm *Regelkreis* mit
+  einem simulierten, absichtlich träge eingestellten Regler (Sollwert wechselt jede
+  Minute) – nach einigen Minuten Aufzeichnung lässt sich die Optimierung ausprobieren.
+* **Übernahme in die Steuerung:** *PIDE* mit unabhängigen Verstärkungen: ``PGain`` = Kp, ``IGain`` = Ki·60 [1/min], ``DGain`` = Kd/60 [min]. *PIDE* abhängige Form bzw. *PID*-Anweisung: ``Kc`` = Kp, Ti und Td in **Minuten** (Werte aus der Tabelle durch 60 teilen). *PIDE* rechnet in % der Bereiche ``PVEUMax/Min`` und ``CVEUMax/Min`` – Kp entsprechend umrechnen.
+
+
+.. _sprache:
+
+Sprache umschalten und übersetzen
+======================================================================
+
+Die Oberfläche ist auf Deutsch geschrieben und lässt sich über **Sprachdateien** in
+andere Sprachen übersetzen. Mitgeliefert werden **Deutsch** und **Englisch**.
+
+Umschalten
+----------------------------------------------------------------------
+
+Menü **Sprache** (im Logger und im Konfigurationsprogramm): Sprache wählen und die Frage
+nach dem Neustart bestätigen. Die Wahl gilt für beide Programme und den Ereignis-Viewer
+und wird in der Datei ``clx_einstellungen.json`` im Datenordner gespeichert. Auch die
+Standardtexte von Qt (Ja/Nein/Abbrechen, Dateidialoge) folgen der gewählten Sprache.
+
+Nicht übersetzt werden Daten: Namen von Variablen, Diagrammen und Triggern, die Spalten
+der CSV-Dateien und des Ereignisprotokolls (``KOMMT``, ``GEHT`` …), die Webseite des
+Webservers sowie die Logdatei des Headless-Betriebs (teilweise).
+
+Eigene Übersetzung erstellen
+----------------------------------------------------------------------
+
+1. Menü **Sprache → Ordner mit Sprachdateien öffnen …**. Der Ordner ``sprachen`` im
+   Datenordner öffnet sich; die Vorlage ``de.txt`` wird dabei hineinkopiert.
+2. ``de.txt`` kopieren und nach dem **Sprachkürzel** benennen, z. B. ``fr.txt``
+   (Französisch), ``it.txt``, ``es.txt``, ``nl.txt``, ``pl.txt``, ``cs.txt``.
+3. Die Datei mit einem Texteditor öffnen (UTF-8), oben hinter ``# Sprache:`` den Namen
+   eintragen (z. B. ``Français``) und hinter jedem ``>`` die Übersetzung schreiben:
+
+   .. code-block:: text
+
+      # Sprache: Français
+
+      @ Konfiguration laden
+      > Charger la configuration
+
+      @ {0} offene Ereignisse quittieren?
+      > Acquitter {0} événements ouverts ?
+
+4. Speichern – die Sprache erscheint sofort im Menü **Sprache** (nach Neustart aktiv).
+
+Regeln:
+
+* ``@`` = deutscher Originaltext (nicht ändern), ``>`` = Übersetzung. Leer gelassene
+  Übersetzungen zeigen den deutschen Text – man kann also schrittweise übersetzen.
+* ``\n`` steht für einen Zeilenumbruch.
+* **Platzhalter** wie ``{0}``, ``{1}`` oder ``{2:.1f}`` müssen erhalten bleiben (die
+  Reihenfolge im Satz ist frei). Fehlt einer, wird für diesen Text das Original verwendet.
+* ``&`` vor einem Buchstaben markiert das Tastenkürzel im Menü (Alt + Buchstabe); ``&&``
+  ergibt ein einzelnes ``&``.
+* HTML-Auszeichnungen wie ``<b>…</b>`` oder ``<code>…</code>`` unverändert lassen.
+* Die englische Datei ``en.txt`` kann als Beispiel dienen.
+
+Gesucht wird zuerst im Ordner ``sprachen`` des Datenordners (eigene Dateien, bleiben bei
+Updates erhalten), dann im Programmordner (mitgelieferte Dateien). Eine eigene ``en.txt``
+im Datenordner ersetzt also die mitgelieferte.
+
+Für Entwickler: Texte im Programm stehen als ``tr("…")`` bzw. ``tr("… {0} …").format(wert)``
+(Modul ``clx_i18n.py``). Nach Programmänderungen bringt
+``python tools/extract_tr.py clx .`` alle Sprachdateien auf den neuesten Stand (neue
+Texte mit leerer Übersetzung, vorhandene Übersetzungen bleiben).
+
+
+CSV-Dateien
+======================================================================
+
+Dateiname und Ort
+----------------------------------------------------------------------
+
+Für jede Aufzeichnung wird eine neue Datei im CSV-Ordner angelegt:
+``<CSV-Name>_JJJJMMTT_HHMMSS.csv``, z. B. ``log_20261012_080000.csv``
+(im Demo-Modus ``demo_...``).
+
+.. _csv-archiv:
+
+Dateigröße begrenzen und archivieren
+----------------------------------------------------------------------
+
+In der Konfiguration lässt sich die Anzahl der Datensätze je CSV-Datei
+begrenzen (*Max. Datensätze je Datei*, ``0`` = unbegrenzt). Wird die Zahl
+erreicht, geschieht automatisch Folgendes:
+
+#. Die Datei wird geschlossen und als ZIP gepackt.
+#. Das ZIP wird in der folgenden Verzeichnisstruktur abgelegt:
+
+   .. code-block:: text
+
+      <Archiv-Ordner>/<CSV-Name>/<Jahr>/<Monat>/<Tag>/<Dateiname>.zip
+
+   Beispiel: ``archiv/log/2026/10/12/log_20261012_080000.zip``
+#. Die ursprüngliche CSV-Datei wird erst gelöscht, nachdem das Archiv
+   erfolgreich geprüft wurde.
+#. Die Aufzeichnung läuft ohne Unterbrechung in einer neuen CSV-Datei weiter.
+
+Hinweise:
+
+* Für **Jahr, Monat und Tag** gilt das Datum des *ersten Datensatzes* der
+  Datei. Der Ordnername ``<CSV-Name>`` ist der in der Konfiguration
+  eingestellte Name (im Demo-Modus ``demo``).
+* Das Packen läuft im Hintergrund und bremst die Aufzeichnung nicht. Das
+  Ergebnis erscheint in der Statuszeile. Schlägt die Archivierung fehl,
+  bleibt die CSV-Datei im CSV-Ordner erhalten.
+* Wird die Aufzeichnung mit **■ Stop** beendet, bleibt die aktuelle Datei
+  ungepackt im CSV-Ordner liegen. Nur volle Dateien werden archiviert.
+* Archivierte Dateien lassen sich mit **CSV laden** direkt als ZIP öffnen.
+* Die Anzeige im Logger arbeitet unabhängig von den Dateien weiter; beim
+  Laden einer Datei wird nur deren Inhalt angezeigt.
+
+Faustformel für die Dateigröße: Datensätze je Datei = Dauer ÷ Abtastintervall.
+Bei 200 ms Intervall entstehen 5 Datensätze pro Sekunde, also 432 000 pro Tag;
+ein Limit von 100 000 Datensätzen entspricht dann rund 5,5 Stunden je Datei.
+
+Format
+----------------------------------------------------------------------
+
+* Trennzeichen: Semikolon (``;``), Dezimaltrennzeichen: Punkt
+* Zeichensatz: UTF-8
+* Erste Zeile: Spaltenüberschriften
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Spalte
+     - Inhalt
+   * - ``Zeit``
+     - Zeitstempel mit Millisekunden, z. B. ``2026-10-11 10:59:30.927``
+   * - ``Epoch``
+     - Unix-Zeit in Sekunden mit drei Nachkommastellen (Millisekunden),
+       z. B. ``1791716370.927``
+   * - Variablen
+     - Eine Spalte je Variable, benannt nach dem Variablennamen. Ein leeres
+       Feld bedeutet: kein gültiger Wert.
+
+Beispiel:
+
+.. code-block:: text
+
+   Zeit;Epoch;Temperatur;Pumpe
+   2026-10-11 10:59:30.927;1791716370.927;51.234;1
+   2026-10-11 10:59:31.127;1791716371.127;51.301;1
+
+.. note::
+
+   Wird die Datei in Excel geöffnet, zeigt Excel Millisekunden nur an, wenn die
+   Spalte entsprechend formatiert ist (benutzerdefiniertes Zahlenformat
+   ``TT.MM.JJJJ hh:mm:ss,000``). Die Werte in der Datei selbst enthalten die
+   Millisekunden immer.
+
+CSV-Datei laden
+----------------------------------------------------------------------
+
+**CSV laden** öffnet eine CSV- oder ZIP-Datei (bei ZIP-Archiven die erste
+CSV im Archiv) und zeigt sie im Offline-Modus an. Eine laufende
+Aufzeichnung wird dabei beendet. Zur Darstellung wird die Spalte ``Epoch``
+verwendet. Variablen, deren Name in der aktuellen Konfiguration vorhanden ist,
+übernehmen Farbe und Zuordnung zu Diagramm und Y-Achse; unbekannte Variablen
+erscheinen auf der ersten Y-Achse des ersten Diagramms.
+
+
+.. _installer:
+
+Installationsdatei erstellen (Windows)
+======================================================================
+
+Aus den Python-Dateien lassen sich zwei eigenständige Programme
+(``CLXLogger.exe`` und ``CLXKonfiguration.exe``) und eine Setup-Datei erzeugen.
+Dazu dienen:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Datei
+     - Aufgabe
+   * - ``build.bat``
+     - Baut mit **PyInstaller** beide Programme in *einen* gemeinsamen Ordner
+       (``dist\CLXDatenlogger``) und anschließend mit **Inno Setup** den Installer.
+   * - ``installer.iss``
+     - Inno-Setup-Skript (Programmordner, Startmenü, optionale Desktop-Symbole,
+       Deinstallation, Anleitung).
+   * - ``make_icon.py``
+     - Erzeugt ``app.ico`` aus dem Standard-Symbol, falls noch keine ``app.ico``
+       existiert.
+   * - ``requirements.txt``
+     - Benötigte Python-Pakete (inkl. PyInstaller und docutils für den Build).
+
+**Voraussetzungen:** Python 3.9 oder neuer (64 Bit), Internetzugang beim ersten
+Lauf (pip) und für den Installer **Inno Setup 6**
+(``https://jrsoftware.org/isinfo.php``).
+
+**Ablauf:**
+
+#. Alle Programmdateien (siehe Überblick) und die vier Build-Dateien liegen im
+   selben Ordner.
+#. In diesem Ordner ``build.bat`` starten (Doppelklick oder Eingabeaufforderung).
+
+   .. code-block:: console
+
+      build.bat              alles: Umgebung, Programme, Installer
+      build.bat exe          nur die Programme (dist\CLXDatenlogger)
+      build.bat installer    nur den Installer (benötigt vorhandenes dist\)
+
+#. Ergebnis: ``dist\CLXDatenlogger`` (lauffähig ohne Installation) und
+   ``installer\CLXDatenlogger_Setup_<Version>.exe``.
+
+Das Skript legt eine virtuelle Umgebung ``.venv`` an, installiert die Pakete,
+erzeugt bei Bedarf das Icon und baut beide Programme. Die Versionsnummer wird
+oben in ``build.bat`` bei ``VERSION`` eingestellt. Ein **eigenes Icon** entsteht,
+indem Sie vor dem Build eine eigene ``app.ico`` in den Ordner legen.
+
+**Speicherort der Daten:** Die installierten Programme schreiben Konfiguration
+(``clx_config.ini``), CSV-Dateien und Archiv **nicht** in den Programmordner
+(dieser ist meist schreibgeschützt), sondern nach
+``%APPDATA%\\CLXDatenlogger``. Die Daten bleiben beim Deinstallieren und bei
+Updates erhalten. Soll alles neben den Programmen liegen (portabler Betrieb auf
+einem USB-Stick), legen Sie eine leere Datei ``portable.txt`` neben die
+``.exe``-Dateien.
+
+**Hinweise:**
+
+* Die ``.exe``-Dateien enthalten Python und alle Bibliotheken (die
+  ``plctag.dll`` und pycomm3 werden mitgenommen; fehlt ``plctag.dll`` neben
+  ``build.bat``, lädt das Skript sie einmalig aus dem GitHub-Release von libplctag); auf dem
+  Zielrechner muss nichts installiert werden.
+* Der Logger startet die Konfiguration über **Konfiguration** in der
+  Werkzeugleiste (``CLXKonfiguration.exe`` im selben Ordner).
+* Schlägt der Build fehl, steht die Ursache in den Meldungen des Fensters
+  (häufig: kein Internet für pip, Python nicht im PATH, Virenscanner sperrt
+  ``dist``). Mit ``build.bat exe`` lässt sich der Installer-Schritt getrennt
+  wiederholen.
+
+Portable Version (ohne Installation)
+----------------------------------------------------------------------
+
+Statt des Installers lässt sich ein ZIP-Paket erzeugen, das nur entpackt wird –
+z. B. auf einen USB-Stick oder in einen beliebigen Ordner:
+
+.. code-block:: console
+
+   build.bat portable
+
+Ergebnis: ``dist\CLXDatenlogger_portable_<Version>.zip`` (``build.bat`` ohne Parameter
+erzeugt das ZIP zusätzlich zum Installer). Benutzung:
+
+#. ZIP entpacken (Rechtsklick › *Alle extrahieren*).
+#. ``CLXKonfiguration.exe`` bzw. ``CLXLogger.exe`` im entpackten Ordner starten.
+   Eine Installation oder Administratorrechte sind nicht nötig.
+
+Im Paket liegt die Datei ``portable.txt``. Sie schaltet den portablen Betrieb ein:
+Konfiguration, CSV-Dateien, Archiv und Logdatei liegen dann **im entpackten Ordner**
+statt unter ``%APPDATA%``. Der Ordner muss deshalb beschreibbar sein (also nicht
+unter ``C:\Program Files`` entpacken). Zum Entfernen genügt es, den Ordner zu
+löschen. Für ein Update die neuen Programmdateien über den alten Ordner entpacken;
+Konfiguration und Aufzeichnungen bleiben erhalten.
+
+.. note::
+
+   Beim ersten Start einer heruntergeladenen ``.exe`` kann Windows SmartScreen
+   warnen (*Weitere Informationen › Trotzdem ausführen*), da die Programme nicht
+   signiert sind. Unter *Eigenschaften › Zulassen* der ZIP-Datei lässt sich das
+   vor dem Entpacken für alle Dateien aufheben.
+
+
+.. _appimage:
+
+Linux: AppImage (x86_64 und arm64)
+======================================================================
+
+Für Linux gibt es das Programm als **AppImage**: eine einzelne Datei, die ohne Installation
+läuft. Sie enthält Logger, Konfigurationsprogramm und Ereignis-Viewer.
+
+Benutzen
+----------------------------------------------------------------------
+
+.. code-block:: console
+
+   chmod +x CLXDatenlogger-2.1.0-x86_64.AppImage        # einmalig: ausführbar machen
+   ./CLXDatenlogger-2.1.0-x86_64.AppImage               # Logger (mit Startbild)
+   ./CLXDatenlogger-2.1.0-x86_64.AppImage --konfig      # Konfigurationsprogramm
+   ./CLXDatenlogger-2.1.0-x86_64.AppImage --ereignisse  # Ereignis-Viewer
+   ./CLXDatenlogger-2.1.0-x86_64.AppImage --headless anlage.ini   # nur Aufzeichnung (z. B. als Dienst)
+
+Auf Raspberry Pi (64-Bit-System) und anderen arm64-Rechnern entsprechend die Datei
+``…-aarch64.AppImage``. Die Daten (Konfiguration, CSV, Archiv, Ereignisse, Sprachdateien)
+liegen in ``~/CLXDatenlogger``; liegt neben dem AppImage eine Datei ``portable.txt``, bleiben sie
+im Ordner des AppImage. Manche Systeme brauchen für AppImages das Paket ``libfuse2``
+(Ubuntu 22.04: ``sudo apt install libfuse2``, Ubuntu 24.04: ``libfuse2t64``); ohne FUSE
+startet es auch mit ``--appimage-extract-and-run``.
+
+Die Bibliothek **libplctag** (``libplctag.so``) wird beim Bauen aus dem Quelltext übersetzt und ist im AppImage enthalten.
+
+Bauen
+----------------------------------------------------------------------
+
+``build_appimage.sh`` im Programmordner baut das AppImage für die Architektur des Rechners,
+auf dem es läuft:
+
+.. code-block:: console
+
+   sudo apt install python3-venv cmake build-essential file libxkbcommon-x11-0 libxcb-cursor0 \
+        libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libegl1 libfontconfig1 libdbus-1-3
+   ./build_appimage.sh
+   # Ergebnis: dist/CLXDatenlogger-2.1.0-x86_64.AppImage (bzw. -aarch64)
+
+* **x86_64** auf einem x86_64-Rechner bauen, **arm64** auf einem arm64-Rechner (Raspberry
+  Pi 4/5 mit 64-Bit-System, Ubuntu arm64 …). PyInstaller kann nicht für eine andere
+  Architektur übersetzen.
+* Ohne arm64-Rechner: ``./build_appimage.sh --docker arm64`` baut in einem Docker-Container
+  per QEMU-Emulation (langsam, aber auf jedem x86_64-PC mit Docker möglich).
+* Das AppImage läuft auf Systemen mit **gleicher oder neuerer** glibc als das Build-System.
+  Für möglichst viele Zielsysteme auf einem älteren System bauen (z. B. Ubuntu 22.04).
+* Gibt es für PyQt6 auf einem älteren arm64-System kein passendes Paket, die Qt-Pakete des
+  Systems verwenden: ``sudo apt install python3-pyqt6 python3-pyqt6.qtsvg`` und
+  ``VENV_SYSTEM=1 ./build_appimage.sh``.
+* **GitHub Actions**: Die Datei ``.github/workflows/appimage.yml`` (im obersten Ordner der
+  Lieferung) baut alle drei Datenlogger für x86_64 und arm64 automatisch, wenn das Projekt in
+  einem GitHub-Repository liegt (Actions › AppImages › Run workflow, oder bei einem Tag ``v*``).
+
+
+Fehlersuche
+======================================================================
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Problem
+     - Mögliche Ursache und Abhilfe
+   * - „Verbindung fehlgeschlagen“ / LED rot
+     - IP-Adresse, CIP-Pfad, Typ und Netzwerkverbindung der betroffenen
+       Steuerung prüfen. Firewall (TCP 44818) prüfen. „keine Antwort innerhalb
+       von … ms“: Steuerung nicht erreichbar oder falscher Pfad. Die übrigen
+       Steuerungen laufen unabhängig weiter.
+   * - „libplctag wurde nicht gefunden“
+     - ``plctag.dll`` (64 Bit, aus dem GitHub-Release von libplctag) neben die
+       Programmdateien legen bzw. den Pfad in ``CLX_PLCTAG_LIB`` angeben.
+       32-Bit-Python kann die 64-Bit-DLL nicht laden.
+   * - Tag-Liste lässt sich nicht laden
+     - ``pip install pycomm3``; IP-Adresse und Pfad prüfen. Bei sehr großen
+       Projekten *Programm-Tags* abschalten.
+   * - LED „Datenbank“ rot
+     - Server, Port, Datenbankname und Zugangsdaten mit **Datenbank testen** prüfen.
+       Die Datenbank muss existieren (``CREATE DATABASE datenlogger;``), der Benutzer
+       braucht CREATE- und INSERT-Rechte. „Treiber fehlt“: ``pip install PyMySQL`` bzw.
+       ``pip install "psycopg[binary]"``. Die Werte werden bis zur Verbindung gepuffert.
+   * - Webseite nicht erreichbar
+     - Webserver in der Konfiguration eingeschaltet? Port von der Firewall frei?
+       Host ``0.0.0.0`` (nicht ``127.0.0.1``) für Zugriffe von anderen Geräten.
+       Mit Zugriffscode: ``/?token=CODE`` anhängen. Diagramme leer: Chart.js-Datei
+       in ``web_static`` bzw. Internetzugang des Browsers prüfen.
+   * - Logger startet ohne Fenster
+     - In der Konfiguration ist *Headless-Modus* aktiv. Mit ``--gui`` starten oder
+       die Option abschalten.
+   * - „Tag … : PLCTAG_ERR_NOT_FOUND“ bzw. „…BAD_PARAM“ in der Statuszeile
+     - Den Tag gibt es nicht (Schreibweise, Programm-Präfix ``Program:Name.``)
+       oder *External Access* ist *None*. Nur dieser Tag bleibt ohne Wert.
+   * - Werte sind offensichtlich falsch
+     - Der eingestellte Typ passt nicht zum Tag (z. B. ``INT`` statt ``REAL``).
+       Mit **Verbindung testen** gegenprüfen oder den Tag aus der Tag-Liste
+       übernehmen (Typ kommt dann aus der Steuerung).
+   * - „Keine Variablen“ beim Start
+     - Zuerst im Konfigurationsprogramm Variablen anlegen und speichern, oder
+       den Demo-Modus verwenden.
+   * - Änderungen der Konfiguration wirken nicht
+     - Der Logger lädt die Konfiguration beim Start. **■ Stop** und erneut
+       **▶ Start** drücken.
+   * - Diagramm ist leer
+     - Aufzeichnung läuft nicht, oder die Variable ist über das Häkchen in der
+       Wertetabelle ausgeblendet. Im Menü *Ansicht › Diagramme* prüfen, ob das
+       Diagramm eingeblendet ist.
+   * - Kurve einer Y-Achse ist nicht sichtbar
+     - Feste Achsengrenzen liegen außerhalb der Werte. **Y-Auto** aktivieren
+       oder die Grenzen in der Konfiguration anpassen.
+   * - „⚠ Archivierung … fehlgeschlagen“
+     - Archiv-Ordner nicht beschreibbar oder Datenträger voll. Die CSV-Datei
+       bleibt im CSV-Ordner erhalten; Pfad und Rechte des Archiv-Ordners
+       prüfen.
+   * - Block lässt sich nicht lesen („Lesefehler“, **Block testen** schlägt fehl)
+     - Der Ausschnitt (erster Index + Anzahl) liegt nicht vollständig im Array,
+       oder das Format passt nicht zum Datentyp des Arrays. Arraygröße, Index und
+       Format prüfen.
+   * - Berechnete Variable zeigt keine Werte
+     - Formel prüfen (Editor: **Prüfen / Berechnen**). Nicht berechenbare Werte
+       (Division durch 0, fehlende Messwerte der verwendeten Variablen) ergeben
+       Lücken. Beim Start meldet der Logger Formelfehler in einem Hinweisfenster.
+   * - Logo oder Icon erscheint nicht
+     - Pfad in der Konfiguration prüfen (relative Pfade gelten vom
+       Programmordner). Bei SVG muss PyQt6 das SVG-Modul enthalten; ersatzweise
+       PNG verwenden.
+   * - Installierte Version findet die Konfiguration nicht
+     - Die Daten liegen unter ``%APPDATA%\\CLXDatenlogger`` (nicht im Programmordner).
+       Mit ``portable.txt`` neben der ``.exe`` wird der Programmordner verwendet.
+   * - Keine Millisekunden in Excel
+     - Zellformat anpassen (siehe Hinweis im Abschnitt *CSV-Dateien*).
+
+
+Bekannte Einschränkungen
+======================================================================
+
+* Ein Block gehört zu genau einer Steuerung; Formeln können aber Variablen
+  verschiedener Steuerungen verknüpfen (es zählt der jeweils letzte Wert).
+  Die Messzeitpunkte der Steuerungen sind nicht synchron.
+* Der Webserver ist nur lesend und ohne Verschlüsselung (HTTP).
+* Ein Block hat höchstens 1000 Elemente und genau ein Format. Ist nur ein
+  Teil des Ausschnitts nicht lesbar, schlägt der gesamte Block fehl.
+* Berechnete Variablen kennen nur Werte der aktuellen Messung (außer den
+  Zeitfunktionen ``ddt``, ``integ`` und ``avg``); beim Laden einer CSV-Datei
+  werden sie nicht neu berechnet, sondern aus der Datei übernommen.
+* Diagramme lassen sich per Drag & Drop nur innerhalb ihrer Seite umordnen;
+  die Zuordnung zu einer Seite erfolgt in der Konfiguration.
+* Aufgezeichnet werden atomare Zahlen- und BOOL-Tags; Strings und ganze
+  Strukturen nicht (deren Glieder aber schon). BOOL-Arrays sind nicht als Block
+  lesbar.
+* Nur lesender Zugriff; der Logger schreibt nichts in die Steuerung.
+* Die Y-Achsen lassen sich nicht per Maus skalieren; verwenden Sie die
+  Auto-Skalierung oder feste Grenzen in der Konfiguration.
+* Es wird immer nur die zeitlich nächste Messung ausgewertet; Werte zwischen
+  zwei Messpunkten werden nicht interpoliert.
+* Die minimale Abtastzeit hängt von der Kommunikation mit der Steuerung ab; bei
+  vielen Variablen kann das eingestellte Intervall nicht eingehalten werden.
+* Der Demo-Schalter und die Fensteranordnung werden nicht in der
+  INI-Datei gespeichert.
