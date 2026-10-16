@@ -1,4 +1,4 @@
-# AppImages für Linux (x86_64 und arm64) aller drei Datenlogger bauen.
+# AppImages für Linux (x86_64 und arm64) aller vier Datenlogger bauen.
 # Start: bei einem Tag "v*" oder von Hand (Actions › AppImages › Run workflow). Ergebnis: Artefakte je Programm und
 # Architektur; bei einem Tag zusätzlich als Dateien eines GitHub-Release.
 #
@@ -6,12 +6,17 @@
 #   ./                  S7 Datenlogger (s7_*.py, build_appimage.sh)
 #   ./clx_datenlogger   CLX Datenlogger
 #   ./tia_datenlogger   TIA Datenlogger
+#   ./plc_datenlogger   PLC Datenlogger (alle Steuerungstypen)
 name: AppImages
 
 on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+
+# Schreibrecht für den Release-Schritt (Dateien an ein GitHub-Release hängen)
+permissions:
+  contents: write
 
 jobs:
   appimage:
@@ -37,7 +42,7 @@ jobs:
             libxcb-image0 libfontconfig1 libdbus-1-3
       - name: AppImage bauen
         working-directory: ${{ matrix.project }}
-        run: ./build_appimage.sh
+        run: bash ./build_appimage.sh     # mit bash: läuft auch, wenn das Skript nicht als ausführbar markiert ist
       - uses: actions/upload-artifact@v4
         with:
           name: appimage-${{ matrix.project == '.' && 's7' || matrix.project }}-${{ matrix.runner }}
