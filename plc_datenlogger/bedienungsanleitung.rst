@@ -58,8 +58,8 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
      - Aufgabe
    * - ``plc_config.py``
      - Konfigurationsprogramm: Projekt, Steuerungen und Treiber, Diagramme,
-       Y-Achsen und Variablen festlegen. Speichert in eine INI-Datei mit beliebigem
-       Namen (Standard ``plc_config.ini``).
+       Y-Achsen und Variablen festlegen. Speichert in eine JSON-Datei mit beliebigem
+       Namen (Standard ``plc_config.json``).
    * - ``plc_logger.py``
      - Startprogramm des Loggers: wählt anhand der Konfiguration bzw. der
        Parameter die Betriebsart (Oberfläche oder Headless).
@@ -106,7 +106,7 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
    * - ``build_appimage.sh``, ``tools/extract_tr.py``
      - Linux-AppImage bauen; Sprachdateien nach Programmänderungen aktualisieren.
    * - ``plc_common.py``
-     - Datenmodell und INI-Datei (inkl. Übernahme der Konfigurationen der
+     - Datenmodell und Konfigurationsdatei (JSON) (inkl. Übernahme der Konfigurationen der
        Einzelprogramme). Wird nicht direkt gestartet.
    * - ``build.bat``, ``installer.iss``, ``make_icon.py``, ``requirements.txt``
      - Erzeugung der Windows-Installationsdatei (siehe :ref:`installer`).
@@ -135,8 +135,8 @@ Funktionsumfang:
   Tag-Liste) bzw. aus exportierten DB-Quellen (S7)
 * Blocklesemodus: viele Werte mit einer Anfrage lesen (Array-Ausschnitte,
   zusammenhängende Adressbereiche)
-* Konfigurationen der Einzelprogramme (S7, TIA, CLX) werden direkt geöffnet und
-  übernommen
+* Konfigurationen der Einzelprogramme (S7, TIA, CLX) werden übernommen; ältere
+  INI-Dateien einmalig umgewandelt
 * Projektname und Konfigurationsdateien mit beliebigem Namen (Öffnen-Dialog)
 * **Webserver** zum Ansehen der Diagramme im Browser (Tablet, Smartphone)
 * **Headless-Betrieb** (ohne Diagramme, nur Aufzeichnung)
@@ -194,11 +194,11 @@ Programme starten
 
 .. code-block:: console
 
-   python plc_config.py [datei.ini]     # Konfiguration
-   python plc_logger.py [datei.ini]     # Logger (Oberfläche oder Headless)
+   python plc_config.py [datei.json]     # Konfiguration
+   python plc_logger.py [datei.json]     # Logger (Oberfläche oder Headless)
 
 Ohne Dateiangabe wird die **zuletzt benutzte** Konfigurationsdatei geöffnet
-(Standard: ``plc_config.ini``). Der Name der Datei ist beliebig. Weitere Parameter
+(Standard: ``plc_config.json``). Der Name der Datei ist beliebig. Weitere Parameter
 des Loggers:
 
 .. list-table::
@@ -207,7 +207,7 @@ des Loggers:
 
    * - Parameter
      - Wirkung
-   * - ``datei.ini`` oder ``--config datei.ini``
+   * - ``datei.json`` oder ``--config datei.json``
      - Konfigurationsdatei, die verwendet wird (und beim nächsten Start ohne
        Angabe wieder geöffnet wird).
    * - ``--headless``
@@ -262,7 +262,7 @@ Beim Start von Logger und Konfigurationsprogramm erscheint das **Startbild**:
   starten. Wieder einschalten: im Logger **Datei → Startbild beim Programmstart zeigen**.
 
 Nach der Auswahl zeigt das Startbild den Ladefortschritt, bis das Hauptfenster bereit ist.
-Wird beim Aufruf eine Konfigurationsdatei angegeben (z. B. ``PLCLogger.exe anlage.ini``),
+Wird beim Aufruf eine Konfigurationsdatei angegeben (z. B. ``PLCLogger.exe anlage.json``),
 entfällt die Auswahl. Das Fenster lässt sich mit der Maus verschieben; **Esc** oder ✕ beendet.
 
 
@@ -793,14 +793,14 @@ Hinweise:
   ein Element einen eigenen Namen, z. B. ``Druck Vorlauf`` statt
   ``Messwerte[1]``. Ein leerer Name stellt den Standardnamen wieder her. Die
   Namen müssen eindeutig sein und dürfen ``; { }`` nicht enthalten. In der
-  INI-Datei stehen sie als ``elem_<Index> = Name`` im Abschnitt des Blocks.
+  Konfigurationsdatei stehen sie unter ``elementnamen`` des Blocks.
 * **Elemente in verschiedenen Diagrammen:** Im Baum des Blockeditors hat jedes
   Element in der letzten Spalte *Diagramm › Y-Achse* eine Auswahlliste. *(wie
   Block)* verwendet das Ziel des Blocks, jeder andere Eintrag stellt dieses
   Element in einem anderen Diagramm bzw. an einer anderen Y-Achse dar. Mit
   **Für alle Elemente des markierten Blocks setzen** wird das gewählte Ziel für
-  alle Elemente übernommen. In der INI-Datei stehen abweichende Ziele als
-  ``elemziel_<Index> = Diagramm,Achse``.
+  alle Elemente übernommen. In der Konfigurationsdatei stehen abweichende Ziele
+  unter ``elementziele`` (Index: [Diagramm, Achse]).
 * Im Variablenbaum der Konfiguration erscheint jeder Block als eine Zeile
   (``▦ Block …``) unter seiner Y-Achse. Mit **Entfernen** wird der markierte
   Block gelöscht.
@@ -891,15 +891,16 @@ Das Menü **Datei** des Konfigurationsprogramms enthält:
 
 * **Neu** – leere Konfiguration mit einer Steuerung; der Dateiname wird beim
   ersten Speichern abgefragt.
-* **Öffnen…** (``Strg+O``) – lädt eine INI- oder TXT-Datei mit **beliebigem
+* **Öffnen…** (``Strg+O``) – lädt eine Konfigurationsdatei (JSON) mit **beliebigem
   Namen**, auch Konfigurationen des S7-, TIA- und CLX-Datenloggers (siehe
   :ref:`uebernahme`).
 * **Speichern** (``Strg+S``) und **Speichern unter…** (``Strg+Umschalt+S``) –
-  schreiben in die aktuelle bzw. eine neue Datei (ohne Endung wird ``.ini``
-  ergänzt). Vor dem Speichern wird geprüft, dass Steuerungs- und
+  schreiben in die aktuelle bzw. eine neue Datei (die Endung ist immer ``.json``). Vor dem Speichern wird geprüft, dass Steuerungs- und
   Variablennamen eindeutig und nicht leer sind, die Verbindungsparameter und
   Adressen für den jeweiligen Treiber gültig sind, die Formeln stimmen und bei
   festen Y-Achsen *Y max* größer als *Y min* ist.
+* **INI-Datei umwandeln …** – ältere INI-Konfigurationen einmalig in JSON umwandeln
+  (siehe :ref:`ini-umwandeln`).
 * **Logger mit dieser Konfiguration starten** (``Strg+R``) – speichert und
   startet den Logger mit dieser Datei.
 
@@ -912,171 +913,238 @@ Datei wird gemerkt (Datei ``plc_last.txt``); Logger und Konfigurationsprogramm
    Der Logger liest die Konfiguration bei jedem **Start**. Änderungen wirken
    daher erst nach erneutem Drücken von **▶ Start**.
 
-Aufbau der INI-Datei
+Aufbau der Konfigurationsdatei (JSON)
 ----------------------------------------------------------------------
 
-Die Datei kann bei Bedarf auch von Hand bearbeitet werden. Beispiel mit vier
-Steuerungen verschiedener Treiber:
+Die Konfiguration wird als **JSON-Datei** gespeichert (UTF-8, eingerückt) und kann bei Bedarf auch von Hand
+bearbeitet werden – mit jedem Texteditor, besser mit einem, der JSON prüft (z. B. Notepad++,
+Visual Studio Code). Beispiel:
 
-.. code-block:: ini
+.. code-block:: json
 
-   [Verbindung]
-   projekt = Prüfstand 3
-   csv_ordner = logs
-   csv_name = log
-   max_records = 100000
-   archiv_ordner = archiv
-   fenster_s = 60
-   anordnung = untereinander
-   balken = 1
-   archiv_beenden = 1
-   seite_anordnung = raster
-   raster_spalten = 2
-   web_aktiv = 1
-   web_host = 0.0.0.0
-   web_port = 8080
-   web_intervall_ms = 1000
-   headless = 0
-   treiberdaten = {"s7": {"symbolquellen": "C:/Projekt/Mess_DB.db"}}
+   {
+     "format": "PLC Datenlogger Konfiguration",
+     "version": 1,
+     "einstellungen": {
+       "projekt": "Prüfstand 3",
+       "csv_ordner": "logs",
+       "csv_name": "log",
+       "max_records": 100000,
+       "archiv_ordner": "archiv",
+       "fenster_s": 60,
+       "anordnung": "untereinander",
+       "balken": true,
+       "archiv_beenden": true,
+       "seite_anordnung": "raster",
+       "raster_spalten": 2,
+       "web_aktiv": true,
+       "web_host": "0.0.0.0",
+       "web_port": 8080,
+       "web_intervall_ms": 1000,
+       "headless": false,
+       "treiberdaten": {
+         "s7": {
+           "symbolquellen": "C:/Projekt/Mess_DB.db"
+         }
+       }
+     },
+     "steuerungen": [
+       {
+         "name": "Presse",
+         "treiber": "tia",
+         "intervall_ms": 100,
+         "aktiv": true,
+         "ip": "192.168.0.1",
+         "port": 102,
+         "tls": "auto",
+         "passwort": "",
+         "rolle": "hmi",
+         "tags_je_anfrage": 50
+       },
+       {
+         "name": "Altanlage",
+         "treiber": "s7",
+         "intervall_ms": 500,
+         "aktiv": true,
+         "ip": "192.168.0.20",
+         "rack": 0,
+         "slot": 2
+       },
+       {
+         "name": "Kessel",
+         "treiber": "clx",
+         "intervall_ms": 200,
+         "aktiv": true,
+         "ip": "192.168.1.10",
+         "pfad": "1,0",
+         "cpu": "controllogix",
+         "timeout_ms": 2000
+       },
+       {
+         "name": "Zaehler",
+         "treiber": "modbus",
+         "intervall_ms": 1000,
+         "aktiv": true,
+         "ip": "192.168.0.50",
+         "port": 502,
+         "unit": 1,
+         "wortfolge": "CDAB",
+         "max_register": 120,
+         "luecke": 8,
+         "timeout_ms": 2000
+       }
+     ],
+     "diagramme": [
+       {
+         "name": "Prozess",
+         "seite": "Prozess",
+         "achsen": [
+           {
+             "name": "Temperatur",
+             "auto": true,
+             "y_min": 0.0,
+             "y_max": 100.0
+           },
+           {
+             "name": "Leistung",
+             "auto": false,
+             "y_min": 0.0,
+             "y_max": 50.0
+           }
+         ]
+       }
+     ],
+     "variablen": [
+       {
+         "name": "Kraft",
+         "adresse": "Presse_DB.Kraft",
+         "typ": "REAL",
+         "farbe": "#d62728",
+         "wert_anzeigen": true,
+         "diagramm": 1,
+         "achse": 1,
+         "balken": true,
+         "formel": "",
+         "steuerung": 1
+       },
+       {
+         "name": "Temp_Alt",
+         "adresse": "DB10.DBD4",
+         "typ": "REAL",
+         "steuerung": 2
+       },
+       {
+         "name": "Temperatur_Kessel",
+         "adresse": "Program:Kessel.Temperatur",
+         "typ": "REAL",
+         "steuerung": 3
+       },
+       {
+         "name": "Wirkleistung",
+         "adresse": "30013",
+         "typ": "REAL",
+         "steuerung": 4
+       }
+     ],
+     "bloecke": [
+       {
+         "name": "Messwerte",
+         "adresse": "Messwerte",
+         "start": 0,
+         "typ": "REAL",
+         "anzahl": 20,
+         "diagramm": 1,
+         "achse": 1,
+         "farbe": "#1f77b4",
+         "wert_anzeigen": true,
+         "balken": false,
+         "steuerung": 3,
+         "elementziele": {
+           "3": [
+             1,
+             2
+           ]
+         }
+       }
+     ]
+   }
 
-   [Steuerungen]
-   anzahl = 4
+Aufbau:
 
-   [Steuerung1]
-   name = Presse
-   treiber = tia
-   intervall_ms = 100
-   aktiv = 1
-   ip = 192.168.0.1
-   port = 102
-   tls = auto
-   passwort =
-   rolle = hmi
-   tags_je_anfrage = 50
+.. list-table::
+   :header-rows: 1
+   :widths: 22 78
 
-   [Steuerung2]
-   name = Altanlage
-   treiber = s7
-   intervall_ms = 500
-   aktiv = 1
-   ip = 192.168.0.20
-   rack = 0
-   slot = 2
+   * - Schlüssel
+     - Inhalt
+   * - ``format``, ``version``
+     - Kennung der Datei und Version des Aufbaus (derzeit 1).
+   * - ``einstellungen``
+     - Projekt, Aufzeichnung (CSV, Archiv, Datenbank), Anzeige, Webserver, Headless.
+   * - ``steuerungen``
+     - Liste der Steuerungen (Reihenfolge = Nummer, auf die ``steuerung`` verweist).
+   * - ``diagramme``
+     - Liste der Diagramme, je Diagramm die Liste ``achsen`` (Y-Achsen) und ggf. die
+       PID-Einstellungen (``pid_…``).
+   * - ``variablen``
+     - Normale und berechnete Variablen (``formel`` nicht leer).
+   * - ``bloecke``
+     - Blöcke des Blocklesemodus; ``elementnamen`` = eigene Namen einzelner Elemente
+       (``{"1": "Druck Vorlauf"}``), ``elementziele`` = abweichendes Diagramm und Achse
+       einzelner Elemente (``{"3": [2, 1]}``).
+   * - ``trigger``
+     - Trigger des Ereignisprotokolls.
 
-   [Steuerung3]
-   name = Kessel
-   treiber = clx
-   intervall_ms = 200
-   aktiv = 1
-   ip = 192.168.1.10
-   pfad = 1,0
-   cpu = controllogix
-   timeout_ms = 2000
-
-   [Steuerung4]
-   name = Zaehler
-   treiber = modbus
-   intervall_ms = 1000
-   aktiv = 1
-   ip = 192.168.0.50
-   port = 502
-   unit = 1
-   wortfolge = CDAB
-   max_register = 120
-   luecke = 8
-   timeout_ms = 2000
-
-   [Diagramme]
-   anzahl = 1
-
-   [Diagramm1]
-   name = Prozess
-   achsen = 2
-   seite = Prozess
-
-   [Diagramm1_Achse1]
-   name = Temperatur
-   auto = 1
-   y_min = 0.0
-   y_max = 100.0
-
-   [Diagramm1_Achse2]
-   name = Leistung
-   auto = 0
-   y_min = 0.0
-   y_max = 50.0
-
-   [Variablen]
-   anzahl = 4
-
-   [Var1]
-   name = Kraft
-   adresse = Presse_DB.Kraft
-   typ = REAL
-   farbe = #d62728
-   wert_anzeigen = 1
-   diagramm = 1
-   achse = 1
-   balken = 1
-   formel =
-   steuerung = 1
-
-   [Var2]
-   name = Temp_Alt
-   adresse = DB10.DBD4
-   typ = REAL
-   ...
-   steuerung = 2
-
-   [Var3]
-   name = Temperatur_Kessel
-   adresse = Program:Kessel.Temperatur
-   typ = REAL
-   ...
-   steuerung = 3
-
-   [Var4]
-   name = Wirkleistung
-   adresse = 30013
-   typ = REAL
-   ...
-   steuerung = 4
-
-   [Bloecke]
-   anzahl = 1
-
-   [Block1]
-   name = Messwerte
-   adresse = Messwerte
-   start = 0
-   typ = REAL
-   anzahl = 20
-   diagramm = 1
-   achse = 1
-   farbe = #1f77b4
-   wert_anzeigen = 1
-   balken = 0
-   steuerung = 3
-   elemziel_3 = 1,2
+Zahlen und Wahrheitswerte stehen mit ihrem Typ in der Datei (``200``, ``1.5``,
+``true``/``false``). Fehlende Schlüssel erhalten beim Laden ihren Standardwert,
+unbekannte werden ignoriert. Ist die Datei kein gültiges JSON (z. B. ein vergessenes
+Komma), meldet das Programm die Zeile der Fehlerstelle.
 
 Erläuterungen:
 
-* ``treiber`` ist das Kürzel des Treibers; die übrigen Schlüssel einer
-  ``[SteuerungN]`` (außer ``name``, ``intervall_ms``, ``aktiv``) sind dessen
+* ``treiber`` ist das Kürzel des Treibers; die übrigen Schlüssel eines
+  Eintrags in ``steuerungen`` (außer ``name``, ``intervall_ms``, ``aktiv``) sind dessen
   Verbindungsparameter (siehe :ref:`treiber`). Unbekannte Schlüssel werden
   ignoriert, fehlende erhalten den Standardwert des Treibers.
 * ``adresse`` ist die Adresse in der Schreibweise des Treibers der Steuerung.
   Bei Blöcken ist ``adresse`` die Startadresse bzw. der Array-Name und ``start``
   der erste Index (nur ``tia``/``clx``).
-* ``treiberdaten`` speichert treibereigene Angaben als JSON (z. B. die Pfade der
+* ``treiberdaten`` enthält treibereigene Angaben als Objekt (z. B. die Pfade der
   S7-DB-Quellen).
-* ``diagramm``, ``achse`` und ``steuerung`` sind jeweils 1-basiert.
+* ``diagramm``, ``achse`` und ``steuerung`` sind Nummern ab 1.
 * ``seite_anordnung`` ist leer (automatisch), ``untereinander``,
-  ``nebeneinander`` oder ``raster``; ``raster_spalten = 0`` wählt die Spaltenzahl
+  ``nebeneinander`` oder ``raster``; ``raster_spalten: 0`` wählt die Spaltenzahl
   automatisch.
 * Die Variablen eines Blocks (``Messwerte[0]`` …) werden beim Laden erzeugt und
-  stehen nicht als ``[VarN]`` in der Datei.
+  stehen nicht unter ``variablen`` in der Datei.
 * Das TIA-Passwort steht im **Klartext** in der Datei.
+
+.. _ini-umwandeln:
+
+Ältere INI-Dateien umwandeln
+----------------------------------------------------------------------
+
+Frühere Versionen speicherten die Konfiguration als Konfigurationsdatei. Diese werden **nicht
+mehr direkt geöffnet**, sondern einmalig in eine JSON-Datei umgewandelt; die Konfigurationsdatei
+selbst bleibt dabei unverändert:
+
+* **Konfigurationsprogramm › Datei › INI-Datei umwandeln …** – eine oder mehrere
+  Konfigurationsdateien wählen; neben jeder entsteht eine gleichnamige ``.json``-Datei. Bei einer
+  einzelnen Datei wird das Ergebnis gleich geöffnet.
+* Wird im Konfigurationsprogramm (Öffnen, Startbild) eine INI-Datei gewählt, bietet
+  es die Umwandlung direkt an.
+* Für viele Dateien auf einmal (Python-Quellen):
+
+  .. code-block:: console
+
+     python tools/ini2json.py anlage1.ini anlage2.ini        # -> anlage1.json, anlage2.json
+     python tools/ini2json.py alt.ini -o neu.json -f        # anderer Name, überschreiben
+
+Der Logger meldet beim Start mit einer Konfigurationsdatei, dass sie umgewandelt werden muss. War
+zuletzt eine INI-Datei geöffnet und gibt es daneben bereits die umgewandelte
+``.json``-Datei, wird diese automatisch verwendet. Alle Inhalte – auch Trigger,
+PID-Einstellungen und Blöcke – werden übernommen.
+
 
 
 .. _treiber:
@@ -1344,9 +1412,9 @@ in der Statuszeile bzw. als Testwert.
 ======================================================================
 
 Konfigurationsdateien des **S7 Datenloggers**, **TIA Datenloggers** und
-**PLC Datenloggers** können direkt geöffnet werden (Konfigurationsprogramm
-**Datei › Öffnen…**, oder als Parameter von Logger bzw. Konfigurationsprogramm).
-Dabei gilt:
+**CLX Datenloggers** werden übernommen – als JSON-Datei direkt mit **Datei › Öffnen…**,
+als ältere INI-Datei nach der einmaligen Umwandlung (**Datei › INI-Datei umwandeln …**,
+siehe :ref:`ini-umwandeln`). Dabei gilt:
 
 * Der Treiber jeder Steuerung wird aus ihren Einträgen erkannt: ``rack``/``slot`` →
   ``s7``, ``pfad``/``cpu`` → ``clx``, ``tls``/``rolle``/``port`` → ``tia``.
@@ -1359,13 +1427,13 @@ Dabei gilt:
 
 Gespeichert wird im Format des PLC Datenloggers (Schlüssel ``treiber`` und
 ``adresse``). Die Einzelprogramme können diese Datei danach **nicht** mehr lesen –
-speichern Sie deshalb mit **Speichern unter…** unter neuem Namen, wenn die alte
-Datei weiter benutzt werden soll.
+speichern Sie deshalb mit **Speichern unter…** unter neuem Namen, wenn die Datei
+auch im Einzelprogramm weiter benutzt werden soll.
 
 Konfigurationen mehrerer Einzelprogramme lassen sich zusammenführen, indem die
 Steuerungen und Variablen im Konfigurationsprogramm neu angelegt oder die
-Abschnitte in der INI-Datei von Hand kopiert werden (Nummern ``SteuerungN``,
-``VarN`` sowie ``anzahl`` und ``steuerung`` anpassen).
+Einträge der Listen ``steuerungen`` und ``variablen`` in der JSON-Datei von Hand
+kopiert werden (``steuerung`` der Variablen anpassen).
 
 
 Logger (``plc_logger.py``)
@@ -2128,7 +2196,7 @@ einem anderen Rechner mit Zugriff auf die Datei (Netzlaufwerk):
 .. code-block:: text
 
    PLCLogger.exe --ereignisse                        (Ereignisprotokoll der zuletzt benutzten Konfiguration)
-   PLCLogger.exe --ereignisse anlage.ini             (Ereignisprotokoll dieser Konfiguration)
+   PLCLogger.exe --ereignisse anlage.json             (Ereignisprotokoll dieser Konfiguration)
    PLCLogger.exe --ereignisse D:\logs\log_ereignisse.csv
 
 Die installierte Version hat dafür im Startmenü die Verknüpfung *PLC Ereignisprotokoll*.
@@ -2563,13 +2631,13 @@ Alle Einzelheiten stehen in ``plc_treiber/base.py``. Die wichtigsten Teile:
    * - Attribut
      - Bedeutung
    * - ``id``
-     - Eindeutiges Kürzel (Kleinbuchstaben), steht als ``treiber = …`` in der
-       INI-Datei. Nach der Einführung nicht mehr ändern.
+     - Eindeutiges Kürzel (Kleinbuchstaben), steht als ``"treiber": "…"`` in der
+       Konfigurationsdatei. Nach der Einführung nicht mehr ändern.
    * - ``name``, ``description``
      - Anzeigename (Auswahlliste) und Beschreibung (Einstellungsdialog).
    * - ``params``
      - Liste von ``Param`` – daraus entsteht der Einstellungsdialog; die Werte
-       stehen in der INI-Datei und im Leser in ``self.plc.params``.
+       stehen in der Konfigurationsdatei und im Leser in ``self.plc.params``.
    * - ``types``, ``block_types``, ``default_type``
      - Lesbare Datentypen (Auswahl aus ``BOOL, BYTE, WORD, DWORD, LWORD, SINT, INT,
        DINT, LINT, USINT, UINT, UDINT, ULINT, REAL, LREAL, TIME, LTIME, S5TIME,
@@ -2736,7 +2804,7 @@ oben in ``build.bat`` bei ``VERSION`` eingestellt. Ein **eigenes Icon** entsteht
 indem Sie vor dem Build eine eigene ``app.ico`` in den Ordner legen.
 
 **Speicherort der Daten:** Die installierten Programme schreiben Konfiguration
-(``plc_config.ini``), CSV-Dateien und Archiv **nicht** in den Programmordner
+(``plc_config.json``), CSV-Dateien und Archiv **nicht** in den Programmordner
 (dieser ist meist schreibgeschützt), sondern nach
 ``%APPDATA%\\PLCDatenlogger``. Die Daten bleiben beim Deinstallieren und bei
 Updates erhalten. Soll alles neben den Programmen liegen (portabler Betrieb auf
@@ -2805,7 +2873,7 @@ Benutzen
    ./PLCDatenlogger-2.1.0-x86_64.AppImage               # Logger (mit Startbild)
    ./PLCDatenlogger-2.1.0-x86_64.AppImage --konfig      # Konfigurationsprogramm
    ./PLCDatenlogger-2.1.0-x86_64.AppImage --ereignisse  # Ereignis-Viewer
-   ./PLCDatenlogger-2.1.0-x86_64.AppImage --headless anlage.ini   # nur Aufzeichnung (z. B. als Dienst)
+   ./PLCDatenlogger-2.1.0-x86_64.AppImage --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
 
 Auf Raspberry Pi (64-Bit-System) und anderen arm64-Rechnern entsprechend die Datei
 ``…-aarch64.AppImage``. Die Daten (Konfiguration, CSV, Archiv, Ereignisse, Sprachdateien)
@@ -2967,5 +3035,5 @@ Bekannte Einschränkungen
 * Diagramme lassen sich per Drag & Drop nur innerhalb ihrer Seite umordnen.
 * Die minimale Abtastzeit hängt von der Kommunikation mit der Steuerung ab; bei
   vielen Variablen kann das eingestellte Intervall nicht eingehalten werden.
-* Der Demo-Schalter und die Fensteranordnung werden nicht in der INI-Datei
+* Der Demo-Schalter und die Fensteranordnung werden nicht in der Konfigurationsdatei
   gespeichert.

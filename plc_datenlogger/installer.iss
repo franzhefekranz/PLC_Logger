@@ -76,8 +76,8 @@ Name: "{autodesktop}\PLC Konfiguration"; Filename: "{app}\{#ConfigExe}"; Tasks: 
 Filename: "{app}\{#ConfigExe}"; Description: "PLC Konfiguration jetzt starten"; Flags: nowait postinstall skipifsilent unchecked
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
-; Hinweis: Der Logger kann mit einer beliebigen Konfigurationsdatei gestartet werden (PLCLogger.exe Datei.ini),
+; Hinweis: Der Logger kann mit einer beliebigen Konfigurationsdatei gestartet werden (PLCLogger.exe Datei.json),
 ; auch ohne Oberflaeche (Parameter --headless). Chart.js fuer den Webserver steckt im Programmordner.
-; Konfiguration (plc_config.ini), CSV-Dateien und Archiv liegen NICHT im Programmordner,
+; Konfiguration (plc_config.json), CSV-Dateien und Archiv liegen NICHT im Programmordner,
 ; sondern unter %APPDATA%\PLCDatenlogger. Sie bleiben deshalb beim Deinstallieren und bei
 ; Updates erhalten. (Portabler Betrieb: Datei portable.txt neben die .exe legen.)

@@ -141,7 +141,7 @@ class SymbolBrowser(QDialog):
             self.status.setText(tr("Nicht lesbare Quellen: ") + "; ".join(problems))
 
     # ---------------- Ergebnis ----------------
-    # Quellen als INI-Einträge (Pfad oder Pfad#DB-Nummern) zurückgeben.
+    # Quellen als Konfigurationseinträge (Pfad oder Pfad#DB-Nummern) zurückgeben.
     def entries(self):
         return self.symset.entries()
 

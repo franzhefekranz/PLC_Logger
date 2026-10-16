@@ -915,12 +915,12 @@ class PlcLed(QWidget):
 # Hauptfenster
 # ---------------------------------------------------------------------------------------
 class MainWindow(QMainWindow):
-    # config_path: Konfigurationsdatei (INI/TXT); demo: Demo-Modus vorwählen.
+    # config_path: Konfigurationsdatei (JSON); demo: Demo-Modus vorwählen.
     def __init__(self, config_path, demo=False):
         super().__init__()
         self.resize(1400, 800)
         self.config_path = config_path
-        # Konfiguration laden; ohne INI-Datei erscheint eine leere Standardkonfiguration, bei einer fehlerhaften Datei
+        # Konfiguration laden; ohne Konfigurationsdatei erscheint eine leere Standardkonfiguration, bei einer fehlerhaften Datei
         # eine Meldung (das Fenster öffnet trotzdem, die Konfiguration kann dann neu geladen werden).
         self.conn, self.charts, self.vars, self.plcs = self._read_config(config_path)
         # Aktuelle Anordnung der Seiten (untereinander/nebeneinander/tabs) und der Diagramme innerhalb einer Seite.
@@ -1532,11 +1532,11 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # Konfiguration laden
     # ---------------------------------------------------------------------------------------
-    # Dialog 'Konfiguration laden': beliebiger Dateiname (INI/TXT/…); die Wahl wird für den nächsten Start gemerkt.
+    # Dialog 'Konfiguration laden': beliebiger Dateiname (JSON); die Wahl wird für den nächsten Start gemerkt.
     def load_config_file(self):
         start = os.path.dirname(self.config_path) or BASE_DIR
         path, _ = QFileDialog.getOpenFileName(self, tr("Konfiguration laden"), start,
-                                              tr("Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)"))
+                                              tr("Konfiguration (*.json);;Alle Dateien (*)"))
         if path:
             self.set_config(path)
 

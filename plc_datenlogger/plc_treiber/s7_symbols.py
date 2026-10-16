@@ -502,7 +502,7 @@ class Source:
                 d.number = numbers.pop(0)
                 self.assigned.append(d.number)
 
-    # Eintrag für die INI-Datei: 'Pfad' oder 'Pfad#Nr1,Nr2' (mit den vergebenen DB-Nummern).
+    # Eintrag für die Konfiguration: 'Pfad' oder 'Pfad#Nr1,Nr2' (mit den vergebenen DB-Nummern).
     def entry(self):
         return self.path + ("#" + ",".join(str(n) for n in self.assigned) if self.assigned else "")
 

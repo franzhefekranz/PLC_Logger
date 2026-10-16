@@ -24,7 +24,7 @@ from plc_common import APP_NAME, APP_VERSION, BASE_DIR, load_settings, recent_co
 from plc_i18n import tr
 
 START_TIME = time.time()
-FILE_FILTER = tr("Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)")
+FILE_FILTER = tr("Konfiguration (*.json);;Alle Dateien (*)")
 # Farben des Startbilds (dunkles Industrie-Blau mit Akzent).
 C_BG1, C_BG2, C_ACCENT, C_TEXT, C_MUTED = "#0f1b2d", "#1d3557", "#4fc3f7", "#eef3f8", "#9fb3c8"
 
@@ -379,8 +379,8 @@ class StartWindow(QWidget):
             return
         p, _flt = QFileDialog.getSaveFileName(self, tr("Neue Konfiguration anlegen"), BASE_DIR, FILE_FILTER)
         if p:
-            if not os.path.splitext(p)[1]:
-                p += ".ini"
+            if os.path.splitext(p)[1].lower() != ".json":
+                p = os.path.splitext(p)[0] + ".json"
             self._finish(os.path.abspath(p), new=True)
 
     def demo(self):

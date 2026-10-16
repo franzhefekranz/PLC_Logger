@@ -13,7 +13,7 @@ Aufruf
     tia_logger.py --ereignisse [Konfigurationsdatei | Ereignisdatei.csv]
     tia_logger.py --konfig [Konfigurationsdatei]     (Konfigurationsprogramm, z. B. im Linux-AppImage)
 
-Ohne Dateiangabe wird die zuletzt benutzte Konfiguration geöffnet (Standard: tia_config.ini). ``--gui`` öffnet die
+Ohne Dateiangabe wird die zuletzt benutzte Konfiguration geöffnet (Standard: tia_config.json). ``--gui`` öffnet die
 Oberfläche auch dann, wenn die Konfiguration den Headless-Modus verlangt; ``--headless`` erzwingt ihn.
 ``--ereignisse`` öffnet nur den Ereignis-Viewer (Ereignisse der Trigger anzeigen und quittieren), z. B. neben einem
 Headless-Logger.
@@ -27,7 +27,7 @@ from tia_common import last_config_path, load_config, remember_config_path
 
 def parse_args(argv):
     ap = argparse.ArgumentParser(description="TIA Datenlogger")
-    ap.add_argument("config", nargs="?", help="Konfigurationsdatei (INI/TXT)")
+    ap.add_argument("config", nargs="?", help="Konfigurationsdatei (JSON)")
     ap.add_argument("--config", dest="config_opt", help="Konfigurationsdatei (wie das Positionsargument)")
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--headless", action="store_true", help="ohne Oberfläche, nur Aufzeichnung")

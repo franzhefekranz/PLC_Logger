@@ -76,8 +76,8 @@ Name: "{autodesktop}\CLX Konfiguration"; Filename: "{app}\{#ConfigExe}"; Tasks: 
 Filename: "{app}\{#ConfigExe}"; Description: "CLX Konfiguration jetzt starten"; Flags: nowait postinstall skipifsilent unchecked
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
-; Hinweis: Der Logger kann mit einer beliebigen Konfigurationsdatei gestartet werden (CLXLogger.exe Datei.ini),
+; Hinweis: Der Logger kann mit einer beliebigen Konfigurationsdatei gestartet werden (CLXLogger.exe Datei.json),
 ; auch ohne Oberflaeche (Parameter --headless). Chart.js fuer den Webserver steckt im Programmordner.
-; Konfiguration (clx_config.ini), CSV-Dateien und Archiv liegen NICHT im Programmordner,
+; Konfiguration (clx_config.json), CSV-Dateien und Archiv liegen NICHT im Programmordner,
 ; sondern unter %APPDATA%\CLXDatenlogger. Sie bleiben deshalb beim Deinstallieren und bei
 ; Updates erhalten. (Portabler Betrieb: Datei portable.txt neben die .exe legen.)

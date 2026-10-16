@@ -76,8 +76,8 @@ Name: "{autodesktop}\S7 Konfiguration"; Filename: "{app}\{#ConfigExe}"; Tasks: d
 Filename: "{app}\{#ConfigExe}"; Description: "S7 Konfiguration jetzt starten"; Flags: nowait postinstall skipifsilent unchecked
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
-; Hinweis: Der Logger kann mit einer beliebigen Konfigurationsdatei gestartet werden (S7Logger.exe Datei.ini),
+; Hinweis: Der Logger kann mit einer beliebigen Konfigurationsdatei gestartet werden (S7Logger.exe Datei.json),
 ; auch ohne Oberflaeche (Parameter --headless). Chart.js fuer den Webserver steckt im Programmordner.
-; Konfiguration (s7_config.ini), CSV-Dateien und Archiv liegen NICHT im Programmordner,
+; Konfiguration (s7_config.json), CSV-Dateien und Archiv liegen NICHT im Programmordner,
 ; sondern unter %APPDATA%\S7Datenlogger. Sie bleiben deshalb beim Deinstallieren und bei
 ; Updates erhalten. (Portabler Betrieb: Datei portable.txt neben die .exe legen.)

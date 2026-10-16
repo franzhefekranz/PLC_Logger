@@ -305,7 +305,7 @@
 @ Aktiv
 > 
 
-@ Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)
+@ Konfiguration (*.json);;Alle Dateien (*)
 > 
 
 @ z. B. Prüfstand 3
@@ -528,6 +528,9 @@
 > 
 
 @ Speichern &unter …
+> 
+
+@ INI-Datei &umwandeln …
 > 
 
 @ Logger mit dieser Konfiguration &starten
@@ -789,6 +792,24 @@
 > 
 
 @ Geladen: {0}
+> 
+
+@ „{0}“ ist eine Konfiguration im alten INI-Format.\n\nJetzt in eine JSON-Datei umwandeln und öffnen?\n(Die INI-Datei bleibt unverändert.)
+> 
+
+@ INI-Datei umwandeln
+> 
+
+@ INI-Datei(en) umwandeln
+> 
+
+@ INI-Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)
+> 
+
+@ „{0}“ existiert bereits. Überschreiben?
+> 
+
+@ Umgewandelt:\n{0}
 > 
 
 @ Konfiguration öffnen

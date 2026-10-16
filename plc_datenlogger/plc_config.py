@@ -1,4 +1,4 @@
-"""Konfigurationsprogramm: Projekt, Steuerungen, Diagramme, Y-Achsen & Variablen -> INI-Datei
+"""Konfigurationsprogramm: Projekt, Steuerungen, Diagramme, Y-Achsen & Variablen -> Konfigurationsdatei (JSON)
 
 Struktur: Diagramm > Y-Achse(n) > Variablen.
 Variablen können über die Auswahlliste "Diagramm › Y-Achse" ODER per Drag & Drop im
@@ -46,11 +46,11 @@ from PyQt6.QtWidgets import (
     QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
-# Eigene Module: Branding, Dialoge (Blöcke, Formeln), Datenmodell/INI, Treiber, Formelprüfung.
+# Eigene Module: Branding, Dialoge (Blöcke, Formeln), Datenmodell/Konfiguration, Treiber, Formelprüfung.
 # Die Treiber (plc_treiber) laden ihre Bibliotheken erst bei Bedarf: das Programm startet auch ohne sie.
 from plc_branding import app_icon, set_windows_app_id
 from plc_block_dialog import BlockEditor
-from plc_common import (BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE,
+from plc_common import (CONFIG_EXT, ConfigFormatError, convert_ini, read_config_store, BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE,
                        Axis, Block, Chart, Plc, Variable, default_connection, driver_store,
                        last_config_path, load_blocks, load_config, load_plcs,
                        remember_config_path, save_config,
@@ -82,7 +82,7 @@ PLC_COLS = [tr("Name"), tr("Treiber"), tr("Verbindung"), "", tr("Intervall"), tr
 ROLE_PARAMS = Qt.ItemDataRole.UserRole.value + 10     # Parameter der Steuerung (Dict) im Verbindungs-Element
 
 # Dateifilter für die Dateidialoge: beliebige Dateinamen sind erlaubt.
-FILE_FILTER = tr("Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)")
+FILE_FILTER = tr("Konfiguration (*.json);;Alle Dateien (*)")
 
 
 # Kleines farbiges Quadrat als Symbol im Baum (zeigt die Variablenfarbe).
@@ -136,11 +136,11 @@ class AssignTree(QTreeWidget):
 
 # Hauptfenster des Konfigurationsprogramms.
 class ConfigWindow(QMainWindow):
-    """Konfigurationsfenster: bearbeitet die INI-Datei von plc_logger.py."""
+    """Konfigurationsfenster: bearbeitet die Konfigurationsdatei von plc_logger.py."""
     def __init__(self, path=None):
         super().__init__()
         self.resize(1300, 820)
-        # Pfad der aktuell bearbeiteten INI-Datei: Startparameter, sonst die zuletzt benutzte Datei ('' = neu, ungespeichert).
+        # Pfad der aktuell bearbeiteten Konfigurationsdatei: Startparameter, sonst die zuletzt benutzte Datei ('' = neu, ungespeichert).
         self.path = os.path.abspath(path) if path else last_config_path()
         # Zähler für Variablen-IDs (stabil, auch wenn sich Tabellenzeilen verschieben).
         self._uid = 0
@@ -370,7 +370,7 @@ class ConfigWindow(QMainWindow):
         lay.addWidget(self.tabs); lay.addWidget(split, 1); lay.addLayout(bottom)
         self.setCentralWidget(central)
 
-        # Beim Start die vorhandene INI-Datei laden (Verbindung, Diagramme, Variablen, Blöcke) und das Fenster-Icon setzen.
+        # Beim Start die vorhandene Konfigurationsdatei laden (Verbindung, Diagramme, Variablen, Blöcke) und das Fenster-Icon setzen.
         self.build_menu()
         self.fill(*load_config(self.path), blocks=load_blocks(self.path), plcs=load_plcs(self.path))
         self.triggers = load_triggers(self.path)
@@ -393,6 +393,7 @@ class ConfigWindow(QMainWindow):
                    (N_("&Speichern"), QKeySequence(std.Save), self.save),
                    (N_("Speichern &unter …"), QKeySequence("Ctrl+Shift+S"), self.save_as),
                    None,
+                   (N_("INI-Datei &umwandeln …"), QKeySequence(), self.convert_ini),
                    (N_("Logger mit dieser Konfiguration &starten"), QKeySequence("Ctrl+R"), self.start_logger),
                    None,
                    (N_("&Beenden"), QKeySequence("Ctrl+Q"), self.close)]
@@ -1382,7 +1383,7 @@ class ConfigWindow(QMainWindow):
         self.refresh_tree()
         self.update_title()
 
-    # Verbindungs- und Anzeigeeinstellungen aus den Feldern als Wörterbuch (für die INI-Datei und für Tests).
+    # Verbindungs- und Anzeigeeinstellungen aus den Feldern als Wörterbuch (für die Konfigurationsdatei und für Tests).
     # Die Steuerungen stehen getrennt in collect_plcs(); ip/pfad/cpu/intervall_ms spiegeln die erste Steuerung.
     def collect_conn(self):
         import json
@@ -1638,18 +1639,29 @@ class ConfigWindow(QMainWindow):
     def save(self):
         return self._write(self.path) if self.path else self.save_as()
 
-    # „Speichern unter“: beliebiger Dateiname; fehlt die Endung, wird .ini angehängt.
+    # „Speichern unter“: beliebiger Dateiname; die Endung ist immer .json.
     def save_as(self):
-        start = self.path or os.path.join(BASE_DIR, "plc_config.ini")
+        start = self.path or os.path.join(BASE_DIR, "plc_config.json")
         p, _ = QFileDialog.getSaveFileName(self, tr("Konfiguration speichern unter"), start, FILE_FILTER)
         if not p:
             return False
-        if not os.path.splitext(p)[1]:
-            p += ".ini"
+        base, ext = os.path.splitext(p)
+        if ext.lower() != CONFIG_EXT:
+            p = (base if ext.lower() in (".ini", ".txt", ".cfg") else p) + CONFIG_EXT
         return self._write(os.path.abspath(p))
 
-    # Konfiguration aus Datei p laden (INI oder TXT, beliebiger Name). Rückgabe: True bei Erfolg.
+    # Konfiguration aus Datei p laden (JSON, beliebiger Name). Rückgabe: True bei Erfolg.
     def load_path(self, p):
+        try:
+            read_config_store(p)
+        except ConfigFormatError as e:
+            # ältere INI-Datei: Umwandlung anbieten (die INI bleibt unverändert)
+            if open(p, encoding="utf-8-sig", errors="replace").read(4096).lstrip().startswith("["):
+                return self.convert_ini(p)
+            QMessageBox.critical(self, tr("Konfiguration laden"), str(e))
+            return False
+        except OSError:
+            pass
         try:
             data = (load_config(p), load_blocks(p), load_plcs(p))
         except Exception as e:
@@ -1668,6 +1680,42 @@ class ConfigWindow(QMainWindow):
         self.setWindowIcon(app_icon(self.ed_icon.text(), self.ed_logo.text()))
         self.update_title()
         self.statusBar().showMessage(tr("Geladen: {0}").format(self.path), 5000)
+        return True
+
+    # Ältere INI-Konfiguration(en) einmalig in JSON umwandeln (die INI-Dateien bleiben unverändert).
+    def convert_ini(self, path=None):
+        if path:
+            paths = [path]
+            ask = tr("„{0}“ ist eine Konfiguration im alten INI-Format.\n\nJetzt in eine JSON-Datei umwandeln und öffnen?\n"
+                     "(Die INI-Datei bleibt unverändert.)").format(os.path.basename(path))
+            if QMessageBox.question(self, tr("INI-Datei umwandeln"), ask) != QMessageBox.StandardButton.Yes:
+                return False
+        else:
+            start = os.path.dirname(self.path) if self.path else BASE_DIR
+            paths, _ = QFileDialog.getOpenFileNames(self, tr("INI-Datei(en) umwandeln"), start,
+                                                    tr("INI-Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)"))
+            if not paths:
+                return False
+        done, errors = [], []
+        for p in paths:
+            target = os.path.splitext(p)[0] + CONFIG_EXT
+            if os.path.exists(target) and QMessageBox.question(
+                    self, tr("INI-Datei umwandeln"),
+                    tr("„{0}“ existiert bereits. Überschreiben?").format(os.path.basename(target))) \
+                    != QMessageBox.StandardButton.Yes:
+                continue
+            try:
+                done.append(convert_ini(p, target))
+            except Exception as e:
+                errors.append(f"{os.path.basename(p)}: {e}")
+        if errors:
+            QMessageBox.warning(self, tr("INI-Datei umwandeln"), "\n".join(errors))
+        if not done:
+            return False
+        if len(done) == 1:
+            return self.load_path(done[0])
+        QMessageBox.information(self, tr("INI-Datei umwandeln"),
+                                tr("Umgewandelt:\n{0}").format("\n".join(done)))
         return True
 
     # „Öffnen“: Dateidialog für eine Konfigurationsdatei mit beliebigem Namen.

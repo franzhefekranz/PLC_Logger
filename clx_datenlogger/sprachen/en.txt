@@ -305,8 +305,8 @@
 @ Aktiv
 > Active
 
-@ Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)
-> Configuration (*.ini *.txt *.cfg);;All files (*)
+@ Konfiguration (*.json);;Alle Dateien (*)
+> Configuration (*.json);;All files (*)
 
 @ z. B. Prüfstand 3
 > e.g. Test bench 3
@@ -529,6 +529,9 @@
 
 @ Speichern &unter …
 > Save &as …
+
+@ INI-Datei &umwandeln …
+> &Convert INI file …
 
 @ Logger mit dieser Konfiguration &starten
 > &Start logger with this configuration
@@ -790,6 +793,24 @@
 
 @ Geladen: {0}
 > Loaded: {0}
+
+@ „{0}“ ist eine Konfiguration im alten INI-Format.\n\nJetzt in eine JSON-Datei umwandeln und öffnen?\n(Die INI-Datei bleibt unverändert.)
+> "{0}" is a configuration in the old INI format.\n\nConvert it to a JSON file now and open it?\n(The INI file is left unchanged.)
+
+@ INI-Datei umwandeln
+> Convert INI file
+
+@ INI-Datei(en) umwandeln
+> Convert INI file(s)
+
+@ INI-Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)
+> INI configuration (*.ini *.txt *.cfg);;All files (*)
+
+@ „{0}“ existiert bereits. Überschreiben?
+> "{0}" already exists. Overwrite?
+
+@ Umgewandelt:\n{0}
+> Converted:\n{0}
 
 @ Konfiguration öffnen
 > Open configuration

@@ -28,7 +28,6 @@ Die Quittierung ist selbst ein Eintrag (die Datei wird nur fortgeschrieben, nie 
 Einträge mit Quittierpflicht ohne spätere QUITTIERT-Zeile derselben ID. ``EventLog`` ist thread-sicher: der Recorder
 schreibt aus seinem Sammler-Thread, der Viewer quittiert aus der Oberfläche.
 """
-import configparser
 import csv
 import getpass
 import io
@@ -69,11 +68,11 @@ class Trigger:
 # Speichern in der Konfigurationsdatei ([Trigger] / [TriggerN])
 # ---------------------------------------------------------------------------------------
 def load_triggers(path):
-    """Trigger aus der INI-Datei lesen (fehlt die Datei oder der Abschnitt: leere Liste)."""
+    """Trigger aus der Konfigurationsdatei lesen (fehlt die Datei oder der Abschnitt: leere Liste)."""
     if not path or not os.path.exists(path):
         return []
-    cp = configparser.ConfigParser(interpolation=None)
-    cp.read(path, encoding="utf-8")
+    from plc_common import read_config_store
+    cp = read_config_store(path)
     out = []
     for i in range(1, cp.getint("Trigger", "anzahl", fallback=0) + 1):
         sec = f"Trigger{i}"
@@ -90,11 +89,9 @@ def load_triggers(path):
 
 
 def save_triggers(path, triggers):
-    """Trigger in die (bereits geschriebene) INI-Datei eintragen; vorhandene Trigger-Abschnitte werden ersetzt."""
-    cp = configparser.ConfigParser(interpolation=None)
-    cp.optionxform = str                        # Groß-/Kleinschreibung der übrigen Schlüssel unverändert lassen
-    if os.path.exists(path):
-        cp.read(path, encoding="utf-8")
+    """Trigger in die (bereits geschriebene) Konfigurationsdatei eintragen; vorhandene Trigger-Abschnitte werden ersetzt."""
+    from plc_common import read_config_store, write_config_store
+    cp = read_config_store(path)
     for sec in [s for s in cp.sections() if s == "Trigger" or re.fullmatch(r"Trigger\d+", s)]:
         cp.remove_section(sec)
     cp["Trigger"] = {"anzahl": str(len(triggers))}
@@ -103,8 +100,7 @@ def save_triggers(path, triggers):
                              "text": " ".join(t.text.split()), "prio": t.prio,
                              "verzoegerung_s": f"{t.verzoegerung_s:g}", "gehen": "1" if t.gehen else "0",
                              "quittieren": "1" if t.quittieren else "0", "aktiv": "1" if t.aktiv else "0"}
-    with open(path, "w", encoding="utf-8") as f:
-        cp.write(f)
+    write_config_store(cp, path)
 
 
 def event_log_path(conn):

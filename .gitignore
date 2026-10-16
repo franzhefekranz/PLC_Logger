@@ -19,6 +19,7 @@ app.ico
 *_einstellungen.json
 settings.json
 *.ini
+*_config.json
 !**/sprachen/*
 logs/
 archiv/

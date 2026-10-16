@@ -1,4 +1,4 @@
-"""Gemeinsame Grundlagen des CLX-Datenloggers: Datenmodell, INI-Konfiguration und Hilfen für Tag-Namen.
+"""Gemeinsame Grundlagen des CLX-Datenloggers: Datenmodell, Konfiguration (JSON) und Hilfen für Tag-Namen.
 
 Der CLX-Datenlogger liest Tags aus Rockwell/Allen-Bradley-Steuerungen (ControlLogix, CompactLogix, Micro800) über
 EtherNet/IP (CIP). Das Lesen übernimmt libplctag (Modul clx_io.py), die Tag-Liste für die Auswahl liefert pycomm3
@@ -9,21 +9,21 @@ Dieses Modul wird vom Logger, vom Konfigurationsprogramm und von den Dialogen ve
 * das Datenmodell:  Plc (Steuerung) und Axis (Y-Achse) -> Chart (Diagramm) -> Variable, außerdem Block
   (Blocklesemodus = Ausschnitt eines Array-Tags). Eine Variable gehört zu genau einer Steuerung, einem Diagramm
   und einer Y-Achse darin;
-* das Laden/Speichern der Konfiguration in einer INI-Datei (load_config / load_plcs / load_blocks /
+* das Laden/Speichern der Konfiguration in einer JSON-Datei (load_config / load_plcs / load_blocks /
   save_config) sowie die Merkhilfe für die zuletzt benutzte Konfigurationsdatei;
 * Hilfen für Tag-Namen und Verbindungspfade (check_tag_name, pycomm3_path).
 
 Das Modul enthält keine Oberfläche (kein Qt) und keine Kommunikation, ist also ohne Steuerung testbar.
 """
 import colorsys
-import configparser
+import json
 import os
 import re
 import sys
 from dataclasses import dataclass, field
 from clx_i18n import N_
 
-# Basisordner für alle Dateien, die das Programm selbst anlegt (INI, CSV, Archiv, Logo-Pfade).
+# Basisordner für alle Dateien, die das Programm selbst anlegt (Konfiguration, CSV, Archiv, Logo-Pfade).
 def _app_dir() -> str:
     """Ordner für Konfiguration, CSV-Dateien und Archiv.
 
@@ -51,7 +51,7 @@ def _app_dir() -> str:
 # Wird beim Import einmalig berechnet; alle relativen Pfade der Konfiguration beziehen sich darauf.
 BASE_DIR = _app_dir()
 # Standardname der Konfigurationsdatei (das Konfigurationsprogramm kann auch andere Dateien laden).
-CONFIG_FILE = os.path.join(BASE_DIR, "clx_config.ini")
+CONFIG_FILE = os.path.join(BASE_DIR, "clx_config.json")
 
 # Programmname und Version (Startbild, Info-Dialog, Fenstertitel).
 APP_NAME = "CLX Datenlogger"
@@ -94,7 +94,7 @@ def recent_configs(limit: int = 10) -> list:
     """Zuletzt benutzte Konfigurationsdateien (neueste zuerst, nur vorhandene)."""
     out = []
     for p in load_settings().get("zuletzt", []):
-        if isinstance(p, str) and os.path.exists(p) and p not in out:
+        if isinstance(p, str) and p.lower().endswith(".json") and os.path.exists(p) and p not in out:
             out.append(p)
     return out[:limit]
 
@@ -145,12 +145,12 @@ CPUS = {"controllogix": N_("ControlLogix"),
         "compactlogix": N_("CompactLogix"),
         "micro800": N_("Micro800")}
 
-# Anordnungen der Diagramm-Seiten: Schlüssel in der INI-Datei -> Text im Menü bzw. in der Auswahl.
+# Anordnungen der Diagramm-Seiten: Schlüssel in der Konfiguration -> Text im Menü bzw. in der Auswahl.
 LAYOUTS = {"untereinander": N_("Untereinander"),
            "nebeneinander": N_("Nebeneinander"),
            "tabs": N_("Tabs")}
 
-# Anordnung der Diagramme INNERHALB einer Seite (Menü Ansicht): Schlüssel in der INI-Datei -> Text.
+# Anordnung der Diagramme INNERHALB einer Seite (Menü Ansicht): Schlüssel in der Konfiguration -> Text.
 # 'raster' ordnet die Diagramme in Zeilen und Spalten an (Spaltenzahl: Einstellung raster_spalten).
 PAGE_LAYOUTS = {"untereinander": N_("Untereinander"),
                 "nebeneinander": N_("Nebeneinander"),
@@ -322,9 +322,207 @@ class Block:
 
 
 # ---------------------------------------------------------------------------------------
-# Konfigurationsdatei (INI)
+# Konfigurationsdatei im JSON-Format
 # ---------------------------------------------------------------------------------------
-# Aufbau:  [Verbindung]  [Diagramme] [DiagrammN] [DiagrammN_AchseM]  [Variablen] [VarN]  [Bloecke] [BlockN]
+# Auf der Platte steht die Konfiguration als verschachteltes JSON (Listen für Steuerungen, Diagramme mit Achsen,
+# Variablen, Blöcke und Trigger; Zahlen und Wahrheitswerte mit echtem Typ). Intern arbeitet das Programm weiter mit
+# Abschnitten und Schlüsseln (ConfigParser) – die Umwandlung übernehmen read_config_store()/write_config_store().
+# Ältere INI-Dateien werden nicht mehr gelesen; convert_ini() wandelt sie einmalig um (Konfigurationsprogramm:
+# Datei › INI-Datei umwandeln …, oder tools/ini2json.py).
+CONFIG_EXT = ".json"
+CONFIG_FORMAT = "CLX Datenlogger Konfiguration"
+CONFIG_VERSION = 1
+
+# Nummerierte Abschnitte: (JSON-Schlüssel, Zählabschnitt, Präfix der Einzelabschnitte)
+_GROUPS = (("steuerungen", "Steuerungen", "Steuerung"), ("diagramme", "Diagramme", "Diagramm"),
+           ("variablen", "Variablen", "Var"), ("bloecke", "Bloecke", "Block"), ("trigger", "Trigger", "Trigger"))
+# Schlüssel mit festem Typ in der JSON-Datei (alle übrigen bleiben Text)
+_BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "pid_aktiv", "gehen", "quittieren",
+              "web_aktiv", "headless", "csv_aktiv", "archiv_beenden", "db_nur_aenderungen"}
+_INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "start", "fenster_s", "max_records",
+             "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
+             "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl"}
+_FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude"}
+_JSON_KEYS = {"treiberdaten"}                    # Text mit JSON-Inhalt -> verschachteltes Objekt
+
+
+class ConfigFormatError(ValueError):
+    """Die Datei ist keine Konfiguration im JSON-Format (z. B. eine ältere INI-Datei)."""
+
+
+def _new_cp():
+    import configparser
+    return configparser.ConfigParser(interpolation=None)
+
+
+def _to_json_value(key, text):
+    """Wert eines Schlüssels (Text) -> passender JSON-Typ."""
+    t = "" if text is None else str(text)
+    try:
+        if key in _BOOL_KEYS:
+            return t.strip().lower() in ("1", "true", "ja", "yes", "on")
+        if key in _INT_KEYS and t.strip() != "":
+            return int(float(t))
+        if key in _FLOAT_KEYS and t.strip() != "":
+            return float(t)
+        if key in _JSON_KEYS:
+            return json.loads(t) if t.strip() else {}
+    except (TypeError, ValueError):
+        pass
+    return t
+
+
+def _to_text(value):
+    """JSON-Wert -> Text für die interne Darstellung."""
+    if isinstance(value, bool):
+        return "1" if value else "0"
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer() and abs(value) < 1e15:
+        return repr(value)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False) if value else ""
+    return str(value)
+
+
+def _section_to_json(sec):
+    out = {}
+    for k, v in sec.items():
+        m = re.fullmatch(r"elem_(\d+)", k)
+        if m:
+            out.setdefault("elementnamen", {})[m.group(1)] = v
+            continue
+        m = re.fullmatch(r"elemziel_(\d+)", k)
+        if m:
+            try:
+                d, a = (int(x) for x in v.split(","))
+                out.setdefault("elementziele", {})[m.group(1)] = [d, a]
+            except ValueError:
+                pass
+            continue
+        out[k] = _to_json_value(k, v)
+    return out
+
+
+def _json_to_section(d):
+    sec = {}
+    for k, v in d.items():
+        if k == "elementnamen" and isinstance(v, dict):
+            for idx, name in v.items():
+                sec[f"elem_{int(idx)}"] = str(name)
+        elif k == "elementziele" and isinstance(v, dict):
+            for idx, (dg, ax) in v.items():
+                sec[f"elemziel_{int(idx)}"] = f"{int(dg)},{int(ax)}"
+        elif k != "achsen" or not isinstance(v, list):
+            sec[k] = _to_text(v)
+    return sec
+
+
+def cp_to_json(cp) -> dict:
+    """Interne Darstellung (Abschnitte) -> JSON-Dokument."""
+    doc = {"format": CONFIG_FORMAT, "version": CONFIG_VERSION}
+    used = set()
+    if cp.has_section("Verbindung"):
+        doc["einstellungen"] = _section_to_json(cp["Verbindung"])
+        used.add("Verbindung")
+    for key, count_sec, prefix in _GROUPS:
+        items = []
+        n = cp.getint(count_sec, "anzahl", fallback=0) if cp.has_section(count_sec) else 0
+        used.add(count_sec)
+        for i in range(1, n + 1):
+            name = f"{prefix}{i}"
+            if not cp.has_section(name):
+                continue
+            used.add(name)
+            item = _section_to_json(cp[name])
+            if key == "diagramme":
+                axes = []
+                for j in range(1, int(item.pop("achsen", 0) or 0) + 1):
+                    an = f"{name}_Achse{j}"
+                    if cp.has_section(an):
+                        axes.append(_section_to_json(cp[an]))
+                        used.add(an)
+                item["achsen"] = axes
+            items.append(item)
+        if items or cp.has_section(count_sec):
+            doc[key] = items
+    rest = {s: dict(cp[s]) for s in cp.sections() if s not in used}
+    if rest:
+        doc["weitere"] = rest                  # unbekannte Abschnitte verlustfrei aufbewahren
+    return doc
+
+
+def json_to_cp(doc):
+    """JSON-Dokument -> interne Darstellung (Abschnitte)."""
+    cp = _new_cp()
+    if not isinstance(doc, dict) or "einstellungen" not in doc and not any(g[0] in doc for g in _GROUPS):
+        raise ConfigFormatError("Unbekannter Aufbau der Konfigurationsdatei")
+    cp["Verbindung"] = _json_to_section(doc.get("einstellungen") or {})
+    for key, count_sec, prefix in _GROUPS:
+        if key not in doc:
+            continue
+        items = [it for it in (doc.get(key) or []) if isinstance(it, dict)]
+        cp[count_sec] = {"anzahl": str(len(items))}
+        for i, it in enumerate(items, 1):
+            sec = _json_to_section(it)
+            if key == "diagramme":
+                axes = [a for a in (it.get("achsen") or []) if isinstance(a, dict)]
+                sec["achsen"] = str(len(axes))
+                for j, a in enumerate(axes, 1):
+                    cp[f"{prefix}{i}_Achse{j}"] = _json_to_section(a)
+            cp[f"{prefix}{i}"] = sec
+    for name, sec in (doc.get("weitere") or {}).items():
+        cp[name] = {k: _to_text(v) for k, v in sec.items()}
+    return cp
+
+
+def read_config_store(path):
+    """Konfigurationsdatei (JSON) lesen -> interne Darstellung. Fehlt die Datei: leere Darstellung.
+
+    Eine INI- oder sonstige Datei löst ConfigFormatError aus (mit Hinweis auf die Umwandlung)."""
+    if not path or not os.path.exists(path):
+        return _new_cp()
+    with open(path, encoding="utf-8-sig") as f:
+        text = f.read()
+    if not text.strip():
+        return _new_cp()
+    try:
+        doc = json.loads(text)
+    except ValueError as e:
+        if text.lstrip().startswith("["):
+            raise ConfigFormatError(
+                f"„{os.path.basename(path)}“ ist eine INI-Datei. Konfigurationen werden jetzt als JSON gespeichert – "
+                "bitte einmalig umwandeln: Konfigurationsprogramm › Datei › INI-Datei umwandeln … "
+                "(oder tools/ini2json.py).") from None
+        raise ConfigFormatError(f"„{os.path.basename(path)}“ ist keine gültige JSON-Datei: {e}") from None
+    return json_to_cp(doc)
+
+
+def write_config_store(cp, path):
+    """Interne Darstellung als JSON schreiben (erst in eine temporäre Datei, dann ersetzen)."""
+    doc = cp_to_json(cp)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(tmp, path)
+
+
+def convert_ini(ini_path, json_path=None):
+    """Ältere INI-Konfiguration einmalig in eine JSON-Datei umwandeln. Rückgabe: Pfad der JSON-Datei.
+
+    Die INI-Datei bleibt unverändert. Vorhandene JSON-Datei gleichen Namens wird überschrieben."""
+    cp = _new_cp()
+    with open(ini_path, encoding="utf-8-sig") as f:
+        cp.read_file(f)
+    json_path = json_path or os.path.splitext(ini_path)[0] + CONFIG_EXT
+    write_config_store(cp, json_path)
+    return json_path
+
+# ---------------------------------------------------------------------------------------
+# Konfiguration: Lesen und Schreiben (intern in Abschnitten, Datei als JSON – siehe oben)
+# ---------------------------------------------------------------------------------------
+# Abschnitte:  [Verbindung]  [Diagramme] [DiagrammN] [DiagrammN_AchseM]  [Variablen] [VarN]  [Bloecke] [BlockN]
 def default_connection() -> dict:
     """Vorgabewerte für die Verbindungs- und Anzeigeeinstellungen (Abschnitt [Verbindung])."""
     # ip/pfad/cpu/intervall_ms spiegeln die erste Steuerung; csv_*/archiv_* = CSV-Protokoll und Archivierung;
@@ -381,9 +579,7 @@ def load_plcs(path: str = None) -> list:
     """Nur die Steuerungen einer Konfigurationsdatei (für das Konfigurationsprogramm)."""
     path = path or CONFIG_FILE
     conn = default_connection()
-    cp = configparser.ConfigParser(interpolation=None)
-    if os.path.exists(path):
-        cp.read(path, encoding="utf-8")
+    cp = read_config_store(path)
     if cp.has_section("Verbindung"):
         s = cp["Verbindung"]
         for key in ("ip", "pfad", "cpu"):
@@ -401,10 +597,14 @@ LAST_FILE = os.path.join(BASE_DIR, "clx_last.txt")
 
 
 def last_config_path() -> str:
-    """Pfad der zuletzt benutzten Konfigurationsdatei (Standard: clx_config.ini im Basisordner)."""
+    """Pfad der zuletzt benutzten Konfigurationsdatei (Standard: clx_config.json im Basisordner)."""
     try:
         with open(LAST_FILE, encoding="utf-8") as f:
             p = f.read().strip()
+        # früher benutzte INI-Datei: gleichnamige, bereits umgewandelte JSON-Datei verwenden
+        alt = os.path.splitext(p)[0] + CONFIG_EXT
+        if p and not p.lower().endswith(CONFIG_EXT) and os.path.exists(alt):
+            return alt
         if p and os.path.exists(p):
             return p
     except OSError:
@@ -426,8 +626,8 @@ def remember_config_path(path: str):
 
 
 def _parse_blocks(cp, charts, n_plc=1):
-    """Block-Abschnitte der INI-Datei in Block-Objekte umsetzen (n_plc: Anzahl der Steuerungen)."""
-    # Block-Abschnitte ([BlockN]) aus der geöffneten INI-Datei lesen.
+    """Block-Abschnitte der Konfiguration in Block-Objekte umsetzen (n_plc: Anzahl der Steuerungen)."""
+    # Block-Abschnitte ([BlockN]) aus der geöffneten Konfiguration lesen.
     # charts wird benötigt, um Diagramm-/Achsenindizes auf gültige Werte zu begrenzen.
     blocks = []
     for i in range(1, cp.getint("Bloecke", "anzahl", fallback=0) + 1):
@@ -476,8 +676,7 @@ def load_blocks(path: str = None) -> list:
     path = path or CONFIG_FILE
     if not os.path.exists(path):
         return []
-    cp = configparser.ConfigParser(interpolation=None)
-    cp.read(path, encoding="utf-8")
+    cp = read_config_store(path)
     charts = [Chart()]
     n = cp.getint("Diagramme", "anzahl", fallback=0)
     if n:
@@ -489,7 +688,7 @@ def load_blocks(path: str = None) -> list:
 
 
 def load_config(path: str = None):
-    """Liest die INI-Datei -> (Verbindungs-Dict, Liste von Chart, Liste von Variable).
+    """Liest die Konfigurationsdatei (JSON) -> (Verbindungs-Dict, Liste von Chart, Liste von Variable).
 
     Die Steuerungen liefert load_plcs(); Variable.plc verweist auf deren Index."""
     path = path or CONFIG_FILE
@@ -500,8 +699,7 @@ def load_config(path: str = None):
     if not os.path.exists(path):
         return conn, [Chart()], variables
     # interpolation=None: '%' in Namen oder Formeln soll nicht als Platzhalter gedeutet werden.
-    cp = configparser.ConfigParser(interpolation=None)
-    cp.read(path, encoding="utf-8")
+    cp = read_config_store(path)
 
     if cp.has_section("Verbindung"):
         s = cp["Verbindung"]
@@ -578,7 +776,7 @@ def load_config(path: str = None):
 
 
 def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs=None):
-    """Konfiguration in die INI-Datei schreiben.
+    """Konfiguration in die Datei (JSON) schreiben.
 
     conn: Verbindungs-/Anzeigeeinstellungen, charts: Diagramme mit Achsen, variables: normale und
     berechnete Variablen, blocks: Blockdefinitionen (deren Elemente werden nicht einzeln gespeichert),
@@ -593,7 +791,7 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
     conn.update(ip=plcs[0].ip, pfad=plcs[0].pfad, cpu=plcs[0].cpu, intervall_ms=plcs[0].intervall_ms)
     # Block-Elemente nie als einzelne [VarN] speichern - sie entstehen beim Laden aus [BlockN].
     variables = [v for v in variables if not v.block]
-    cp = configparser.ConfigParser(interpolation=None)
+    cp = _new_cp()
     cp["Verbindung"] = {k: str(v) for k, v in conn.items()}
     cp["Steuerungen"] = {"anzahl": str(len(plcs))}
     for i, p in enumerate(plcs, 1):
@@ -636,5 +834,4 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
             if nm and 0 <= idx < b.count:
                 cp[f"Block{i}"][f"elem_{idx}"] = " ".join(nm.split())
     # Datei komplett neu schreiben (die Konfiguration ist klein; so bleibt sie immer konsistent).
-    with open(path, "w", encoding="utf-8") as f:
-        cp.write(f)
+    write_config_store(cp, path)

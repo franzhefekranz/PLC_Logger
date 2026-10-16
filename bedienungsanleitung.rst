@@ -26,8 +26,8 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
      - Aufgabe
    * - ``s7_config.py``
      - Konfigurationsprogramm: Projekt, Steuerungen, Diagramme, Y-Achsen und
-       Variablen festlegen. Speichert in eine INI-Datei mit beliebigem Namen
-       (Standard ``s7_config.ini``).
+       Variablen festlegen. Speichert in eine JSON-Datei mit beliebigem Namen
+       (Standard ``s7_config.json``).
    * - ``s7_logger.py``
      - Startprogramm des Loggers: wählt anhand der Konfiguration bzw. der
        Parameter die Betriebsart (Oberfläche oder Headless).
@@ -66,7 +66,7 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
    * - ``build_appimage.sh``, ``tools/extract_tr.py``
      - Linux-AppImage bauen; Sprachdateien nach Programmänderungen aktualisieren.
    * - ``s7_common.py``
-     - Gemeinsame Funktionen (INI-Datei, SPS-Zugriff). Wird nicht direkt
+     - Gemeinsame Funktionen (Konfigurationsdatei, SPS-Zugriff). Wird nicht direkt
        gestartet.
    * - ``build.bat``, ``installer.iss``, ``make_icon.py``, ``requirements.txt``
      - Erzeugung der Windows-Installationsdatei (siehe :ref:`installer`).
@@ -136,11 +136,11 @@ Programme starten
 
 .. code-block:: console
 
-   python s7_config.py [datei.ini]     # Konfiguration
-   python s7_logger.py [datei.ini]     # Logger (Oberfläche oder Headless)
+   python s7_config.py [datei.json]     # Konfiguration
+   python s7_logger.py [datei.json]     # Logger (Oberfläche oder Headless)
 
 Ohne Dateiangabe wird die **zuletzt benutzte** Konfigurationsdatei geöffnet
-(Standard: ``s7_config.ini``). Der Name der Datei ist beliebig. Weitere Parameter
+(Standard: ``s7_config.json``). Der Name der Datei ist beliebig. Weitere Parameter
 des Loggers:
 
 .. list-table::
@@ -149,7 +149,7 @@ des Loggers:
 
    * - Parameter
      - Wirkung
-   * - ``datei.ini`` oder ``--config datei.ini``
+   * - ``datei.json`` oder ``--config datei.json``
      - Konfigurationsdatei, die verwendet wird (und beim nächsten Start ohne
        Angabe wieder geöffnet wird).
    * - ``--headless``
@@ -217,7 +217,7 @@ Beim Start von Logger und Konfigurationsprogramm erscheint das **Startbild**:
   starten. Wieder einschalten: im Logger **Datei → Startbild beim Programmstart zeigen**.
 
 Nach der Auswahl zeigt das Startbild den Ladefortschritt, bis das Hauptfenster bereit ist.
-Wird beim Aufruf eine Konfigurationsdatei angegeben (z. B. ``S7Logger.exe anlage.ini``),
+Wird beim Aufruf eine Konfigurationsdatei angegeben (z. B. ``S7Logger.exe anlage.json``),
 entfällt die Auswahl. Das Fenster lässt sich mit der Maus verschieben; **Esc** oder ✕ beendet.
 
 
@@ -695,16 +695,16 @@ Hinweise:
   automatisch aufgeklappt). Per Doppelklick auf die Spalte *Name* erhält ein
   Element einen eigenen Namen, z. B. ``Druck Vorlauf`` statt ``Messwerte[1]``.
   Ein leerer Name stellt den Standardnamen wieder her. Die Namen müssen
-  eindeutig sein und dürfen ``; { }`` nicht enthalten. In der INI-Datei stehen
-  sie als ``elem_<Index> = Name`` im Abschnitt des Blocks.
+  eindeutig sein und dürfen ``; { }`` nicht enthalten. In der Konfigurationsdatei stehen
+  sie unter ``elementnamen`` des Blocks.
 * **Elemente in verschiedenen Diagrammen:** Im Baum des Blockeditors hat jedes
   Element in der letzten Spalte *Diagramm › Y-Achse* eine Auswahlliste. Der Eintrag
   *(wie Block)* verwendet das Ziel des Blocks, jeder andere Eintrag stellt dieses
   Element in einem anderen Diagramm bzw. an einer anderen Y-Achse dar. Mit
   **Für alle Elemente des markierten Blocks setzen** wird das gewählte Ziel für
   alle Elemente auf einmal übernommen. Gelesen wird der Block weiterhin mit
-  **einer** Anfrage; in der INI-Datei stehen abweichende Ziele als
-  ``elemziel_<Index> = Diagramm,Achse``. Im Variablenbaum der Konfiguration
+  **einer** Anfrage; in der Konfigurationsdatei stehen abweichende Ziele unter
+  ``elementziele`` (Index: [Diagramm, Achse]). Im Variablenbaum der Konfiguration
   erscheinen die abweichend zugeordneten Elemente zusätzlich unter der Achse, in
   der sie dargestellt werden.
 * Im Variablenbaum der Konfiguration erscheint jeder Block als eine Zeile
@@ -775,7 +775,7 @@ Hinweise zum Baum:
   werden als ``BYTE``, ``WORD`` und ``DWORD`` aufgezeichnet, ``TIME`` als
   ``DINT`` (Millisekunden).
 * Von großen Arrays werden höchstens 500 Elemente dargestellt.
-* Die importierten Quellen werden mit ihrem Dateipfad in der INI-Datei
+* Die importierten Quellen werden mit ihrem Dateipfad in der Konfigurationsdatei
   gespeichert (``symbolquellen``) und beim nächsten Öffnen des Dialogs
   automatisch wieder gelesen. Die Quelldateien müssen dafür am selben Ort
   bleiben.
@@ -798,15 +798,16 @@ Das Menü **Datei** des Konfigurationsprogramms enthält:
 
 * **Neu** – leere Konfiguration mit einer Steuerung; der Dateiname wird beim
   ersten Speichern abgefragt.
-* **Öffnen…** (``Strg+O``) – lädt eine INI- oder TXT-Datei mit **beliebigem
+* **Öffnen…** (``Strg+O``) – lädt eine Konfigurationsdatei (JSON) mit **beliebigem
   Namen**. Ältere Konfigurationen mit nur einer Steuerung und ohne Y-Achsen
   werden übernommen.
 * **Speichern** (``Strg+S``) und **Speichern unter…** (``Strg+Umschalt+S``) –
-  schreiben in die aktuelle bzw. eine neue Datei (ohne Endung wird ``.ini``
-  ergänzt). Vor dem Speichern wird geprüft, dass Steuerungs- und
+  schreiben in die aktuelle bzw. eine neue Datei (die Endung ist immer ``.json``). Vor dem Speichern wird geprüft, dass Steuerungs- und
   Variablennamen eindeutig und nicht leer sind, jede Steuerung eine
   IP-Adresse hat, die Formeln gültig sind und bei festen Y-Achsen *Y max* größer
   als *Y min* ist.
+* **INI-Datei umwandeln …** – ältere INI-Konfigurationen einmalig in JSON umwandeln
+  (siehe :ref:`ini-umwandeln`).
 * **Logger mit dieser Konfiguration starten** (``Strg+R``) – speichert und
   startet den Logger mit dieser Datei.
 
@@ -819,123 +820,190 @@ Datei wird gemerkt (Datei ``s7_last.txt``); Logger und Konfigurationsprogramm
    Der Logger liest die Konfiguration bei jedem **Start**. Änderungen wirken
    daher erst nach erneutem Drücken von **▶ Start**.
 
-Aufbau der INI-Datei
+Aufbau der Konfigurationsdatei (JSON)
 ----------------------------------------------------------------------
 
-Die Datei kann bei Bedarf auch von Hand bearbeitet werden:
+Die Konfiguration wird als **JSON-Datei** gespeichert (UTF-8, eingerückt) und kann bei Bedarf auch von Hand
+bearbeitet werden – mit jedem Texteditor, besser mit einem, der JSON prüft (z. B. Notepad++,
+Visual Studio Code). Beispiel:
 
-.. code-block:: ini
+.. code-block:: json
 
-   [Verbindung]
-   projekt = Prüfstand 3
-   ip = 192.168.0.1
-   rack = 0
-   slot = 1
-   intervall_ms = 200
-   csv_ordner = logs
-   csv_name = log
-   max_records = 100000
-   archiv_ordner = archiv
-   fenster_s = 60
-   anordnung = untereinander
-   balken = 1
-   symbolquellen = C:/Projekt/Prozess.scl#20
-   logo = C:/Firma/logo.png
-   icon = C:/Firma/icon.ico
-   archiv_beenden = 1
-   seite_anordnung = raster
-   raster_spalten = 2
-   web_aktiv = 1
-   web_host = 0.0.0.0
-   web_port = 8080
-   web_token = geheim
-   web_intervall_ms = 1000
-   headless = 0
+   {
+     "format": "S7 Datenlogger Konfiguration",
+     "version": 1,
+     "einstellungen": {
+       "projekt": "Prüfstand 3",
+       "ip": "192.168.0.1",
+       "rack": 0,
+       "slot": 1,
+       "intervall_ms": 200,
+       "csv_ordner": "logs",
+       "csv_name": "log",
+       "max_records": 100000,
+       "archiv_ordner": "archiv",
+       "fenster_s": 60,
+       "anordnung": "untereinander",
+       "balken": true,
+       "symbolquellen": "C:/Projekt/Prozess.scl#20",
+       "logo": "C:/Firma/logo.png",
+       "icon": "C:/Firma/icon.ico",
+       "archiv_beenden": true,
+       "seite_anordnung": "raster",
+       "raster_spalten": 2,
+       "web_aktiv": true,
+       "web_host": "0.0.0.0",
+       "web_port": 8080,
+       "web_token": "geheim",
+       "web_intervall_ms": 1000,
+       "headless": false
+     },
+     "steuerungen": [
+       {
+         "name": "Kessel",
+         "ip": "192.168.0.1",
+         "rack": 0,
+         "slot": 1,
+         "intervall_ms": 200,
+         "aktiv": true
+       },
+       {
+         "name": "Pumpe",
+         "ip": "192.168.0.2",
+         "rack": 0,
+         "slot": 1,
+         "intervall_ms": 500,
+         "aktiv": true
+       }
+     ],
+     "diagramme": [
+       {
+         "name": "Prozess",
+         "seite": "Prozess",
+         "achsen": [
+           {
+             "name": "Temperatur",
+             "auto": true,
+             "y_min": 0.0,
+             "y_max": 100.0
+           },
+           {
+             "name": "Druck",
+             "auto": false,
+             "y_min": 0.0,
+             "y_max": 10.0
+           }
+         ]
+       }
+     ],
+     "variablen": [
+       {
+         "name": "Temperatur_Kessel",
+         "bereich": "DB",
+         "db": 10,
+         "byte": 0,
+         "bit": 0,
+         "typ": "REAL",
+         "farbe": "#d62728",
+         "wert_anzeigen": true,
+         "diagramm": 1,
+         "achse": 1,
+         "balken": true,
+         "formel": "",
+         "steuerung": 1
+       }
+     ],
+     "bloecke": [
+       {
+         "name": "Messwerte",
+         "bereich": "DB",
+         "db": 10,
+         "start": 0,
+         "bit": 0,
+         "typ": "REAL",
+         "anzahl": 20,
+         "diagramm": 1,
+         "achse": 1,
+         "farbe": "#1f77b4",
+         "wert_anzeigen": true,
+         "balken": false,
+         "steuerung": 2,
+         "elementziele": {
+           "3": [
+             2,
+             1
+           ]
+         }
+       }
+     ]
+   }
 
-   [Steuerungen]
-   anzahl = 2
+Aufbau:
 
-   [Steuerung1]
-   name = Kessel
-   ip = 192.168.0.1
-   rack = 0
-   slot = 1
-   intervall_ms = 200
-   aktiv = 1
+.. list-table::
+   :header-rows: 1
+   :widths: 22 78
 
-   [Steuerung2]
-   name = Pumpe
-   ip = 192.168.0.2
-   rack = 0
-   slot = 1
-   intervall_ms = 500
-   aktiv = 1
+   * - Schlüssel
+     - Inhalt
+   * - ``format``, ``version``
+     - Kennung der Datei und Version des Aufbaus (derzeit 1).
+   * - ``einstellungen``
+     - Projekt, Aufzeichnung (CSV, Archiv, Datenbank), Anzeige, Webserver, Headless.
+   * - ``steuerungen``
+     - Liste der Steuerungen (Reihenfolge = Nummer, auf die ``steuerung`` verweist).
+   * - ``diagramme``
+     - Liste der Diagramme, je Diagramm die Liste ``achsen`` (Y-Achsen) und ggf. die
+       PID-Einstellungen (``pid_…``).
+   * - ``variablen``
+     - Normale und berechnete Variablen (``formel`` nicht leer).
+   * - ``bloecke``
+     - Blöcke des Blocklesemodus; ``elementnamen`` = eigene Namen einzelner Elemente
+       (``{"1": "Druck Vorlauf"}``), ``elementziele`` = abweichendes Diagramm und Achse
+       einzelner Elemente (``{"3": [2, 1]}``).
+   * - ``trigger``
+     - Trigger des Ereignisprotokolls.
 
-   [Diagramme]
-   anzahl = 1
+Zahlen und Wahrheitswerte stehen mit ihrem Typ in der Datei (``200``, ``1.5``,
+``true``/``false``). Fehlende Schlüssel erhalten beim Laden ihren Standardwert,
+unbekannte werden ignoriert. Ist die Datei kein gültiges JSON (z. B. ein vergessenes
+Komma), meldet das Programm die Zeile der Fehlerstelle.
 
-   [Diagramm1]
-   name = Prozess
-   achsen = 2
-   seite = Prozess
-
-   [Diagramm1_Achse1]
-   name = Temperatur
-   auto = 1
-   y_min = 0.0
-   y_max = 100.0
-
-   [Diagramm1_Achse2]
-   name = Druck
-   auto = 0
-   y_min = 0.0
-   y_max = 10.0
-
-   [Variablen]
-   anzahl = 1
-
-   [Var1]
-   name = Temperatur_Kessel
-   bereich = DB
-   db = 10
-   byte = 0
-   bit = 0
-   typ = REAL
-   farbe = #d62728
-   wert_anzeigen = 1
-   diagramm = 1
-   achse = 1
-   balken = 1
-   formel =
-   steuerung = 1
-
-   [Bloecke]
-   anzahl = 1
-
-   [Block1]
-   name = Messwerte
-   bereich = DB
-   db = 10
-   start = 0
-   bit = 0
-   typ = REAL
-   anzahl = 20
-   diagramm = 1
-   achse = 1
-   farbe = #1f77b4
-   wert_anzeigen = 1
-   balken = 0
-   steuerung = 2
-   elemziel_3 = 2,1
-
-``diagramm``, ``achse`` und ``steuerung`` sind jeweils 1-basiert. Im Abschnitt
-``[Verbindung]`` spiegeln ``ip``, ``rack``, ``slot`` und ``intervall_ms`` die erste
-Steuerung (für ältere Programmversionen); fehlt ``[Steuerungen]``, entsteht daraus
+``diagramm``, ``achse`` und ``steuerung`` sind Nummern ab 1. In
+``einstellungen`` spiegeln ``ip``, ``rack``, ``slot`` und ``intervall_ms`` die erste
+Steuerung (für ältere Programmversionen); fehlt ``steuerungen``, entsteht daraus
 genau eine Steuerung. ``seite_anordnung`` ist leer (automatisch), ``untereinander``,
-``nebeneinander`` oder ``raster``; ``raster_spalten = 0`` wählt die Spaltenzahl
+``nebeneinander`` oder ``raster``; ``raster_spalten: 0`` wählt die Spaltenzahl
 automatisch. Die Variablen eines Blocks
-(``Messwerte[0]`` …) werden beim Laden erzeugt und stehen nicht als ``[VarN]``
+(``Messwerte[0]`` …) werden beim Laden erzeugt und stehen nicht unter ``variablen``
 in der Datei.
+
+.. _ini-umwandeln:
+
+Ältere INI-Dateien umwandeln
+----------------------------------------------------------------------
+
+Frühere Versionen speicherten die Konfiguration als Konfigurationsdatei. Diese werden **nicht
+mehr direkt geöffnet**, sondern einmalig in eine JSON-Datei umgewandelt; die Konfigurationsdatei
+selbst bleibt dabei unverändert:
+
+* **Konfigurationsprogramm › Datei › INI-Datei umwandeln …** – eine oder mehrere
+  Konfigurationsdateien wählen; neben jeder entsteht eine gleichnamige ``.json``-Datei. Bei einer
+  einzelnen Datei wird das Ergebnis gleich geöffnet.
+* Wird im Konfigurationsprogramm (Öffnen, Startbild) eine INI-Datei gewählt, bietet
+  es die Umwandlung direkt an.
+* Für viele Dateien auf einmal (Python-Quellen):
+
+  .. code-block:: console
+
+     python tools/ini2json.py anlage1.ini anlage2.ini        # -> anlage1.json, anlage2.json
+     python tools/ini2json.py alt.ini -o neu.json -f        # anderer Name, überschreiben
+
+Der Logger meldet beim Start mit einer Konfigurationsdatei, dass sie umgewandelt werden muss. War
+zuletzt eine INI-Datei geöffnet und gibt es daneben bereits die umgewandelte
+``.json``-Datei, wird diese automatisch verwendet. Alle Inhalte – auch Trigger,
+PID-Einstellungen und Blöcke – werden übernommen.
+
 
 
 Logger (``s7_logger.py``)
@@ -1698,7 +1766,7 @@ einem anderen Rechner mit Zugriff auf die Datei (Netzlaufwerk):
 .. code-block:: text
 
    S7Logger.exe --ereignisse                        (Ereignisprotokoll der zuletzt benutzten Konfiguration)
-   S7Logger.exe --ereignisse anlage.ini             (Ereignisprotokoll dieser Konfiguration)
+   S7Logger.exe --ereignisse anlage.json             (Ereignisprotokoll dieser Konfiguration)
    S7Logger.exe --ereignisse D:\logs\log_ereignisse.csv
 
 Die installierte Version hat dafür im Startmenü die Verknüpfung *S7 Ereignisprotokoll*.
@@ -2074,7 +2142,7 @@ oben in ``build.bat`` bei ``VERSION`` eingestellt. Ein **eigenes Icon** entsteht
 indem Sie vor dem Build eine eigene ``app.ico`` in den Ordner legen.
 
 **Speicherort der Daten:** Die installierten Programme schreiben Konfiguration
-(``s7_config.ini``), CSV-Dateien und Archiv **nicht** in den Programmordner
+(``s7_config.json``), CSV-Dateien und Archiv **nicht** in den Programmordner
 (dieser ist meist schreibgeschützt), sondern nach
 ``%APPDATA%\\S7Datenlogger``. Die Daten bleiben beim Deinstallieren und bei
 Updates erhalten. Soll alles neben den Programmen liegen (portabler Betrieb auf
@@ -2142,7 +2210,7 @@ Benutzen
    ./S7Datenlogger-2.1.0-x86_64.AppImage               # Logger (mit Startbild)
    ./S7Datenlogger-2.1.0-x86_64.AppImage --konfig      # Konfigurationsprogramm
    ./S7Datenlogger-2.1.0-x86_64.AppImage --ereignisse  # Ereignis-Viewer
-   ./S7Datenlogger-2.1.0-x86_64.AppImage --headless anlage.ini   # nur Aufzeichnung (z. B. als Dienst)
+   ./S7Datenlogger-2.1.0-x86_64.AppImage --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
 
 Auf Raspberry Pi (64-Bit-System) und anderen arm64-Rechnern entsprechend die Datei
 ``…-aarch64.AppImage``. Die Daten (Konfiguration, CSV, Archiv, Ereignisse, Sprachdateien)
@@ -2281,4 +2349,4 @@ Bekannte Einschränkungen
 * Die minimale Abtastzeit hängt von der Kommunikation mit der SPS ab; bei
   vielen Variablen kann das eingestellte Intervall nicht eingehalten werden.
 * Der Demo-Schalter und die Fensteranordnung werden nicht in der
-  INI-Datei gespeichert.
+  Konfigurationsdatei gespeichert.

@@ -29,7 +29,7 @@ import threading
 from clx_common import BASE_DIR
 from clx_i18n import N_, tr
 
-# Datenbanktypen: Schlüssel in der INI-Datei -> Anzeige.
+# Datenbanktypen: Schlüssel in der Konfigurationsdatei -> Anzeige.
 DB_TYPES = {"": N_("Keine"), "sqlite": N_("SQLite (Datei)"), "mariadb": N_("MariaDB / MySQL"),
             "timescale": N_("TimescaleDB / PostgreSQL")}
 DEFAULT_PORTS = {"mariadb": 3306, "timescale": 5432}
