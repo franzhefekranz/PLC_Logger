@@ -1,6 +1,7 @@
-# Windows-Programme aller vier Datenlogger bauen: portables ZIP und Installer (Inno Setup).
-# Start: bei einem Tag "v*" oder von Hand (Actions › Windows › Run workflow). Ergebnis: Artefakte je Programm
-# (…_portable_<Version>.zip und …_Setup_<Version>.exe); bei einem Tag zusätzlich als Dateien eines GitHub-Release.
+# Windows-Programme des PLC Datenloggers bauen: portables ZIP und Installer (Inno Setup).
+# Start: bei einem Tag "v*" oder von Hand (Actions › Windows › Run workflow). Ergebnis: Artefakte
+# (PLCDatenlogger_portable_<Version>.zip und PLCDatenlogger_Setup_<Version>.exe); bei einem Tag zusätzlich als
+# Dateien eines GitHub-Release.
 #
 # Gebaut wird mit build.bat (wie auf dem eigenen PC), ohne Pause am Ende (NOPAUSE) und mit dem Python dieses Workflows
 # (BUILD_PYTHON). Die Versionsnummer steht oben in build.bat (VERSION).
@@ -11,24 +12,11 @@ on:
   push:
     tags: ["v*"]
 
-# Schreibrecht für den Release-Schritt (Dateien an ein GitHub-Release hängen)
 permissions:
   contents: write
 
 jobs:
   windows:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - project: "."
-            name: s7
-          - project: "clx_datenlogger"
-            name: clx
-          - project: "tia_datenlogger"
-            name: tia
-          - project: "plc_datenlogger"
-            name: plc
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,7 +27,6 @@ jobs:
       - name: Inno Setup installieren
         run: choco install innosetup -y --no-progress
       - name: Programme, portables ZIP und Installer bauen
-        working-directory: ${{ matrix.project }}
         shell: cmd
         env:
           NOPAUSE: "1"
@@ -47,18 +34,18 @@ jobs:
         run: call build.bat all
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ matrix.name }}-portable
-          path: ${{ matrix.project }}/dist/*_portable_*.zip
+          name: windows-portable
+          path: dist/*_portable_*.zip
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-${{ matrix.name }}-setup
-          path: ${{ matrix.project }}/installer/*_Setup_*.exe
+          name: windows-setup
+          path: installer/*_Setup_*.exe
           if-no-files-found: warn
       - name: Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ matrix.project }}/dist/*_portable_*.zip
-            ${{ matrix.project }}/installer/*_Setup_*.exe
+            dist/*_portable_*.zip
+            installer/*_Setup_*.exe

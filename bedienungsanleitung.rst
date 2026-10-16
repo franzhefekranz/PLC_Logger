@@ -1,5 +1,5 @@
 ======================================================================
-S7 Datenlogger – Bedienungsanleitung
+PLC Datenlogger – Bedienungsanleitung
 ======================================================================
 
 .. contents:: Inhalt
@@ -10,11 +10,62 @@ S7 Datenlogger – Bedienungsanleitung
 Überblick
 ======================================================================
 
-Der S7 Datenlogger liest zyklisch Variablen aus einer oder **mehreren**
-Siemens-Step-7-Steuerungen (S7-300/400/1200/1500) über das Protokoll
-*S7-Kommunikation* (Bibliothek ``python-snap7``), speichert alle Messwerte in einer
-CSV-Datei und zeigt sie als y-t-Diagramm an – in der Oberfläche, im Browser
-(Webserver) oder gar nicht (Headless-Betrieb, nur Aufzeichnung).
+Der PLC Datenlogger liest zyklisch Variablen aus einer oder **mehreren**
+Steuerungen **unterschiedlicher Hersteller gleichzeitig**, speichert alle Messwerte
+in einer gemeinsamen CSV-Datei (und/oder Datenbank) und zeigt sie als
+y-t-Diagramm an – in der Oberfläche, im Browser (Webserver) oder gar nicht
+(Headless-Betrieb, nur Aufzeichnung).
+
+Er ersetzt die früheren Einzelprogramme *S7 Datenlogger*, *TIA Datenlogger* und
+*CLX Datenlogger*. Die Kommunikation mit den Steuerungen
+übernehmen **Treiber**; jede Steuerung der Konfiguration bekommt ihren eigenen
+Treiber. Eingebaut sind:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 12 38 50
+
+   * - Treiber
+     - Steuerungen / Protokoll
+     - Bibliothek, Adressierung
+   * - ``s7``
+     - Siemens S7-300/400/1200/1500 über S7-Kommunikation (PUT/GET)
+     - python-snap7; absolute Adressen wie ``DB10.DBD4``, ``M5.0``, ``EW64``
+   * - ``tia``
+     - Siemens S7-1200/1500 symbolisch über S7CommPlus (wie TIA Portal/HMI),
+       auch optimierte Bausteine, ohne PUT/GET
+     - s7commplus; symbolische Namen wie ``Anlage_DB.Motor[2].Drehzahl``
+   * - ``clx``
+     - Allen-Bradley ControlLogix, CompactLogix, Micro800 über EtherNet/IP (CIP)
+     - libplctag (+ pycomm3 für die Tag-Liste); Tag-Namen wie ``Program:Main.Druck``
+   * - ``modbus``
+     - Modbus TCP (Wago, Schneider, Beckhoff, Phoenix Contact, Umrichter,
+       Energiezähler, Gateways …)
+     - keine Zusatzbibliothek; ``40001``, ``30001``, ``00001``, ``10001`` bzw.
+       ``HR0``, ``IR0``, ``C0``, ``DI0``
+   * - ``modbus_rtu``
+     - Modbus RTU über RS-485/RS-232 (mehrere Geräte an einer Schnittstelle)
+     - pymodbus, pyserial; Adressen wie ``modbus``
+   * - ``opcua``
+     - OPC UA: Beckhoff, B&R, Codesys, Siemens, Omron, Rockwell (Gateway),
+       Kepware … – Steuerungen vieler Hersteller
+     - asyncua; NodeId wie ``ns=4;s=MAIN.fTemperatur``; Auswahl aus dem Server
+   * - ``slmp``
+     - Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC-Protokoll, Ethernet)
+     - keine Zusatzbibliothek; ``D100``, ``M10``, ``X1F``, ``ZR1000``
+   * - ``kvhostlink``
+     - KEYENCE KV-8000/7000/5000/3000/Nano, KV-X (Host Link, Ethernet)
+     - keine Zusatzbibliothek; ``DM100``, ``R1000``, ``EM0``, ``T10``
+   * - ``toyopuc``
+     - JTEKT TOYOPUC PC10G/PC10, PC3J, Nano 10GX (Computer Link, Ethernet)
+     - keine Zusatzbibliothek; ``D0100``, ``M0010``, ``P1-D0100`` (hex)
+   * - ``s5as511``
+     - Siemens S5 über die PG-Schnittstelle (AS511, seriell, 20-mA-Adapter)
+     - pyserial; ``DB10.DW4``, ``EW0``, ``MW10``, ``T5``
+
+Weitere Treiber lassen sich **ohne Änderung des Programms** ergänzen: Eine
+Python-Datei im Ordner ``treiber`` des Datenordners genügt (siehe
+:ref:`treiber-entwickeln`).
 
 Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
 
@@ -24,94 +75,103 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
 
    * - Datei
      - Aufgabe
-   * - ``s7_config.py``
-     - Konfigurationsprogramm: Projekt, Steuerungen, Diagramme, Y-Achsen und
-       Variablen festlegen. Speichert in eine JSON-Datei mit beliebigem Namen
-       (Standard ``s7_config.json``).
-   * - ``s7_logger.py``
+   * - ``plc_config.py``
+     - Konfigurationsprogramm: Projekt, Steuerungen und Treiber, Diagramme,
+       Y-Achsen und Variablen festlegen. Speichert in eine JSON-Datei mit beliebigem
+       Namen (Standard ``plc_config.json``).
+   * - ``plc_logger.py``
      - Startprogramm des Loggers: wählt anhand der Konfiguration bzw. der
        Parameter die Betriebsart (Oberfläche oder Headless).
-   * - ``s7_gui.py``
+   * - ``plc_gui.py``
      - Oberfläche des Loggers: Diagramme, Online-/Offline-Modus, Lineale,
-       Status-LEDs. Wird von ``s7_logger.py`` geladen.
-   * - ``s7_headless.py``
+       Status-LEDs. Wird von ``plc_logger.py`` geladen.
+   * - ``plc_headless.py``
      - Betrieb ohne Oberfläche (nur Aufzeichnung, benötigt kein Qt).
-   * - ``s7_recorder.py``
-     - Aufzeichnungskern ohne Oberfläche: je Steuerung ein Lese-Thread, ein
-       Sammler-Thread für Zusammenführung, Formeln, Datenpuffer, CSV und Archiv.
-   * - ``s7_web.py``
+   * - ``plc_recorder.py``
+     - Aufzeichnungskern ohne Oberfläche: je Steuerung ein Lese-Thread (mit dem
+       Leser ihres Treibers), ein Sammler-Thread für Zusammenführung, Formeln,
+       Datenpuffer, CSV und Archiv.
+   * - ``plc_treiber/``
+     - Die Treiber: ``base.py`` (Schnittstelle), ``__init__.py`` (Verzeichnis,
+       lädt eingebaute und eigene Treiber), ``ui.py`` (Einstellungsdialog der
+       Verbindung), ``s7.py``/``s7_symbols.py``/``s7_browser.py``,
+       ``tia.py``/``tia_io.py``/``tia_taglist.py``/``tia_browser.py``,
+       ``clx.py``/``plc_io.py``/``plc_taglist.py``/``plc_browser.py``,
+       ``modbus.py``, ``modbus_rtu.py``, ``opcua.py``/``opcua_browser.py``,
+       ``slmp.py``, ``kvhostlink.py``, ``toyopuc.py`` (gemeinsame Grundlage
+       ``word_common.py``), ``s5as511.py`` und ``_vorlage.py`` (Vorlage für eigene
+       Treiber).
+   * - ``plc_web.py``
      - Webserver (Flask) mit Chart.js-Seite zum Ansehen der Diagramme im Browser.
-   * - ``s7_svg.py``
+   * - ``plc_svg.py``
      - SVG-Export eines Diagramms (unabhängig von Qt).
-   * - ``s7_util.py``
+   * - ``plc_util.py``
      - Kleine Hilfsfunktionen (Formatierung, Achsenteilung, Datenreduktion).
-   * - ``s7_db.py``
+   * - ``plc_db.py``
      - Aufzeichnung in SQLite, MariaDB oder TimescaleDB/PostgreSQL (eigener Schreib-Thread).
-   * - ``s7_db_dialog.py``
+   * - ``plc_db_dialog.py``
      - Lesemodus: Zeitraum aus der Datenbank wählen und im Logger anzeigen.
-   * - ``s7_events.py``
+   * - ``plc_events.py``
      - Trigger und Ereignisprotokoll (Auswertung, Datei, Quittierung).
-   * - ``s7_event_viewer.py``
+   * - ``plc_event_viewer.py``
      - Ereignis-Viewer (Anzeigen und Quittieren); auch allein startbar.
-   * - ``s7_trigger_dialog.py``
+   * - ``plc_trigger_dialog.py``
      - Trigger-Editor des Konfigurationsprogramms.
-   * - ``s7_pid.py``
+   * - ``plc_pid.py``
      - PID-Regler-Optimierung: Streckenmodell, Einstellregeln, Simulation (ohne Oberfläche).
-   * - ``s7_pid_dialog.py``
+   * - ``plc_pid_dialog.py``
      - Fenster der PID-Optimierung (Logger) und Einstellungen dazu (Konfigurationsprogramm).
-   * - ``s7_i18n.py``, ``sprachen/``
+   * - ``plc_i18n.py``, ``sprachen/``
      - Sprachumschaltung und Sprachdateien (``de.txt`` = Vorlage, ``en.txt`` = Englisch).
-   * - ``s7_splash.py``
+   * - ``plc_splash.py``
      - Startbild (Auswahl der Konfiguration, Lade-Anzeige).
    * - ``build_appimage.sh``, ``tools/extract_tr.py``
      - Linux-AppImage bauen; Sprachdateien nach Programmänderungen aktualisieren.
-   * - ``s7_common.py``
-     - Gemeinsame Funktionen (Konfigurationsdatei, SPS-Zugriff). Wird nicht direkt
-       gestartet.
+   * - ``plc_common.py``
+     - Datenmodell und Konfigurationsdatei (JSON) (inkl. Übernahme der Konfigurationen der
+       Einzelprogramme). Wird nicht direkt gestartet.
    * - ``build.bat``, ``installer.iss``, ``make_icon.py``, ``requirements.txt``
      - Erzeugung der Windows-Installationsdatei (siehe :ref:`installer`).
-   * - ``s7_block_dialog.py``
+   * - ``plctag.dll``
+     - libplctag für Windows (64 Bit), vom Treiber ``clx`` benötigt.
+   * - ``plc_block_dialog.py``
      - Editor für Blöcke (Blocklesemodus), vom Konfigurationsprogramm geöffnet.
-   * - ``s7_formula.py``
+   * - ``plc_formula.py``
      - Auswertung der Formeln berechneter Variablen. Wird nicht direkt gestartet.
-   * - ``s7_formula_dialog.py``
+   * - ``plc_formula_dialog.py``
      - Editor für berechnete Variablen (vom Konfigurationsprogramm geöffnet).
-   * - ``s7_branding.py``
+   * - ``plc_branding.py``
      - Programm-Icon und Logo. Wird nicht direkt gestartet.
-   * - ``s7_symbols.py``
-     - Liest DB-/UDT-Quellen und berechnet die Adressen. Wird nicht direkt
-       gestartet.
-   * - ``s7_browser.py``
-     - Dialog zur Variablenauswahl aus dem Symbolbaum. Wird vom
-       Konfigurationsprogramm geöffnet.
 
 Funktionsumfang:
 
-* Aufzeichnung beliebig vieler Variablen in einstellbarem Abtastintervall
-* **Mehrere Steuerungen gleichzeitig:** je Steuerung ein eigener Lese-Thread mit
-  eigenem Abtastintervall; die Oberfläche bleibt dadurch flüssig
+* **Steuerungen verschiedener Hersteller in einer Aufzeichnung**, z. B. eine
+  S7-1500 (symbolisch), eine S7-300 (PUT/GET), eine ControlLogix und einen
+  Modbus-Energiezähler – mit gemeinsamer Zeitachse, gemeinsamen Diagrammen und
+  Formeln über Steuerungsgrenzen hinweg
+* **Erweiterbar** um eigene Treiber (Python-Datei in einen Ordner legen, fertig)
+* Je Steuerung ein eigener Lese-Thread mit eigenem Abtastintervall; eine
+  langsame oder ausgefallene Steuerung bremst die anderen nicht
 * **Status-LEDs** für jede Verbindung (grau, gelb, grün, rot)
+* Variablenauswahl direkt aus der Steuerung (TIA: Variablenliste der CPU, CLX:
+  Tag-Liste) bzw. aus exportierten DB-Quellen (S7)
+* Blocklesemodus: viele Werte mit einer Anfrage lesen (Array-Ausschnitte,
+  zusammenhängende Adressbereiche)
+* Konfigurationen der Einzelprogramme (S7, TIA, CLX) werden übernommen; ältere
+  INI-Dateien einmalig umgewandelt
 * Projektname und Konfigurationsdateien mit beliebigem Namen (Öffnen-Dialog)
 * **Webserver** zum Ansehen der Diagramme im Browser (Tablet, Smartphone)
-* **Headless-Betrieb** (ohne Diagramme, nur Aufzeichnung), in der Konfiguration
-  einstellbar
-* Beim Beenden wird die aktuelle CSV-Datei archiviert
-* Diagramme einer Seite untereinander, nebeneinander oder als **Raster (Grid)**
-* Elemente eines Blocks können auf verschiedene Diagramme verteilt werden
-* CSV-Protokoll mit Zeitstempel in Millisekunden
-* Begrenzung der CSV-Dateigröße (Datensätze) mit automatischer ZIP-Archivierung
-  in einer Verzeichnisstruktur Name/Jahr/Monat/Tag
-* Variablenauswahl aus einem Symbolbaum der Datenbausteine (aus DB-Quellen)
+* **Headless-Betrieb** (ohne Diagramme, nur Aufzeichnung)
+* CSV-Protokoll mit Zeitstempel in Millisekunden, Begrenzung der Dateigröße mit
+  automatischer ZIP-Archivierung (Name/Jahr/Monat/Tag), Datenbank-Aufzeichnung mit
+  Lesemodus (Zeitraum aus der Datenbank wählen und anzeigen)
 * Berechnete Variablen aus Formeln (z. B. Mittelwert, Differenz, Integral)
-* Blocklesemodus: ganze Bereiche (Startadresse, Format, Anzahl) mit einer
-  einzigen SPS-Anfrage lesen
-* Mehrere Diagramme, je Diagramm mehrere Y-Achsen mit eigener Skalierung;
-  mehrere Diagramme je Seite/Tab mit Mindesthöhe und Scrollleiste
-* Legende mit Livewerten; Kurven per Rechtsklick auf den Namen ausblenden
-* Eigenes Logo (rechts oben) und Programm-Icon
-* Online-Modus (fortlaufende Anzeige) und Offline-Modus (zurückscrollen, Lineale)
-* Schmale Balken für Aktualwerte, optionale Werteanzeige
+* Trigger und Ereignisprotokoll mit Quittierung und eigenen Notizen
+* PID-Regler-Optimierung aus aufgezeichneten Sprungantworten
+* Mehrere Diagramme, je Diagramm mehrere Y-Achsen; Seiten/Tabs, Raster-Anordnung
+* Legende mit Livewerten, Online-/Offline-Modus mit Linealen, Balken für Aktualwerte
 * Screenshots einzelner Diagramme als PNG oder SVG
+* Sprachumschaltung (Deutsch, Englisch, eigene Sprachdateien)
 * Demo-Modus mit simulierten Werten (ohne SPS)
 
 
@@ -121,26 +181,49 @@ Installation und Start
 Voraussetzungen
 ----------------------------------------------------------------------
 
-* Python 3.9 oder neuer
-* Bibliotheken installieren:
+* Python 3.9 oder neuer (64 Bit)
+* Bibliotheken installieren (alle auf einmal):
 
   .. code-block:: console
 
-     pip install python-snap7 PyQt6 pyqtgraph numpy Flask
+     pip install -r requirements.txt
 
-  Der Headless-Betrieb braucht kein PyQt6 und kein pyqtgraph; Flask wird nur für
-  den Webserver benötigt.
+  bzw. einzeln:
+
+  .. code-block:: console
+
+     pip install PyQt6 pyqtgraph numpy Flask          # Oberfläche, Webserver
+     pip install python-snap7                         # Treiber s7
+     pip install s7commplus                           # Treiber tia
+     pip install pycomm3                              # Treiber clx (Tag-Liste)
+     pip install pymodbus pyserial                    # Treiber modbus_rtu
+     pip install asyncua                              # Treiber opcua
+     pip install pyserial                             # Treiber s5as511
+
+  Benötigt werden nur die Bibliotheken der Treiber, die Sie tatsächlich
+  verwenden. Fehlt eine, wird der Treiber trotzdem angezeigt; der
+  Einstellungsdialog der Steuerung und **Treiber › Installierte Treiber …**
+  zeigen dann „✗ Bibliothek fehlt“. Die Treiber ``modbus``, ``slmp``,
+  ``kvhostlink`` und ``toyopuc`` brauchen keine Bibliothek. Der Headless-Betrieb braucht kein PyQt6 und kein pyqtgraph.
+* **libplctag** (nur Treiber ``clx``) ist kein pip-Paket. Benötigt wird
+  ``plctag.dll`` (Windows, 64 Bit); sie liegt dem Programm bei. Sonst aus
+  https://github.com/libplctag/libplctag/releases das Paket
+  ``libplctag_<Version>_windows_x64.zip`` laden und ``plctag.dll`` **neben die
+  Programmdateien** legen, oder ihren Pfad in der Umgebungsvariablen
+  ``CLX_PLCTAG_LIB`` angeben. Unter Linux wird ``libplctag.so`` verwendet.
+  libplctag steht unter MPL 2.0 bzw. LGPL 2; bei Weitergabe die Lizenzhinweise
+  beachten.
 
 Programme starten
 ----------------------------------------------------------------------
 
 .. code-block:: console
 
-   python s7_config.py [datei.json]     # Konfiguration
-   python s7_logger.py [datei.json]     # Logger (Oberfläche oder Headless)
+   python plc_config.py [datei.json]     # Konfiguration
+   python plc_logger.py [datei.json]     # Logger (Oberfläche oder Headless)
 
 Ohne Dateiangabe wird die **zuletzt benutzte** Konfigurationsdatei geöffnet
-(Standard: ``s7_config.json``). Der Name der Datei ist beliebig. Weitere Parameter
+(Standard: ``plc_config.json``). Der Name der Datei ist beliebig. Weitere Parameter
 des Loggers:
 
 .. list-table::
@@ -163,34 +246,31 @@ Der Logger kann das Konfigurationsprogramm auch selbst öffnen
 (**Konfig-Editor** in der Werkzeugleiste), und das Konfigurationsprogramm kann den
 Logger starten (**Datei › Logger mit dieser Konfiguration starten**).
 
-Vorbereitung der Steuerung
+Vorbereitung der Steuerungen
 ----------------------------------------------------------------------
 
-.. warning::
+Der Logger liest nur; er schreibt nichts in die Steuerungen. Was in den
+Steuerungen einzurichten ist, hängt vom Treiber ab und steht im Kapitel
+:ref:`treiber` beim jeweiligen Treiber. Kurz:
 
-   Bei **S7-1200/1500** muss in TIA Portal in den CPU-Eigenschaften
-   *„PUT/GET-Kommunikation vom Partner erlauben“* aktiviert sein. Die
-   gelesenen Datenbausteine müssen **ohne** „Optimierten Bausteinzugriff“
-   angelegt sein, sonst sind die Byte-Offsets nicht verlässlich.
+* ``s7``: Bei S7-1200/1500 *PUT/GET-Kommunikation vom Partner erlauben* und nur
+  **nicht optimierte** Datenbausteine lesen. TCP-Port 102.
+* ``tia``: Nichts einzurichten; ggf. Passwort der Zugriffsstufe und TLS. TCP-Port 102.
+* ``clx``: *External Access* der Tags *Read/Write* oder *Read Only*. TCP-Port 44818.
+* ``modbus``: Modbus TCP im Gerät eingeschaltet, Register laut Gerätehandbuch.
+  TCP-Port 502.
+* ``modbus_rtu``: Geräteadresse, Baudrate und Parität laut Gerät; Bus
+  abgeschlossen (120 Ω an beiden Enden).
+* ``opcua``: OPC-UA-Server der Steuerung eingeschaltet, Variablen freigegeben;
+  mit Sicherheit das Client-Zertifikat im Server als vertrauenswürdig freigeben.
+  Meist TCP-Port 4840.
+* ``slmp``: In GX Works eine SLMP-/MC-Protokoll-Verbindung (binär) mit Port anlegen.
+* ``kvhostlink``: Nichts einzurichten. TCP-Port 8501.
+* ``toyopuc``: In PCwin einen Computer-Link-Port einrichten.
+* ``s5as511``: PG-Adapter (20 mA) an der PG-Schnittstelle; STEP 5 währenddessen
+  nicht verbinden.
 
-Typische Werte für Rack und Slot:
-
-.. list-table::
-   :header-rows: 1
-   :widths: 40 15 15
-
-   * - Steuerung
-     - Rack
-     - Slot
-   * - S7-1200 / S7-1500
-     - 0
-     - 1
-   * - S7-300
-     - 0
-     - 2
-
-Die Firewall des PCs muss Verbindungen zur SPS auf TCP-Port 102 zulassen.
-
+Die Firewall des PCs muss die Verbindungen auf den genannten Ports zulassen.
 
 .. _startbild:
 
@@ -217,29 +297,34 @@ Beim Start von Logger und Konfigurationsprogramm erscheint das **Startbild**:
   starten. Wieder einschalten: im Logger **Datei → Startbild beim Programmstart zeigen**.
 
 Nach der Auswahl zeigt das Startbild den Ladefortschritt, bis das Hauptfenster bereit ist.
-Wird beim Aufruf eine Konfigurationsdatei angegeben (z. B. ``S7Logger.exe anlage.json``),
+Wird beim Aufruf eine Konfigurationsdatei angegeben (z. B. ``PLCLogger.exe anlage.json``),
 entfällt die Auswahl. Das Fenster lässt sich mit der Maus verschieben; **Esc** oder ✕ beendet.
 
 
 Schnellstart
 ======================================================================
 
-#. ``s7_config.py`` starten.
+#. ``plc_config.py`` starten.
 #. Im Reiter *Projekt & Steuerungen* einen Projektnamen vergeben und die
-   Steuerung(en) eintragen (Name, IP-Adresse, Rack, Slot, Intervall).
-#. Mit **Variable hinzufügen** Variablen anlegen (Steuerung, Bereich, DB, Byte, Typ).
+   Steuerung(en) eintragen: **Name**, **Treiber** wählen, mit **…** die
+   Verbindung einstellen (IP-Adresse und die Parameter des Treibers), Intervall.
+#. Mit dem Auswahlknopf des Treibers (z. B. **Aus Variablenliste wählen…**,
+   **Aus Tag-Liste wählen…**, **Aus DB-Quelle wählen…**) Variablen aus der
+   Steuerung übernehmen, oder mit **Variable hinzufügen** die Adresse von Hand
+   eintragen.
 #. Mit **Verbindung testen** prüfen, ob die Werte korrekt gelesen werden.
 #. **Speichern** (bzw. **Speichern unter…** mit eigenem Dateinamen) und das
    Konfigurationsprogramm schließen.
-#. ``s7_logger.py`` starten und **▶ Start** drücken.
+#. ``plc_logger.py`` starten und **▶ Start** drücken.
 
 .. tip::
 
-   Ohne SPS können Sie das Programm mit dem **Demo**-Modus ausprobieren
-   (siehe :ref:`demo-modus`).
+   Eine vorhandene Konfiguration des S7-, TIA- oder CLX-Datenloggers öffnen Sie
+   einfach mit **Datei › Öffnen…** (siehe :ref:`uebernahme`). Ohne SPS können Sie
+   das Programm mit dem **Demo**-Modus ausprobieren (siehe :ref:`demo-modus`).
 
 
-Konfigurationsprogramm (``s7_config.py``)
+Konfigurationsprogramm (``plc_config.py``)
 ======================================================================
 
 .. figure:: images/config_gesamt.png
@@ -252,7 +337,7 @@ Konfigurationsprogramm (``s7_config.py``)
 Projekt, Steuerungen und Einstellungen
 ----------------------------------------------------------------------
 
-Der obere Fensterbereich ist in vier Reiter gegliedert.
+Der obere Fensterbereich ist in mehrere Reiter gegliedert.
 
 **Reiter „Projekt & Steuerungen“**
 
@@ -273,17 +358,45 @@ Der obere Fensterbereich ist in vier Reiter gegliedert.
      - Frei wählbarer Name des Projekts. Er erscheint in den Fenstertiteln, im
        Webserver und im Log.
    * - Steuerungen (Tabelle)
-     - Eine Zeile je SPS: **Name** (eindeutig, auch für die Status-LED),
-       **IP-Adresse**, **Rack / Slot** (Position der CPU, siehe Tabelle oben),
-       **Intervall** (Zeit zwischen zwei Messungen dieser Steuerung, 10 bis
-       60000 ms) und **Aktiv** (abgeschaltete Steuerungen werden nicht gelesen).
+     - Eine Zeile je Steuerung mit den Spalten:
+
+       * **Name** – eindeutig, auch für die Status-LED.
+       * **Treiber** – Auswahl aus allen geladenen Treibern (``s7``, ``tia``,
+         ``clx``, ``modbus`` und eigene). Beim Wechsel des Treibers werden die
+         Verbindungsparameter auf dessen Standardwerte gesetzt; die IP-Adresse
+         bleibt erhalten. Die Typlisten der Variablen dieser Steuerung
+         passen sich an.
+       * **Verbindung** – Kurzbeschreibung der Verbindung, z. B.
+         ``192.168.0.1, Rack 0/Slot 1`` oder ``192.168.0.10:502, Unit 1``.
+       * **…** – öffnet den **Einstellungsdialog** der Verbindung (siehe unten).
+         Doppelklick auf *Verbindung* hat dieselbe Wirkung.
+       * **Intervall** – Zeit zwischen zwei Messungen dieser Steuerung, 10 bis
+         60000 ms.
+       * **Aktiv** – abgeschaltete Steuerungen werden nicht gelesen.
+
        Mit **+ Steuerung** und **Steuerung entfernen** ändern Sie die Liste; beim
        Entfernen wandern deren Variablen und Blöcke zur ersten Steuerung.
 
+**Einstellungsdialog der Verbindung.** Der Dialog wird aus den Parametern des
+Treibers aufgebaut (Textfelder, Zahlen, Auswahllisten, Passwortfelder).
+Selten benötigte Parameter stehen im Bereich *Erweitert*. Unten zeigt der Dialog,
+ob die benötigte Bibliothek installiert ist (✓ bzw. ✗ mit Fehlermeldung). Beim
+**OK** prüft der Treiber die Eingaben (z. B. leere IP-Adresse). Die Parameter
+der eingebauten Treiber sind im Kapitel :ref:`treiber` beschrieben.
+
 Jede Steuerung wird im Logger von einem **eigenen Thread** gelesen. Das
 Intervall gilt je Steuerung; eine langsame oder ausgefallene Steuerung bremst
-die anderen nicht. Die Messwerte aller Steuerungen werden in einer gemeinsamen
-CSV-Datei zusammengeführt (eine Spalte je Variable).
+die anderen nicht. Die Messwerte aller Steuerungen – gleich welchen Treibers –
+werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable).
+
+**Menü „Treiber“**
+
+* **Installierte Treiber …** – Übersicht aller geladenen Treiber mit Kürzel,
+  Name, benötigter Bibliothek und deren Zustand; darunter Treiber, die nicht
+  geladen werden konnten (mit Fehlermeldung), und der Ordner für eigene Treiber.
+* **Ordner für eigene Treiber öffnen …** – legt den Ordner ``treiber`` im
+  Datenordner an (falls nötig), kopiert die Vorlage ``_vorlage.py`` hinein und
+  öffnet ihn im Dateimanager (siehe :ref:`treiber-entwickeln`).
 
 **Reiter „Aufzeichnung“**
 
@@ -497,7 +610,7 @@ Variablen anlegen
 
    Die Variablentabelle mit Steuerung, Adresse, Typ, Farbe und Formel.
 
-Jede Zeile der Variablentabelle beschreibt eine SPS-Variable:
+Jede Zeile der Variablentabelle beschreibt einen Wert einer Steuerung:
 
 .. list-table::
    :header-rows: 1
@@ -510,20 +623,21 @@ Jede Zeile der Variablentabelle beschreibt eine SPS-Variable:
        Das Zeichen ``;`` ist nicht erlaubt.
    * - Steuerung
      - Steuerung, aus der die Variable gelesen wird (Auswahl aus der Tabelle der
-       Steuerungen).
+       Steuerungen). Sie bestimmt den Treiber und damit Schreibweise der Adresse
+       und mögliche Typen.
    * - Diagramm › Y-Achse
      - Zuordnung der Variablen (Auswahlliste oder Drag & Drop, siehe unten).
-   * - Bereich
-     - ``DB`` Datenbaustein, ``M`` Merker, ``E`` Eingänge, ``A`` Ausgänge.
-   * - DB
-     - Nummer des Datenbausteins (nur bei Bereich ``DB``).
-   * - Byte
-     - Byte-Offset (Startadresse) der Variable.
-   * - Bit
-     - Bitnummer 0 bis 7 (nur bei Typ ``BOOL``).
+   * - Adresse
+     - Adresse in der Schreibweise des Treibers, z. B. ``DB10.DBD4`` (``s7``),
+       ``Anlage_DB.Motor[2].Drehzahl`` (``tia``), ``Program:Main.Druck``
+       (``clx``) oder ``40001`` (``modbus``). Der Tooltip der Zelle zeigt
+       Beispiele für den Treiber der gewählten Steuerung. Einzelheiten im Kapitel
+       :ref:`treiber`.
    * - Typ
-     - ``BOOL``, ``BYTE``, ``SINT``, ``INT``, ``WORD``, ``DINT``, ``DWORD``,
-       ``REAL`` oder ``LREAL``.
+     - Datentyp, Auswahl aus den Typen, die der Treiber lesen kann (z. B. ``BOOL``,
+       ``INT``, ``DINT``, ``REAL``, ``LREAL`` …). Wird die Steuerung einer
+       Variable geändert und kennt der neue Treiber den Typ nicht, bleibt er
+       sichtbar stehen und wird beim Speichern als Fehler gemeldet.
    * - Farbe
      - Linienfarbe; Klick öffnet die Farbauswahl.
    * - Werteanzeige
@@ -644,11 +758,43 @@ Blocklesemodus
 
    Der Blockeditor mit Blocktabelle und Elementbaum (Namen und Ziel je Element).
 
-Normalerweise wird jede Variable mit einer eigenen Anfrage an die SPS gelesen.
-Bei vielen Werten kostet das Zeit und begrenzt das erreichbare
-Abtastintervall. Im **Blocklesemodus** lesen Sie einen zusammenhängenden
-Bereich gleichen Formats mit **einer einzigen Anfrage**; die Werte werden
-danach einzeln zugewiesen.
+Viele gleichartige Werte, die in der Steuerung hintereinander liegen, liest der
+**Blocklesemodus** mit möglichst **einer Anfrage**; die Werte werden danach
+einzeln zugewiesen. Was ein Block ist, hängt vom Treiber ab:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 85
+
+   * - Treiber
+     - Block
+   * - ``s7``
+     - **Startadresse** (z. B. ``DB10.DBD0``, ``MW100``) + Anzahl; die Elemente
+       folgen lückenlos (``DB10.DBD0``, ``DB10.DBD4``, ``DB10.DBD8`` …; bei
+       ``BOOL`` bitweise). Gelesen mit einer Anfrage.
+   * - ``tia``
+     - **Array ohne Index** (z. B. ``Mess_DB.Werte``) + **erster Index** (wie in
+       TIA, z. B. 1 bei ``Array[1..100]``) + Anzahl.
+   * - ``clx``
+     - **Array-Tag ohne Index** (z. B. ``Messwerte``, ``Program:Main.Temp``) +
+       **erster Index** + Anzahl. BOOL-Arrays sind bitweise gepackt und nicht als
+       Block lesbar.
+   * - ``modbus``
+     - **Startadresse** (z. B. ``40001`` oder ``HR0``) + Anzahl; die Elemente
+       folgen lückenlos (bei ``REAL`` je 2 Register: ``40001``, ``40003`` …).
+       Der Treiber fasst ohnehin benachbarte Adressen zusammen; ein Block ist
+       hier vor allem eine bequeme Art, viele Variablen anzulegen.
+   * - ``modbus_rtu``
+     - wie ``modbus``.
+   * - ``opcua``
+     - **Array-Knoten** (NodeId ohne Index) + **erster Index** + Anzahl; gelesen
+       mit einem Indexbereich in einer Anfrage.
+   * - ``slmp``, ``kvhostlink``, ``toyopuc``
+     - **Startgerät** (z. B. ``D100``, ``DM100``, ``D0100``) + Anzahl; Elemente
+       lückenlos (bei ``REAL`` je 2 Wörter), bei ``BOOL`` fortlaufende Bits.
+   * - ``s5as511``
+     - **Startadresse** (z. B. ``DB10.DW0``, ``MB0``, ``E0.0``) + Anzahl; Elemente
+       lückenlos.
 
 Mit **Blöcke (Blocklesemodus)…** öffnet sich der Editor. Jede Zeile ist ein
 Block mit folgenden Angaben:
@@ -663,18 +809,13 @@ Block mit folgenden Angaben:
      - Name des Blocks. Jedes Element wird zur Variable ``Name[0]``,
        ``Name[1]``, …, ``Name[n-1]``. Nicht erlaubt: ``; { } [ ]``.
    * - Steuerung
-     - Steuerung, aus der der Block gelesen wird.
-   * - Bereich / DB
-     - ``DB``, ``M``, ``E`` oder ``A``; bei ``DB`` die Nummer des Datenbausteins.
-   * - Startadresse
-     - Byte-Adresse des ersten Werts.
-   * - Bit
-     - Nur bei ``BOOL``: Startbit des ersten Werts (0 bis 7). Die weiteren
-       Bits folgen fortlaufend und laufen in das nächste Byte weiter.
+     - Steuerung, aus der der Block gelesen wird (bestimmt den Treiber).
+   * - Startadresse / Array
+     - Siehe Tabelle oben; der Tooltip zeigt die Schreibweise des Treibers.
+   * - Erster Index
+     - Nur bei Treibern mit Arrays (``tia``, ``clx``); sonst gesperrt.
    * - Format
-     - ``BOOL``, ``BYTE``, ``SINT``, ``INT``, ``WORD``, ``DINT``, ``DWORD``,
-       ``REAL`` oder ``LREAL``. Alle Elemente des Blocks haben dieses Format
-       und liegen lückenlos hintereinander.
+     - Datentyp der Elemente (Auswahl des Treibers).
    * - Anzahl
      - Anzahl der Werte (1 bis 1000).
    * - Diagramm › Y-Achse
@@ -685,18 +826,21 @@ Block mit folgenden Angaben:
        im Farbton.
    * - Werteanzeige / Balken
      - Gilt für alle Elemente des Blocks (Balken sind standardmäßig aus).
-   * - Adressbereich
-     - Berechnete Anzeige, z. B. ``DB10.DBD0 … DB10.DBD76 (80 Bytes)``.
+   * - Bereich
+     - Berechnete Anzeige, z. B. ``DB10.DBD0 … DB10.DBD76 (80 Bytes)`` oder
+       ``Messwerte[0] … Messwerte[19]``.
 
-Beispiele:
+Beispiel (``clx``): Array-Tag ``Messwerte`` (``REAL[100]``), erster Index 10,
+Anzahl 20 liest ``Messwerte[10]`` bis ``Messwerte[29]`` mit einer Anfrage und
+erzeugt die Variablen ``Block[0]`` bis ``Block[19]``. Beispiel (``s7``):
+Startadresse ``DB5.DBD0``, Format ``REAL``, Anzahl 20 liest die Bytes 0 bis 79
+des DB 5.
 
-* ``Messwerte``: DB 10, Startadresse 0, Format ``REAL``, Anzahl 20 liest 80
-  Bytes (``DB10.DBD0`` bis ``DB10.DBD76``) und erzeugt ``Messwerte[0]`` bis
-  ``Messwerte[19]``.
-* ``Meldungen``: DB 20, Startadresse 4, Bit 0, Format ``BOOL``, Anzahl 16 liest
-  die Bits ``DB20.DBX4.0`` bis ``DB20.DBX5.7``.
+Arrays lassen sich bei ``tia`` und ``clx`` auch direkt im Auswahldialog als
+Block übernehmen (Array markieren, **Markiertes Array als Block…** oder
+Doppelklick).
 
-**Block testen** liest den markierten Block einmal aus der SPS und zeigt die
+**Markierten Block testen** liest den Block einmal aus der Steuerung und zeigt die
 ersten Werte sowie die Lesezeit an.
 
 Hinweise:
@@ -705,105 +849,104 @@ Hinweise:
   Legende, Wertetabelle, Balken und CSV-Datei und können in **Formeln**
   verwendet werden, z. B. ``{Messwerte[3]} - {Messwerte[4]}``.
 * **Elementnamen ändern:** Im unteren Teil des Blockeditors zeigt ein **Baum**
-  alle Blöcke mit ihren Elementen (Block aufklappen; ein markierter Block wird
-  automatisch aufgeklappt). Per Doppelklick auf die Spalte *Name* erhält ein
-  Element einen eigenen Namen, z. B. ``Druck Vorlauf`` statt ``Messwerte[1]``.
-  Ein leerer Name stellt den Standardnamen wieder her. Die Namen müssen
-  eindeutig sein und dürfen ``; { }`` nicht enthalten. In der Konfigurationsdatei stehen
-  sie unter ``elementnamen`` des Blocks.
+  alle Blöcke mit ihren Elementen. Per Doppelklick auf die Spalte *Name* erhält
+  ein Element einen eigenen Namen, z. B. ``Druck Vorlauf`` statt
+  ``Messwerte[1]``. Ein leerer Name stellt den Standardnamen wieder her. Die
+  Namen müssen eindeutig sein und dürfen ``; { }`` nicht enthalten. In der
+  Konfigurationsdatei stehen sie unter ``elementnamen`` des Blocks.
 * **Elemente in verschiedenen Diagrammen:** Im Baum des Blockeditors hat jedes
-  Element in der letzten Spalte *Diagramm › Y-Achse* eine Auswahlliste. Der Eintrag
-  *(wie Block)* verwendet das Ziel des Blocks, jeder andere Eintrag stellt dieses
+  Element in der letzten Spalte *Diagramm › Y-Achse* eine Auswahlliste. *(wie
+  Block)* verwendet das Ziel des Blocks, jeder andere Eintrag stellt dieses
   Element in einem anderen Diagramm bzw. an einer anderen Y-Achse dar. Mit
   **Für alle Elemente des markierten Blocks setzen** wird das gewählte Ziel für
-  alle Elemente auf einmal übernommen. Gelesen wird der Block weiterhin mit
-  **einer** Anfrage; in der Konfigurationsdatei stehen abweichende Ziele unter
-  ``elementziele`` (Index: [Diagramm, Achse]). Im Variablenbaum der Konfiguration
-  erscheinen die abweichend zugeordneten Elemente zusätzlich unter der Achse, in
-  der sie dargestellt werden.
+  alle Elemente übernommen. In der Konfigurationsdatei stehen abweichende Ziele
+  unter ``elementziele`` (Index: [Diagramm, Achse]).
 * Im Variablenbaum der Konfiguration erscheint jeder Block als eine Zeile
   (``▦ Block …``) unter seiner Y-Achse. Mit **Entfernen** wird der markierte
-  Block gelöscht. Wird ein Diagramm oder eine Y-Achse entfernt, wandern die
-  zugehörigen Blöcke wie Variablen auf die erste Achse.
-* Auch große Blöcke werden mit einer Anfrage ausgelöst; das SPS-Protokoll teilt
-  Bereiche, die größer als eine Telegrammlänge sind, intern selbstständig auf.
-  Der gelesene Bereich muss vollständig im Datenbaustein liegen, sonst schlägt
-  das Lesen des ganzen Blocks fehl.
-* Bei Blöcken im Bereich ``DB`` ist der Baustein ohne optimierten Zugriff
-  anzulegen (wie bei einzelnen Variablen).
+  Block gelöscht.
+* Der Bereich muss vollständig in der Steuerung vorhanden sein (Array groß
+  genug, DB lang genug, Register vorhanden), sonst schlägt das Lesen des Blocks
+  fehl; die übrigen Variablen werden weiter gelesen.
 * Viele Elemente bedeuten viele Kurven: Teilen Sie große Blöcke auf mehrere
   Diagramme bzw. Y-Achsen auf oder schalten Sie *Werteanzeige* ab.
 
-Variablen aus SPS-Symbolen wählen
+Variablen aus der Steuerung wählen
 ----------------------------------------------------------------------
 
 .. figure:: images/symbolbaum.png
-   :alt: Symbolbaum
+   :alt: Auswahldialog
    :width: 90%
    :align: center
 
-   Auswahl von Variablen aus dem Symbolbaum der Datenbausteine.
+   Auswahl von Variablen aus der Steuerung.
 
-Mit **Aus SPS/DB-Quelle wählen…** öffnet sich ein Baum der Datenbausteine
-(DB › Struktur › Variable). Dort wählen Sie per Häkchen die Variablen, die
-aufgezeichnet werden sollen.
+Der Knopf über der Variablentabelle heißt je nach Treiber der gewählten
+Steuerung unterschiedlich und öffnet dessen Auswahldialog (bei mehreren
+Steuerungen wird zuerst gefragt, welche):
 
-.. important::
+.. list-table::
+   :header-rows: 1
+   :widths: 15 25 60
 
-   Die SPS kann über die S7-Kommunikation **keine Variablennamen und keine
-   Strukturen** liefern; Symbole stehen nur im TIA-/STEP-7-Projekt. Der Baum
-   wird deshalb aus den **DB-Quellen** aufgebaut, die Sie aus dem Projekt
-   exportieren. Die SPS selbst nennt nur, welche Datenbausteine mit welcher
-   Größe vorhanden sind (Funktion *Mit SPS abgleichen*).
+   * - Treiber
+     - Knopf
+     - Herkunft der Variablen
+   * - ``tia``
+     - Aus Variablenliste wählen…
+     - Variablenliste direkt aus der CPU (alle Datenbausteine, Merker, Ein- und
+       Ausgänge mit Struktur und Typ, auch optimierte Bausteine).
+   * - ``clx``
+     - Aus Tag-Liste wählen…
+     - Tag-Liste direkt aus der Steuerung (pycomm3): Controller- und
+       Programm-Tags, UDTs, Arrays.
+   * - ``s7``
+     - Aus DB-Quelle wählen…
+     - Exportierte DB-Quellen aus TIA Portal/STEP 7 (die SPS liefert über
+       PUT/GET keine Namen); Abgleich der DB-Größen mit der SPS.
+   * - ``opcua``
+     - Aus OPC-UA-Server wählen…
+     - Adressraum des Servers (Ordner, Variablen mit Datentyp, Arrays als Block).
+   * - übrige Treiber
+     - –
+     - Modbus, MELSEC, KEYENCE, TOYOPUC und S5 liefern keine Namen; Adressen laut
+       Programm bzw. Gerätehandbuch von Hand eintragen.
 
-Vorgehen:
+Allgemeines Vorgehen:
 
-#. **Quelle exportieren.** TIA Portal: Datenbaustein (und benutzerdefinierte
-   Datentypen/UDTs) in der Projektnavigation markieren, Rechtsklick,
-   *Quelle aus Bausteinen generieren*. STEP 7: DB als Quelle (``.db``/``.awl``)
-   speichern. Der Baustein muss **ohne** „Optimierten Bausteinzugriff“
-   angelegt sein.
-#. **Importieren.** Im Dialog **DB-Quelle importieren…** wählen (mehrere Dateien
-   möglich). Enthält die Quelle keine DB-Nummer (TIA), wird danach die
-   Nummer des Bausteins in der SPS abgefragt.
-#. **Optional abgleichen.** **Mit SPS abgleichen** liest die vorhandenen DBs
-   der SPS. Je DB wird die berechnete Größe mit der Größe in der SPS
-   verglichen (✓ oder ⚠). Weicht sie ab, sind die Adressen wahrscheinlich
-   nicht korrekt (z. B. optimierter Baustein oder veraltete Quelle). DBs, zu
-   denen keine Quelle vorliegt, werden ebenfalls aufgeführt.
-#. **Auswählen.** Variablen anhaken. Ein Häkchen an einer Struktur, einem
-   Array oder einem DB wählt alle darin enthaltenen Variablen. Das Feld
-   *Filter* blendet nach Namen aus.
-#. **Übernehmen.** Unter *Neue Variablen anlegen in* das Diagramm bzw. die
-   Y-Achse wählen und **Auswahl übernehmen** drücken. Die Variablen erscheinen
-   in der Variablentabelle; ihr Name ist der Symbolpfad, z. B.
-   ``Prozess.Motor.Drehzahl``.
+#. **Laden.** Beim ersten Öffnen wird die Liste aus der Steuerung geladen (``tia``,
+   ``clx``) bzw. werden die DB-Quellen importiert (``s7``, **DB-Quelle
+   importieren…**). Geladene Listen werden je Steuerung im Ordner ``taglisten``
+   des Datenordners zwischengespeichert und beim nächsten Öffnen sofort angezeigt,
+   auch ohne Verbindung. Die Pfade der S7-DB-Quellen werden in der Konfiguration
+   gespeichert.
+#. **Suchen.** Strukturen und Arrays lassen sich aufklappen; das **Filter**-Feld
+   sucht nach Namen.
+#. **Auswählen.** Lesbare Werte anhaken. Bereits angelegte Variablen sind
+   angehakt und ausgegraut. Nicht aufzeichenbare Typen (z. B. ``STRING``) sind
+   grau dargestellt.
+#. **Arrays als Block** (``tia``, ``clx``): Array markieren, **Markiertes Array
+   als Block…**, ersten Index und Anzahl festlegen.
+#. **Übernehmen.** Unter *Neue Variablen anlegen in* das Diagramm bzw. die Y-Achse
+   wählen und **Auswahl übernehmen** drücken. Adresse und Typ kommen aus der
+   Steuerung bzw. Quelle.
 #. **Prüfen.** Mit **Verbindung testen** die gelesenen Werte kontrollieren.
 
-Hinweise zum Baum:
-
-* Bereits angelegte Variablen sind angehakt und ausgegraut
-  (*bereits in der Liste*).
-* Typen ohne Aufzeichnungsmöglichkeit (z. B. ``STRING``, ``DTL``, ``DATE``)
-  sind grau dargestellt und nicht anwählbar. ``USINT``, ``UINT`` und ``UDINT``
-  werden als ``BYTE``, ``WORD`` und ``DWORD`` aufgezeichnet, ``TIME`` als
-  ``DINT`` (Millisekunden).
-* Von großen Arrays werden höchstens 500 Elemente dargestellt.
-* Die importierten Quellen werden mit ihrem Dateipfad in der Konfigurationsdatei
-  gespeichert (``symbolquellen``) und beim nächsten Öffnen des Dialogs
-  automatisch wieder gelesen. Die Quelldateien müssen dafür am selben Ort
-  bleiben.
-* Die Adressen werden nach den Regeln für Standard-Bausteinzugriff berechnet
-  (BOOL bitweise gepackt, Strukturen und Arrays auf geraden Byte-Adressen).
+Einzelheiten zu den Dialogen stehen beim jeweiligen Treiber im Kapitel
+:ref:`treiber`.
 
 Verbindung testen
 ----------------------------------------------------------------------
 
-**Verbindung testen** verbindet sich nacheinander mit jeder Steuerung, liest
-deren Variablen einmal und trägt das Ergebnis in die Spalte *Testwert* ein.
-Fehler werden dort im Klartext angezeigt (z. B. ungültige Adresse oder nicht
-erlaubter Zugriff); kann eine Steuerung nicht erreicht werden, meldet das ein
-Hinweisfenster mit Name und IP-Adresse.
+**Verbindung testen** verbindet sich nacheinander mit jeder Steuerung
+(über ihren Treiber), liest deren Variablen einmal und trägt das Ergebnis in die
+Spalte *Testwert* ein. Fehler einzelner Variablen werden dort im Klartext
+angezeigt (z. B. Adresse nicht vorhanden, falscher Typ, Zugriff verweigert,
+Modbus-Ausnahme „ungültige Adresse“); kann eine Steuerung nicht erreicht werden,
+meldet das ein Hinweisfenster mit Name und Verbindung.
+
+Beim Speichern prüft der Treiber jeder Steuerung die Adressen formal (Schreibweise,
+passender Typ, z. B. ``BOOL`` bei Coils). Ob es eine Adresse in der Steuerung
+tatsächlich gibt, zeigt erst der Verbindungstest.
 
 Speichern und Laden
 ----------------------------------------------------------------------
@@ -813,20 +956,20 @@ Das Menü **Datei** des Konfigurationsprogramms enthält:
 * **Neu** – leere Konfiguration mit einer Steuerung; der Dateiname wird beim
   ersten Speichern abgefragt.
 * **Öffnen…** (``Strg+O``) – lädt eine Konfigurationsdatei (JSON) mit **beliebigem
-  Namen**. Ältere Konfigurationen mit nur einer Steuerung und ohne Y-Achsen
-  werden übernommen.
+  Namen**, auch Konfigurationen des S7-, TIA- und CLX-Datenloggers (siehe
+  :ref:`uebernahme`).
 * **Speichern** (``Strg+S``) und **Speichern unter…** (``Strg+Umschalt+S``) –
   schreiben in die aktuelle bzw. eine neue Datei (die Endung ist immer ``.json``). Vor dem Speichern wird geprüft, dass Steuerungs- und
-  Variablennamen eindeutig und nicht leer sind, jede Steuerung eine
-  IP-Adresse hat, die Formeln gültig sind und bei festen Y-Achsen *Y max* größer
-  als *Y min* ist.
+  Variablennamen eindeutig und nicht leer sind, die Verbindungsparameter und
+  Adressen für den jeweiligen Treiber gültig sind, die Formeln stimmen und bei
+  festen Y-Achsen *Y max* größer als *Y min* ist.
 * **INI-Datei umwandeln …** – ältere INI-Konfigurationen einmalig in JSON umwandeln
   (siehe :ref:`ini-umwandeln`).
 * **Logger mit dieser Konfiguration starten** (``Strg+R``) – speichert und
   startet den Logger mit dieser Datei.
 
 Der Titel des Fensters zeigt Projektname und Dateiname. Die zuletzt benutzte
-Datei wird gemerkt (Datei ``s7_last.txt``); Logger und Konfigurationsprogramm
+Datei wird gemerkt (Datei ``plc_last.txt``); Logger und Konfigurationsprogramm
 öffnen sie beim nächsten Start ohne Parameter wieder.
 
 .. note::
@@ -844,14 +987,10 @@ Visual Studio Code). Beispiel:
 .. code-block:: json
 
    {
-     "format": "S7 Datenlogger Konfiguration",
+     "format": "PLC Datenlogger Konfiguration",
      "version": 1,
      "einstellungen": {
        "projekt": "Prüfstand 3",
-       "ip": "192.168.0.1",
-       "rack": 0,
-       "slot": 1,
-       "intervall_ms": 200,
        "csv_ordner": "logs",
        "csv_name": "log",
        "max_records": 100000,
@@ -859,35 +998,64 @@ Visual Studio Code). Beispiel:
        "fenster_s": 60,
        "anordnung": "untereinander",
        "balken": true,
-       "symbolquellen": "C:/Projekt/Prozess.scl#20",
-       "logo": "C:/Firma/logo.png",
-       "icon": "C:/Firma/icon.ico",
        "archiv_beenden": true,
        "seite_anordnung": "raster",
        "raster_spalten": 2,
        "web_aktiv": true,
        "web_host": "0.0.0.0",
        "web_port": 8080,
-       "web_token": "geheim",
        "web_intervall_ms": 1000,
-       "headless": false
+       "headless": false,
+       "treiberdaten": {
+         "s7": {
+           "symbolquellen": "C:/Projekt/Mess_DB.db"
+         }
+       }
      },
      "steuerungen": [
        {
-         "name": "Kessel",
+         "name": "Presse",
+         "treiber": "tia",
+         "intervall_ms": 100,
+         "aktiv": true,
          "ip": "192.168.0.1",
-         "rack": 0,
-         "slot": 1,
-         "intervall_ms": 200,
-         "aktiv": true
+         "port": 102,
+         "tls": "auto",
+         "passwort": "",
+         "rolle": "hmi",
+         "tags_je_anfrage": 50
        },
        {
-         "name": "Pumpe",
-         "ip": "192.168.0.2",
-         "rack": 0,
-         "slot": 1,
+         "name": "Altanlage",
+         "treiber": "s7",
          "intervall_ms": 500,
-         "aktiv": true
+         "aktiv": true,
+         "ip": "192.168.0.20",
+         "rack": 0,
+         "slot": 2
+       },
+       {
+         "name": "Kessel",
+         "treiber": "clx",
+         "intervall_ms": 200,
+         "aktiv": true,
+         "ip": "192.168.1.10",
+         "pfad": "1,0",
+         "cpu": "controllogix",
+         "timeout_ms": 2000
+       },
+       {
+         "name": "Zaehler",
+         "treiber": "modbus",
+         "intervall_ms": 1000,
+         "aktiv": true,
+         "ip": "192.168.0.50",
+         "port": 502,
+         "unit": 1,
+         "wortfolge": "CDAB",
+         "max_register": 120,
+         "luecke": 8,
+         "timeout_ms": 2000
        }
      ],
      "diagramme": [
@@ -902,21 +1070,18 @@ Visual Studio Code). Beispiel:
              "y_max": 100.0
            },
            {
-             "name": "Druck",
+             "name": "Leistung",
              "auto": false,
              "y_min": 0.0,
-             "y_max": 10.0
+             "y_max": 50.0
            }
          ]
        }
      ],
      "variablen": [
        {
-         "name": "Temperatur_Kessel",
-         "bereich": "DB",
-         "db": 10,
-         "byte": 0,
-         "bit": 0,
+         "name": "Kraft",
+         "adresse": "Presse_DB.Kraft",
          "typ": "REAL",
          "farbe": "#d62728",
          "wert_anzeigen": true,
@@ -925,15 +1090,31 @@ Visual Studio Code). Beispiel:
          "balken": true,
          "formel": "",
          "steuerung": 1
+       },
+       {
+         "name": "Temp_Alt",
+         "adresse": "DB10.DBD4",
+         "typ": "REAL",
+         "steuerung": 2
+       },
+       {
+         "name": "Temperatur_Kessel",
+         "adresse": "Program:Kessel.Temperatur",
+         "typ": "REAL",
+         "steuerung": 3
+       },
+       {
+         "name": "Wirkleistung",
+         "adresse": "30013",
+         "typ": "REAL",
+         "steuerung": 4
        }
      ],
      "bloecke": [
        {
          "name": "Messwerte",
-         "bereich": "DB",
-         "db": 10,
+         "adresse": "Messwerte",
          "start": 0,
-         "bit": 0,
          "typ": "REAL",
          "anzahl": 20,
          "diagramm": 1,
@@ -941,11 +1122,11 @@ Visual Studio Code). Beispiel:
          "farbe": "#1f77b4",
          "wert_anzeigen": true,
          "balken": false,
-         "steuerung": 2,
+         "steuerung": 3,
          "elementziele": {
            "3": [
-             2,
-             1
+             1,
+             2
            ]
          }
        }
@@ -983,14 +1164,24 @@ Zahlen und Wahrheitswerte stehen mit ihrem Typ in der Datei (``200``, ``1.5``,
 unbekannte werden ignoriert. Ist die Datei kein gültiges JSON (z. B. ein vergessenes
 Komma), meldet das Programm die Zeile der Fehlerstelle.
 
-``diagramm``, ``achse`` und ``steuerung`` sind Nummern ab 1. In
-``einstellungen`` spiegeln ``ip``, ``rack``, ``slot`` und ``intervall_ms`` die erste
-Steuerung (für ältere Programmversionen); fehlt ``steuerungen``, entsteht daraus
-genau eine Steuerung. ``seite_anordnung`` ist leer (automatisch), ``untereinander``,
-``nebeneinander`` oder ``raster``; ``raster_spalten: 0`` wählt die Spaltenzahl
-automatisch. Die Variablen eines Blocks
-(``Messwerte[0]`` …) werden beim Laden erzeugt und stehen nicht unter ``variablen``
-in der Datei.
+Erläuterungen:
+
+* ``treiber`` ist das Kürzel des Treibers; die übrigen Schlüssel eines
+  Eintrags in ``steuerungen`` (außer ``name``, ``intervall_ms``, ``aktiv``) sind dessen
+  Verbindungsparameter (siehe :ref:`treiber`). Unbekannte Schlüssel werden
+  ignoriert, fehlende erhalten den Standardwert des Treibers.
+* ``adresse`` ist die Adresse in der Schreibweise des Treibers der Steuerung.
+  Bei Blöcken ist ``adresse`` die Startadresse bzw. der Array-Name und ``start``
+  der erste Index (nur ``tia``/``clx``).
+* ``treiberdaten`` enthält treibereigene Angaben als Objekt (z. B. die Pfade der
+  S7-DB-Quellen).
+* ``diagramm``, ``achse`` und ``steuerung`` sind Nummern ab 1.
+* ``seite_anordnung`` ist leer (automatisch), ``untereinander``,
+  ``nebeneinander`` oder ``raster``; ``raster_spalten: 0`` wählt die Spaltenzahl
+  automatisch.
+* Die Variablen eines Blocks (``Messwerte[0]`` …) werden beim Laden erzeugt und
+  stehen nicht unter ``variablen`` in der Datei.
+* Das TIA-Passwort steht im **Klartext** in der Datei.
 
 .. _ini-umwandeln:
 
@@ -1020,7 +1211,626 @@ PID-Einstellungen und Blöcke – werden übernommen.
 
 
 
-Logger (``s7_logger.py``)
+.. _treiber:
+
+Steuerungen und Treiber
+======================================================================
+
+Jede Steuerung der Konfiguration hat genau einen Treiber. Er legt fest, welche
+Verbindungsparameter es gibt, wie Variablen adressiert werden, welche Datentypen
+lesbar sind, wie Blöcke aussehen und ob es einen Auswahldialog gibt. In einer
+Konfiguration lassen sich beliebige Treiber mischen.
+
+Treiber ``s7`` – Siemens S7 (PUT/GET, snap7)
+----------------------------------------------------------------------
+
+Für S7-300/400 und S7-1200/1500 über die klassische S7-Kommunikation mit
+**absoluten Adressen**. Bibliothek: ``python-snap7``.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse
+     - Adresse der CPU bzw. des CP.
+   * - Rack
+     - Baugruppenträger, fast immer ``0``.
+   * - Slot
+     - Steckplatz der CPU: S7-300 ``2``, S7-1200/1500 ``1`` (bzw. ``0``),
+       S7-400 laut Hardwarekonfiguration.
+
+**Vorbereitung:** Bei S7-1200/1500 in TIA Portal in den CPU-Eigenschaften
+*„PUT/GET-Kommunikation vom Partner erlauben“* aktivieren. Gelesen werden nur
+Datenbausteine **ohne** „Optimierten Bausteinzugriff“ (für optimierte Bausteine
+den Treiber ``tia`` verwenden). TCP-Port 102.
+
+**Adressen** (deutsche oder englische Schreibweise; der Typ kommt aus der Spalte
+*Typ*, die Größenangabe X/B/W/D in der Adresse ist nur Schreibhilfe):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Adresse
+     - Bedeutung
+   * - ``DB10.DBX4.2``, ``DB10.DBB4``, ``DB10.DBW4``, ``DB10.DBD4``
+     - Datenbaustein 10, Byte 4 (Bit 2)
+   * - ``DB10.4``, ``DB10.4.2``
+     - Kurzform: DB-Nummer, Byte[, Bit]
+   * - ``M5.0``, ``MB5``, ``MW10``, ``MD20``
+     - Merker
+   * - ``E0.1``, ``EB0``, ``EW64`` bzw. ``I0.1``, ``IB0``, ``IW64``
+     - Eingänge (Prozessabbild)
+   * - ``A1.0``, ``AB1``, ``AW2`` bzw. ``Q1.0``, ``QB1``, ``QW2``
+     - Ausgänge (Prozessabbild)
+
+Beim Speichern wird die Adresse einheitlich passend zum Typ geschrieben (z. B.
+``DB10.4`` mit Typ ``REAL`` → ``DB10.DBD4``).
+
+**Typen:** ``BOOL``, ``BYTE``, ``USINT``, ``SINT``, ``CHAR``, ``WORD``, ``UINT``,
+``INT``, ``DWORD``, ``UDINT``, ``DINT``, ``REAL``, ``TIME`` (ms), ``LWORD``,
+``ULINT``, ``LINT``, ``LREAL``.
+
+**Blöcke:** Startadresse + Anzahl, Elemente lückenlos; ein Block wird mit
+**einer** Anfrage gelesen. Einzelvariablen werden einzeln gelesen – bei vielen
+Variablen in einem DB ist ein Block deutlich schneller.
+
+**Auswahldialog „Aus DB-Quelle wählen…“:** Die SPS liefert über
+S7-Kommunikation **keine Namen und Strukturen**. Der Baum der Datenbausteine
+(DB › Struktur › Variable) wird deshalb aus **DB-Quellen** aufgebaut:
+
+#. In TIA Portal den DB (und benötigte UDTs) markieren, Rechtsklick *Quelle aus
+   Bausteinen generieren*; in STEP 7 den DB als Quelle (``.db``/``.awl``)
+   speichern.
+#. Im Dialog **DB-Quelle importieren…** wählen (mehrere Dateien möglich). Fehlt die
+   DB-Nummer in der Quelle (TIA), wird sie abgefragt.
+#. Optional **Mit SPS abgleichen**: vergleicht die berechnete Größe jedes DB mit
+   der Größe in der SPS (✓ bzw. ⚠ – Abweichung deutet auf einen optimierten
+   Baustein oder eine veraltete Quelle hin).
+#. Variablen anhaken (Häkchen an Struktur/Array/DB wählt alles darin) und
+   übernehmen. Der Name der Variable ist der Symbolpfad.
+
+Die Pfade der Quellen werden in der Konfiguration gespeichert (``treiberdaten``)
+und beim nächsten Öffnen wieder gelesen.
+
+Treiber ``tia`` – Siemens S7-1200/1500 symbolisch (S7CommPlus)
+----------------------------------------------------------------------
+
+Symbolischer Zugriff wie TIA Portal und Siemens-HMIs – auch auf **optimierte**
+Datenbausteine, **ohne** PUT/GET. Bibliothek: ``s7commplus``.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse
+     - Adresse der CPU.
+   * - Port
+     - ISO-on-TCP-Port, Standard ``102``.
+   * - TLS
+     - *Automatisch* (TLS, wenn die CPU es anbietet), *Aus*, *An (TLS erzwingen)*.
+       Neuere Firmware (S7-1500 ab V3.1, S7-1200 ab V4.7, Projekte ab TIA V19)
+       kommuniziert nur verschlüsselt.
+   * - Passwort
+     - Passwort der Zugriffsstufe, falls die CPU lesenden Zugriff schützt
+       (steht im Klartext in der Konfigurationsdatei).
+   * - Rolle (Erweitert)
+     - *HMI* (Standard), *Engineering*, *PG*.
+   * - Variablen je Anfrage (Erweitert)
+     - Höchstzahl Variablen je Leseanfrage (Standard 50); größere Mengen werden
+       aufgeteilt.
+
+**Vorbereitung:** In der Regel keine. Variablen müssen „Erreichbar aus
+HMI/OPC UA/Web API“ sein (Standard). Jede CPU erlaubt nur eine begrenzte Zahl
+von HMI-Verbindungen; der Logger belegt eine je Steuerung. TCP-Port 102.
+
+**Adressen:** symbolische Namen wie in TIA Portal:
+
+.. code-block:: text
+
+   Mess_DB.Temp                     Variable in einem Datenbaustein
+   Anlage_DB.Motor[2].Drehzahl      Strukturglied in einem Array
+   MArea.Start_Merker               Merker (PLC-Variable)
+   IArea.Taster_1                   Eingang
+   QArea.Lampe                      Ausgang
+
+**Typen:** ``BOOL``, ``BYTE``, ``WORD``, ``DWORD``, ``LWORD``, ``SINT``, ``INT``,
+``DINT``, ``LINT``, ``USINT``, ``UINT``, ``UDINT``, ``ULINT``, ``REAL``,
+``LREAL``, ``TIME``, ``LTIME``, ``S5TIME``, ``CHAR``, ``WCHAR``.
+
+**Blöcke:** Array ohne Index + erster Index (wie in TIA, z. B. ``1`` bei
+``Array[1..100]``) + Anzahl.
+
+**Auswahldialog „Aus Variablenliste wählen…“:** lädt die Variablenliste direkt
+aus der CPU (Datenbausteine, Merker, Ein-/Ausgänge mit Struktur und Typ) und
+speichert sie im Ordner ``taglisten`` zwischen.
+
+.. warning::
+
+   ``s7commplus`` ist eine **inoffizielle** Implementierung, nicht von Siemens.
+   Neue Konfigurationen zuerst an einer nicht sicherheitsrelevanten Anlage testen.
+
+Treiber ``clx`` – Allen-Bradley Logix (EtherNet/IP)
+----------------------------------------------------------------------
+
+Für ControlLogix, CompactLogix und Micro800. Gelesen wird mit **libplctag**
+(``plctag.dll`` / ``libplctag.so``); alle Tags einer Steuerung werden je Zyklus
+gleichzeitig angestoßen und zu gemeinsamen CIP-Anfragen zusammengefasst. Die
+Tag-Liste liefert **pycomm3**.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse
+     - Adresse des Ethernet-Moduls (z. B. 1756-EN2T) bzw. der CPU mit eingebautem
+       Ethernet.
+   * - CIP-Pfad
+     - Weg zur CPU, ``Port,Adresse``; Backplane = Port 1. ControlLogix mit CPU in
+       Steckplatz 0: ``1,0`` (Steckplatz 3: ``1,3``), CompactLogix: ``1,0``,
+       Micro800: leer.
+   * - Steuerungstyp
+     - ControlLogix, CompactLogix oder Micro800.
+   * - Zeitlimit (Erweitert)
+     - Wartezeit je Lesezyklus (Standard 2000 ms).
+
+**Vorbereitung:** *External Access* der Tags *Read/Write* oder *Read Only*.
+TCP-Port 44818.
+
+**Adressen:** Tag-Namen wie in Studio 5000 bzw. Connected Components Workbench:
+``Temp_Kessel`` (Controller-Tag), ``Program:Main.Druck`` (Programm-Tag),
+``Anlage.Motor[2].Drehzahl``, ``Status.3`` (Bit 3 eines Integers, Typ ``BOOL``).
+
+**Typen:** ``BOOL``, ``SINT``, ``INT``, ``DINT``, ``LINT``, ``USINT``, ``UINT``,
+``UDINT``, ``ULINT``, ``REAL``, ``LREAL`` (Bit-Strings ``DWORD``/``WORD`` als
+``UDINT``/``UINT`` lesen).
+
+**Blöcke:** Array-Tag ohne Index + erster Index + Anzahl; libplctag teilt große
+Bereiche selbst auf. BOOL-Arrays nicht als Block.
+
+**Auswahldialog „Aus Tag-Liste wählen…“:** Controller-Tags und (Häkchen
+*Programm-Tags*) die Tags aller Programme, mit UDTs, Arrays (höchstens 500
+Elemente einzeln) und Filter; Zwischenspeicher im Ordner ``taglisten``.
+
+Treiber ``modbus`` – Modbus TCP
+----------------------------------------------------------------------
+
+Für alle Geräte mit Modbus TCP (auch Modbus-RTU-Geräte hinter einem
+TCP-Gateway). Ohne Zusatzbibliothek. Benachbarte Adressen werden automatisch zu
+möglichst wenigen Anfragen zusammengefasst (Funktionen 1 bis 4).
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse, Port
+     - Adresse des Geräts bzw. Gateways, Port Standard ``502``.
+   * - Geräteadresse (Unit-ID)
+     - Slave-/Unit-ID (Standard 1); bei Gateways die Adresse am seriellen Bus.
+   * - Byte-/Wortfolge
+     - Reihenfolge bei Werten über mehrere Register (``DINT``, ``REAL`` …) laut
+       Gerätehandbuch: ``ABCD`` Big Endian (Standard), ``CDAB`` Wörter getauscht
+       (häufig, z. B. bei vielen Energiezählern), ``BADC`` Bytes getauscht,
+       ``DCBA`` Little Endian.
+   * - Register je Anfrage (Erweitert)
+     - Höchstzahl Register einer Anfrage (1 bis 125, Standard 120).
+   * - Lücke zusammenfassen bis (Erweitert)
+     - Adressen mit kleinerem Abstand werden in einer Anfrage mitgelesen
+       (Standard 8 Register; 0 = nur lückenlose).
+   * - Zeitlimit (Erweitert)
+     - Wartezeit auf eine Antwort (Standard 2000 ms).
+
+**Adressen** – Modicon-Schreibweise (ab 1 gezählt) oder Tabelle + Offset (ab 0):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Modicon
+     - ab 0
+     - Bereich, Funktion
+   * - ``40001`` … (6-stellig ``400001``)
+     - ``HR0`` …
+     - Holding-Register, FC 3
+   * - ``30001`` … (``300001``)
+     - ``IR0`` …
+     - Input-Register, FC 4
+   * - ``00001`` … bzw. ``1`` …
+     - ``C0`` …
+     - Coils, FC 1 (Typ ``BOOL``)
+   * - ``10001`` … (``100001``)
+     - ``DI0`` …
+     - Discrete Inputs, FC 2 (Typ ``BOOL``)
+   * - ``40001.3``
+     - ``HR0.3``
+     - Bit 3 eines Registers (Typ ``BOOL``, Bit 0–15)
+
+``40001`` und ``HR0`` bezeichnen dasselbe Register. Steht im Gerätehandbuch
+„Register 100“ ohne Zusatz, ist meist ``HR100`` (= ``40101``) gemeint – im
+Zweifel mit **Verbindung testen** beide prüfen. ``%MW0`` (Schneider) wird als
+``HR0`` verstanden.
+
+**Typen:** ``BOOL``, ``INT``, ``UINT``, ``WORD`` (1 Register), ``DINT``,
+``UDINT``, ``DWORD``, ``REAL`` (2 Register), ``LINT``, ``ULINT``, ``LWORD``,
+``LREAL`` (4 Register).
+
+**Blöcke:** Startadresse + Anzahl, Elemente lückenlos (bei ``REAL`` im Abstand
+von 2 Registern).
+
+**Fehler:** Antwortet das Gerät mit einer Modbus-Ausnahme (z. B. *ungültige
+Adresse*), bleibt nur die betroffene Anfrage ohne Wert; die Meldung erscheint
+in der Statuszeile bzw. als Testwert.
+
+
+Treiber ``modbus_rtu`` – Modbus RTU (seriell)
+----------------------------------------------------------------------
+
+Für Geräte mit Modbus RTU an RS-485 oder RS-232 (Frequenzumrichter, Energiezähler,
+Temperaturregler, Kompaktsteuerungen …), angeschlossen über eine eingebaute
+Schnittstelle oder einen USB-Adapter. Bibliothek: ``pymodbus`` (3.x oder 4.x) und
+``pyserial``.
+
+Adressen, Datentypen, Byte-/Wortfolge, Blöcke und das Zusammenfassen benachbarter
+Adressen sind **dieselben wie beim Treiber** ``modbus`` (``40001``/``HR0``,
+``30001``/``IR0``, ``00001``/``C0``, ``10001``/``DI0``, ``40001.3``).
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - Schnittstelle
+     - Windows ``COM3`` …, Linux ``/dev/ttyUSB0``, ``/dev/ttyAMA0`` …
+   * - Geräteadresse
+     - Modbus-Slave-Adresse 1–247.
+   * - Baudrate, Parität, Stoppbits
+     - Laut Gerät; üblich 19200 Baud, gerade Parität, 1 Stoppbit (bzw. 9600 8N2).
+   * - Byte-/Wortfolge
+     - Wie beim Treiber ``modbus``.
+   * - Datenbits, Register je Anfrage, Lücke, Zeitlimit, Wiederholungen (Erweitert)
+     - Register je Anfrage Standard 60 (kleinere Werte entlasten langsame
+       Geräte), Zeitlimit 1000 ms, 1 Wiederholung.
+
+**Mehrere Geräte an einem Bus:** Je Gerät eine Steuerung mit **gleicher
+Schnittstelle** und eigener Geräteadresse anlegen. Die Steuerungen teilen sich die
+Schnittstelle automatisch; die Telegramme gehen nacheinander auf den Bus.
+Baudrate, Parität, Stoppbits und Datenbits müssen dabei gleich sein (sonst meldet
+die zweite Steuerung einen Fehler). Die Abtastintervalle aller Geräte zusammen
+müssen zur Busgeschwindigkeit passen – bei 9600 Baud dauert eine Anfrage mit
+10 Registern etwa 30 ms.
+
+Antwortet ein Gerät nicht, wird nur dessen Steuerung als gestört gemeldet (LED
+rot), die übrigen Geräte am Bus werden weiter gelesen.
+
+Treiber ``opcua`` – OPC UA
+----------------------------------------------------------------------
+
+Für alle Steuerungen und Server mit OPC UA – z. B. Beckhoff TwinCAT, B&R,
+Codesys-Steuerungen (Wago, Festo, Schneider, Eaton …), Siemens S7-1500 und WinCC,
+Omron NX/NJ, Rockwell über FactoryTalk Linx Gateway, Mitsubishi iQ-R mit
+OPC-UA-Modul, Kepware/KEPServerEX. Bibliothek: ``asyncua``.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - Endpunkt
+     - z. B. ``opc.tcp://192.168.0.10:4840`` (Codesys, TwinCAT, S7-1500: Port
+       4840; Kepware: 49320). Ein Pfad nach dem Port gehört dazu, falls der Server
+       ihn verlangt.
+   * - Sicherheit
+     - *Keine*, oder *Basic256Sha256*, *Aes128Sha256RsaOaep*, *Aes256Sha256RsaPss*
+       jeweils mit *Signieren* bzw. *Signieren und verschlüsseln* – was der Server
+       anbietet.
+   * - Benutzer, Passwort
+     - Leer = anonym. Das Passwort steht im Klartext in der Konfigurationsdatei.
+   * - Client-Zertifikat, privater Schlüssel (Erweitert)
+     - Nur mit Sicherheit. Leer = der Treiber erzeugt beim ersten Verbinden ein
+       selbstsigniertes Zertifikat (Ordner ``opcua`` im Datenordner, gültig ein Jahr).
+   * - Zeitlimit, Knoten je Anfrage (Erweitert)
+     - Standard 4 s und 500 Knoten je Read-Anfrage (manche Server erlauben weniger,
+       dann z. B. 100 einstellen).
+
+**Zertifikat freigeben:** Mit Sicherheit muss der Server das Client-Zertifikat
+meist erst als vertrauenswürdig akzeptieren (TwinCAT, Codesys, S7-1500: im
+Zertifikatsspeicher des Servers „Vertrauen“ wählen). Der erste Verbindungsversuch
+wird dann abgelehnt, nach der Freigabe klappt es.
+
+**Adressen:** die NodeId des Knotens, wie sie Server und Engineering-Werkzeug
+anzeigen:
+
+.. code-block:: text
+
+   ns=4;s=|var|CODESYS Control.Application.GVL.Temperatur     Codesys
+   ns=4;s=MAIN.fTemperatur                                     TwinCAT
+   ns=3;s="DB_Prozess"."Temperatur"                            S7-1500
+   ns=2;s=Kanal1.Geraet1.Temperatur                            Kepware
+   ns=2;i=1001                                                 numerische Kennung
+
+Der Server liefert jeden Wert mit seinem eigenen OPC-UA-Datentyp; die Spalte *Typ*
+dient nur der Anzeige. Zeitstempel (DateTime) werden als Unix-Zeit aufgezeichnet,
+Texte sind nicht aufzeichenbar.
+
+**Blöcke:** Array-Knoten (NodeId ohne Index) + erster Index + Anzahl. Der
+Ausschnitt wird mit einem Indexbereich in **einer** Anfrage gelesen. Ein Array
+als einzelne Variable meldet „Array – bitte als Block lesen“.
+
+**Auswahldialog „Aus OPC-UA-Server wählen…“:** verbindet sich mit dem Server und
+zeigt den Adressraum ab *Objects*; Ordner werden beim Aufklappen nachgeladen.
+Lesbare Variablen (Zahlen, BOOL) anhaken, Arrays per Doppelklick bzw. **Markiertes
+Array als Block …** übernehmen. Das Filterfeld durchsucht die bereits geladenen
+Knoten. Name der neuen Variable ist der Pfad aus den Anzeigenamen.
+
+Alle Knoten einer Steuerung werden je Zyklus mit möglichst wenigen Read-Anfragen
+gelesen. Ein ungültiger Knoten (z. B. *BadNodeIdUnknown*) betrifft nur seine
+eigene Variable.
+
+Treiber ``slmp`` – Mitsubishi MELSEC (SLMP / MC-Protokoll)
+----------------------------------------------------------------------
+
+Für MELSEC iQ-R, iQ-F (FX5), Q (QnU, QnUDE …) und L mit eingebautem Ethernet oder
+Ethernet-Modul. Protokoll SLMP (MC-Protokoll) mit 3E-Rahmen, binär, über TCP oder
+UDP. Keine Zusatzbibliothek.
+
+**Vorbereitung (GX Works):** In den Ethernet-Einstellungen eine Verbindung
+„SLMP“ (iQ-R/iQ-F) bzw. „MC-Protokoll“ (Q/L), **binär**, TCP oder UDP, mit Port
+anlegen und auf die Steuerung übertragen. Der Logger liest nur.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse, Port, Protokoll
+     - Wie in GX Works eingestellt (z. B. Port 5007, TCP).
+   * - Serie
+     - *Q/L/iQ-F* (Standardformat) oder *iQ-R* (erweitertes Format mit 4-Byte-
+       Gerätenummern). Eine iQ-R versteht beide.
+   * - Netzwerk-Nr., Station, Ziel-Modul (Erweitert)
+     - Für die eigene Station ``0``, ``255``, ``03FF``. Bei Multi-CPU-Systemen
+       Ziel-Modul ``03E0`` … ``03E3`` für CPU 1 … 4.
+   * - Wörter je Anfrage, Lücke, Zeitlimit (Erweitert)
+     - Standard 960 Wörter (Höchstwert des Protokolls), 16 Wörter, 2000 ms.
+
+**Adressen** in MELSEC-Schreibweise. ``X``, ``Y``, ``B``, ``W``, ``SB``, ``SW``,
+``DX``, ``DY`` sind **hexadezimal**, alle übrigen dezimal:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Adresse
+     - Bedeutung
+   * - ``D100``, ``W1A``, ``R200``, ``ZR1000``, ``SD10``, ``Z0``
+     - Wortgeräte (Datenregister, Link-Register, Dateiregister …)
+   * - ``TN5``, ``CN3``, ``SN0``
+     - Istwerte von Timern, Zählern, remanenten Timern
+   * - ``M10``, ``X1F``, ``Y20``, ``B3``, ``L5``, ``F0``, ``SM400``, ``TS5``, ``CS3``
+     - Bitgeräte (Typ ``BOOL``)
+   * - ``D100.3``
+     - Bit 3 eines Wortes (Bit ``0`` … ``F``)
+   * - ``M16`` mit Typ ``UINT``
+     - 16 Bits eines Bitgeräts als Wort (nur ab einem Vielfachen von 16)
+
+**Typen:** ``BOOL``, ``INT``, ``UINT``, ``WORD``, ``DINT``, ``UDINT``, ``DWORD``,
+``REAL``, ``LINT``, ``ULINT``, ``LWORD``, ``LREAL``. Werte über mehrere Wörter
+belegen aufeinanderfolgende Register, niederwertiges Wort zuerst (wie in GX Works).
+
+**Blöcke:** Startgerät + Anzahl (z. B. ``D100``, ``REAL``, 10 → ``D100``,
+``D102`` … ``D118``). Unabhängig davon fasst der Treiber benachbarte Adressen zu
+möglichst wenigen Anfragen zusammen; Bitgeräte werden wortweise (16 Bits je Wort)
+gelesen.
+
+Fehlerantworten der Steuerung erscheinen mit Code, z. B. *SLMP-Fehler 0xC056:
+Adresse außerhalb des Bereichs*; betroffen ist nur die jeweilige Anfrage.
+
+Treiber ``kvhostlink`` – KEYENCE KV (Host Link)
+----------------------------------------------------------------------
+
+Für KEYENCE KV-8000, KV-7000, KV-5000/5500, KV-3000, KV Nano und KV-X mit
+Ethernet (eingebaut oder KV-EP21V/KV-LE21V). Protokoll: Host Link (ASCII) über
+TCP, Port **8501**. In KV STUDIO ist nichts einzurichten. Keine Zusatzbibliothek.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse, Port
+     - Adresse der KV; Port Standard 8501.
+   * - Wörter je Anfrage, Lücke, Zeitlimit (Erweitert)
+     - Standard 500 Wörter, 16 Wörter, 2000 ms.
+
+**Adressen** in KEYENCE-Schreibweise:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Adresse
+     - Bedeutung
+   * - ``DM100``, ``EM0``, ``FM0``, ``ZF10``, ``W1A`` (hex), ``TM0``, ``CM10``, ``VM0``, ``Z1``
+     - Wortgeräte
+   * - ``R1000``, ``MR500``, ``LR0``, ``CR3``
+     - Relais (Typ ``BOOL``); die letzten beiden Ziffern sind die Bitnummer 00–15
+       (``R1000`` = Kanal 10, Bit 0; auf ``R1015`` folgt ``R1100``)
+   * - ``B1F``, ``VB0``
+     - Link-Relais (hexadezimal, Typ ``BOOL``)
+   * - ``T10``, ``C5``
+     - Istwert von Timer bzw. Zähler (32 Bit, Typ ``DINT``/``UDINT``)
+   * - ``DM100.3``
+     - Bit 3 eines Wortes
+
+**Typen** wie beim Treiber ``slmp``; Werte über mehrere Wörter: niederwertiges
+Wort zuerst (wie in KV STUDIO). Benachbarte Wortadressen werden mit einem
+``RDS``-Befehl gelesen, benachbarte Relais ebenso.
+
+Fehlerantworten (``E0`` Gerätenummer ungültig, ``E1`` Befehl ungültig …)
+betreffen nur die jeweilige Anfrage.
+
+Treiber ``toyopuc`` – JTEKT TOYOPUC (Computer Link)
+----------------------------------------------------------------------
+
+Für JTEKT TOYOPUC PC10G/PC10, PC3J/PC3JG, Nano 10GX und TOYOPUC-Plus mit
+Ethernet. Protokoll: Computer Link (binär) über TCP oder UDP. Keine
+Zusatzbibliothek.
+
+**Vorbereitung (PCwin):** Am Ethernet-Modul bzw. der eingebauten Schnittstelle
+einen Port für *Computer Link* (TCP passiv bzw. UDP) einrichten.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse, Port, Protokoll
+     - Wie in PCwin eingestellt.
+   * - Wörter je Anfrage, Lücke, Zeitlimit (Erweitert)
+     - Standard 512 Wörter, 16 Wörter, 2000 ms.
+
+**Adressen** wie in PCwin, Nummern **hexadezimal**:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Adresse
+     - Bedeutung
+   * - ``D0100``, ``R0010``, ``S0020``, ``N0005``, ``B0000``
+     - Register (Daten-, Link-, Sonder-, Istwert-, Dateiregister)
+   * - ``M0010``, ``X0007``, ``Y0020``, ``K0001``, ``L0100``, ``V0000``, ``T0005``, ``C0003``, ``P0000``
+     - Relais und Kontakte (Typ ``BOOL``)
+   * - ``M010W``
+     - 16 Relais als Wort (``M0100`` … ``M010F``)
+   * - ``D0100.F``
+     - Bit F eines Registers
+   * - ``U00100``, ``EN0010``, ``H0000``, ``ES0000``, ``EB00000``
+     - Erweiterte Register
+   * - ``EM0010``, ``EX0007``, ``EY0007``, ``EK0000``, ``EV0000``, ``EL0000``, ``GX0000``, ``GM0000`` …
+     - Erweiterte Relais
+   * - ``P1-D0100``, ``P2-M1000``, ``P3-R0000``
+     - Programmbereiche 1–3 (PC3J im 3-Programm-Modus, PC10); auch die oberen
+       Nummernbereiche (z. B. ``D3000`` … bzw. ``M1000`` …) werden so adressiert.
+
+**Typen** wie beim Treiber ``slmp``; Werte über mehrere Wörter: niederwertiges
+Wort zuerst. Die Wortadressen der Bereiche entsprechen dem Computer-Link-Handbuch
+von JTEKT (Grundbereich mit Befehl 1C, erweiterter Bereich und Programmbereiche
+mit Befehl 94).
+
+Treiber ``s5as511`` – Siemens S5 (PG-Schnittstelle AS511)
+----------------------------------------------------------------------
+
+Für SIMATIC S5-90U, 95U, 100U, 115U, 135U, 155U über die **PG-Schnittstelle**
+(20-mA-Linienstrom). Benötigt wird ein Pegelwandler 20 mA ⇄ RS-232 oder USB
+(PG-Adapterkabel, z. B. 6ES5 734-1BD20, oder ein USB-PG-Adapter). Protokoll:
+AS511 mit 9600 Baud, 8 Datenbits, gerade Parität, 1 Stoppbit. Bibliothek:
+``pyserial``.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - Schnittstelle
+     - Schnittstelle des Adapters, z. B. ``COM1`` oder ``/dev/ttyUSB0``.
+   * - Baudrate
+     - 9600 (Standard der PG-Schnittstelle).
+   * - Parität, Bytes je Anfrage, Lücke, Zeitlimit (Erweitert)
+     - Gerade Parität; 64 Bytes; 8 Bytes; 500 ms.
+
+**Adressen** in S5-Schreibweise (deutsch oder englisch):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Adresse
+     - Bedeutung
+   * - ``DB10.DW4``
+     - Datenwort 4 des DB 10 (Typ ``WORD``, ``INT`` oder ``S5TIME``)
+   * - ``DB10.DL4``, ``DB10.DR4``
+     - linkes bzw. rechtes Byte von Datenwort 4 (Typ ``BYTE``)
+   * - ``DB10.DD4``
+     - Doppelwort aus DW4 und DW5 (Typ ``DWORD``, ``DINT`` oder ``REAL``)
+   * - ``DB10.D4.3``
+     - Bit 3 von Datenwort 4 (Bit 0 … 15; Typ ``BOOL``)
+   * - ``EB0``, ``EW0``, ``ED0``, ``E0.1`` (``I…``)
+     - Eingänge (Prozessabbild)
+   * - ``AB1``, ``AW2``, ``AD4``, ``A1.0`` (``Q…``)
+     - Ausgänge (Prozessabbild)
+   * - ``MB10``, ``MW10``, ``MD10``, ``M5.0`` (``F…``)
+     - Merker
+   * - ``T5``, ``Z3`` (``C3``)
+     - Timer- bzw. Zählerwort
+
+**Typen:** ``BOOL``, ``BYTE``, ``WORD``, ``INT``, ``DWORD``, ``DINT``,
+``REAL`` (S5-Gleitpunktzahl „KG“: Exponent und Mantisse im Zweierkomplement) und
+``S5TIME`` (Timerwort mit Zeitbasis → Millisekunden). Die Daten liegen im S5 im
+Motorola-Format (höherwertiges Byte zuerst).
+
+**Ablauf:** Beim Verbinden liest der Treiber die Systemdaten der CPU (Lage von
+Prozessabbild, Merkern, Timern und Zählern im Speicher), beim ersten Zugriff auf
+einen Datenbaustein dessen Adresse und Länge, und liest dann die Speicherbereiche
+mit möglichst wenigen Aufträgen. Ändert sich ein Datenbaustein (neu geladen, Länge
+geändert), mit **■ Stop** / **▶ Start** neu verbinden.
+
+**Hinweise:**
+
+* Die PG-Schnittstelle ist langsam (9600 Baud, Quittungsverkehr): Ein Auftrag
+  dauert etwa 50–100 ms. Für viele Werte ein Intervall von 1 s oder mehr wählen
+  und Werte möglichst zusammenhängend anlegen.
+* Solange der Logger liest, ist die PG-Schnittstelle belegt – zum Programmieren
+  mit STEP 5 den Logger stoppen.
+* Fehlt ein Datenbaustein, meldet die Variable „DB… nicht vorhanden“; Adressen
+  hinter dem Ende des DB „Adresse außerhalb von DB…“.
+
+
+.. _uebernahme:
+
+Übernahme von Konfigurationen der Einzelprogramme
+======================================================================
+
+Konfigurationsdateien des **S7 Datenloggers**, **TIA Datenloggers** und
+**CLX Datenloggers** werden übernommen – als JSON-Datei direkt mit **Datei › Öffnen…**,
+als ältere INI-Datei nach der einmaligen Umwandlung (**Datei › INI-Datei umwandeln …**,
+siehe :ref:`ini-umwandeln`). Dabei gilt:
+
+* Der Treiber jeder Steuerung wird aus ihren Einträgen erkannt: ``rack``/``slot`` →
+  ``s7``, ``pfad``/``cpu`` → ``clx``, ``tls``/``rolle``/``port`` → ``tia``.
+* S7-Variablen (``bereich``, ``db``, ``byte``, ``bit``) werden in Adressen
+  umgerechnet, z. B. ``DB10.DBD4`` oder ``M5.0``; S7-Blöcke erhalten ihre
+  Startadresse. Tag-Namen von TIA und CLX werden unverändert übernommen.
+* Die Pfade der S7-DB-Quellen (``symbolquellen``) wandern nach ``treiberdaten``.
+* Diagramme, Achsen, Formeln, Blöcke, Trigger, PID-Einstellungen, Datenbank,
+  Webserver und Anzeige werden unverändert übernommen.
+
+Gespeichert wird im Format des PLC Datenloggers (Schlüssel ``treiber`` und
+``adresse``). Die Einzelprogramme können diese Datei danach **nicht** mehr lesen –
+speichern Sie deshalb mit **Speichern unter…** unter neuem Namen, wenn die Datei
+auch im Einzelprogramm weiter benutzt werden soll.
+
+Konfigurationen mehrerer Einzelprogramme lassen sich zusammenführen, indem die
+Steuerungen und Variablen im Konfigurationsprogramm neu angelegt oder die
+Einträge der Listen ``steuerungen`` und ``variablen`` in der JSON-Datei von Hand
+kopiert werden (``steuerung`` der Variablen anpassen).
+
+
+Logger (``plc_logger.py``)
 ======================================================================
 
 Bedienelemente
@@ -1361,7 +2171,7 @@ Die Tabelle am rechten Rand listet alle Variablen, bei denen in der
 Konfiguration *Werteanzeige* aktiviert ist.
 
 * Der Name wird in der Variablenfarbe dargestellt. Ein Mauszeiger über dem
-  Namen zeigt die SPS-Adresse.
+  Namen zeigt die Adresse (bei berechneten Variablen die Formel).
 * Mit dem **Häkchen** vor dem Namen blenden Sie die Kurve der Variable im
   Diagramm aus oder ein (alternativ per Rechtsklick in der Legende).
 * Die Spalten wechseln je nach Modus (*Aktuell* online, *Lineal 1 / Lineal 2 /
@@ -1486,12 +2296,12 @@ eignet sich für Dauerbetrieb, z. B. als Autostart-Programm auf einem Industrie-
   Konfiguration, oder Startparameter ``--headless``. Mit ``--gui`` lässt sich trotz
   eingestelltem Headless-Modus die Oberfläche öffnen.
 * **Meldungen** (Verbindung, Fehler, Archivierung) stehen in der Logdatei
-  ``s7_logger.log`` im Programm- bzw. Datenordner (rotierend, mehrere Dateien).
+  ``plc_logger.log`` im Programm- bzw. Datenordner (rotierend, mehrere Dateien).
 * **Beenden:** Mit ``Strg+C`` im Konsolenfenster bzw. durch das Signal SIGTERM
   (Dienst beenden, Windows: Fenster schließen) wird sauber beendet: Die
   CSV-Datei wird geschlossen und – bei gesetzter Option – archiviert.
 * Die installierte Version enthält im Startmenü die Verknüpfung
-  *S7 Datenlogger (Headless, nur Aufzeichnung)*.
+  *PLC Datenlogger (Headless, nur Aufzeichnung)*.
 
 
 
@@ -1786,11 +2596,11 @@ einem anderen Rechner mit Zugriff auf die Datei (Netzlaufwerk):
 
 .. code-block:: text
 
-   S7Logger.exe --ereignisse                        (Ereignisprotokoll der zuletzt benutzten Konfiguration)
-   S7Logger.exe --ereignisse anlage.json             (Ereignisprotokoll dieser Konfiguration)
-   S7Logger.exe --ereignisse D:\logs\log_ereignisse.csv
+   PLCLogger.exe --ereignisse                        (Ereignisprotokoll der zuletzt benutzten Konfiguration)
+   PLCLogger.exe --ereignisse anlage.json             (Ereignisprotokoll dieser Konfiguration)
+   PLCLogger.exe --ereignisse D:\logs\log_ereignisse.csv
 
-Die installierte Version hat dafür im Startmenü die Verknüpfung *S7 Ereignisprotokoll*.
+Die installierte Version hat dafür im Startmenü die Verknüpfung *PLC Ereignisprotokoll*.
 Im Konfigurationsprogramm öffnet **Ereignisprotokoll anzeigen …** denselben Viewer.
 
 
@@ -1947,7 +2757,7 @@ Hinweise
 * Im **Demo-Modus** enthält die Beispielkonfiguration das Diagramm *Regelkreis* mit
   einem simulierten, absichtlich träge eingestellten Regler (Sollwert wechselt jede
   Minute) – nach einigen Minuten Aufzeichnung lässt sich die Optimierung ausprobieren.
-* **Übernahme in die Steuerung:** S7-1200/1500 *PID_Compact*: ``Retain.CtrlParams.Gain`` = Kp, ``.Ti`` = Ti [s], ``.Td`` = Td [s] (PI: Td = 0). S7-300/400 *CONT_C* (FB 41): ``GAIN`` = Kp, ``TI``/``TD`` als TIME (z. B. ``T#32S``), ``TM_LAG`` ≈ Td/5.
+* **Übernahme in die Steuerung:** *PIDE* mit unabhängigen Verstärkungen: ``PGain`` = Kp, ``IGain`` = Ki·60 [1/min], ``DGain`` = Kd/60 [min]. *PIDE* abhängige Form bzw. *PID*-Anweisung: ``Kc`` = Kp, Ti und Td in **Minuten** (Werte aus der Tabelle durch 60 teilen). *PIDE* rechnet in % der Bereiche ``PVEUMax/Min`` und ``CVEUMax/Min`` – Kp entsprechend umrechnen.
 
 
 .. _sprache:
@@ -1963,7 +2773,7 @@ Umschalten
 
 Menü **Sprache** (im Logger und im Konfigurationsprogramm): Sprache wählen und die Frage
 nach dem Neustart bestätigen. Die Wahl gilt für beide Programme und den Ereignis-Viewer
-und wird in der Datei ``s7_einstellungen.json`` im Datenordner gespeichert. Auch die
+und wird in der Datei ``plc_einstellungen.json`` im Datenordner gespeichert. Auch die
 Standardtexte von Qt (Ja/Nein/Abbrechen, Dateidialoge) folgen der gewählten Sprache.
 
 Nicht übersetzt werden Daten: Namen von Variablen, Diagrammen und Triggern, die Spalten
@@ -2009,8 +2819,8 @@ Updates erhalten), dann im Programmordner (mitgelieferte Dateien). Eine eigene `
 im Datenordner ersetzt also die mitgelieferte.
 
 Für Entwickler: Texte im Programm stehen als ``tr("…")`` bzw. ``tr("… {0} …").format(wert)``
-(Modul ``s7_i18n.py``). Nach Programmänderungen bringt
-``python tools/extract_tr.py s7 .`` alle Sprachdateien auf den neuesten Stand (neue
+(Modul ``plc_i18n.py``). Nach Programmänderungen bringt
+``python tools/extract_tr.py clx .`` alle Sprachdateien auf den neuesten Stand (neue
 Texte mit leerer Übersetzung, vorhandene Übersetzungen bleiben).
 
 
@@ -2113,11 +2923,243 @@ erscheinen auf der ersten Y-Achse des ersten Diagramms.
 
 .. _installer:
 
+.. _treiber-entwickeln:
+
+Treiber entwickeln
+======================================================================
+
+Ein Treiber ist **eine Python-Datei**. Sie wird beim Programmstart automatisch
+geladen; das Programm selbst muss weder geändert noch neu gebaut werden – auch die
+installierte ``.exe`` bzw. das AppImage lädt eigene Treiber.
+
+Wo Treiber gesucht werden
+----------------------------------------------------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Ort
+     - Hinweis
+   * - Ordner ``treiber`` im **Datenordner**
+     - Empfohlen. Windows installiert: ``%APPDATA%\PLCDatenlogger\treiber``,
+       Linux: ``~/PLCDatenlogger/treiber``, portabel bzw. Python-Quellen: Ordner
+       ``treiber`` neben den Programmdateien. Bleibt bei Updates erhalten.
+       Öffnen mit **Treiber › Ordner für eigene Treiber öffnen …**.
+   * - Ordner in der Umgebungsvariablen ``PLC_TREIBER``
+     - Mehrere Ordner mit ``;`` (Windows) bzw. ``:`` (Linux) trennen – z. B. für
+       einen gemeinsamen Netzwerkordner.
+   * - Paket ``plc_treiber`` (nur Python-Quellen)
+     - Datei direkt neben ``s7.py`` usw.; Dateiname **ohne** Unterstrich
+       (Namen mit ``_`` gelten dort als Hilfsmodule, z. B. ``s7_browser.py``).
+
+Dateien, deren Name mit ``_`` beginnt (z. B. ``_vorlage.py``), werden **nicht**
+geladen. Hilfsmodule eines Treibers können neben ihm im selben Ordner liegen
+(der Ordner wird in den Suchpfad aufgenommen). Kann ein Treiber nicht geladen
+werden (Syntaxfehler, fehlende Bibliothek beim Import, doppeltes Kürzel), laufen
+alle anderen weiter; die Fehlermeldung steht unter **Treiber › Installierte
+Treiber …**.
+
+In fünf Schritten zum eigenen Treiber
+----------------------------------------------------------------------
+
+#. **Treiber › Ordner für eigene Treiber öffnen …** – der Ordner enthält danach
+   die Vorlage ``_vorlage.py``.
+#. Die Vorlage kopieren, z. B. nach ``meine_sps.py`` (ohne ``_`` am Anfang).
+   Unverändert ist sie bereits ein funktionierender Treiber „Simulation“, der
+   Sinus-, Rampen-, Rechteck- und Zufallswerte liefert (Adressen ``sinus:20``,
+   ``rampe:10``, ``rechteck:4``, ``zufall:50``).
+#. Kürzel ``id`` (eindeutig, steht in der Konfigurationsdatei), ``name``,
+   ``params`` und ``types`` anpassen.
+#. In der Reader-Klasse ``connect()``, ``read()`` und ``close()`` mit dem
+   Protokoll der Steuerung füllen.
+#. Konfigurationsprogramm neu starten – der Treiber erscheint in der Auswahl
+   *Treiber* der Steuerungstabelle.
+
+Minimaler Treiber
+----------------------------------------------------------------------
+
+.. code-block:: python
+
+   from plc_treiber.base import NAN, Driver, Param, Reader
+
+   class MeinReader(Reader):
+       def connect(self):
+           # Verbindung aufbauen; Fehler als Ausnahme melden (z. B. ConnectionError)
+           self.sock = verbinde(self.plc.params["ip"], self.plc.params["port"])
+           return len(self.vars)                 # Anzahl lesbarer Variablen
+
+       def read(self):
+           # EIN Messzyklus: Werte in der Reihenfolge von self.vars, float, NaN = kein Wert
+           out = []
+           for v in self.vars:
+               try:
+                   out.append(float(lies(self.sock, v.address, v.dtype)))
+                   self.errors.pop(v.address, None)
+               except KeyError as e:             # nur diese Variable fehlt
+                   self.errors[v.address] = str(e)
+                   out.append(NAN)
+           return out
+
+       def close(self):
+           self.sock.close()
+
+   class MeinTreiber(Driver):
+       id = "mein"
+       name = "Meine Steuerung"
+       description = "Kurzbeschreibung für den Einstellungsdialog"
+       params = [
+           Param("ip", "IP-Adresse", "text", "192.168.0.10"),
+           Param("port", "Port", "int", 5000, minimum=1, maximum=65535),
+       ]
+       types = ["BOOL", "INT", "DINT", "REAL"]
+       address_hint = "z. B. R100"
+
+       def create_reader(self, plc, variables):
+           return MeinReader(self, plc, variables)
+
+   DRIVER = MeinTreiber()
+
+Schnittstelle
+----------------------------------------------------------------------
+
+Alle Einzelheiten stehen in ``plc_treiber/base.py``. Die wichtigsten Teile:
+
+.. list-table:: Klasse ``Driver`` – Attribute
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Attribut
+     - Bedeutung
+   * - ``id``
+     - Eindeutiges Kürzel (Kleinbuchstaben), steht als ``"treiber": "…"`` in der
+       Konfigurationsdatei. Nach der Einführung nicht mehr ändern.
+   * - ``name``, ``description``
+     - Anzeigename (Auswahlliste) und Beschreibung (Einstellungsdialog).
+   * - ``params``
+     - Liste von ``Param`` – daraus entsteht der Einstellungsdialog; die Werte
+       stehen in der Konfigurationsdatei und im Leser in ``self.plc.params``.
+   * - ``types``, ``block_types``, ``default_type``
+     - Lesbare Datentypen (Auswahl aus ``BOOL, BYTE, WORD, DWORD, LWORD, SINT, INT,
+       DINT, LINT, USINT, UINT, UDINT, ULINT, REAL, LREAL, TIME, LTIME, S5TIME,
+       CHAR, WCHAR``), Formate für Blöcke (``None`` = wie ``types``), Vorgabe.
+   * - ``address_label``, ``address_hint``, ``block_hint``
+     - Bezeichnung und Tooltip-Texte für Adressen und Blöcke.
+   * - ``block_uses_index``
+     - ``True``: Block = Array-Name + erster Index (Elemente ``Name[i]``);
+       ``False``: Block = Startadresse (Elementadresse über
+       ``block_element_address``).
+   * - ``browse_label``
+     - Text des Auswahlknopfs; leer = kein Auswahldialog.
+   * - ``library``
+     - Name der benötigten Bibliothek (für Anzeigen).
+
+.. list-table:: Klasse ``Driver`` – Methoden (alle optional außer ``create_reader``)
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Methode
+     - Aufgabe
+   * - ``create_reader(plc, variables)``
+     - Liefert den ``Reader`` für eine Steuerung.
+   * - ``summary(plc)``
+     - Kurztext der Verbindung für Tabelle, LEDs und Meldungen.
+   * - ``check_params(params)``
+     - Fehlertext für ungültige Parameter oder ``""``.
+   * - ``check_address(address, dtype)``
+     - Formale Prüfung einer Adresse beim Speichern; Fehlertext oder ``""``.
+   * - ``normalize_address(address, dtype)``
+     - Einheitliche Schreibweise (z. B. Großbuchstaben).
+   * - ``block_element_address(block, i)``
+     - Adresse des i-ten Block-Elements (``block.address``, ``block.start``,
+       ``block.dtype``).
+   * - ``check_block(block)``, ``type_size(dtype)``
+     - Prüfung eines Blocks; Größe eines Typs in Bytes (für die Anzeige).
+   * - ``check_library()``
+     - Prüft die Bibliothek (``import …``); Ausnahme mit Hinweis, wenn sie fehlt.
+       Bibliotheken möglichst erst hier bzw. in ``connect()`` importieren, damit
+       der Treiber auch ohne sie geladen wird.
+   * - ``read_once(plc, variables)``
+     - Verbindungstest; Standard: ``connect`` + ``read`` + ``close``.
+   * - ``browse(parent, ctx)``
+     - Auswahldialog (Qt). ``ctx``: ``BrowseContext`` mit ``plc``, ``existing``
+       (vorhandene Adressen), ``target_labels``, ``default_target`` und ``store``
+       (treibereigene, in der Konfiguration gespeicherte Werte). Rückgabe:
+       ``BrowseResult`` mit ``variables`` = ``[(Name, Adresse, Typ)]``,
+       ``blocks`` = ``[(Name, Adresse, erster Index, Anzahl, Typ)]``,
+       ``target_index`` und geändertem ``store`` – oder ``None`` bei Abbruch.
+
+.. list-table:: Klasse ``Reader``
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Teil
+     - Bedeutung
+   * - ``self.plc``, ``self.vars``, ``self.driver``
+     - Steuerung (``plc.params``, ``plc.name``), zu lesende Variablen (je
+       ``address``, ``dtype``, ``name``, ``block``, ``block_idx``), Treiber.
+   * - ``connect()``
+     - Verbindung aufbauen und prüfen; Rückgabe: Anzahl lesbarer Variablen.
+   * - ``read()``
+     - Ein Messzyklus; Liste von ``float`` in der Reihenfolge von ``self.vars``,
+       ``NAN`` für nicht lesbare Werte. Möglichst wenige Anfragen (Variablen mit
+       gleichem ``block`` gemeinsam lesen).
+   * - ``close()``
+     - Verbindung schließen (darf mehrfach aufgerufen werden).
+   * - ``self.errors``
+     - ``{Adresse: Fehlertext}`` einzelner nicht lesbarer Variablen; erscheint in
+       Statuszeile und Testwert. Die übrigen Variablen werden weiter gelesen.
+
+Regeln:
+
+* **Verbindungsfehler** (Steuerung nicht erreichbar, Socket geschlossen) als
+  Ausnahme aus ``connect()``/``read()`` melden. Der Lese-Thread zeigt die LED
+  rot, schließt den Leser und verbindet nach kurzer Wartezeit neu.
+* **Fehler einzelner Variablen** dagegen in ``self.errors`` eintragen und ``NAN``
+  liefern – keine Ausnahme.
+* Jeder Leser läuft in **seinem eigenen Thread**; er muss nicht thread-sicher
+  sein, darf aber keine globalen Objekte unsynchronisiert mit anderen Lesern
+  teilen.
+* ``read()`` sollte deutlich kürzer dauern als das Intervall der Steuerung.
+* Texte für die Oberfläche können mit ``from plc_i18n import tr`` übersetzbar
+  gemacht werden (``tools/extract_tr.py`` nimmt Treiber im Paket mit auf).
+
+Für fertige Beispiele lohnt ein Blick in ``plc_treiber/modbus.py`` (eigenes
+Protokoll über Sockets, Zusammenfassen von Anfragen, eigene Adressschreibweise)
+und ``plc_treiber/s7.py`` (Bibliothek, Blöcke, Auswahldialog).
+
+Testen ohne Oberfläche
+----------------------------------------------------------------------
+
+.. code-block:: python
+
+   import sys; sys.path.insert(0, r"C:\Pfad\zum\plc_datenlogger")
+   from plc_common import Plc, Variable
+   from plc_treiber import get_driver, load_errors
+
+   print(load_errors())                                  # Ladefehler?
+   d = get_driver("mein")
+   plc = Plc(name="Test", driver="mein", params=d.default_params())
+   werte, fehler = d.read_once(plc, [Variable("A", address="R100", dtype="INT")])
+   print(werte, fehler)
+
+Treiber in die ``.exe`` aufnehmen
+----------------------------------------------------------------------
+
+Eigene Treiber im Ordner ``treiber`` brauchen keinen Neubau. Soll ein Treiber
+fest eingebaut werden, die Datei in ``plc_treiber/`` legen, ihr Kürzel in
+``BUILTIN`` in ``plc_treiber/__init__.py`` eintragen (optional, legt nur die
+Reihenfolge fest) und benötigte Bibliotheken in ``requirements.txt`` sowie –
+falls PyInstaller sie nicht findet – als ``--collect-all`` in ``build.bat`` bzw.
+``build_appimage.sh`` ergänzen. ``build.bat`` nimmt alle Module von
+``plc_treiber`` automatisch auf (``--collect-submodules plc_treiber``).
+
+
 Installationsdatei erstellen (Windows)
 ======================================================================
 
 Aus den Python-Dateien lassen sich zwei eigenständige Programme
-(``S7Logger.exe`` und ``S7Konfiguration.exe``) und eine Setup-Datei erzeugen.
+(``PLCLogger.exe`` und ``PLCKonfiguration.exe``) und eine Setup-Datei erzeugen.
 Dazu dienen:
 
 .. list-table::
@@ -2128,7 +3170,7 @@ Dazu dienen:
      - Aufgabe
    * - ``build.bat``
      - Baut mit **PyInstaller** beide Programme in *einen* gemeinsamen Ordner
-       (``dist\S7Datenlogger``) und anschließend mit **Inno Setup** den Installer.
+       (``dist\PLCDatenlogger``) und anschließend mit **Inno Setup** den Installer.
    * - ``installer.iss``
      - Inno-Setup-Skript (Programmordner, Startmenü, optionale Desktop-Symbole,
        Deinstallation, Anleitung).
@@ -2151,11 +3193,11 @@ Lauf (pip) und für den Installer **Inno Setup 6**
    .. code-block:: console
 
       build.bat              alles: Umgebung, Programme, Installer
-      build.bat exe          nur die Programme (dist\S7Datenlogger)
+      build.bat exe          nur die Programme (dist\PLCDatenlogger)
       build.bat installer    nur den Installer (benötigt vorhandenes dist\)
 
-#. Ergebnis: ``dist\S7Datenlogger`` (lauffähig ohne Installation) und
-   ``installer\S7Datenlogger_Setup_<Version>.exe``.
+#. Ergebnis: ``dist\PLCDatenlogger`` (lauffähig ohne Installation) und
+   ``installer\PLCDatenlogger_Setup_<Version>.exe``.
 
 Das Skript legt eine virtuelle Umgebung ``.venv`` an, installiert die Pakete,
 erzeugt bei Bedarf das Icon und baut beide Programme. Die Versionsnummer wird
@@ -2163,9 +3205,9 @@ oben in ``build.bat`` bei ``VERSION`` eingestellt. Ein **eigenes Icon** entsteht
 indem Sie vor dem Build eine eigene ``app.ico`` in den Ordner legen.
 
 **Speicherort der Daten:** Die installierten Programme schreiben Konfiguration
-(``s7_config.json``), CSV-Dateien und Archiv **nicht** in den Programmordner
+(``plc_config.json``), CSV-Dateien und Archiv **nicht** in den Programmordner
 (dieser ist meist schreibgeschützt), sondern nach
-``%APPDATA%\\S7Datenlogger``. Die Daten bleiben beim Deinstallieren und bei
+``%APPDATA%\\PLCDatenlogger``. Die Daten bleiben beim Deinstallieren und bei
 Updates erhalten. Soll alles neben den Programmen liegen (portabler Betrieb auf
 einem USB-Stick), legen Sie eine leere Datei ``portable.txt`` neben die
 ``.exe``-Dateien.
@@ -2173,10 +3215,11 @@ einem USB-Stick), legen Sie eine leere Datei ``portable.txt`` neben die
 **Hinweise:**
 
 * Die ``.exe``-Dateien enthalten Python und alle Bibliotheken (die
-  ``snap7.dll`` wird automatisch mitgenommen); auf dem Zielrechner muss nichts
-  installiert werden.
+  ``plctag.dll`` sowie die Bibliotheken aller eingebauten Treiber – python-snap7, s7commplus, pycomm3 – werden mitgenommen; fehlt ``plctag.dll`` neben
+  ``build.bat``, lädt das Skript sie einmalig aus dem GitHub-Release von libplctag); auf dem
+  Zielrechner muss nichts installiert werden.
 * Der Logger startet die Konfiguration über **Konfiguration** in der
-  Werkzeugleiste (``S7Konfiguration.exe`` im selben Ordner).
+  Werkzeugleiste (``PLCKonfiguration.exe`` im selben Ordner).
 * Schlägt der Build fehl, steht die Ursache in den Meldungen des Fensters
   (häufig: kein Internet für pip, Python nicht im PATH, Virenscanner sperrt
   ``dist``). Mit ``build.bat exe`` lässt sich der Installer-Schritt getrennt
@@ -2192,11 +3235,11 @@ z. B. auf einen USB-Stick oder in einen beliebigen Ordner:
 
    build.bat portable
 
-Ergebnis: ``dist\S7Datenlogger_portable_<Version>.zip`` (``build.bat`` ohne Parameter
+Ergebnis: ``dist\PLCDatenlogger_portable_<Version>.zip`` (``build.bat`` ohne Parameter
 erzeugt das ZIP zusätzlich zum Installer). Benutzung:
 
 #. ZIP entpacken (Rechtsklick › *Alle extrahieren*).
-#. ``S7Konfiguration.exe`` bzw. ``S7Logger.exe`` im entpackten Ordner starten.
+#. ``PLCKonfiguration.exe`` bzw. ``PLCLogger.exe`` im entpackten Ordner starten.
    Eine Installation oder Administratorrechte sind nicht nötig.
 
 Im Paket liegt die Datei ``portable.txt``. Sie schaltet den portablen Betrieb ein:
@@ -2218,13 +3261,12 @@ Bauen auf GitHub (ohne eigenen Windows-PC)
 ----------------------------------------------------------------------
 
 Liegt das Projekt in einem GitHub-Repository, baut der Workflow
-``.github/workflows/windows.yml`` (im obersten Ordner der Lieferung) für alle vier
-Datenlogger das **portable ZIP** und den **Installer** auf einem Windows-Rechner von
-GitHub:
+``.github/workflows/windows.yml`` das **portable ZIP** und den **Installer** auf einem
+Windows-Rechner von GitHub:
 
 * **Von Hand:** *Actions › Windows › Run workflow*. Die Dateien liegen danach in der
-  Zusammenfassung des Laufs unter *Artifacts* (je Programm ``…-portable`` und
-  ``…-setup``).
+  Zusammenfassung des Laufs unter *Artifacts* (``windows-portable`` und
+  ``windows-setup``).
 * **Mit einem Tag** ``v*`` (z. B. ``v2.1.0``): zusätzlich als Dateien eines
   GitHub-Release, zusammen mit den AppImages.
 
@@ -2245,18 +3287,20 @@ Benutzen
 
 .. code-block:: console
 
-   chmod +x S7Datenlogger-2.1.0-x86_64.AppImage        # einmalig: ausführbar machen
-   ./S7Datenlogger-2.1.0-x86_64.AppImage               # Logger (mit Startbild)
-   ./S7Datenlogger-2.1.0-x86_64.AppImage --konfig      # Konfigurationsprogramm
-   ./S7Datenlogger-2.1.0-x86_64.AppImage --ereignisse  # Ereignis-Viewer
-   ./S7Datenlogger-2.1.0-x86_64.AppImage --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
+   chmod +x PLCDatenlogger-2.1.0-x86_64.AppImage        # einmalig: ausführbar machen
+   ./PLCDatenlogger-2.1.0-x86_64.AppImage               # Logger (mit Startbild)
+   ./PLCDatenlogger-2.1.0-x86_64.AppImage --konfig      # Konfigurationsprogramm
+   ./PLCDatenlogger-2.1.0-x86_64.AppImage --ereignisse  # Ereignis-Viewer
+   ./PLCDatenlogger-2.1.0-x86_64.AppImage --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
 
 Auf Raspberry Pi (64-Bit-System) und anderen arm64-Rechnern entsprechend die Datei
 ``…-aarch64.AppImage``. Die Daten (Konfiguration, CSV, Archiv, Ereignisse, Sprachdateien)
-liegen in ``~/S7Datenlogger``; liegt neben dem AppImage eine Datei ``portable.txt``, bleiben sie
+liegen in ``~/PLCDatenlogger``; liegt neben dem AppImage eine Datei ``portable.txt``, bleiben sie
 im Ordner des AppImage. Manche Systeme brauchen für AppImages das Paket ``libfuse2``
 (Ubuntu 22.04: ``sudo apt install libfuse2``, Ubuntu 24.04: ``libfuse2t64``); ohne FUSE
 startet es auch mit ``--appimage-extract-and-run``.
+
+Die Bibliothek **libplctag** (``libplctag.so``) wird beim Bauen aus dem Quelltext übersetzt und ist im AppImage enthalten.
 
 Bauen
 ----------------------------------------------------------------------
@@ -2269,7 +3313,7 @@ auf dem es läuft:
    sudo apt install python3-venv cmake build-essential file libxkbcommon-x11-0 libxcb-cursor0 \
         libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libegl1 libfontconfig1 libdbus-1-3
    ./build_appimage.sh
-   # Ergebnis: dist/S7Datenlogger-2.1.0-x86_64.AppImage (bzw. -aarch64)
+   # Ergebnis: dist/PLCDatenlogger-2.1.0-x86_64.AppImage (bzw. -aarch64)
 
 * **x86_64** auf einem x86_64-Rechner bauen, **arm64** auf einem arm64-Rechner (Raspberry
   Pi 4/5 mit 64-Bit-System, Ubuntu arm64 …). PyInstaller kann nicht für eine andere
@@ -2281,9 +3325,9 @@ auf dem es läuft:
 * Gibt es für PyQt6 auf einem älteren arm64-System kein passendes Paket, die Qt-Pakete des
   Systems verwenden: ``sudo apt install python3-pyqt6 python3-pyqt6.qtsvg`` und
   ``VENV_SYSTEM=1 ./build_appimage.sh``.
-* **GitHub Actions**: Die Datei ``.github/workflows/appimage.yml`` (im obersten Ordner der
-  Lieferung) baut alle drei Datenlogger für x86_64 und arm64 automatisch, wenn das Projekt in
-  einem GitHub-Repository liegt (Actions › AppImages › Run workflow, oder bei einem Tag ``v*``).
+* **GitHub Actions**: Der Workflow ``.github/workflows/appimage.yml`` baut die AppImages für x86_64
+  und arm64 automatisch, wenn das Projekt in einem GitHub-Repository liegt (Actions › AppImages ›
+  Run workflow, oder bei einem Tag ``v*``).
 
 
 Fehlersuche
@@ -2296,9 +3340,63 @@ Fehlersuche
    * - Problem
      - Mögliche Ursache und Abhilfe
    * - „Verbindung fehlgeschlagen“ / LED rot
-     - IP-Adresse, Rack/Slot und Netzwerkverbindung der betroffenen Steuerung
-       prüfen. Firewall (TCP 102) prüfen. Bei S7-1200/1500 PUT/GET-Zugriff
-       aktivieren. Die übrigen Steuerungen laufen unabhängig weiter.
+     - Verbindungsparameter (**…** in der Steuerungstabelle) und Netzwerk der
+       betroffenen Steuerung prüfen, Firewall (``s7``/``tia`` TCP 102, ``clx``
+       TCP 44818, ``modbus`` TCP 502). Die übrigen Steuerungen laufen unabhängig
+       weiter.
+   * - „Bibliothek fehlt“ im Einstellungsdialog bzw. unter *Installierte Treiber*
+     - Bibliothek des Treibers installieren: ``pip install python-snap7``
+       (``s7``), ``pip install s7commplus`` (``tia``), ``pip install pycomm3``
+       und ``plctag.dll`` (``clx``).
+   * - Treiber fehlt in der Auswahl / „(Treiber fehlt)“
+     - Eigener Treiber nicht geladen: **Treiber › Installierte Treiber …** zeigt
+       die Fehlermeldung. Dateiname darf nicht mit ``_`` beginnen; Datei liegt
+       im richtigen Ordner? Steuerungen mit fehlendem Treiber bleiben in der
+       Konfiguration erhalten, werden aber nicht gelesen.
+   * - ``s7``: „Address out of range“ / Werte falsch
+     - DB zu kurz oder **optimierter** Baustein (Offsets stimmen nicht) – Baustein
+       ohne „Optimierten Bausteinzugriff“ anlegen oder Treiber ``tia`` verwenden.
+       Bei S7-1200/1500 PUT/GET erlauben.
+   * - ``tia``: Verbindung abgelehnt
+     - TLS-Einstellung (*An* bzw. *Aus* probieren), Passwort der Zugriffsstufe,
+       Zahl freier HMI-Verbindungen der CPU.
+   * - ``clx``: „libplctag wurde nicht gefunden“
+     - ``plctag.dll`` (64 Bit) neben die Programmdateien legen bzw. Pfad in
+       ``CLX_PLCTAG_LIB`` angeben. 32-Bit-Python kann die 64-Bit-DLL nicht laden.
+   * - ``clx``: „PLCTAG_ERR_NOT_FOUND“ bzw. „…BAD_PARAM“
+     - Den Tag gibt es nicht (Schreibweise, Präfix ``Program:Name.``) oder
+       *External Access* ist *None*. Nur dieser Tag bleibt ohne Wert.
+   * - ``modbus``: „ungültige Adresse“ (Ausnahme 2)
+     - Register im Gerät nicht vorhanden. Zählweise prüfen (``40001`` = ``HR0``;
+       „Register 100“ im Handbuch ist oft ``HR100``). Einzelne Lücken in einem
+       zusammengefassten Bereich: *Lücke zusammenfassen bis* auf ``0`` stellen.
+   * - ``modbus_rtu``: „Gerät … antwortet nicht“
+     - Geräteadresse, Baudrate, Parität, Stoppbits prüfen; A/B-Leitung vertauscht?
+       Busabschluss vorhanden? Zeitlimit erhöhen.
+   * - ``opcua``: „BadSecurityChecksFailed“, „BadCertificate…“ oder Abweisung
+     - Client-Zertifikat im Server als vertrauenswürdig freigeben; Sicherheit so
+       wählen, wie der Server sie anbietet.
+   * - ``opcua``: „BadNodeIdUnknown“
+     - NodeId falsch geschrieben (Namensraum ``ns=``, Anführungszeichen bei S7-1500)
+       – am besten aus dem Auswahldialog übernehmen.
+   * - ``slmp``: „SLMP-Fehler 0xC059“ bzw. keine Verbindung
+     - Verbindung in GX Works als **binär** einrichten; Serie (Q/L bzw. iQ-R),
+       Port und TCP/UDP prüfen.
+   * - ``kvhostlink``: „KV-Fehler E0“
+     - Gerätenummer außerhalb des Bereichs der CPU.
+   * - ``toyopuc``: „TOYOPUC-Fehler 0x40/0x42“
+     - Adresse außerhalb des Bereichs; obere Nummernbereiche mit ``P1-…`` adressieren.
+   * - ``s5as511``: „Keine Antwort von der S5“
+     - Adapter, Schnittstelle, Parität (gerade) und Verkabelung prüfen; STEP 5
+       darf nicht gleichzeitig verbunden sein.
+   * - ``modbus``: Werte unsinnig groß/klein
+     - Byte-/Wortfolge falsch (meist ``CDAB`` statt ``ABCD``) oder falscher Typ
+       (``REAL`` statt ``DINT``). Mit **Verbindung testen** die Einstellungen
+       durchprobieren.
+   * - Auswahldialog lässt sich nicht laden
+     - Bibliothek des Treibers fehlt (siehe oben), Verbindung prüfen. ``clx``: bei
+       sehr großen Projekten *Programm-Tags* abschalten. ``s7``: DB-Quellen
+       müssen am gespeicherten Pfad liegen.
    * - LED „Datenbank“ rot
      - Server, Port, Datenbankname und Zugangsdaten mit **Datenbank testen** prüfen.
        Die Datenbank muss existieren (``CREATE DATABASE datenlogger;``), der Benutzer
@@ -2307,26 +3405,14 @@ Fehlersuche
    * - Webseite nicht erreichbar
      - Webserver in der Konfiguration eingeschaltet? Port von der Firewall frei?
        Host ``0.0.0.0`` (nicht ``127.0.0.1``) für Zugriffe von anderen Geräten.
-       Mit Zugriffscode: ``/?token=CODE`` anhängen. Diagramme leer: Chart.js-Datei
-       in ``web_static`` bzw. Internetzugang des Browsers prüfen.
+       Mit Zugriffscode: ``/?token=CODE`` anhängen.
    * - Logger startet ohne Fenster
      - In der Konfiguration ist *Headless-Modus* aktiv. Mit ``--gui`` starten oder
        die Option abschalten.
-   * - „Lesefehler …“ in der Statuszeile
-     - Adresse existiert nicht oder liegt außerhalb des Bausteins. DB-Nummer,
-       Byte-Offset und Typ prüfen. Bei optimierten Bausteinen den optimierten
-       Zugriff abschalten.
    * - Werte sind offensichtlich falsch
-     - Byte-Offset oder Datentyp stimmt nicht (z. B. ``INT`` statt ``REAL``).
-       Mit **Verbindung testen** im Konfigurationsprogramm gegenprüfen.
-   * - Im Symbolbaum fehlt ein DB oder „Unbekannter Typ …“
-     - Die Quelle verweist auf einen UDT, der nicht importiert wurde (oder
-       auf einen Funktionsbaustein, bei Instanz-DBs nicht unterstützt). Die
-       UDT-Quelle ebenfalls importieren.
-   * - ⚠ „Größe weicht ab“ im Symbolbaum
-     - Quelle passt nicht zum Baustein in der SPS (veraltet) oder der
-       Baustein ist optimiert. Quelle neu exportieren, optimierten Zugriff
-       abschalten und Baustein neu laden.
+     - Der eingestellte Typ passt nicht zur Variable (z. B. ``INT`` statt
+       ``REAL``). Mit **Verbindung testen** gegenprüfen oder die Variable aus dem
+       Auswahldialog übernehmen (Typ kommt dann aus der Steuerung).
    * - „Keine Variablen“ beim Start
      - Zuerst im Konfigurationsprogramm Variablen anlegen und speichern, oder
        den Demo-Modus verwenden.
@@ -2342,24 +3428,22 @@ Fehlersuche
        oder die Grenzen in der Konfiguration anpassen.
    * - „⚠ Archivierung … fehlgeschlagen“
      - Archiv-Ordner nicht beschreibbar oder Datenträger voll. Die CSV-Datei
-       bleibt im CSV-Ordner erhalten; Pfad und Rechte des Archiv-Ordners
-       prüfen.
-   * - Block lässt sich nicht lesen („Lesefehler“, **Block testen** schlägt fehl)
-     - Der Bereich (Startadresse + Anzahl × Größe) liegt nicht vollständig im
-       Datenbaustein, oder der DB ist optimiert. Länge des DBs, Startadresse und
-       Format prüfen; Anzahl verkleinern. Ein Fehler in einem Block verwirft die
-       ganze Messung.
+       bleibt im CSV-Ordner erhalten.
+   * - Block lässt sich nicht lesen
+     - Der Bereich (Start + Anzahl) ist in der Steuerung nicht vollständig
+       vorhanden, oder das Format passt nicht. Größe, Index und Format prüfen.
    * - Berechnete Variable zeigt keine Werte
      - Formel prüfen (Editor: **Prüfen / Berechnen**). Nicht berechenbare Werte
-       (Division durch 0, fehlende Messwerte der verwendeten Variablen) ergeben
-       Lücken. Beim Start meldet der Logger Formelfehler in einem Hinweisfenster.
+       ergeben Lücken. Beim Start meldet der Logger Formelfehler.
    * - Logo oder Icon erscheint nicht
      - Pfad in der Konfiguration prüfen (relative Pfade gelten vom
-       Programmordner). Bei SVG muss PyQt6 das SVG-Modul enthalten; ersatzweise
-       PNG verwenden.
+       Programmordner). Ersatzweise PNG statt SVG verwenden.
    * - Installierte Version findet die Konfiguration nicht
-     - Die Daten liegen unter ``%APPDATA%\\S7Datenlogger`` (nicht im Programmordner).
+     - Die Daten liegen unter ``%APPDATA%\\PLCDatenlogger`` (nicht im Programmordner).
        Mit ``portable.txt`` neben der ``.exe`` wird der Programmordner verwendet.
+   * - Einzelprogramm kann die Datei nicht mehr lesen
+     - Nach dem Speichern im PLC Datenlogger hat die Datei das neue Format (siehe
+       :ref:`uebernahme`). Alte Datei vorher mit **Speichern unter…** sichern.
    * - Keine Millisekunden in Excel
      - Zellformat anpassen (siehe Hinweis im Abschnitt *CSV-Dateien*).
 
@@ -2368,24 +3452,29 @@ Bekannte Einschränkungen
 ======================================================================
 
 * Ein Block gehört zu genau einer Steuerung; Formeln können aber Variablen
-  verschiedener Steuerungen verknüpfen (es zählt der jeweils letzte Wert).
-  Die Messzeitpunkte der Steuerungen sind nicht synchron.
+  verschiedener Steuerungen (auch verschiedener Treiber) verknüpfen – es zählt
+  der jeweils letzte Wert. Die Messzeitpunkte der Steuerungen sind nicht synchron.
+* Nur lesender Zugriff; der Logger schreibt nichts in die Steuerungen.
+* ``opcua``: gelesen wird zyklisch (kein Abonnement); Strukturen und Texte sind nicht aufzeichenbar.
+* ``s5as511``: langsam (9600 Baud); nur lesend; Datenbaustein-Adressen werden beim
+  Verbinden ermittelt.
+* ``slmp``, ``kvhostlink``, ``toyopuc``, ``s5as511`` wurden gegen Protokoll-Simulatoren
+  getestet; vor dem Produktiveinsatz an der realen Steuerung mit **Verbindung testen** prüfen.
+* ``s7``: nur nicht optimierte Bausteine; Namen nur über DB-Quellen.
+* ``tia``: inoffizielle Bibliothek; Funktion hängt von Firmware und
+  Schutzeinstellungen der CPU ab.
+* Aufgezeichnet werden Zahlen und ``BOOL``; Strings und ganze Strukturen nicht
+  (deren Glieder aber schon).
+* Ein Block hat höchstens 1000 Elemente und genau ein Format. Ist ein Teil des
+  Bereichs nicht lesbar, schlägt der gesamte Block fehl.
+* Eigene Treiber laufen mit den Rechten des Programms; nur Treiber aus
+  vertrauenswürdiger Quelle in den Treiber-Ordner legen.
 * Der Webserver ist nur lesend und ohne Verschlüsselung (HTTP).
-* Ein Block hat höchstens 1000 Elemente und genau ein Format. Ist nur ein
-  Teil des Bereichs nicht lesbar, schlägt der gesamte Block fehl.
-* Berechnete Variablen kennen nur Werte der aktuellen Messung (außer den
-  Zeitfunktionen ``ddt``, ``integ`` und ``avg``); beim Laden einer CSV-Datei
-  werden sie nicht neu berechnet, sondern aus der Datei übernommen.
-* Diagramme lassen sich per Drag & Drop nur innerhalb ihrer Seite umordnen;
-  die Zuordnung zu einer Seite erfolgt in der Konfiguration.
-* Der Symbolbaum stammt aus exportierten DB-Quellen, nicht direkt aus der SPS.
-  Optimierte Bausteine und Instanz-DBs von Funktionsbausteinen werden nicht
-  unterstützt.
-* Die Y-Achsen lassen sich nicht per Maus skalieren; verwenden Sie die
-  Auto-Skalierung oder feste Grenzen in der Konfiguration.
-* Es wird immer nur die zeitlich nächste Messung ausgewertet; Werte zwischen
-  zwei Messpunkten werden nicht interpoliert.
-* Die minimale Abtastzeit hängt von der Kommunikation mit der SPS ab; bei
+* Berechnete Variablen kennen nur Werte der aktuellen Messung (außer ``ddt``,
+  ``integ`` und ``avg``); beim Laden einer CSV-Datei werden sie aus der Datei
+  übernommen.
+* Diagramme lassen sich per Drag & Drop nur innerhalb ihrer Seite umordnen.
+* Die minimale Abtastzeit hängt von der Kommunikation mit der Steuerung ab; bei
   vielen Variablen kann das eingestellte Intervall nicht eingehalten werden.
-* Der Demo-Schalter und die Fensteranordnung werden nicht in der
-  Konfigurationsdatei gespeichert.
+* Der Demo-Schalter und die Fensteranordnung werden nicht in der Konfigurationsdatei
+  gespeichert.

@@ -11,7 +11,9 @@ def escape(s):
 
 def collect(pfx, folder):
     keys, where = [], {}
-    for path in sorted(glob.glob(os.path.join(folder, f"{pfx}_*.py"))):
+    paths = sorted(glob.glob(os.path.join(folder, f"{pfx}_*.py")))
+    paths += sorted(glob.glob(os.path.join(folder, f"{pfx}_treiber", "*.py")))   # Treiber (PLC-Datenlogger)
+    for path in paths:
         if path.endswith("_i18n.py"):
             continue
         tree = ast.parse(open(path, encoding="utf-8").read())
@@ -21,7 +23,7 @@ def collect(pfx, folder):
             a = n.args[0]
             if isinstance(a, ast.Constant) and isinstance(a.value, str) and a.value.strip():
                 if a.value not in where:
-                    where[a.value] = os.path.basename(path)
+                    where[a.value] = os.path.relpath(path, folder)
                     keys.append(a.value)
     # Texte aus dem Sprachmodul selbst
     i18n = os.path.join(folder, f"{pfx}_i18n.py")
@@ -57,7 +59,8 @@ def write(path, app, lang, keys, where, table):
 
 def main():
     pfx, folder = sys.argv[1], sys.argv[2]
-    app = {"s7": "S7 Datenlogger", "clx": "CLX Datenlogger", "tia": "TIA Datenlogger"}[pfx]
+    app = {"s7": "S7 Datenlogger", "clx": "CLX Datenlogger", "tia": "TIA Datenlogger",
+           "plc": "PLC Datenlogger"}.get(pfx, pfx)
     keys, where = collect(pfx, folder)
     lang_dir = os.path.join(folder, "sprachen")
     os.makedirs(lang_dir, exist_ok=True)

@@ -8,7 +8,7 @@ import sys
 
 from PyQt6.QtGui import QGuiApplication
 
-from s7_branding import default_pixmap
+from clx_branding import default_pixmap
 
 # QPixmap benötigt eine laufende Qt-Anwendung (ohne Fenster genügt QGuiApplication).
 app = QGuiApplication(sys.argv)

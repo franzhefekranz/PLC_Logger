@@ -1,4 +1,4 @@
-# S7 Datenlogger – Sprachdatei
+# PLC Datenlogger – Sprachdatei
 # Sprache: Deutsch
 #
 # Neue Sprache: diese Datei kopieren und nach dem Sprachkürzel benennen (z. B. fr.txt, it.txt, es.txt),
@@ -9,7 +9,7 @@
 # Die Datei muss UTF-8 kodiert bleiben. Gesucht wird im Ordner "sprachen" im Datenordner und im Programmordner.
 # Umschalten: Menü "Sprache" (gilt nach einem Neustart).
 
-# ---------------- s7_block_dialog.py
+# ---------------- plc_block_dialog.py
 
 @ Name
 > 
@@ -17,13 +17,10 @@
 @ Steuerung
 > 
 
-@ Bereich
+@ Startadresse / Array
 > 
 
-@ Startadresse
-> 
-
-@ Bit
+@ Erster Index
 > 
 
 @ Format
@@ -44,10 +41,10 @@
 @ Balken
 > 
 
-@ Adressbereich
+@ Bereich
 > 
 
-@ Ein <b>Block</b> liest <i>Anzahl</i> aufeinanderfolgende Werte gleichen <i>Formats</i> ab der <i>Startadresse</i> mit einer einzigen Anfrage (schneller als einzelne Variablen). Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Bei <b>BOOL</b> sind Startadresse und Bit der erste Bit-Wert; die weiteren Bits folgen fortlaufend. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>). In der letzten Spalte des Baums kann jedes Element einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zugeordnet werden (<i>wie Block</i> = Ziel des Blocks); gelesen werden alle Elemente weiterhin gemeinsam mit einer Anfrage.
+@ Ein <b>Block</b> liest <i>Anzahl</i> zusammenhängende Werte gleichen <i>Formats</i> gemeinsam (meist mit einer einzigen Anfrage, schneller als einzelne Variablen). Je nach Treiber der Steuerung ist die <b>Startadresse</b> die Adresse des ersten Werts (z. B. <code>DB10.DBD0</code>, <code>40001</code>; die Elemente folgen lückenlos) oder der Name eines <b>Arrays</b> ohne Index (z. B. <code>Messwerte</code>, <code>Mess_DB.Werte</code>) mit dem <i>ersten Index</i>. Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>) und einzelne Elemente einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks).
 > 
 
 @ Blöcke (Blocklesemodus)
@@ -86,6 +83,12 @@
 @ Ziel:
 > 
 
+@ Erster Array-Index
+> 
+
+@ Bei diesem Treiber ohne Bedeutung (Startadresse)
+> 
+
 @ {0}   ({1} Bytes)
 > 
 
@@ -98,10 +101,16 @@
 @ Block testen
 > 
 
+@ Die Bibliothek des Treibers fehlt ({0}):\n{1}
+> 
+
 @ Lesen fehlgeschlagen:\n{0}
 > 
 
-@ {0}: {1} Werte ({2} Bytes) in {3:.1f} ms gelesen.\n\nErste Werte: {4}
+@ {0} (Anzahl {1}):\n
+> 
+
+@ {0}: {1} Werte ({2} Bytes) in {3:.1f} ms gelesen (einschließlich Verbindungsaufbau).\n\nErste Werte: {4}
 > 
 
 @ „{0}“: Name darf nicht leer sein und keines der Zeichen ; {{ }} [ ] enthalten.
@@ -122,111 +131,7 @@
 @ Blöcke prüfen
 > 
 
-# ---------------- s7_browser.py
-
-@ Variablen aus SPS-Symbolen wählen
-> 
-
-@ Die SPS liefert über S7-Kommunikation <b>keine Variablennamen</b> – diese stehen nur im Projekt. Importieren Sie daher die DB-Quelle(n): TIA Portal: Rechtsklick auf den Baustein › <i>Quelle aus Bausteinen generieren</i> (.db/.scl); STEP 7: .db/.awl. Die Adressen werden für <b>nicht optimierte</b> Bausteine berechnet. UDTs bitte ebenfalls importieren.
-> 
-
-@ DB-Quelle importieren…
-> 
-
-@ Quelle entfernen
-> 
-
-@ Quelle des markierten DBs aus der Liste entfernen
-> 
-
-@ Mit SPS abgleichen
-> 
-
-@ DB-Nummern und -Größen aus der SPS lesen und vergleichen
-> 
-
-@ Filter (Name)…
-> 
-
-@ Typ
-> 
-
-@ Hinweis
-> 
-
-@ Auswahl übernehmen
-> 
-
-@ Schließen
-> 
-
-@ Neue Variablen anlegen in:
-> 
-
-@ Nicht lesbare Quellen: 
-> 
-
-@ Größe unbekannt
-> 
-
-@ nur in der SPS ({0}) – keine Symbolinformation, Quelle importieren
-> 
-
-@ SPS: {0} Datenbausteine gefunden.
-> 
-
-@ {0} Bytes (aus Quelle)
-> 
-
-@  · ⚠ DB in der SPS nicht gefunden
-> 
-
-@  · SPS: {0} Bytes ⚠ Größe weicht ab
-> 
-
-@ Typ wird nicht unterstützt
-> 
-
-@ bereits in der Liste
-> 
-
-@ DB-/UDT-Quellen importieren
-> 
-
-@ Quelldateien (*.db *.scl *.awl *.src *.udt *.txt);;Alle Dateien (*)
-> 
-
-@ DB-Nummer
-> 
-
-@ Nummer des Datenbausteins „{0}“ in der SPS\n(TIA-Quellen enthalten keine Nummer):
-> 
-
-@ Import
-> 
-
-@ Bitte zuerst einen Datenbaustein mit importierter Quelle markieren.
-> 
-
-@ SPS-Abgleich fehlgeschlagen
-> 
-
-@ {0}\n\nHinweis: Bei S7-1200/1500 muss PUT/GET erlaubt sein; die Bausteinliste kann durch die Schutzstufe gesperrt sein.
-> 
-
-@ SPS-Abgleich
-> 
-
-@ In der SPS wurden keine Datenbausteine gefunden.
-> 
-
-@ Auswahl
-> 
-
-@ Es sind keine neuen Variablen angehakt.
-> 
-
-# ---------------- s7_common.py
+# ---------------- plc_common.py
 
 @ Untereinander
 > 
@@ -240,9 +145,9 @@
 @ Raster (Grid)
 > 
 
-# ---------------- s7_config.py
+# ---------------- plc_config.py
 
-@ Byte
+@ Typ
 > 
 
 @ Testwert
@@ -251,13 +156,10 @@
 @ Formel
 > 
 
-@ IP-Adresse
+@ Treiber
 > 
 
-@ Rack
-> 
-
-@ Slot
+@ Verbindung
 > 
 
 @ Intervall
@@ -452,7 +354,7 @@
 @ <b>Variablen</b>
 > 
 
-@ Aus SPS/DB-Quelle wählen…
+@ Aus Steuerung wählen…
 > 
 
 @ Blöcke (Blocklesemodus)…
@@ -474,6 +376,9 @@
 > 
 
 @ Speichern unter…
+> 
+
+@ Nicht alle Treiber konnten geladen werden – Menü Treiber › Installierte Treiber
 > 
 
 @ &Datei
@@ -500,7 +405,28 @@
 @ &Beenden
 > 
 
+@ Installierte Treiber …
+> 
+
+@ Ordner für eigene Treiber öffnen …
+> 
+
 @ Sprache
+> 
+
+@ Kürzel
+> 
+
+@ Bibliothek
+> 
+
+@ Nicht geladen:
+> 
+
+@ Eigene Treiber (Python-Datei, Vorlage plc_treiber/_vorlage.py) in diesen Ordner legen; sie werden beim nächsten Start geladen:
+> 
+
+@ Installierte Treiber
 > 
 
 @ ohne Projektname
@@ -509,7 +435,16 @@
 @ neu, nicht gespeichert
 > 
 
-@ S7 Konfiguration – {0} – {1}
+@ PLC Konfiguration – {0} – {1}
+> 
+
+@ Protokoll bzw. Steuerungsfamilie
+> 
+
+@ Doppelklick oder „…“: Verbindungsparameter bearbeiten
+> 
+
+@ Verbindungsparameter bearbeiten
 > 
 
 @ Bitte eine Steuerung markieren; mindestens eine muss bleiben.
@@ -540,6 +475,9 @@
 > 
 
 @ Ereignisprotokoll (*.csv)
+> 
+
+@ .csv
 > 
 
 @ Trigger:
@@ -656,10 +594,19 @@
 @ Steuerung wählen
 > 
 
-@ Symbole aus Steuerung:
+@ Variablen aus Steuerung:
 > 
 
-@ {0} Variablen übernommen – bitte Adressen mit „Verbindung testen“ prüfen.
+@ Aus Steuerung wählen
+> 
+
+@ Der Treiber „{0}“ bietet keine Auswahl aus der Steuerung – bitte die Adressen in der Tabelle eintragen.\n\n{1}
+> 
+
+@ Für den Treiber „{0}“ fehlt eine Bibliothek ({1}):\n{2}
+> 
+
+@ {0} Variablen und {1} Blöcke übernommen – mit „Verbindung testen“ prüfen.
 > 
 
 @ CSV-Name
@@ -674,13 +621,19 @@
 @ Die Namen der Steuerungen müssen eindeutig sein und dürfen kein ; [ ] enthalten.
 > 
 
-@ Jede Steuerung braucht eine IP-Adresse.
-> 
-
 @ Namen prüfen
 > 
 
 @ Variablennamen müssen eindeutig, nicht leer und ohne ';' sein.
+> 
+
+@ Block {0}: {1}
+> 
+
+@ Adressen prüfen
+> 
+
+@ Ungültige Einstellungen oder Adressen:\n
 > 
 
 @ {0}: unbekannte oder später definierte Variablen: 
@@ -779,7 +732,7 @@
 @ Verbindung fehlgeschlagen
 > 
 
-# ---------------- s7_db.py
+# ---------------- plc_db.py
 
 @ Keine
 > 
@@ -832,7 +785,7 @@
 @ Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.
 > 
 
-# ---------------- s7_db_dialog.py
+# ---------------- plc_db_dialog.py
 
 @ Automatisch (höchstens {0} Punkte je Variable)
 > 
@@ -987,6 +940,9 @@
 @ Abbrechen
 > 
 
+@ Schließen
+> 
+
 @ Breche ab …
 > 
 
@@ -1041,7 +997,7 @@
 @ Lade Werte …
 > 
 
-# ---------------- s7_event_viewer.py
+# ---------------- plc_event_viewer.py
 
 @ Kommt
 > 
@@ -1169,7 +1125,7 @@
 @ Ereignisprotokoll (*.csv);;Alle Dateien (*)
 > 
 
-# ---------------- s7_events.py
+# ---------------- plc_events.py
 
 @ Info
 > 
@@ -1195,7 +1151,7 @@
 @ Trigger {0} übersprungen: {1}
 > 
 
-# ---------------- s7_formula.py
+# ---------------- plc_formula.py
 
 @ abs(x) – Betrag
 > 
@@ -1311,7 +1267,7 @@
 @ Die Formel ist zu komplex
 > 
 
-# ---------------- s7_formula_dialog.py
+# ---------------- plc_formula_dialog.py
 
 @ <b>Variablen</b> in geschweiften Klammern: <code>{Name}</code> (Doppelklick in der Liste fügt ein). Operatoren: <code>+ - * / // % **</code>, Vergleiche <code>&lt; &gt; == !=</code>, <code>and or not</code>, Bedingung: <code>a if {x} &gt; 5 else b</code>. Konstanten: 
 > 
@@ -1373,7 +1329,7 @@
 @ Die Formel darf sich nicht auf sich selbst beziehen.
 > 
 
-# ---------------- s7_gui.py
+# ---------------- plc_gui.py
 
 @ Das Archiv enthält keine CSV-Datei.
 > 
@@ -1648,7 +1604,7 @@
 @ Beende … (Aufzeichnung stoppen, CSV archivieren)
 > 
 
-# ---------------- s7_logger.py
+# ---------------- plc_logger.py
 
 @ Neue Konfiguration
 > 
@@ -1656,7 +1612,7 @@
 @ Lade Oberfläche (Diagramme) …
 > 
 
-# ---------------- s7_pid.py
+# ---------------- plc_pid.py
 
 @ SIMC (Skogestad)
 > 
@@ -1682,7 +1638,7 @@
 @ robust (langsam, sicher)
 > 
 
-@ <b>Übernahme:</b> S7-1200/1500 PID_Compact: Retain.CtrlParams.Gain = Kp, .Ti = Ti [s], .Td = Td [s] (PI: Td = 0). S7-300/400 CONT_C (FB 41): GAIN = Kp, TI = Ti, TD = Td als TIME (z. B. T#32S), TM_LAG ≈ Td/5. Die Werte gelten für die Standardform u = Kp·(e + 1/Ti·∫e dt + Td·de/dt) in den aufgezeichneten Einheiten (Kp = Stellwert-Einheit je Istwert-Einheit, z. B. %/°C). Rechnet der Regler mit normierten Werten: Kp_norm = Kp · Istwert-Spanne / Stellwert-Spanne. Negatives Kp: Wirksinn umkehren und den Betrag eintragen. Die Simulation berücksichtigt keine Stellwertbegrenzung.
+@ <b>Übernahme:</b> Siemens PID_Compact (S7-1200/1500): Retain.CtrlParams.Gain = Kp, .Ti = Ti [s], .Td = Td [s] (PI: Td = 0). Siemens CONT_C (FB 41): GAIN = Kp, TI/TD als TIME (z. B. T#32S). Allen-Bradley PIDE (unabhängige Verstärkungen): PGain = Kp, IGain = Ki·60 [1/min], DGain = Kd/60 [min]; PID-Anweisung bzw. abhängige Form: Kc = Kp, Ti und Td in Minuten. Die Werte gelten für die Standardform u = Kp·(e + 1/Ti·∫e dt + Td·de/dt) in den aufgezeichneten Einheiten (Kp = Stellwert-Einheit je Istwert-Einheit, z. B. %/°C). Rechnet der Regler mit normierten Werten: Kp_norm = Kp · Istwert-Spanne / Stellwert-Spanne. Negatives Kp: Wirksinn umkehren und den Betrag eintragen. Die Simulation berücksichtigt keine Stellwertbegrenzung.
 > 
 
 @ I-Strecke mit Totzeit: Ki = {0:.4g} 1/s, Totzeit θ = {1:.3g} s – Übereinstimmung {2:.0f} %
@@ -1733,7 +1689,7 @@
 @ {0}: Kp = {1:.4g}, Ti = {2}, Td = {3}; Parallelform Ki = {4:.4g} 1/s, Kd = {5:.4g} s
 > 
 
-# ---------------- s7_pid_dialog.py
+# ---------------- plc_pid_dialog.py
 
 @ (keiner)
 > 
@@ -1772,6 +1728,9 @@
 > 
 
 @ Ausregelzeit
+> 
+
+@ Hinweis
 > 
 
 @ PID-Regler-Optimierung – {0}
@@ -1828,7 +1787,7 @@
 @ ; Überschwingen {0}, Ausregelzeit {1}
 > 
 
-# ---------------- s7_recorder.py
+# ---------------- plc_recorder.py
 
 @ Archiv ist fehlerhaft
 > 
@@ -1839,13 +1798,19 @@
 @ Demo-Modus (simulierte Werte)
 > 
 
-@ Verbunden mit {0}
+@ Treiber {0}: {1}
+> 
+
+@ Verbunden mit {0} ({1} Variablen)
 > 
 
 @ Verbindung zu {0} fehlgeschlagen: {1}
 > 
 
 @ Lesefehler: {0} – neuer Verbindungsversuch
+> 
+
+@ [{0}] Variable {1}: {2}
 > 
 
 @ Getrennt
@@ -1887,7 +1852,7 @@
 @ ⚠ CSV-Fehler: {0}
 > 
 
-# ---------------- s7_splash.py
+# ---------------- plc_splash.py
 
 @ Never change a running system – außer, die Regelparameter sind von Ziegler-Nichols.
 > 
@@ -1970,48 +1935,7 @@
 @ Wird geladen …
 > 
 
-# ---------------- s7_symbols.py
-
-@ Unerwartetes Dateiende
-> 
-
-@ Zahl erwartet, gefunden: „{0}“
-> 
-
-@ UDT „{0}“ ohne STRUCT
-> 
-
-@ Unerwartetes Dateiende in der Deklaration
-> 
-
-@ Ungültige Array-Grenzen {0}..{1}
-> 
-
-@ UDT-Verschachtelung zu tief (zyklische Definition?)
-> 
-
-@ Unbekannter Typ „{0}“ – UDT-Quelle ebenfalls importieren (Instanz-DBs von Funktionsbausteinen werden nicht unterstützt)
-> 
-
-@ … {0} weitere Elemente
-> 
-
-@ Keine DATA_BLOCK- oder TYPE-Definition gefunden
-> 
-
-@ {0} › {1}: DB-Nummer fehlt
-> 
-
-@ {0} › {1}: keine Deklaration gefunden
-> 
-
-@ optimierter Zugriff – Adressen für PUT/GET nicht nutzbar
-> 
-
-@ {0} › {1}: DB{2} ist doppelt vorhanden ({3})
-> 
-
-# ---------------- s7_trigger_dialog.py
+# ---------------- plc_trigger_dialog.py
 
 @ Bedingung
 > 
@@ -2067,7 +1991,1222 @@
 @ {0} Trigger, davon {1} aktiv.
 > 
 
-# ---------------- s7_i18n.py
+# ---------------- plc_treiber/__init__.py
+
+@ {0} (Treiber fehlt)
+> 
+
+@ Treiber „{0}“ ist nicht installiert
+> 
+
+@ DRIVER ist keine Unterklasse von plc_treiber.base.Driver
+> 
+
+@ Treiber-Kürzel „{0}“ ist bereits vergeben
+> 
+
+# ---------------- plc_treiber/base.py
+
+@ IP-Adresse fehlt
+> 
+
+@ Adresse fehlt
+> 
+
+@ Startadresse fehlt
+> 
+
+@ Format {0} wird für Blöcke nicht unterstützt
+> 
+
+# ---------------- plc_treiber/clx.py
+
+@ Allen-Bradley Logix (EtherNet/IP, libplctag)
+> 
+
+@ ControlLogix, CompactLogix, Micro800; Tag-Namen wie in Studio 5000
+> 
+
+@ IP-Adresse
+> 
+
+@ CIP-Pfad
+> 
+
+@ CIP-Pfad zur CPU: 1,<Steckplatz> (Backplane-Port 1). CompactLogix: 1,0. Micro800: leer.
+> 
+
+@ Steuerungstyp
+> 
+
+@ Zeitlimit
+> 
+
+@ Zeitlimit je Lesezyklus
+> 
+
+@ Tag-Name
+> 
+
+@ Tag-Name wie in Studio 5000, z. B. Temp, Program:Main.Druck, Motor[2].Drehzahl, Status.3
+> 
+
+@ Array-Tag ohne Index, z. B. Messwerte, Program:Main.Temp oder Motor[1].Historie
+> 
+
+@ Aus Tag-Liste wählen…
+> 
+
+@ Ungültiger Tag-Name „{0}“
+> 
+
+@ Typ {0} wird nicht unterstützt
+> 
+
+@ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
+> 
+
+# ---------------- plc_treiber/clx_browser.py
+
+@ Array als Block übernehmen
+> 
+
+@ Erster Index:
+> 
+
+@ Anzahl (max. 1000):
+> 
+
+@ Tags aus der Steuerung wählen – {0}
+> 
+
+@ Steuerung <b>{0}</b> – {1}, {2}
+> 
+
+@ , Pfad {0}
+> 
+
+@ . Tag-Namen und Datentypen kommen direkt aus der Steuerung (pycomm3).
+> 
+
+@ Tag-Liste aus Steuerung laden
+> 
+
+@ Programm-Tags
+> 
+
+@ Auch die Tags der Programme (Program:Name.Tag) laden – dauert länger
+> 
+
+@ Markiertes Array als Block…
+> 
+
+@ Array aus Zahlen mit einer einzigen Leseanfrage übernehmen (auch per Doppelklick)
+> 
+
+@ Filter (Tag-Name, ab 2 Zeichen)…
+> 
+
+@ Datentyp
+> 
+
+@ Auswahl übernehmen
+> 
+
+@ Neue Variablen anlegen in:
+> 
+
+@ zwischengespeicherte Liste – mit „Tag-Liste laden“ aktualisieren
+> 
+
+@ Noch keine Tag-Liste vorhanden – sie wird aus der Steuerung geladen …
+> 
+
+@ Lade Tag-Liste von {0} …
+> 
+
+@ Lade Tag-Liste von {0} … {1:.0f} s
+> 
+
+@ \n\nDas Python-Paket pycomm3 fehlt (pip install pycomm3).
+> 
+
+@ \n\nIP-Adresse und Pfad prüfen; die Steuerung muss über EtherNet/IP erreichbar sein.
+> 
+
+@ Tag-Liste konnte nicht geladen werden: {0}
+> 
+
+@ Tag-Liste
+> 
+
+@ aus der Steuerung geladen
+> 
+
+@ {0} Tags ({1})
+> 
+
+@ Mehr als 2000 Treffer – bitte den Filter verfeinern.
+> 
+
+@ als Block lesbar (Doppelklick)
+> 
+
+@ zeigt die ersten {0} Elemente
+> 
+
+@ Typ wird nicht aufgezeichnet
+> 
+
+@ bereits in der Liste
+> 
+
+@ {0} Tags
+> 
+
+@ , {0} Blöcke
+> 
+
+@  gewählt
+> 
+
+@ Als Block übernehmen
+> 
+
+@ Bitte ein eindimensionales Array aus Zahlen markieren (z. B. DINT[100] oder REAL[50]). BOOL-Arrays sind bitweise gepackt und lassen sich nicht als Block lesen.
+> 
+
+@ als Block vorgemerkt ({0} Elemente ab [{1}])
+> 
+
+@ Auswahl
+> 
+
+@ Es sind keine neuen Tags angehakt und keine Blöcke vorgemerkt.
+> 
+
+# ---------------- plc_treiber/clx_common.py
+
+@ ControlLogix
+> 
+
+@ CompactLogix
+> 
+
+@ Micro800
+> 
+
+# ---------------- plc_treiber/clx_io.py
+
+@ libplctag wurde nicht gefunden: plctag.dll (64 Bit, aus https://github.com/libplctag/libplctag/releases, Paket ..._windows_x64.zip) neben die Programmdateien legen oder ihren Pfad in CLX_PLCTAG_LIB angeben.
+> 
+
+@ keine Antwort
+> 
+
+@ keine Antwort innerhalb von {0} ms
+> 
+
+# ---------------- plc_treiber/kvhostlink.py
+
+@ Gerätenummer ungültig
+> 
+
+@ Befehl ungültig
+> 
+
+@ Programm nicht registriert
+> 
+
+@ Schreibschutz
+> 
+
+@ Gerätefehler
+> 
+
+@ kein Kommentar
+> 
+
+@ Ungültige KV-Adresse „{0}“ (z. B. DM100, EM0, W1A, R1000, MR500, T10, DM100.3)
+> 
+
+@ „{0}“: {1} wird dezimal gezählt
+> 
+
+@ „{0}“: die letzten beiden Ziffern sind die Bitnummer 00–15
+> 
+
+@ Bitnummer nur bei Wortgeräten: {0}
+> 
+
+@ Bitnummer 0–15 erwartet: {0}
+> 
+
+@ nicht verbunden
+> 
+
+@ Verbindung von der Steuerung getrennt
+> 
+
+@ KV-Fehler {0}: {1} ({2})
+> 
+
+@ KV-Antwort zu kurz: {0}
+> 
+
+@ Bitgeräte haben den Typ BOOL: {0}
+> 
+
+@ KEYENCE KV (Host Link)
+> 
+
+@ KV-8000/7000/5000/3000/Nano, KV-X über Ethernet, Host-Link-Protokoll (Port 8501)
+> 
+
+@ Port
+> 
+
+@ Host-Link-Port, Standard 8501
+> 
+
+@ Wörter je Anfrage
+> 
+
+@ Lücke zusammenfassen bis
+> 
+
+@  Wörter
+> 
+
+@ Gerät
+> 
+
+@ KV-Gerät: DM100, EM0, FM0, ZF10, W1A, TM0; Bits: R1000, MR500, LR0, CR3, B1F; Timer/Zähler-Istwert: T10, C5; Bit im Wort: DM100.3
+> 
+
+@ Startgerät, z. B. DM100 (Elemente folgen lückenlos)
+> 
+
+@ Bitgeräte haben den Typ BOOL
+> 
+
+@ Bitnummer nur beim Typ BOOL
+> 
+
+@ Timer/Zähler: Istwert als DINT/UDINT lesen
+> 
+
+# ---------------- plc_treiber/modbus.py
+
+@ Funktion nicht unterstützt
+> 
+
+@ ungültige Adresse
+> 
+
+@ ungültiger Wert
+> 
+
+@ Gerät beschäftigt
+> 
+
+@ Gateway: kein Pfad
+> 
+
+@ Gateway: Gerät antwortet nicht
+> 
+
+@ Ungültige Modbus-Adresse „{0}“
+> 
+
+@ Ungültige Modbus-Adresse „{0}“ (z. B. 40001, 30001, 00001, 10001, HR0, 40001.3)
+> 
+
+@ Verbindung vom Gerät getrennt
+> 
+
+@ Modbus-Ausnahme {0} ({1})
+> 
+
+@ Modbus TCP
+> 
+
+@ Holding-/Input-Register, Coils, Discrete Inputs; ohne Zusatzbibliothek
+> 
+
+@ Geräteadresse (Unit-ID)
+> 
+
+@ Slave-/Unit-ID; bei Gateways die Adresse des Geräts am seriellen Bus
+> 
+
+@ Byte-/Wortfolge
+> 
+
+@ ABCD – Big Endian (Standard)
+> 
+
+@ CDAB – Wörter getauscht
+> 
+
+@ BADC – Bytes getauscht
+> 
+
+@ DCBA – Little Endian
+> 
+
+@ Reihenfolge bei Werten über mehrere Register (DINT, REAL …); laut Gerätehandbuch
+> 
+
+@ Register je Anfrage
+> 
+
+@  Register
+> 
+
+@ Adressen mit kleinerem Abstand werden in einer Anfrage gelesen (0 = nur lückenlose)
+> 
+
+@ Modbus-Adresse: 40001 (Holding-Register), 30001 (Input-Register), 00001 (Coil), 10001 (Discrete Input), 40001.3 (Bit) – oder HR0, IR0, C0, DI0 (ab 0 gezählt)
+> 
+
+@ Startadresse, z. B. 40001 oder HR0 (Elemente folgen lückenlos)
+> 
+
+@ Coils und Discrete Inputs haben den Typ BOOL
+> 
+
+@ Coils und Discrete Inputs haben keine Bitnummer
+> 
+
+@ BOOL aus einem Register braucht eine Bitnummer 0–15, z. B. 40001.3
+> 
+
+# ---------------- plc_treiber/modbus_rtu.py
+
+@ Unbekannte pymodbus-Version
+> 
+
+@ Keine Schnittstelle eingestellt
+> 
+
+@ Schnittstelle {0} wird von einer anderen Steuerung mit anderen Einstellungen benutzt (Baudrate/Parität/Stoppbits müssen gleich sein)
+> 
+
+@ Schnittstelle {0} lässt sich nicht öffnen
+> 
+
+@ Gerät {0} antwortet nicht: {1}
+> 
+
+@ Gerät {0} antwortet nicht
+> 
+
+@ Modbus RTU (seriell, pymodbus)
+> 
+
+@ RS-485/RS-232: Umrichter, Zähler, Regler; mehrere Geräte an einer Schnittstelle möglich
+> 
+
+@ Schnittstelle
+> 
+
+@ Windows: COM3 …, Linux: /dev/ttyUSB0, /dev/ttyAMA0 …
+> 
+
+@ Geräteadresse
+> 
+
+@ Modbus-Slave-Adresse 1–247
+> 
+
+@ Baudrate
+> 
+
+@ Parität
+> 
+
+@ gerade (Even)
+> 
+
+@ ungerade (Odd)
+> 
+
+@ keine (None)
+> 
+
+@ Stoppbits
+> 
+
+@ Datenbits
+> 
+
+@ Kleinere Werte entlasten langsame Geräte
+> 
+
+@ Wiederholungen
+> 
+
+@ Erneute Versuche, wenn ein Gerät nicht antwortet
+> 
+
+@ Schnittstelle fehlt
+> 
+
+# ---------------- plc_treiber/opcua.py
+
+@ Signieren
+> 
+
+@ Signieren und verschlüsseln
+> 
+
+@ Ungültige NodeId: {0}
+> 
+
+@ Array – bitte als Block lesen
+> 
+
+@ Datentyp nicht darstellbar: {0}
+> 
+
+@ OPC UA (asyncua)
+> 
+
+@ Steuerungen und Server mit OPC UA: Beckhoff, B&R, Codesys, Siemens, Omron, Kepware …
+> 
+
+@ Endpunkt
+> 
+
+@ Adresse des OPC-UA-Servers, z. B. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)
+> 
+
+@ Sicherheit
+> 
+
+@ Benutzer
+> 
+
+@ Leer = anonym
+> 
+
+@ Passwort
+> 
+
+@ Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.
+> 
+
+@ Client-Zertifikat
+> 
+
+@ Zertifikatsdatei (.der/.pem). Leer = selbstsigniertes Zertifikat wird automatisch erzeugt.
+> 
+
+@ Privater Schlüssel
+> 
+
+@ Schlüsseldatei (.pem) zum Client-Zertifikat
+> 
+
+@ Knoten je Anfrage
+> 
+
+@ Höchstzahl Knoten je Read-Anfrage (Server begrenzen das teilweise, z. B. auf 100)
+> 
+
+@ NodeId
+> 
+
+@ NodeId, z. B. ns=4;s=MAIN.fTemperatur, ns=3;s="DB1"."Wert" oder ns=2;i=1001
+> 
+
+@ Array-Knoten (NodeId ohne Index), z. B. ns=4;s=MAIN.aWerte
+> 
+
+@ Aus OPC-UA-Server wählen…
+> 
+
+@ Der Endpunkt muss mit opc.tcp:// beginnen
+> 
+
+@ Zertifikat und Schlüssel bitte beide angeben (oder beide leer lassen)
+> 
+
+@ NodeId fehlt
+> 
+
+@ Ungültige NodeId „{0}“ (z. B. ns=2;s=Name oder ns=2;i=1001)
+> 
+
+# ---------------- plc_treiber/opcua_browser.py
+
+@ OPC UA – Variablen wählen ({0})
+> 
+
+@ Filter (geladene Knoten) …
+> 
+
+@ Markiertes Array als Block …
+> 
+
+@ Verbunden. Ordner aufklappen, Variablen anhaken; Arrays per Doppelklick als Block.
+> 
+
+@ Datentyp nicht aufzeichenbar
+> 
+
+@ Block
+> 
+
+@ Bitte ein Array aus Zahlen markieren.
+> 
+
+@ Array als Block – {0}
+> 
+
+@ Anzahl:
+> 
+
+# ---------------- plc_treiber/s5as511.py
+
+@ DB-Nummer 0–255 erwartet: {0}
+> 
+
+@ Bit eines Datenworts: DB10.D4.0 … DB10.D4.15
+> 
+
+@ S5-Datenwort: DB10.DW4, DB10.DL4, DB10.DR4, DB10.DD4 oder DB10.D4.3
+> 
+
+@ Bitadresse ohne Größenangabe, z. B. E0.1
+> 
+
+@ Ungültige S5-Adresse „{0}“
+> 
+
+@ Ungültige S5-Adresse „{0}“ (z. B. DB10.DW4, DB10.D4.3, EW0, A1.0, MW10, T5, Z3)
+> 
+
+@ Keine Antwort von der S5 (Zeitüberschreitung)
+> 
+
+@ S5 lehnt ab (DLE NAK) bei {0}
+> 
+
+@ Unerwartete Antwort bei {0}: {1}
+> 
+
+@ Fehlerhafte DLE-Folge von der S5
+> 
+
+@ Antwort der S5 zu lang oder unvollständig
+> 
+
+@ Funktion {0:02X}h
+> 
+
+@ Bereitschaft
+> 
+
+@ Auftrag
+> 
+
+@ Datenbeginn
+> 
+
+@ Abschluss
+> 
+
+@ Systemdaten zu kurz ({0} Bytes)
+> 
+
+@ DB{0} nicht vorhanden
+> 
+
+@ Fehlerhafte Speicherdaten der S5
+> 
+
+@ Adresse außerhalb von DB{0} ({1} Bytes)
+> 
+
+@ {0}: Schnittstelle lässt sich nicht öffnen: {1}
+> 
+
+@ Siemens S5 (PG-Schnittstelle AS511)
+> 
+
+@ S5-90U … 155U über die PG-Schnittstelle (20 mA) mit Pegelwandler an RS-232/USB
+> 
+
+@ Schnittstelle des PG-Adapters, z. B. COM1 oder /dev/ttyUSB0
+> 
+
+@ AS511: 9600 Baud
+> 
+
+@ AS511: gerade Parität
+> 
+
+@ Bytes je Anfrage
+> 
+
+@  Bytes
+> 
+
+@ AS511: 500 ms
+> 
+
+@ S5-Adresse: DB10.DW4, DB10.DL4/DR4, DB10.DD4, DB10.D4.3; EW0, E0.1, AB1, A1.0, MW10, M5.0, T5, Z3
+> 
+
+@ Startadresse, z. B. DB10.DW0 oder MW100 (Elemente folgen lückenlos)
+> 
+
+@ Bitadressen (E0.1, DB10.D4.3) haben den Typ BOOL – und nur sie
+> 
+
+@ Byteadresse: Typ BYTE
+> 
+
+@ Wortadresse: Typ WORD, INT oder S5TIME
+> 
+
+@ Doppelwortadresse: Typ DWORD, DINT oder REAL
+> 
+
+@ Timer/Zähler: Typ WORD oder S5TIME
+> 
+
+@ Bit-Blöcke nur bei E, A und M (DB-Bits einzeln anlegen)
+> 
+
+# ---------------- plc_treiber/s7.py
+
+@ Ungültige S7-Adresse „{0}“ (z. B. DB10.DBD4, M5.0, EW64)
+> 
+
+@ Die installierte python-snap7-Version unterstützt keine Bausteinliste.
+> 
+
+@ Siemens S7 (PUT/GET, snap7)
+> 
+
+@ S7-300/400/1200/1500 über S7-Kommunikation; absolute Adressen, nicht optimierte Bausteine
+> 
+
+@ Rack
+> 
+
+@ Slot
+> 
+
+@ S7-300: 2, S7-400: laut Hardware, S7-1200/1500: 1 (bzw. 0)
+> 
+
+@ Siemens-Adresse, z. B. DB10.DBD4, DB10.DBX0.3, M5.0, MW10, EW64, A1.0
+> 
+
+@ Startadresse, z. B. DB10.DBD0 (Elemente folgen lückenlos)
+> 
+
+@ Aus DB-Quelle wählen…
+> 
+
+# ---------------- plc_treiber/s7_browser.py
+
+@ Variablen aus SPS-Symbolen wählen
+> 
+
+@ Die SPS liefert über S7-Kommunikation <b>keine Variablennamen</b> – diese stehen nur im Projekt. Importieren Sie daher die DB-Quelle(n): TIA Portal: Rechtsklick auf den Baustein › <i>Quelle aus Bausteinen generieren</i> (.db/.scl); STEP 7: .db/.awl. Die Adressen werden für <b>nicht optimierte</b> Bausteine berechnet. UDTs bitte ebenfalls importieren.
+> 
+
+@ DB-Quelle importieren…
+> 
+
+@ Quelle entfernen
+> 
+
+@ Quelle des markierten DBs aus der Liste entfernen
+> 
+
+@ Mit SPS abgleichen
+> 
+
+@ DB-Nummern und -Größen aus der SPS lesen und vergleichen
+> 
+
+@ Filter (Name)…
+> 
+
+@ Nicht lesbare Quellen: 
+> 
+
+@ Größe unbekannt
+> 
+
+@ nur in der SPS ({0}) – keine Symbolinformation, Quelle importieren
+> 
+
+@ SPS: {0} Datenbausteine gefunden.
+> 
+
+@ {0} Bytes (aus Quelle)
+> 
+
+@  · ⚠ DB in der SPS nicht gefunden
+> 
+
+@  · SPS: {0} Bytes ⚠ Größe weicht ab
+> 
+
+@ Typ wird nicht unterstützt
+> 
+
+@ DB-/UDT-Quellen importieren
+> 
+
+@ Quelldateien (*.db *.scl *.awl *.src *.udt *.txt);;Alle Dateien (*)
+> 
+
+@ DB-Nummer
+> 
+
+@ Nummer des Datenbausteins „{0}“ in der SPS\n(TIA-Quellen enthalten keine Nummer):
+> 
+
+@ Import
+> 
+
+@ Bitte zuerst einen Datenbaustein mit importierter Quelle markieren.
+> 
+
+@ SPS-Abgleich fehlgeschlagen
+> 
+
+@ {0}\n\nHinweis: Bei S7-1200/1500 muss PUT/GET erlaubt sein; die Bausteinliste kann durch die Schutzstufe gesperrt sein.
+> 
+
+@ SPS-Abgleich
+> 
+
+@ In der SPS wurden keine Datenbausteine gefunden.
+> 
+
+@ Es sind keine neuen Variablen angehakt.
+> 
+
+# ---------------- plc_treiber/s7_symbols.py
+
+@ Unerwartetes Dateiende
+> 
+
+@ Zahl erwartet, gefunden: „{0}“
+> 
+
+@ UDT „{0}“ ohne STRUCT
+> 
+
+@ Unerwartetes Dateiende in der Deklaration
+> 
+
+@ Ungültige Array-Grenzen {0}..{1}
+> 
+
+@ UDT-Verschachtelung zu tief (zyklische Definition?)
+> 
+
+@ Unbekannter Typ „{0}“ – UDT-Quelle ebenfalls importieren (Instanz-DBs von Funktionsbausteinen werden nicht unterstützt)
+> 
+
+@ … {0} weitere Elemente
+> 
+
+@ Keine DATA_BLOCK- oder TYPE-Definition gefunden
+> 
+
+@ {0} › {1}: DB-Nummer fehlt
+> 
+
+@ {0} › {1}: keine Deklaration gefunden
+> 
+
+@ optimierter Zugriff – Adressen für PUT/GET nicht nutzbar
+> 
+
+@ {0} › {1}: DB{2} ist doppelt vorhanden ({3})
+> 
+
+# ---------------- plc_treiber/slmp.py
+
+@ ASCII-Daten nicht wandelbar
+> 
+
+@ Anzahl Punkte zu groß
+> 
+
+@ Adresse außerhalb des Bereichs
+> 
+
+@ Datenlänge passt nicht
+> 
+
+@ Befehl/Unterbefehl nicht unterstützt (Serie Q/L bzw. iQ-R prüfen?)
+> 
+
+@ Gerät nicht lesbar
+> 
+
+@ Anfrage fehlerhaft (Gerät/Adresse)
+> 
+
+@ Anfragelänge passt nicht
+> 
+
+@ Gerät/Adresse außerhalb des Bereichs
+> 
+
+@ Gerät existiert nicht
+> 
+
+@ Ungültige MELSEC-Adresse „{0}“ (z. B. D100, M10, X1F, W1A, ZR1000, D100.3)
+> 
+
+@ „{0}“: {1} wird {2} gezählt
+> 
+
+@ dezimal
+> 
+
+@ hexadezimal
+> 
+
+@ Bitgeräte haben keine Bitnummer: {0}
+> 
+
+@ Ungültige SLMP-Antwort
+> 
+
+@ SLMP-Fehler 0x{0:04X}: {1}
+> 
+
+@ SLMP-Antwort zu kurz
+> 
+
+@ Wortzugriff auf Bitgeräte nur ab einem Vielfachen von 16, z. B. M0, M16, X10
+> 
+
+@ Mitsubishi MELSEC (SLMP / MC-Protokoll)
+> 
+
+@ iQ-R, iQ-F, Q, L über Ethernet; SLMP 3E-Rahmen binär, TCP oder UDP
+> 
+
+@ In GX Works eingestellter SLMP-Port (z. B. 5007, 5000, 1025)
+> 
+
+@ Protokoll
+> 
+
+@ Serie
+> 
+
+@ Q/L/iQ-F (Standard)
+> 
+
+@ iQ-R (erweiterte Gerätenummern)
+> 
+
+@ iQ-R: erweitertes Format (4-Byte-Gerätenummer). Q/L/iQ-F: Standardformat; iQ-R versteht beide.
+> 
+
+@ Netzwerk-Nr.
+> 
+
+@ Station (PC-Nr.)
+> 
+
+@ 255 = eigene Station
+> 
+
+@ Ziel-Modul (E/A-Nr., hex)
+> 
+
+@ 03FF = eigene CPU; Multi-CPU: 03E0 … 03E3
+> 
+
+@ MELSEC-Gerät: D100, W1A (hex), R200, ZR1000, TN5, CN3; Bits: M10, X1F (hex), Y20, B3, SM400; Bit im Wort: D100.3
+> 
+
+@ Startgerät, z. B. D100 (Elemente folgen lückenlos)
+> 
+
+@ Ziel-Modul: hexadezimale Zahl erwartet, z. B. 03FF
+> 
+
+# ---------------- plc_treiber/tia.py
+
+@ Siemens S7-1200/1500 (S7CommPlus, symbolisch)
+> 
+
+@ Symbolischer Zugriff wie TIA Portal, auch optimierte Bausteine; ohne PUT/GET
+> 
+
+@ ISO-on-TCP-Port der Steuerung (Standard 102)
+> 
+
+@ TLS
+> 
+
+@ Automatisch: TLS verwenden, wenn die Steuerung es anbietet (ab TIA V17 / Firmware mit PG/HMI-Kommunikation über TLS); An: nur mit TLS; Aus: ohne TLS
+> 
+
+@ Passwort der Zugriffsstufe, falls die CPU lesenden Zugriff schützt. Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.
+> 
+
+@ Rolle
+> 
+
+@ Variablen je Anfrage
+> 
+
+@ Höchstzahl Variablen je Leseanfrage (größere Mengen werden aufgeteilt)
+> 
+
+@ Variable in der Steuerung
+> 
+
+@ Symbolischer Name: Datenbaustein.Variable, z. B. Anlage_DB.Motor[2].Drehzahl; Merker/Ein-/Ausgänge: MArea.<Name>, IArea.<Name>, QArea.<Name>
+> 
+
+@ Array ohne Index, z. B. Mess_DB.Werte oder Anlage_DB.Motor[1].Historie
+> 
+
+@ Aus Variablenliste wählen…
+> 
+
+@ Ungültiger Variablenname „{0}“
+> 
+
+@ Array „{0}“ ist leer oder ungültig (ohne Index angeben).
+> 
+
+# ---------------- plc_treiber/tia_browser.py
+
+@ <b>{0}</b> (Array[{1}..{2}] of {3})
+> 
+
+@ Variablen aus der Steuerung wählen – {0}
+> 
+
+@ Steuerung <b>{0}</b> – {1}:{2}, TLS {3}
+> 
+
+@ . Variablennamen und Datentypen kommen direkt aus der Steuerung (S7CommPlus); optimierte Datenbausteine werden symbolisch gelesen.
+> 
+
+@ Variablenliste aus Steuerung laden
+> 
+
+@ Nach einer Programmänderung in der Steuerung neu laden (dauert einige Sekunden)
+> 
+
+@ Filter (Name, ab 2 Zeichen)…
+> 
+
+@ Variablenname
+> 
+
+@ zwischengespeicherte Liste – mit „Variablenliste laden“ aktualisieren
+> 
+
+@ Noch keine Variablenliste vorhanden – sie wird aus der Steuerung geladen …
+> 
+
+@ Lade Variablenliste von {0} …
+> 
+
+@ Lade Variablenliste von {0} … {1:.0f} s
+> 
+
+@ \n\nDas Python-Paket s7commplus fehlt (pip install s7commplus).
+> 
+
+@ \n\nIP-Adresse, Port, TLS-Einstellung und Passwort prüfen (TCP-Port 102 muss erreichbar sein).
+> 
+
+@ Variablenliste konnte nicht geladen werden: {0}
+> 
+
+@ Variablenliste
+> 
+
+@ Protokoll V{0}
+> 
+
+@ {0} Variablen ({1})
+> 
+
+@ {0} Variablen
+> 
+
+@ Bitte ein eindimensionales Array aus Zahlen oder BOOL markieren (z. B. Array[1..100] of Real).
+> 
+
+@ Es sind keine neuen Variablen angehakt und keine Blöcke vorgemerkt.
+> 
+
+# ---------------- plc_treiber/tia_common.py
+
+@ Aus
+> 
+
+@ An (TLS erzwingen)
+> 
+
+@ HMI (Standard)
+> 
+
+@ Engineering
+> 
+
+@ PG
+> 
+
+# ---------------- plc_treiber/tia_io.py
+
+@ Variable in der Steuerung nicht gefunden
+> 
+
+@ Lesefehler (Variable nicht lesbar oder geändert)
+> 
+
+# ---------------- plc_treiber/tia_taglist.py
+
+@ Merker (MArea)
+> 
+
+@ Eingänge (IArea)
+> 
+
+@ Ausgänge (QArea)
+> 
+
+@ Zeiten (S7Timers)
+> 
+
+@ Zähler (S7Counters)
+> 
+
+# ---------------- plc_treiber/toyopuc.py
+
+@ CPU-Modul-Fehler
+> 
+
+@ Relaisbefehl: falsche Länge
+> 
+
+@ Befehl nicht unterstützt
+> 
+
+@ Zugriff verweigert (Schlüssel/Modus)
+> 
+
+@ Programmnummer/Bereich fehlt
+> 
+
+@ Antwortdaten zu lang
+> 
+
+@ Anzahl außerhalb des Bereichs
+> 
+
+@ Adresse + Anzahl außerhalb des Bereichs
+> 
+
+@ Adresse ungerade
+> 
+
+@ Programmnummer ungültig
+> 
+
+@ keine Antwort vom Link-Modul
+> 
+
+@ Befehl nicht ausführbar
+> 
+
+@ Ungültige TOYOPUC-Adresse „{0}“ (z. B. D0100, R0010, M0010, X0007, U00100, P1-D0100)
+> 
+
+@ „W“ (Wortzugriff) nur bei Relais: {0}
+> 
+
+@ Relais haben keine Bitnummer: {0}
+> 
+
+@ Adresse außerhalb des Bereichs: {0}
+> 
+
+@ {0} ist kein Programmbereich (P1-/P2-/P3- nur bei D, R, S, N und Relais)
+> 
+
+@ Adresse außerhalb des Grundbereichs: {0} (bis {1}{2:04X}; sonst P1-…)
+> 
+
+@ Adresse außerhalb des Grundbereichs: {0} (größere Nummern über P1-…)
+> 
+
+@ Unbekannter Bereich: {0}
+> 
+
+@ Ungültige Antwort (TOYOPUC)
+> 
+
+@ TOYOPUC-Fehler 0x{0:02X}: {1}
+> 
+
+@ TOYOPUC-Antwort zu kurz
+> 
+
+@ Einzelne Relais haben den Typ BOOL (16 Relais als Wort: z. B. M010W)
+> 
+
+@ JTEKT TOYOPUC (Computer Link)
+> 
+
+@ PC10G/PC10, PC3J, Nano 10GX, TOYOPUC-Plus über Ethernet (Computer-Link-Protokoll)
+> 
+
+@ In PCwin für Computer Link eingestellter Port
+> 
+
+@ TOYOPUC-Adresse (hex): D0100, R0010, S0020, N0005, U00100; Relais: M0010, X0007, Y0020, K0001, L0100; Wort aus Relais: M010W; Bit: D0100.F; Programmbereich: P1-D0100
+> 
+
+@ Startadresse, z. B. D0100 (Elemente folgen lückenlos)
+> 
+
+# ---------------- plc_treiber/ui.py
+
+@ Verbindung – {0} ({1})
+> 
+
+@ Erweitert
+> 
+
+@ Bibliothek vorhanden
+> 
+
+@ Bibliothek fehlt: {0}
+> 
+
+# ---------------- plc_treiber/word_common.py
+
+@ Antwort zu kurz
+> 
+
+# ---------------- plc_i18n.py
 
 @ Ordner mit Sprachdateien öffnen …
 > 

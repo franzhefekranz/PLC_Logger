@@ -10,7 +10,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from s7_common import convert_ini  # noqa: E402
+from plc_common import convert_ini  # noqa: E402
 
 
 def main():

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # =====================================================================================================================
-#  S7 Datenlogger – AppImage für Linux bauen (x86_64 oder arm64/aarch64)
+#  PLC Datenlogger – AppImage für Linux bauen (x86_64 oder arm64/aarch64)
 #
 #  Aufruf (im Programmordner):
 #      ./build_appimage.sh                 AppImage für die Architektur dieses Rechners bauen
 #      ./build_appimage.sh --docker arm64  in einem Docker-Container für arm64 bauen (auf x86_64 per QEMU-Emulation)
 #      ./build_appimage.sh --docker amd64  in einem Docker-Container für x86_64 bauen
 #
-#  Ergebnis: dist/S7Datenlogger-<Version>-x86_64.AppImage bzw. dist/S7Datenlogger-<Version>-aarch64.AppImage
+#  Ergebnis: dist/PLCDatenlogger-<Version>-x86_64.AppImage bzw. dist/PLCDatenlogger-<Version>-aarch64.AppImage
 #
 #  Ein AppImage ist eine einzelne, ausführbare Datei: herunterladen, ausführbar machen (chmod +x) und starten.
 #  Es enthält Logger, Konfigurationsprogramm (Parameter --konfig) und Ereignis-Viewer (--ereignisse).
@@ -24,9 +24,9 @@
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")"
 
-APP="S7Datenlogger"
-NAME="S7 Datenlogger"
-PFX="s7"
+APP="PLCDatenlogger"
+NAME="PLC Datenlogger"
+PFX="plc"
 PY="${PYTHON:-python3}"
 
 # ------------------------------------------------------------------ Docker-Modus
@@ -97,21 +97,39 @@ fi
 EXTRA=()
 [[ -f web_static/chart.umd.js ]] && EXTRA+=(--add-data "$PWD/web_static:web_static")
 
+# ------------------------------------------------------------------ 2b. libplctag (natives Linux-Gegenstück zu plctag.dll)
+PLCTAG_VER="2.7.2"
+LIB="$B/libplctag.so"
+if [[ ! -f "$LIB" ]]; then
+    echo "[2/6] libplctag $PLCTAG_VER aus dem Quelltext bauen (cmake, gcc) ..."
+    rm -rf "$B/libplctag-src"
+    if ! git clone -q --depth 1 --branch "v$PLCTAG_VER" https://github.com/libplctag/libplctag.git "$B/libplctag-src"; then
+        mkdir -p "$B/libplctag-src"
+        curl -fsSL "https://github.com/libplctag/libplctag/archive/refs/tags/v$PLCTAG_VER.tar.gz" \
+            | tar -xz -C "$B/libplctag-src" --strip-components=1
+    fi
+    cmake -S "$B/libplctag-src" -B "$B/libplctag-src/build" -DCMAKE_BUILD_TYPE=Release >/dev/null
+    cmake --build "$B/libplctag-src/build" --target plctag_dyn -j"$(nproc)" >/dev/null
+    cp "$(find "$B/libplctag-src/build" -name 'libplctag.so*' -type f | head -1)" "$LIB"
+fi
+EXTRA+=(--add-binary "$PWD/$LIB:.")
+
 # ------------------------------------------------------------------ 3. PyInstaller (ein Programm für alles)
 echo "[3/6] PyInstaller ..."
 "$VPY" -m PyInstaller --noconfirm --clean --windowed --onedir --name "$APP" \
     --distpath "$B/dist" --workpath "$B/work" --specpath "$B" \
     --add-data "$PWD/sprachen:sprachen" \
-    --collect-all snap7 --collect-data pyqtgraph --hidden-import PyQt6.QtSvg \
+    --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PyQt6.QtSvg \
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
-    --hidden-import s7_block_dialog --hidden-import s7_branding --hidden-import s7_browser \
-    --hidden-import s7_common --hidden-import s7_config --hidden-import s7_db --hidden-import s7_db_dialog --hidden-import s7_event_viewer \
-    --hidden-import s7_events --hidden-import s7_formula --hidden-import s7_formula_dialog \
-    --hidden-import s7_gui --hidden-import s7_headless --hidden-import s7_i18n --hidden-import s7_pid \
-    --hidden-import s7_pid_dialog --hidden-import s7_recorder --hidden-import s7_splash --hidden-import s7_svg \
-    --hidden-import s7_symbols --hidden-import s7_trigger_dialog --hidden-import s7_util \
-    --hidden-import s7_web \
+    --hidden-import plc_block_dialog --hidden-import plc_branding --hidden-import plc_common \
+    --hidden-import plc_config --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_event_viewer \
+    --hidden-import plc_events --hidden-import plc_formula --hidden-import plc_formula_dialog \
+    --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_i18n --hidden-import plc_pid \
+    --hidden-import plc_pid_dialog --hidden-import plc_recorder --hidden-import plc_splash \
+    --hidden-import plc_svg --hidden-import plc_trigger_dialog --hidden-import plc_util \
+    --hidden-import plc_web \
+    --collect-submodules plc_treiber --add-data "$PWD/plc_treiber/_vorlage.py:plc_treiber" \
     ${EXTRA[@]+"${EXTRA[@]}"} \
     "${PFX}_logger.py"
 

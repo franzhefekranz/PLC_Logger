@@ -1,18 +1,21 @@
 @echo off
 rem ====================================================================================
-rem  S7 Datenlogger - Build-Skript
+rem  PLC Datenlogger - Build-Skript
 rem
-rem  Erzeugt mit PyInstaller die beiden Programme (S7Logger.exe, S7Konfiguration.exe)
+rem  Erzeugt mit PyInstaller die beiden Programme (PLCLogger.exe, PLCKonfiguration.exe)
 rem  in EINEM gemeinsamen Ordner und baut daraus mit Inno Setup die Setup-Datei.
-rem  S7Logger.exe laeuft mit Oberflaeche oder (Option "Headless" bzw. Parameter --headless) ohne.
+rem  PLCLogger.exe laeuft mit Oberflaeche oder (Option "Headless" bzw. Parameter --headless) ohne.
 rem  Fuer den Webserver wird Chart.js einmalig nach web_static\chart.umd.js geladen und mit eingepackt.
 rem
 rem  Aufruf:   build.bat              alles: Umgebung, .exe-Dateien, Installer
-rem            build.bat exe          nur die .exe-Dateien (dist\S7Datenlogger)
+rem            build.bat exe          nur die .exe-Dateien (dist\PLCDatenlogger)
 rem            build.bat portable     .exe-Dateien und portables ZIP (ohne Installer):
-rem                                   dist\S7Datenlogger_portable_<Version>.zip - entpacken, .exe starten
+rem                                   dist\PLCDatenlogger_portable_<Version>.zip - entpacken, .exe starten
 rem            build.bat installer    nur den Installer (setzt vorhandenes dist\ voraus)
 rem
+rem  Ein Programm fuer alle Steuerungen: die Treiber (Paket plc_treiber: S7/snap7, TIA/s7commplus, Logix/libplctag,
+rem  Modbus TCP) werden komplett eingepackt. libplctag gibt es nicht als pip-Paket: plctag.dll (64 Bit) wird einmalig
+rem  aus dem offiziellen GitHub-Release geladen (oder liegt bereits neben diesem Skript) und eingepackt.
 rem  Voraussetzungen: Python 3.9+ (py-Launcher oder python im PATH), Internetzugang fuer
 rem  pip (beim ersten Lauf), Inno Setup 6 (https://jrsoftware.org/isinfo.php) fuer den Installer.
 rem  Die Versionsnummer wird unten bei VERSION eingestellt.
@@ -21,11 +24,13 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 
 set "VERSION=2.1.0"
+rem  Version der libplctag-Bibliothek (GitHub-Release), aus der plctag.dll geladen wird.
+set "PLCTAG_VER=2.7.2"
 set "STEP=%~1"
 if "%STEP%"=="" set "STEP=all"
 
 echo ================================================================
-echo  S7 Datenlogger - Build (%STEP%), Version %VERSION%
+echo  PLC Datenlogger - Build (%STEP%), Version %VERSION%
 echo ================================================================
 
 if /I "%STEP%"=="installer" goto :installer
@@ -79,50 +84,63 @@ if not exist "web_static\chart.umd.js" (
         echo           Alternativ die Datei chart.umd.js von chartjs.org manuell nach web_static kopieren.
     )
 )
+rem ------------------------------------------------------------------ 2c. libplctag (plctag.dll)
+rem  Die DLL steckt im Paket libplctag_<Version>_windows_x64.zip des offiziellen Releases; nur sie wird entnommen.
+if not exist "plctag.dll" (
+    echo [3/6] Lade plctag.dll aus libplctag %PLCTAG_VER% ...
+    powershell -NoProfile -Command "try { $z = Join-Path $env:TEMP 'libplctag_win64.zip'; Invoke-WebRequest -UseBasicParsing -Uri 'https://github.com/libplctag/libplctag/releases/download/v%PLCTAG_VER%/libplctag_%PLCTAG_VER%_windows_x64.zip' -OutFile $z; Add-Type -AssemblyName System.IO.Compression.FileSystem; $a = [IO.Compression.ZipFile]::OpenRead($z); $e = $a.Entries | Where-Object { $_.Name -eq 'plctag.dll' } | Select-Object -First 1; [IO.Compression.ZipFileExtensions]::ExtractToFile($e, (Join-Path (Get-Location) 'plctag.dll'), $true); $a.Dispose(); Remove-Item $z } catch { exit 1 }"
+    if errorlevel 1 (
+        echo [FEHLER] plctag.dll konnte nicht geladen werden. Bitte von https://github.com/libplctag/libplctag/releases
+        echo          das Paket libplctag_%PLCTAG_VER%_windows_x64.zip laden und plctag.dll neben build.bat legen.
+        goto :fail
+    )
+)
+set ADDDLL=--add-binary "plctag.dll;."
 set "ADDWEB="
 if exist "web_static\chart.umd.js" set ADDWEB=--add-data "web_static;web_static"
 
 rem ------------------------------------------------------------------ 3. PyInstaller
 rem  --windowed        keine Konsole
-rem  --collect-all snap7  nimmt die snap7.dll mit; --collect-data pyqtgraph: Zusatzdateien
+rem  --collect-submodules plc_treiber  alle Treiber; --collect-all snap7/pycomm3/s7commplus/asyncua/pymodbus/serial  deren Bibliotheken;
+rem  --add-binary plctag.dll  libplctag (Logix); --collect-data pyqtgraph
 rem  --hidden-import pymysql/psycopg, --collect-all psycopg_binary  Datenbanktreiber (MariaDB, PostgreSQL/TimescaleDB)
 rem  --hidden-import PyQt6.QtSvg  fuer den SVG-Export und SVG-Logos (wird erst zur Laufzeit importiert)
-rem  --hidden-import s7_*  Module, die s7_logger.py erst zur Laufzeit je nach Betriebsart importiert
+rem  --hidden-import plc_*  Module, die plc_logger.py erst zur Laufzeit je nach Betriebsart importiert
 rem  --collect-all flask/werkzeug  Webserver (Flask) samt Zusatzdateien; --add-data web_static  Chart.js
-echo [4/6] PyInstaller: S7Logger ...
-"%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name S7Logger --icon app.ico ^
+echo [4/6] PyInstaller: PLCLogger ...
+"%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCLogger --icon app.ico ^
     --distpath build\p1 --workpath build\w1 ^
-    --collect-all snap7 --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import s7_db --hidden-import s7_db_dialog --hidden-import s7_events --hidden-import s7_event_viewer --hidden-import s7_trigger_dialog --hidden-import s7_pid --hidden-import s7_pid_dialog --hidden-import s7_i18n --hidden-import s7_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
-    --hidden-import s7_gui --hidden-import s7_headless --hidden-import s7_recorder ^
-    --hidden-import s7_web --hidden-import s7_svg --hidden-import s7_util ^
+    --collect-submodules plc_treiber --add-data "plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
+    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_recorder ^
+    --hidden-import plc_web --hidden-import plc_svg --hidden-import plc_util ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
-    s7_logger.py || goto :fail
+    plc_logger.py || goto :fail
 
-echo [5/6] PyInstaller: S7Konfiguration ...
-"%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name S7Konfiguration --icon app.ico ^
+echo [5/6] PyInstaller: PLCKonfiguration ...
+"%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCKonfiguration --icon app.ico ^
     --distpath build\p2 --workpath build\w2 ^
-    --collect-all snap7 --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import s7_db --hidden-import s7_db_dialog --hidden-import s7_events --hidden-import s7_event_viewer --hidden-import s7_trigger_dialog --hidden-import s7_pid --hidden-import s7_pid_dialog --hidden-import s7_i18n --hidden-import s7_splash --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary ^
-    s7_config.py || goto :fail
+    --collect-submodules plc_treiber --add-data "plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
+    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    plc_config.py || goto :fail
 
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die
 rem  Dateien der Konfiguration, die dort noch fehlen (/XC /XN /XO = vorhandene nicht ueberschreiben).
 rem  robocopy meldet mit Rueckgabewerten 0-7 Erfolg.
-if exist "dist\S7Datenlogger" rmdir /s /q "dist\S7Datenlogger"
-robocopy "build\p1\S7Logger" "dist\S7Datenlogger" /E /NFL /NDL /NJH /NJS /NP >nul
+if exist "dist\PLCDatenlogger" rmdir /s /q "dist\PLCDatenlogger"
+robocopy "build\p1\PLCLogger" "dist\PLCDatenlogger" /E /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 goto :fail
-robocopy "build\p2\S7Konfiguration" "dist\S7Datenlogger" /E /XC /XN /XO /NFL /NDL /NJH /NJS /NP >nul
+robocopy "build\p2\PLCKonfiguration" "dist\PLCDatenlogger" /E /XC /XN /XO /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 goto :fail
-if not exist "dist\S7Datenlogger\S7Logger.exe" goto :fail
-if not exist "dist\S7Datenlogger\S7Konfiguration.exe" goto :fail
+if not exist "dist\PLCDatenlogger\PLCLogger.exe" goto :fail
+if not exist "dist\PLCDatenlogger\PLCKonfiguration.exe" goto :fail
 
 rem  Bedienungsanleitung als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
 "%VPY%" -c "import docutils.core as d; d.publish_file(source_path='bedienungsanleitung.rst', destination_path='bedienungsanleitung.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >nul 2>nul
 if errorlevel 1 echo [HINWEIS] bedienungsanleitung.html konnte nicht erzeugt werden (der Installer enthaelt dann die .rst).
 
 echo.
-echo [OK] Programme erzeugt: dist\S7Datenlogger\S7Logger.exe und S7Konfiguration.exe
+echo [OK] Programme erzeugt: dist\PLCDatenlogger\PLCLogger.exe und PLCKonfiguration.exe
 if /I "%STEP%"=="exe" goto :done
 
 rem ------------------------------------------------------------------ 3b. Portables ZIP
@@ -132,8 +150,8 @@ if /I "%STEP%"=="portable" goto :done
 rem ------------------------------------------------------------------ 4. Inno Setup
 :installer
 echo [6/6] Inno Setup: Installer erzeugen ...
-if not exist "dist\S7Datenlogger\S7Logger.exe" (
-    echo [FEHLER] dist\S7Datenlogger fehlt. Zuerst "build.bat exe" ausfuehren.
+if not exist "dist\PLCDatenlogger\PLCLogger.exe" (
+    echo [FEHLER] dist\PLCDatenlogger fehlt. Zuerst "build.bat exe" ausfuehren.
     goto :fail
 )
 set "ISCC="
@@ -151,7 +169,7 @@ if not defined ISCC (
 )
 "%ISCC%" /Qp /DAppVersion=%VERSION% installer.iss || goto :fail
 echo.
-echo [OK] Installer erzeugt: installer\S7Datenlogger_Setup_%VERSION%.exe
+echo [OK] Installer erzeugt: installer\PLCDatenlogger_Setup_%VERSION%.exe
 
 :done
 echo.
@@ -166,9 +184,9 @@ rem  dann neben den .exe-Dateien statt unter %APPDATA%) und der Anleitung, gepac
 rem  weil portable.txt NICHT in den Installer gelangen darf (sonst schriebe die installierte Version in den
 rem  schreibgeschuetzten Programmordner).
 echo [5b] Portables ZIP erzeugen ...
-set "PDIR=dist\portable\S7Datenlogger"
+set "PDIR=dist\portable\PLCDatenlogger"
 if exist "dist\portable" rmdir /s /q "dist\portable"
-robocopy "dist\S7Datenlogger" "%PDIR%" /E /NFL /NDL /NJH /NJS /NP >nul
+robocopy "dist\PLCDatenlogger" "%PDIR%" /E /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 exit /b 1
 > "%PDIR%\portable.txt" echo Portabler Betrieb: Konfiguration, CSV-Dateien und Archiv liegen in diesem Ordner.
 rem  Sprachdateien zum Bearbeiten und Ergaenzen (eigene Uebersetzung: de.txt kopieren, z. B. als fr.txt)
@@ -177,11 +195,11 @@ if not exist "%PDIR%\Doku" mkdir "%PDIR%\Doku"
 if exist "bedienungsanleitung.html" copy /y "bedienungsanleitung.html" "%PDIR%\Doku\" >nul
 if not exist "bedienungsanleitung.html" copy /y "bedienungsanleitung.rst" "%PDIR%\Doku\" >nul
 if exist "images" robocopy "images" "%PDIR%\Doku\images" /E /NFL /NDL /NJH /NJS /NP >nul
-set "ZIP=dist\S7Datenlogger_portable_%VERSION%.zip"
+set "ZIP=dist\PLCDatenlogger_portable_%VERSION%.zip"
 if exist "%ZIP%" del "%ZIP%"
-powershell -NoProfile -Command "Compress-Archive -Path 'dist\portable\S7Datenlogger' -DestinationPath '%ZIP%'"
+powershell -NoProfile -Command "Compress-Archive -Path 'dist\portable\PLCDatenlogger' -DestinationPath '%ZIP%'"
 if not exist "%ZIP%" exit /b 1
-echo [OK] Portables Paket: %ZIP%  (entpacken und S7Logger.exe bzw. S7Konfiguration.exe starten)
+echo [OK] Portables Paket: %ZIP%  (entpacken und PLCLogger.exe bzw. PLCKonfiguration.exe starten)
 exit /b 0
 
 :fail
