@@ -435,9 +435,30 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
 
 **Reiter „Datenbank“**
 
+.. figure:: images/config_datenbank.png
+   :alt: Reiter Datenbank
+   :width: 80%
+   :align: center
+
+   Reiter „Datenbank“.
+
 Auswahl und Zugangsdaten einer Datenbank, in die zusätzlich oder statt der
 CSV-Datei aufgezeichnet wird (SQLite, MariaDB/MySQL, TimescaleDB/PostgreSQL), mit
 dem Knopf **Datenbank testen**. Einzelheiten im Kapitel :ref:`datenbank`.
+
+**Reiter „Trigger & Ereignisse“**
+
+.. figure:: images/config_trigger_ereignis.png
+   :alt: Reiter Trigger und Ereignisse
+   :width: 80%
+   :align: center
+
+   Reiter „Trigger & Ereignisse“.
+
+Zeigt die Zahl der angelegten Trigger. **Trigger bearbeiten …** öffnet den
+Trigger-Editor, **Ereignisprotokoll anzeigen …** den Ereignis-Viewer, und unter
+*Ereignisdatei* lässt sich der Speicherort des Ereignisprotokolls wählen (leer =
+neben der CSV-Datei). Einzelheiten im Kapitel :ref:`ereignisse`.
 
 **Reiter „Webserver & Headless“**
 
@@ -596,13 +617,6 @@ Jede Zeile der Variablentabelle beschreibt einen Wert einer Steuerung:
 
 Zuordnung per Drag & Drop
 ----------------------------------------------------------------------
-
-.. figure:: images/config_dragdrop.png
-   :alt: Drag & Drop im Zuordnungsbaum
-   :width: 90%
-   :align: center
-
-   Variablen im Baum auf eine Y-Achse ziehen.
 
 Variablen können im Baum mit der Maus verschoben werden:
 
@@ -2020,6 +2034,13 @@ Gelesen wird aus der Datenbank der geladenen Konfiguration; die Datenbank wird n
 gelesen, eine laufende Aufzeichnung (auch eines anderen Loggers) kann dabei
 weiterschreiben.
 
+.. figure:: images/datenbank.png
+   :alt: Dialog Aus Datenbank laden
+   :width: 85%
+   :align: center
+
+   Dialog „Aus Datenbank laden“: Variablen, Zeitraum und Auflösung wählen.
+
 .. list-table::
    :header-rows: 1
    :widths: 25 75
@@ -2855,6 +2876,24 @@ Konfiguration und Aufzeichnungen bleiben erhalten.
    signiert sind. Unter *Eigenschaften › Zulassen* der ZIP-Datei lässt sich das
    vor dem Entpacken für alle Dateien aufheben.
 
+
+Bauen auf GitHub (ohne eigenen Windows-PC)
+----------------------------------------------------------------------
+
+Liegt das Projekt in einem GitHub-Repository, baut der Workflow
+``.github/workflows/windows.yml`` (im obersten Ordner der Lieferung) für alle vier
+Datenlogger das **portable ZIP** und den **Installer** auf einem Windows-Rechner von
+GitHub:
+
+* **Von Hand:** *Actions › Windows › Run workflow*. Die Dateien liegen danach in der
+  Zusammenfassung des Laufs unter *Artifacts* (je Programm ``…-portable`` und
+  ``…-setup``).
+* **Mit einem Tag** ``v*`` (z. B. ``v2.1.0``): zusätzlich als Dateien eines
+  GitHub-Release, zusammen mit den AppImages.
+
+Gebaut wird mit ``build.bat`` wie auf dem eigenen PC; die Versionsnummer kommt aus
+``VERSION`` in ``build.bat``. Bilder der Anleitung (Ordner ``images``) werden
+mitgenommen, wenn sie im Repository liegen.
 
 .. _appimage:
 

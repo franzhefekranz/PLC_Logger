@@ -22,7 +22,7 @@ rem ============================================================================
 setlocal EnableExtensions
 cd /d "%~dp0"
 
-set "VERSION=1.0.0"
+set "VERSION=2.1.0"
 rem  Version der libplctag-Bibliothek (GitHub-Release), aus der plctag.dll geladen wird.
 set "PLCTAG_VER=2.7.2"
 set "STEP=%~1"
@@ -42,7 +42,9 @@ goto :fail
 rem ------------------------------------------------------------------ 1. Python-Umgebung
 :exe
 set "PY="
-where py >nul 2>nul && set "PY=py -3"
+rem  BUILD_PYTHON: Python fest vorgeben (z. B. im GitHub-Workflow), sonst py-Launcher bzw. python aus dem PATH
+if defined BUILD_PYTHON set "PY=%BUILD_PYTHON%"
+if not defined PY where py >nul 2>nul && set "PY=py -3"
 if not defined PY where python >nul 2>nul && set "PY=python"
 if not defined PY (
     echo [FEHLER] Python wurde nicht gefunden. Bitte Python 3.9 oder neuer installieren.
