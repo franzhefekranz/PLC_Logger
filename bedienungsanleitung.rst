@@ -289,7 +289,7 @@ Beim Start von Logger und Konfigurationsprogramm erscheint das **Startbild**:
    :width: 80%
    :align: center
 
-   Startbild mit den zuletzt benutzten Konfigurationen.
+   Startbild des Konfigurationsprogramms: Konfiguration wählen oder neu anlegen.
 
 * **Zuletzt benutzt**: die zuletzt geöffneten Konfigurationen mit Ordner und Änderungsdatum.
   Doppelklick oder **Öffnen** (Eingabetaste) startet mit der markierten Datei.
@@ -884,7 +884,7 @@ Variablen aus der Steuerung wählen
    :width: 90%
    :align: center
 
-   Auswahl von Variablen aus der Steuerung.
+   Beispiel: Tag-Liste einer ControlLogix (Treiber ``clx``), bereits angelegte Tags sind angehakt.
 
 Der Knopf über der Variablentabelle heißt je nach Treiber der gewählten
 Steuerung unterschiedlich und öffnet dessen Auswahldialog (bei mehreren
