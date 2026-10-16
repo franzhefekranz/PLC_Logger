@@ -31,7 +31,7 @@ python plc_config.py                # Konfiguration
 python plc_logger.py                # Logger  (--demo: ohne Steuerung)
 ```
 
-Ausführliche Anleitung: [`bedienungsanleitung.rst`](bedienungsanleitung.rst).
+Ausführliche Anleitung: im [Wiki](../../wiki) (wird automatisch aus [`bedienungsanleitung.rst`](bedienungsanleitung.rst) erzeugt).
 
 ## Bauen
 

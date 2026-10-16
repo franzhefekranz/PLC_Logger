@@ -65,7 +65,7 @@ Treiber. Eingebaut sind:
 
 Weitere Treiber lassen sich **ohne Änderung des Programms** ergänzen: Eine
 Python-Datei im Ordner ``treiber`` des Datenordners genügt (siehe
-:ref:`treiber-entwickeln`).
+`Treiber entwickeln <treiber-entwickeln_>`__).
 
 Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
 
@@ -131,7 +131,7 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
      - Datenmodell und Konfigurationsdatei (JSON) (inkl. Übernahme der Konfigurationen der
        Einzelprogramme). Wird nicht direkt gestartet.
    * - ``build.bat``, ``installer.iss``, ``make_icon.py``, ``requirements.txt``
-     - Erzeugung der Windows-Installationsdatei (siehe :ref:`installer`).
+     - Erzeugung der Windows-Installationsdatei (siehe `Installationsdatei erstellen (Windows) <installer_>`__).
    * - ``app.ico``, ``logo.png``
      - Programm-Icon und Logo (Vorgabe, wenn in der Konfiguration nichts eingetragen ist;
        ``app.ico`` fließt auch in die ``.exe``-Dateien und den Installer ein).
@@ -245,7 +245,7 @@ des Loggers:
    * - ``--gui``
      - Oberfläche öffnen, auch wenn die Konfiguration *Headless* verlangt.
    * - ``--demo``
-     - Simulierte Werte statt SPS-Verbindung (siehe :ref:`demo-modus`).
+     - Simulierte Werte statt SPS-Verbindung (siehe `Demo-Modus <demo-modus_>`__).
 
 Der Logger kann das Konfigurationsprogramm auch selbst öffnen
 (**Konfig-Editor** in der Werkzeugleiste), und das Konfigurationsprogramm kann den
@@ -256,7 +256,7 @@ Vorbereitung der Steuerungen
 
 Der Logger liest nur; er schreibt nichts in die Steuerungen. Was in den
 Steuerungen einzurichten ist, hängt vom Treiber ab und steht im Kapitel
-:ref:`treiber` beim jeweiligen Treiber. Kurz:
+`Steuerungen und Treiber <treiber_>`__ beim jeweiligen Treiber. Kurz:
 
 * ``s7``: Bei S7-1200/1500 *PUT/GET-Kommunikation vom Partner erlauben* und nur
   **nicht optimierte** Datenbausteine lesen. TCP-Port 102.
@@ -325,8 +325,8 @@ Schnellstart
 .. tip::
 
    Eine vorhandene Konfiguration des S7-, TIA- oder CLX-Datenloggers öffnen Sie
-   einfach mit **Datei › Öffnen…** (siehe :ref:`uebernahme`). Ohne SPS können Sie
-   das Programm mit dem **Demo**-Modus ausprobieren (siehe :ref:`demo-modus`).
+   einfach mit **Datei › Öffnen…** (siehe `Übernahme von Konfigurationen der Einzelprogramme <uebernahme_>`__). Ohne SPS können Sie
+   das Programm mit dem **Demo**-Modus ausprobieren (siehe `Demo-Modus <demo-modus_>`__).
 
 
 Konfigurationsprogramm (``plc_config.py``)
@@ -387,7 +387,7 @@ Treibers aufgebaut (Textfelder, Zahlen, Auswahllisten, Passwortfelder).
 Selten benötigte Parameter stehen im Bereich *Erweitert*. Unten zeigt der Dialog,
 ob die benötigte Bibliothek installiert ist (✓ bzw. ✗ mit Fehlermeldung). Beim
 **OK** prüft der Treiber die Eingaben (z. B. leere IP-Adresse). Die Parameter
-der eingebauten Treiber sind im Kapitel :ref:`treiber` beschrieben.
+der eingebauten Treiber sind im Kapitel `Steuerungen und Treiber <treiber_>`__ beschrieben.
 
 Jede Steuerung wird im Logger von einem **eigenen Thread** gelesen. Das
 Intervall gilt je Steuerung; eine langsame oder ausgefallene Steuerung bremst
@@ -401,7 +401,7 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
   geladen werden konnten (mit Fehlermeldung), und der Ordner für eigene Treiber.
 * **Ordner für eigene Treiber öffnen …** – legt den Ordner ``treiber`` im
   Datenordner an (falls nötig), kopiert die Vorlage ``_vorlage.py`` hinein und
-  öffnet ihn im Dateimanager (siehe :ref:`treiber-entwickeln`).
+  öffnet ihn im Dateimanager (siehe `Treiber entwickeln <treiber-entwickeln_>`__).
 
 **Reiter „Aufzeichnung“**
 
@@ -420,7 +420,7 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
      - Bedeutung
    * - CSV-Datei schreiben
      - Schaltet die CSV-Datei ein oder aus (z. B. aus, wenn nur in eine Datenbank
-       aufgezeichnet werden soll; siehe :ref:`datenbank`).
+       aufgezeichnet werden soll; siehe `Datenbank (SQLite, MariaDB, TimescaleDB) <datenbank_>`__).
    * - CSV-Ordner
      - Zielordner für die Protokolldateien. Ein relativer Pfad bezieht sich
        auf den Programmordner.
@@ -431,7 +431,7 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
    * - Max. Datensätze je Datei
      - Obergrenze für die Anzahl der Datensätze (Zeilen) je CSV-Datei.
        ``0`` = unbegrenzt. Ist die Zahl erreicht, wird die Datei gepackt und
-       archiviert (siehe :ref:`csv-archiv`).
+       archiviert (siehe `Dateigröße begrenzen und archivieren <csv-archiv_>`__).
    * - Archiv-Ordner
      - Basisordner des Archivs (Standard: ``archiv``). Ein relativer Pfad
        bezieht sich auf den Programmordner.
@@ -485,7 +485,7 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
 
 Auswahl und Zugangsdaten einer Datenbank, in die zusätzlich oder statt der
 CSV-Datei aufgezeichnet wird (SQLite, MariaDB/MySQL, TimescaleDB/PostgreSQL), mit
-dem Knopf **Datenbank testen**. Einzelheiten im Kapitel :ref:`datenbank`.
+dem Knopf **Datenbank testen**. Einzelheiten im Kapitel `Datenbank (SQLite, MariaDB, TimescaleDB) <datenbank_>`__.
 
 **Reiter „Trigger & Ereignisse“**
 
@@ -499,7 +499,7 @@ dem Knopf **Datenbank testen**. Einzelheiten im Kapitel :ref:`datenbank`.
 Zeigt die Zahl der angelegten Trigger. **Trigger bearbeiten …** öffnet den
 Trigger-Editor, **Ereignisprotokoll anzeigen …** den Ereignis-Viewer, und unter
 *Ereignisdatei* lässt sich der Speicherort des Ereignisprotokolls wählen (leer =
-neben der CSV-Datei). Einzelheiten im Kapitel :ref:`ereignisse`.
+neben der CSV-Datei). Einzelheiten im Kapitel `Trigger und Ereignisprotokoll <ereignisse_>`__.
 
 **Reiter „Webserver & Headless“**
 
@@ -517,7 +517,7 @@ neben der CSV-Datei). Einzelheiten im Kapitel :ref:`ereignisse`.
    * - Feld
      - Bedeutung
    * - Webserver starten
-     - Startet mit dem Logger einen Webserver (siehe :ref:`webserver`).
+     - Startet mit dem Logger einen Webserver (siehe `Webserver (Diagramme im Browser) <webserver_>`__).
    * - Adresse (Host) / Port
      - ``0.0.0.0`` macht den Server im ganzen Netzwerk erreichbar, ``127.0.0.1``
        nur auf dem eigenen Rechner. Standard-Port: 8080.
@@ -528,7 +528,7 @@ neben der CSV-Datei). Einzelheiten im Kapitel :ref:`ereignisse`.
      - Wie oft die Browserseite neue Daten abholt (200 bis 60000 ms).
    * - Headless-Modus
      - Der Logger startet ohne Oberfläche und zeichnet nur auf (siehe
-       :ref:`headless`).
+       `Headless-Betrieb (nur Aufzeichnung) <headless_>`__).
 
 Aufbau: Diagramme, Y-Achsen und Variablen
 ----------------------------------------------------------------------
@@ -594,11 +594,11 @@ Wählen Sie im Baum ein Diagramm oder eine Y-Achse aus. Im Bereich
    * - Seite (Tab)
      - *Nur bei Diagrammen.* Diagramme mit gleichem Seitennamen werden
        gemeinsam auf einer Seite (Tab bzw. Dock) angezeigt, z. B. ``Prozess``
-       oder ``Alarme``. Leer = Standardseite (siehe :ref:`seiten`).
+       oder ``Alarme``. Leer = Standardseite (siehe `Seiten, Diagramme und Anordnung <seiten_>`__).
    * - Regler
      - *Nur bei Diagrammen.* Haken **PID-Regler-Optimierung** und **Einstellen …**:
        Soll-, Ist- und Stellwert für die Berechnung der Reglerparameter im Logger
-       festlegen (siehe :ref:`pid-optimierung`).
+       festlegen (siehe `PID-Regler-Optimierung <pid-optimierung_>`__).
    * - Auto-Skalierung
      - *Nur bei Y-Achsen.* Aktiv: Die Achse passt sich automatisch an die
        sichtbaren Daten an. Inaktiv: Es gelten die festen Grenzen
@@ -638,7 +638,7 @@ Jede Zeile der Variablentabelle beschreibt einen Wert einer Steuerung:
        ``Anlage_DB.Motor[2].Drehzahl`` (``tia``), ``Program:Main.Druck``
        (``clx``) oder ``40001`` (``modbus``). Der Tooltip der Zelle zeigt
        Beispiele für den Treiber der gewählten Steuerung. Einzelheiten im Kapitel
-       :ref:`treiber`.
+       `Steuerungen und Treiber <treiber_>`__.
    * - Typ
      - Datentyp, Auswahl aus den Typen, die der Treiber lesen kann (z. B. ``BOOL``,
        ``INT``, ``DINT``, ``REAL``, ``LREAL`` …). Wird die Steuerung einer
@@ -938,7 +938,7 @@ Allgemeines Vorgehen:
 #. **Prüfen.** Mit **Verbindung testen** die gelesenen Werte kontrollieren.
 
 Einzelheiten zu den Dialogen stehen beim jeweiligen Treiber im Kapitel
-:ref:`treiber`.
+`Steuerungen und Treiber <treiber_>`__.
 
 Verbindung testen
 ----------------------------------------------------------------------
@@ -963,14 +963,14 @@ Das Menü **Datei** des Konfigurationsprogramms enthält:
   ersten Speichern abgefragt.
 * **Öffnen…** (``Strg+O``) – lädt eine Konfigurationsdatei (JSON) mit **beliebigem
   Namen**, auch Konfigurationen des S7-, TIA- und CLX-Datenloggers (siehe
-  :ref:`uebernahme`).
+  `Übernahme von Konfigurationen der Einzelprogramme <uebernahme_>`__).
 * **Speichern** (``Strg+S``) und **Speichern unter…** (``Strg+Umschalt+S``) –
   schreiben in die aktuelle bzw. eine neue Datei (die Endung ist immer ``.json``). Vor dem Speichern wird geprüft, dass Steuerungs- und
   Variablennamen eindeutig und nicht leer sind, die Verbindungsparameter und
   Adressen für den jeweiligen Treiber gültig sind, die Formeln stimmen und bei
   festen Y-Achsen *Y max* größer als *Y min* ist.
 * **INI-Datei umwandeln …** – ältere INI-Konfigurationen einmalig in JSON umwandeln
-  (siehe :ref:`ini-umwandeln`).
+  (siehe `Ältere INI-Dateien umwandeln <ini-umwandeln_>`__).
 * **Logger mit dieser Konfiguration starten** (``Strg+R``) – speichert und
   startet den Logger mit dieser Datei.
 
@@ -1174,7 +1174,7 @@ Erläuterungen:
 
 * ``treiber`` ist das Kürzel des Treibers; die übrigen Schlüssel eines
   Eintrags in ``steuerungen`` (außer ``name``, ``intervall_ms``, ``aktiv``) sind dessen
-  Verbindungsparameter (siehe :ref:`treiber`). Unbekannte Schlüssel werden
+  Verbindungsparameter (siehe `Steuerungen und Treiber <treiber_>`__). Unbekannte Schlüssel werden
   ignoriert, fehlende erhalten den Standardwert des Treibers.
 * ``adresse`` ist die Adresse in der Schreibweise des Treibers der Steuerung.
   Bei Blöcken ist ``adresse`` die Startadresse bzw. der Array-Name und ``start``
@@ -1814,7 +1814,7 @@ geändert), mit **■ Stop** / **▶ Start** neu verbinden.
 Konfigurationsdateien des **S7 Datenloggers**, **TIA Datenloggers** und
 **CLX Datenloggers** werden übernommen – als JSON-Datei direkt mit **Datei › Öffnen…**,
 als ältere INI-Datei nach der einmaligen Umwandlung (**Datei › INI-Datei umwandeln …**,
-siehe :ref:`ini-umwandeln`). Dabei gilt:
+siehe `Ältere INI-Dateien umwandeln <ini-umwandeln_>`__). Dabei gilt:
 
 * Der Treiber jeder Steuerung wird aus ihren Einträgen erkannt: ``rack``/``slot`` →
   ``s7``, ``pfad``/``cpu`` → ``clx``, ``tls``/``rolle``/``port`` → ``tia``.
@@ -1880,10 +1880,10 @@ Werkzeugleiste (oben):
      - Setzt die beiden Lineale (Offline) auf ein Drittel und zwei Drittel des
        sichtbaren Zeitbereichs.
    * - **Demo**
-     - Simulierte Werte statt SPS (siehe :ref:`demo-modus`).
+     - Simulierte Werte statt SPS (siehe `Demo-Modus <demo-modus_>`__).
    * - **Screenshot**
      - Öffnet eine Liste der Diagramme; das gewählte Diagramm wird als PNG
-       oder SVG gespeichert (siehe :ref:`screenshots`).
+       oder SVG gespeichert (siehe `Screenshots von Diagrammen <screenshots_>`__).
    * - **Fenster [s]**
      - Breite des sichtbaren Zeitfensters in Sekunden (1 bis 604800).
 
@@ -1904,7 +1904,7 @@ Aufzeichnung starten und beenden
    zu Zeilen zusammengeführt und in die CSV-Datei geschrieben.
 #. **■ Stop** beendet die Aufzeichnung und schließt die Datei. Beim Beenden des
    Programms wird automatisch gestoppt und – bei gesetzter Option – die
-   aktuelle CSV-Datei archiviert (siehe :ref:`csv-archiv`).
+   aktuelle CSV-Datei archiviert (siehe `Dateigröße begrenzen und archivieren <csv-archiv_>`__).
 
 Bei Verbindungsverlust versucht der Logger selbstständig, die Verbindung
 wiederherzustellen, und meldet dies in der Statuszeile. Während der Pause
@@ -2517,7 +2517,7 @@ Konfigurationsprogramm, Reiter **Trigger & Ereignisse** → **Trigger bearbeiten
    * - Name
      - Name des Triggers (eindeutig, ohne ``;``); steht im Ereignisprotokoll.
    * - Bedingung
-     - Ausdruck wie bei den :ref:`berechneten Variablen <berechnete-variablen>`.
+     - Ausdruck wie bei den `berechneten Variablen <berechnete-variablen_>`__.
        Ergebnis ungleich 0 = erfüllt. Beispiele: ``{Temperatur} > 80``,
        ``{Druck} < 2 and {Pumpe} == 1``, ``abs(ddt({Füllstand})) > 5``,
        ``{Störung} == 1``. Variablen ohne Wert (keine Verbindung) gelten als
@@ -2927,8 +2927,6 @@ verwendet. Variablen, deren Name in der aktuellen Konfiguration vorhanden ist,
 erscheinen auf der ersten Y-Achse des ersten Diagramms.
 
 
-.. _installer:
-
 .. _treiber-entwickeln:
 
 Treiber entwickeln
@@ -3161,6 +3159,8 @@ falls PyInstaller sie nicht findet – als ``--collect-all`` in ``build.bat`` bz
 ``plc_treiber`` automatisch auf (``--collect-submodules plc_treiber``).
 
 
+.. _installer:
+
 Installationsdatei erstellen (Windows)
 ======================================================================
 
@@ -3280,6 +3280,12 @@ Windows-Rechner von GitHub:
 Gebaut wird mit ``build.bat`` wie auf dem eigenen PC; die Versionsnummer kommt aus
 ``VERSION`` in ``build.bat``. Bilder der Anleitung (Ordner ``images``) werden
 mitgenommen, wenn sie im Repository liegen.
+
+**Wiki:** Der Workflow ``.github/workflows/wiki.yml`` erzeugt bei jeder Änderung dieser
+Anleitung (oder der Bilder) das GitHub-Wiki neu: eine Seite je Kapitel, mit
+Seitenleiste und Bildern (Werkzeug ``tools/make_wiki.py``, benötigt pandoc). Einmalig
+vorher im Repository das Wiki einschalten und die erste Seite anlegen. Die
+Wiki-Seiten nicht von Hand bearbeiten – sie werden beim nächsten Lauf überschrieben.
 
 .. _appimage:
 
@@ -3450,7 +3456,7 @@ Fehlersuche
        Mit ``portable.txt`` neben der ``.exe`` wird der Programmordner verwendet.
    * - Einzelprogramm kann die Datei nicht mehr lesen
      - Nach dem Speichern im PLC Datenlogger hat die Datei das neue Format (siehe
-       :ref:`uebernahme`). Alte Datei vorher mit **Speichern unter…** sichern.
+       `Übernahme von Konfigurationen der Einzelprogramme <uebernahme_>`__). Alte Datei vorher mit **Speichern unter…** sichern.
    * - Keine Millisekunden in Excel
      - Zellformat anpassen (siehe Hinweis im Abschnitt *CSV-Dateien*).
 

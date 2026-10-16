@@ -1,0 +1,39 @@
+# GitHub-Wiki aus der Bedienungsanleitung erzeugen und aktualisieren.
+# Start: bei jeder Änderung von bedienungsanleitung.rst oder images/ auf main, oder von Hand (Actions › Wiki).
+# Voraussetzung (einmalig): Wiki in den Repository-Einstellungen eingeschaltet und die erste Seite angelegt
+# (GitHub legt das Wiki-Repository erst damit an). Danach überschreibt dieser Workflow die Seiten bei jeder Änderung.
+name: Wiki
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["bedienungsanleitung.rst", "images/**", "tools/make_wiki.py"]
+
+permissions:
+  contents: write
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: pandoc installieren
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pandoc
+      - name: Wiki-Seiten erzeugen
+        run: python3 tools/make_wiki.py wiki_out
+      - name: Ins Wiki übertragen
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki_repo || {
+            echo "::error::Wiki nicht gefunden. Bitte im Repository unter Settings › Features das Wiki einschalten und unter dem Reiter Wiki einmal die erste Seite speichern."
+            exit 1; }
+          cd wiki_repo
+          git rm -rq --ignore-unmatch '*.md' images || true
+          cp -r ../wiki_out/. .
+          git add -A
+          if git diff --cached --quiet; then echo "Wiki ist aktuell."; exit 0; fi
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
+              commit -q -m "Wiki aus bedienungsanleitung.rst (${GITHUB_SHA::7})"
+          git push -q
