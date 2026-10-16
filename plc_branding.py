@@ -7,7 +7,9 @@
 * ``set_windows_app_id`` sorgt unter Windows für ein eigenes Taskleisten-Symbol.
 
 Die Bilddateien (PNG, SVG, ICO, JPG ...) werden in der Konfiguration angegeben; relative Pfade
-beziehen sich auf den Programm-/Datenordner (siehe plc_common.BASE_DIR).
+beziehen sich auf den Programm-/Datenordner (siehe plc_common.BASE_DIR). Ohne Angabe gelten die mitgelieferten
+Dateien ``app.ico`` (Icon) und ``logo.png`` (Logo) im Programm- bzw. Datenordner, erst danach das gezeichnete
+Standard-Symbol.
 """
 import math
 import os
@@ -25,6 +27,15 @@ def resolve(path: str) -> str:
         return ""
     # Absolute Pfade bleiben unverändert, relative gelten ab dem Basisordner des Programms.
     return path if os.path.isabs(path) else os.path.join(BASE_DIR, path)
+
+
+def bundled(name: str) -> str:
+    """Mitgelieferte Bilddatei (Datenordner, Programmordner, PyInstaller-Archiv) oder ""."""
+    for folder in (BASE_DIR, os.path.dirname(os.path.abspath(__file__)), getattr(sys, "_MEIPASS", "")):
+        path = os.path.join(folder, name) if folder else ""
+        if path and os.path.exists(path):
+            return path
+    return ""
 
 
 def default_pixmap(size: int = 256) -> QPixmap:
@@ -61,9 +72,10 @@ def default_pixmap(size: int = 256) -> QPixmap:
 
 
 def app_icon(*paths) -> QIcon:
-    """Erste vorhandene Bilddatei aus paths als Icon, sonst das Standard-Icon."""
-    # Der erste Pfad, der existiert und ein lesbares Bild ist, gewinnt (z. B. erst das Icon, dann das Logo).
-    for path in paths:
+    """Erste vorhandene Bilddatei als Icon: konfiguriertes Icon, mitgeliefertes app.ico, weitere Pfade (z. B. das
+    Logo), sonst das Standard-Icon."""
+    candidates = list(paths[:1]) + [bundled("app.ico")] + list(paths[1:])
+    for path in candidates:
         full = resolve(path)
         if full and os.path.exists(full):
             icon = QIcon(full)
@@ -73,15 +85,19 @@ def app_icon(*paths) -> QIcon:
     return QIcon(default_pixmap(256))
 
 
-def logo_pixmap(path: str, height: int = 28) -> QPixmap:
-    """Logo auf feste Höhe skaliert (Seitenverhältnis bleibt); ohne Datei das Standard-Icon."""
+def logo_pixmap(path: str, height: int = 28, max_width: int = 0) -> QPixmap:
+    """Logo auf feste Höhe skaliert (Seitenverhältnis bleibt, höchstens max_width breit); ohne Datei das
+    mitgelieferte logo.png, sonst das Standard-Icon."""
     # Logo laden (SVG funktioniert, wenn das Qt-SVG-Plugin vorhanden ist).
-    full = resolve(path)
-    if full and os.path.exists(full):
-        pm = QPixmap(full)
-        if not pm.isNull():
-            # Auf feste Höhe skalieren, Seitenverhältnis bleibt erhalten; SmoothTransformation = hohe Qualität.
-            return pm.scaledToHeight(height, Qt.TransformationMode.SmoothTransformation)
+    for full in (resolve(path), bundled("logo.png")):
+        if full and os.path.exists(full):
+            pm = QPixmap(full)
+            if not pm.isNull():
+                # Auf feste Höhe skalieren, Seitenverhältnis bleibt erhalten; SmoothTransformation = hohe Qualität.
+                pm = pm.scaledToHeight(height, Qt.TransformationMode.SmoothTransformation)
+                if max_width and pm.width() > max_width:
+                    pm = pm.scaledToWidth(max_width, Qt.TransformationMode.SmoothTransformation)
+                return pm
     return default_pixmap(256).scaledToHeight(height, Qt.TransformationMode.SmoothTransformation)
 
 

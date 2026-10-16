@@ -132,6 +132,11 @@ Das Programm besteht aus mehreren Dateien, die im selben Ordner liegen müssen:
        Einzelprogramme). Wird nicht direkt gestartet.
    * - ``build.bat``, ``installer.iss``, ``make_icon.py``, ``requirements.txt``
      - Erzeugung der Windows-Installationsdatei (siehe :ref:`installer`).
+   * - ``app.ico``, ``logo.png``
+     - Programm-Icon und Logo (Vorgabe, wenn in der Konfiguration nichts eingetragen ist;
+       ``app.ico`` fließt auch in die ``.exe``-Dateien und den Installer ein).
+   * - ``images/``
+     - Bilder der Bedienungsanleitung.
    * - ``plctag.dll``
      - libplctag für Windows (64 Bit), vom Treiber ``clx`` benötigt.
    * - ``plc_block_dialog.py``
@@ -463,10 +468,11 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
    * - Logo (rechts oben)
      - Bilddatei (PNG, SVG, JPG), die im Logger rechts oben in der Menüleiste
        angezeigt wird (auf 28 Pixel Höhe skaliert). Ein relativer Pfad bezieht
-       sich auf den Programmordner. Ohne Angabe wird ein Standard-Symbol gezeigt.
+       sich auf den Programmordner. Ohne Angabe wird das mitgelieferte ``logo.png``
+       gezeigt (fehlt es, ein Standard-Symbol).
    * - Programm-Icon
      - Icon für Fenster und Taskleiste (PNG, ICO oder SVG). Ohne Angabe wird das
-       Logo bzw. das Standard-Symbol verwendet.
+       mitgelieferte ``app.ico`` verwendet, sonst das Logo bzw. das Standard-Symbol.
 
 **Reiter „Datenbank“**
 
@@ -3175,8 +3181,8 @@ Dazu dienen:
      - Inno-Setup-Skript (Programmordner, Startmenü, optionale Desktop-Symbole,
        Deinstallation, Anleitung).
    * - ``make_icon.py``
-     - Erzeugt ``app.ico`` aus dem Standard-Symbol, falls noch keine ``app.ico``
-       existiert.
+     - Erzeugt fehlende Symboldateien (``app.ico`` aus dem Standard-Symbol,
+       ``app.png`` für das AppImage aus ``app.ico``); vorhandene bleiben unverändert.
    * - ``requirements.txt``
      - Benötigte Python-Pakete (inkl. PyInstaller und docutils für den Build).
 
@@ -3201,8 +3207,9 @@ Lauf (pip) und für den Installer **Inno Setup 6**
 
 Das Skript legt eine virtuelle Umgebung ``.venv`` an, installiert die Pakete,
 erzeugt bei Bedarf das Icon und baut beide Programme. Die Versionsnummer wird
-oben in ``build.bat`` bei ``VERSION`` eingestellt. Ein **eigenes Icon** entsteht,
-indem Sie vor dem Build eine eigene ``app.ico`` in den Ordner legen.
+oben in ``build.bat`` bei ``VERSION`` eingestellt. Icon und Logo sind die Dateien
+``app.ico`` und ``logo.png`` im Programmordner; zum Austauschen einfach ersetzen
+(Icon am besten mit 256×256 Pixeln, für ein scharfes Symbol in Explorer und Taskleiste).
 
 **Speicherort der Daten:** Die installierten Programme schreiben Konfiguration
 (``plc_config.json``), CSV-Dateien und Archiv **nicht** in den Programmordner

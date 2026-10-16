@@ -189,7 +189,7 @@ class _Banner(QWidget):
         self.subtitle = subtitle
         lay = QVBoxLayout(self)
         lay.setContentsMargins(28, 34, 28, 22)
-        self.logo = LogoLabel(logo_pixmap(logo_path, 96) if logo_path else default_pixmap(96))
+        self.logo = LogoLabel(logo_pixmap(logo_path, 96, max_width=244))
         self.logo.setToolTip(APP_NAME)
         lay.addWidget(self.logo, 0, Qt.AlignmentFlag.AlignLeft)
         lay.addSpacing(18)

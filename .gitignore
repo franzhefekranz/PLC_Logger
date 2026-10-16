@@ -12,7 +12,6 @@ installer/
 *.AppImage
 appimage_build/
 bedienungsanleitung.html
-app.ico
 
 # Laufzeitdaten (Konfiguration, Aufzeichnungen, Einstellungen)
 *_last.txt

@@ -119,6 +119,7 @@ echo "[3/6] PyInstaller ..."
 "$VPY" -m PyInstaller --noconfirm --clean --windowed --onedir --name "$APP" \
     --distpath "$B/dist" --workpath "$B/work" --specpath "$B" \
     --add-data "$PWD/sprachen:sprachen" \
+    --add-data "$PWD/logo.png:." --add-data "$PWD/app.ico:." \
     --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PyQt6.QtSvg \
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
