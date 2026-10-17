@@ -1,0 +1,12 @@
+; rinohtype-Vorlage für das PDF der Bedienungsanleitung (siehe conf.py, rinoh_documents).
+
+[TEMPLATE_CONFIGURATION]
+name=PLC Datenlogger
+template=book
+stylesheet=pdf.rts
+language=de
+
+; deutsche Texte, die rinohtype nicht mitbringt bzw. die hier besser passen
+[STRINGS]
+@section='Abschnitt'
+@note='Hinweis'

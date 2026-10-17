@@ -1,0 +1,104 @@
+# Testumgebung für die Datenbank-Aufzeichnung des PLC-Datenloggers:
+# TimescaleDB (PostgreSQL), QuestDB, InfluxDB 3 Core, VictoriaMetrics und Grafana mit vorkonfigurierten Datenquellen.
+#
+# Einzelne Dienste starten:  docker compose up -d influxdb3 grafana
+#
+# Start:   docker compose up -d        (im Ordner docker)
+# Stopp:   docker compose down         (Daten bleiben in den Volumes erhalten)
+# Löschen: docker compose down -v      (auch alle aufgezeichneten Daten)
+#
+# Zugangsdaten stehen in der Datei .env (Vorlage: .env.example).
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: plc-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${TS_DB:-datenlogger}
+      POSTGRES_USER: ${TS_USER:-logger}
+      POSTGRES_PASSWORD: ${TS_PASSWORD:?TS_PASSWORD in .env setzen}
+      TZ: UTC
+    ports:
+      - "5432:5432"            # PLC Logger: Datenbank „TimescaleDB / PostgreSQL“, Port 5432
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+
+  questdb:
+    image: questdb/questdb:latest
+    container_name: plc-questdb
+    restart: unless-stopped
+    environment:
+      # Anmeldung für die PostgreSQL-Schnittstelle (Grafana); die HTTP-Schnittstelle bleibt ohne Anmeldung
+      QDB_PG_USER: ${QDB_PG_USER:-admin}
+      QDB_PG_PASSWORD: ${QDB_PG_PASSWORD:?QDB_PG_PASSWORD in .env setzen}
+    ports:
+      - "9000:9000"            # HTTP: PLC Logger (Datenbank „QuestDB“, Port 9000) und Web-Konsole
+      - "8812:8812"            # PostgreSQL-Schnittstelle (Grafana, psql)
+    volumes:
+      - questdb-data:/var/lib/questdb
+
+  influxdb3:
+    image: influxdb:3-core
+    container_name: plc-influxdb3
+    restart: unless-stopped
+    # Testbetrieb ohne Anmeldung. Mit Anmeldung: --without-auth entfernen, dann einmalig einen Token erzeugen
+    #   docker exec plc-influxdb3 influxdb3 create token --admin
+    # und im PLC Logger ins Feld Passwort (Benutzer leer) bzw. in .env (INFLUX_TOKEN) eintragen.
+    command:
+      - influxdb3
+      - serve
+      - --node-id=plc-node
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3/data
+      - --without-auth
+    ports:
+      - "8181:8181"            # PLC Logger: Datenbank „InfluxDB 3 Core“, Port 8181, Datenbankname datenlogger
+    volumes:
+      - influxdb3-data:/var/lib/influxdb3
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: plc-victoriametrics
+    restart: unless-stopped
+    command:
+      - -storageDataPath=/storage
+      - -retentionPeriod=${VM_RETENTION:-1y}     # Aufbewahrungsdauer (Standard von VictoriaMetrics: 1 Monat)
+      - -httpListenAddr=:8428
+    ports:
+      - "8428:8428"            # PLC Logger: Datenbank „VictoriaMetrics“, Port 8428; Oberfläche: http://localhost:8428/vmui
+    volumes:
+      - victoriametrics-data:/storage
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: plc-grafana
+    restart: unless-stopped
+    depends_on:
+      - timescaledb
+      - questdb
+      - influxdb3
+      - victoriametrics
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD in .env setzen}
+      # für die Datenquellen-Datei (provisioning)
+      TS_DB: ${TS_DB:-datenlogger}
+      TS_USER: ${TS_USER:-logger}
+      TS_PASSWORD: ${TS_PASSWORD}
+      QDB_PG_USER: ${QDB_PG_USER:-admin}
+      QDB_PG_PASSWORD: ${QDB_PG_PASSWORD}
+      INFLUX_DB: ${INFLUX_DB:-datenlogger}
+      INFLUX_TOKEN: ${INFLUX_TOKEN:-}
+    ports:
+      - "3000:3000"            # http://localhost:3000
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+
+volumes:
+  timescale-data:
+  questdb-data:
+  influxdb3-data:
+  victoriametrics-data:
+  grafana-data:

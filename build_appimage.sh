@@ -2,7 +2,7 @@
 # =====================================================================================================================
 #  PLC Datenlogger – AppImage für Linux bauen (x86_64 oder arm64/aarch64)
 #
-#  Aufruf (im Programmordner):
+#  Aufruf (im Projektordner; Programmdateien in src/, Anleitung in doc/):
 #      ./build_appimage.sh                 AppImage für die Architektur dieses Rechners bauen
 #      ./build_appimage.sh --docker arm64  in einem Docker-Container für arm64 bauen (auf x86_64 per QEMU-Emulation)
 #      ./build_appimage.sh --docker amd64  in einem Docker-Container für x86_64 bauen
@@ -56,7 +56,9 @@ case "$(uname -m)" in
     aarch64|arm64) ARCH=aarch64 ;;
     *) echo "[FEHLER] Architektur $(uname -m) wird nicht unterstützt (x86_64 oder aarch64)."; exit 1 ;;
 esac
-VERSION="$(sed -n 's/^APP_VERSION = "\(.*\)"/\1/p' "${PFX}_common.py")"
+VERSION="$(sed -n 's/^APP_VERSION = "\(.*\)"/\1/p' "src/${PFX}_common.py")"
+# Programmmodule (plc_*, Paket plc_treiber) liegen in src: für PyInstaller und --collect-submodules auffindbar machen
+export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 echo "== $NAME $VERSION – AppImage für $ARCH"
 
 B="build/linux-$ARCH"
@@ -70,12 +72,12 @@ fi
 VPY="$B/venv/bin/python"
 "$VPY" -m pip install -q --upgrade pip wheel
 if ! "$VPY" -m pip install -q -r requirements.txt; then
-    echo "[HINWEIS] Nicht alle Pakete als Wheel verfügbar (z. B. PyQt6 auf älteren arm64-Systemen)."
-    echo "          Alternative: System-Pakete verwenden, z. B. sudo apt install python3-pyqt6 python3-pyqt6.qtsvg"
+    echo "[HINWEIS] Nicht alle Pakete als Wheel verfügbar (z. B. PySide6 auf älteren arm64-Systemen)."
+    echo "          Alternative: System-Pakete verwenden, z. B. sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtsvg"
     echo "          und die Umgebung mit  rm -rf $B/venv && PYTHON=/usr/bin/python3 VENV_SYSTEM=1 ./build_appimage.sh  neu anlegen."
     if [[ "${VENV_SYSTEM:-0}" == "1" ]]; then
         rm -rf "$B/venv"; "$PY" -m venv --system-site-packages "$B/venv"
-        grep -viE '^(PyQt6|pyqt6)' requirements.txt > "$B/req.txt"
+        grep -viE '^(PySide6|pyside6)' requirements.txt > "$B/req.txt"
         "$VPY" -m pip install -q -r "$B/req.txt"
     else
         exit 1
@@ -86,7 +88,7 @@ fi
 # ------------------------------------------------------------------ 2. Symbol und Zusatzdateien
 echo "[2/6] Symbol, Chart.js ..."
 if [[ ! -f app.png ]]; then
-    QT_QPA_PLATFORM=offscreen "$VPY" make_icon.py || true
+    QT_QPA_PLATFORM=offscreen "$VPY" tools/make_icon.py || true
 fi
 if [[ ! -f web_static/chart.umd.js ]]; then
     mkdir -p web_static
@@ -117,22 +119,22 @@ EXTRA+=(--add-binary "$PWD/$LIB:.")
 # ------------------------------------------------------------------ 3. PyInstaller (ein Programm für alles)
 echo "[3/6] PyInstaller ..."
 "$VPY" -m PyInstaller --noconfirm --clean --windowed --onedir --name "$APP" \
-    --distpath "$B/dist" --workpath "$B/work" --specpath "$B" \
+    --distpath "$B/dist" --workpath "$B/work" --specpath "$B" --paths "$PWD/src" \
     --add-data "$PWD/sprachen:sprachen" \
     --add-data "$PWD/logo.png:." --add-data "$PWD/app.ico:." \
-    --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PyQt6.QtSvg \
+    --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 \
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
-    --hidden-import plc_block_dialog --hidden-import plc_branding --hidden-import plc_common \
+    --hidden-import plc_about --hidden-import plc_block_dialog --hidden-import plc_branding --hidden-import plc_common \
     --hidden-import plc_config --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_event_viewer \
     --hidden-import plc_events --hidden-import plc_formula --hidden-import plc_formula_dialog \
     --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_i18n --hidden-import plc_pid \
     --hidden-import plc_pid_dialog --hidden-import plc_recorder --hidden-import plc_splash \
     --hidden-import plc_svg --hidden-import plc_trigger_dialog --hidden-import plc_util \
     --hidden-import plc_web \
-    --collect-submodules plc_treiber --add-data "$PWD/plc_treiber/_vorlage.py:plc_treiber" \
+    --collect-submodules plc_treiber --add-data "$PWD/src/plc_treiber/_vorlage.py:plc_treiber" \
     ${EXTRA[@]+"${EXTRA[@]}"} \
-    "${PFX}_logger.py"
+    "$PWD/src/${PFX}_logger.py"
 
 # ------------------------------------------------------------------ 4. AppDir
 echo "[4/6] AppDir zusammenstellen ..."
@@ -140,7 +142,21 @@ AD="$B/AppDir"
 rm -rf "$AD"
 mkdir -p "$AD/usr/lib/$APP" "$AD/usr/share/applications" "$AD/usr/share/icons/hicolor/256x256/apps" "$AD/usr/share/doc/$APP"
 cp -a "$B/dist/$APP/." "$AD/usr/lib/$APP/"
-cp bedienungsanleitung.rst "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+cp doc/bedienungsanleitung.rst "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+# HTML-Fassung der Anleitung erzeugen (docutils; für die Kontexthilfe F1 nötig) und mit der PDF-Fassung
+# (falls mit tools/build_doc.py erzeugt) beilegen; Menü Hilfe › Bedienungsanleitung bzw. F1 öffnen sie
+"$VPY" -c "import docutils.core as d; d.publish_file(source_path='doc/bedienungsanleitung.rst', destination_path='doc/bedienungsanleitung.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >/dev/null 2>&1 \
+    || echo "[HINWEIS] doc/bedienungsanleitung.html konnte nicht erzeugt werden (F1 öffnet dann die Anleitung am Anfang)."
+cp doc/bedienungsanleitung.html "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+[[ -d doc/images ]] && cp -r doc/images "$AD/usr/share/doc/$APP/" || true
+cp build/doc/Bedienungsanleitung.pdf "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+# Lizenz (LGPL-3.0-or-later) und Lizenztexte: neben das Programm und nach usr/share/doc
+for f in LICENSE COPYING THIRD_PARTY_LICENSES.md; do
+    if [[ -f "$f" ]]; then
+        cp "$f" "$AD/usr/lib/$APP/"
+        cp "$f" "$AD/usr/share/doc/$APP/"
+    fi
+done
 if [[ -f app.png ]]; then
     cp app.png "$AD/$APP.png"
 else

@@ -1,4 +1,6 @@
-"""Bedienungsanleitung (bedienungsanleitung.rst) in Seiten für das GitHub-Wiki umwandeln.
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2026 Michael Taxis
+"""Bedienungsanleitung (doc/bedienungsanleitung.rst) in Seiten für das GitHub-Wiki umwandeln.
 
     python tools/make_wiki.py ZIELORDNER        (Repository für Bildadressen: Umgebungsvariable GITHUB_REPOSITORY)
 
@@ -16,7 +18,8 @@ import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SOURCE = os.path.join(ROOT, "bedienungsanleitung.rst")
+DOC = os.path.join(ROOT, "doc")
+SOURCE = os.path.join(DOC, "bedienungsanleitung.rst")
 
 
 def slug(text):
@@ -109,9 +112,9 @@ def main(target, repo):
         for head, name, _b in chapters:
             f.write(f"* [{head}]({name})\n")
     with open(os.path.join(target, "_Footer.md"), "w", encoding="utf-8") as f:
-        f.write("Automatisch erzeugt aus [`bedienungsanleitung.rst`](../blob/main/bedienungsanleitung.rst) – "
+        f.write("Automatisch erzeugt aus [`doc/bedienungsanleitung.rst`](../blob/main/doc/bedienungsanleitung.rst) – "
                 "Änderungen bitte dort vornehmen, nicht im Wiki.\n")
-    img_src, img_dst = os.path.join(ROOT, "images"), os.path.join(target, "images")
+    img_src, img_dst = os.path.join(DOC, "images"), os.path.join(target, "images")
     if os.path.isdir(img_src):
         shutil.rmtree(img_dst, ignore_errors=True)
         shutil.copytree(img_src, img_dst)

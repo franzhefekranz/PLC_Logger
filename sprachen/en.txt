@@ -9,6 +9,68 @@
 # Die Datei muss UTF-8 kodiert bleiben. Gesucht wird im Ordner "sprachen" im Datenordner und im Programmordner.
 # Umschalten: Menü "Sprache" (gilt nach einem Neustart).
 
+# ---------------- plc_about.py
+
+@ Die Bedienungsanleitung konnte nicht geöffnet werden:\n{0}
+> The user manual could not be opened:\n{0}
+
+@ Die Bedienungsanleitung wurde nicht gefunden (Bedienungsanleitung.pdf bzw. bedienungsanleitung.html im Programmordner oder im Unterordner Doku).
+> The user manual was not found (Bedienungsanleitung.pdf or bedienungsanleitung.html in the program folder or in its Doku subfolder).
+
+@ Bedienungsanleitung
+> User manual
+
+@ Über {0}
+> About {0}
+
+@ Version {0}
+> Version {0}
+
+@ Programm
+> Program
+
+@ Bibliotheken
+> Libraries
+
+@ Drittkomponenten
+> Third-party components
+
+@ Lizenz (LGPL v3)
+> License (LGPL v3)
+
+@ GPL v3
+> GPL v3
+
+@ Liest zyklisch Werte aus Steuerungen, zeichnet sie als CSV und/oder in einer Datenbank auf und zeigt sie als y-t-Diagramme an (Oberfläche, Browser, Headless).
+> Cyclically reads values from PLCs, records them as CSV and/or in a database and shows them as y-t charts (desktop, browser, headless).
+
+@ Dieses Programm ist freie Software: Sie können es unter den Bedingungen der GNU Lesser General Public License, wie von der Free Software Foundation veröffentlicht, weitergeben und/oder verändern, entweder gemäß Version 3 der Lizenz oder (nach Ihrer Wahl) jeder späteren Version.
+> This program is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+@ Dieses Programm wird in der Hoffnung verbreitet, dass es nützlich ist, aber OHNE JEDE GEWÄHR; sogar ohne die implizite Gewähr der MARKTREIFE oder der EIGNUNG FÜR EINEN BESTIMMTEN ZWECK.
+> This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+@ Lizenztexte: <a href='LICENSE'>GNU LGPL v3</a>, <a href='COPYING'>GNU GPL v3</a> (<a href='https://www.gnu.org/licenses/'>gnu.org/licenses</a>).
+> License texts: <a href='LICENSE'>GNU LGPL v3</a>, <a href='COPYING'>GNU GPL v3</a> (<a href='https://www.gnu.org/licenses/'>gnu.org/licenses</a>).
+
+@ Die Oberfläche verwendet Qt über PySide6 (LGPL-3.0). Die Bibliotheken liegen als eigene Dateien im Programmordner und können durch kompatible Fassungen ersetzt werden.
+> The user interface uses Qt via PySide6 (LGPL-3.0). The libraries are separate files in the program folder and can be replaced with compatible versions.
+
+@ nicht installiert
+> not installed
+
+@ System
+> System
+
+@ &Hilfe
+> &Help
+
+@ &Bedienungsanleitung
+> User &manual
+
+@ &Über {0} …
+> &About {0} …
+
 # ---------------- plc_block_dialog.py
 
 @ Name
@@ -501,8 +563,11 @@
 @ Standard
 > Default
 
-@ 0 = Standard (MariaDB 3306, PostgreSQL/TimescaleDB 5432)
-> 0 = default (MariaDB 3306, PostgreSQL/TimescaleDB 5432)
+@ 0 = Standard (MariaDB 3306, PostgreSQL/TimescaleDB 5432, QuestDB 9000, InfluxDB 3 8181, VictoriaMetrics 8428)
+> 0 = default (MariaDB 3306, PostgreSQL/TimescaleDB 5432, QuestDB 9000, InfluxDB 3 8181, VictoriaMetrics 8428)
+
+@ Rechnername oder IP-Adresse; bei QuestDB, InfluxDB und VictoriaMetrics auch eine URL (z. B. https://server:8181)
+> Host name or IP address; for QuestDB, InfluxDB and VictoriaMetrics also a URL (e.g. https://server:8181)
 
 @ Wird im Klartext in der Konfigurationsdatei gespeichert
 > Stored in plain text in the configuration file
@@ -548,6 +613,12 @@
 
 @ Tabelle:
 > Table:
+
+@ Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics hinter vmauth)
+> Without a user, the password is used as a token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics behind vmauth)
+
+@ VictoriaMetrics: Name der Metrik = Tabelle + _wert
+> VictoriaMetrics: metric name = table + _wert
 
 @ Standard ({0})
 > Default ({0})
@@ -746,11 +817,29 @@
 @ TimescaleDB / PostgreSQL
 > TimescaleDB / PostgreSQL
 
+@ QuestDB
+> QuestDB
+
+@ InfluxDB 3 Core
+> InfluxDB 3 Core
+
+@ VictoriaMetrics
+> VictoriaMetrics
+
 @ Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)
 > Invalid table name: {0!r} (letters, digits, _ only)
 
 @ normale PostgreSQL-Tabelle, TimescaleDB nicht verfügbar: {0}
 > regular PostgreSQL table, TimescaleDB not available: {0}
+
+@ ohne Deduplizierung: {0}
+> without deduplication: {0}
+
+@ Tabelle wird beim ersten Schreiben angelegt ({0})
+> Table will be created on first write ({0})
+
+@ Metrik {0}, Labels projekt und variable
+> Metric {0}, labels projekt and variable
 
 @ Keine Datenbank gewählt.
 > No database selected.
@@ -1409,6 +1498,12 @@
 @ Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)
 > Scale all Y axes automatically (overrides fixed ranges)
 
+@ Werte am Mauszeiger (online)
+> Values at mouse pointer (online)
+
+@ Im Online-Modus Zeit und Werte aller Kurven an der Mausposition anzeigen
+> In online mode, show time and values of all curves at the mouse position
+
 @ Screenshot
 > Screenshot
 
@@ -1887,8 +1982,8 @@
 @ <div style='font-size:18pt;font-weight:bold'>{0}</div><div style='color:{1}'>Version {2} · Du hast das Geheimnis gefunden! 🎉</div>
 > <div style='font-size:18pt;font-weight:bold'>{0}</div><div style='color:{1}'>Version {2} · You found the secret! 🎉</div>
 
-@ Qt {0} · PyQt {1}
-> Qt {0} · PyQt {1}
+@ Qt {0} · PySide {1}
+> Qt {0} · PySide {1}
 
 @ Python {0} · {1} · {2} {3}<br>Datenordner: {4}<br>Seit dem Start vergangen: {5} s
 > Python {0} · {1} · {2} {3}<br>Data folder: {4}<br>Time since start: {5} s
@@ -1898,9 +1993,6 @@
 
 @ Zurück an die Arbeit
 > Back to work
-
-@ Version {0}
-> Version {0}
 
 @ Aufzeichnung & Analyse
 > Recording & analysis

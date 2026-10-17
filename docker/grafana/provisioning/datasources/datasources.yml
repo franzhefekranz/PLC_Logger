@@ -1,0 +1,55 @@
+# Grafana-Datenquellen für die Tabelle "messwerte" des PLC-Datenloggers (Werte aus der .env-Datei).
+# TimescaleDB und QuestDB über die eingebaute PostgreSQL-Datenquelle (QuestDB über Port 8812), InfluxDB 3 über die
+# InfluxDB-Datenquelle mit SQL, VictoriaMetrics über die Prometheus-Datenquelle (Metrik messwerte_wert).
+apiVersion: 1
+
+datasources:
+  - name: TimescaleDB
+    uid: plc-timescaledb
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: timescaledb:5432
+    user: $TS_USER
+    isDefault: true
+    jsonData:
+      database: $TS_DB
+      sslmode: disable
+      timescaledb: true
+      postgresVersion: 1600
+    secureJsonData:
+      password: $TS_PASSWORD
+
+  - name: QuestDB
+    uid: plc-questdb
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: questdb:8812
+    user: $QDB_PG_USER
+    jsonData:
+      database: qdb
+      sslmode: disable
+      postgresVersion: 1200
+    secureJsonData:
+      password: $QDB_PG_PASSWORD
+
+  - name: InfluxDB 3
+    uid: plc-influxdb3
+    type: influxdb
+    access: proxy
+    url: http://influxdb3:8181
+    jsonData:
+      version: SQL
+      dbName: $INFLUX_DB
+      httpMode: POST
+      insecureGrpc: true
+    secureJsonData:
+      token: $INFLUX_TOKEN
+
+  - name: VictoriaMetrics
+    uid: plc-victoriametrics
+    type: prometheus
+    access: proxy
+    url: http://victoriametrics:8428
+    jsonData:
+      httpMethod: POST
+      timeInterval: 1s

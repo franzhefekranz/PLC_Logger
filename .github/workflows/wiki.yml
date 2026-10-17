@@ -1,5 +1,5 @@
 # GitHub-Wiki aus der Bedienungsanleitung erzeugen und aktualisieren.
-# Start: bei jeder Änderung von bedienungsanleitung.rst oder images/ auf main, oder von Hand (Actions › Wiki).
+# Start: bei jeder Änderung von doc/bedienungsanleitung.rst oder doc/images/ auf main, oder von Hand (Actions › Wiki).
 # Voraussetzung (einmalig): Wiki in den Repository-Einstellungen eingeschaltet und die erste Seite angelegt
 # (GitHub legt das Wiki-Repository erst damit an). Danach überschreibt dieser Workflow die Seiten bei jeder Änderung.
 name: Wiki
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["bedienungsanleitung.rst", "images/**", "tools/make_wiki.py"]
+    paths: ["doc/**", "tools/make_wiki.py"]
 
 permissions:
   contents: write

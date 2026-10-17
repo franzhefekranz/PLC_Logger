@@ -1,0 +1,18 @@
+; rinohtype-Stylesheet für das PDF der Bedienungsanleitung (Grundlage: Sphinx-Stylesheet von rinohtype).
+
+[STYLESHEET]
+name=PLC Datenlogger
+description=Bedienungsanleitung PLC Datenlogger
+base=sphinx
+
+[VARIABLES]
+; DejaVu Sans / Sans Mono enthalten die Symbole der Anleitung (✓ ✗ ⚠ ▶ und Rahmenlinien in Codeblöcken)
+mono_typeface=DejaVu Sans Mono
+fallback_typeface=DejaVu Sans
+
+; Kapitel auf der nächsten Seite beginnen (nicht immer rechts) – keine Leerseiten im Bildschirm-PDF
+[chapter]
+page_break=any
+
+[table of contents section]
+page_break=any

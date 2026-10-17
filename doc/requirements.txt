@@ -1,0 +1,8 @@
+# Werkzeuge für die Dokumentation (PDF der Bedienungsanleitung mit Sphinx und rinohtype, ohne LaTeX)
+#   pip install -r doc/requirements.txt
+#   python tools/build_doc.py
+sphinx>=8.0
+rinohtype>=0.5.5
+# Schriften mit den Symbolen der Anleitung (✓ ✗ ⚠ ▶, Rahmenlinien in Codeblöcken)
+rinoh-typeface-dejavusans
+rinoh-typeface-dejavusansmono
