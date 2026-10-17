@@ -39,7 +39,8 @@ LIBRARIES = [("pyqtgraph", "pyqtgraph", "pyqtgraph"),
              ("NumPy", "numpy", "numpy"), ("Flask", "Flask", "flask"), ("python-snap7", "python-snap7", "snap7"),
              ("s7commplus", "s7commplus", "s7commplus"), ("pycomm3", "pycomm3", "pycomm3"),
              ("pymodbus", "pymodbus", "pymodbus"), ("pyserial", "pyserial", "serial"),
-             ("asyncua", "asyncua", "asyncua"), ("PyMySQL", "PyMySQL", "pymysql"), ("psycopg", "psycopg", "psycopg")]
+             ("asyncua", "asyncua", "asyncua"), ("PyMySQL", "PyMySQL", "pymysql"), ("psycopg", "psycopg", "psycopg"),
+             ("openpyxl", "openpyxl", "openpyxl")]
 
 
 def _search_dirs():
@@ -105,6 +106,7 @@ HELP_TOPICS = {
     "NoteDialog": "Notizen (eigene Einträge)",
     "PidTuneDialog": "Berechnen (Logger)",
     "AboutDialog": "Lizenz",
+    "ExportDialog": "Werte exportieren (CSV/Excel)",
 }
 
 

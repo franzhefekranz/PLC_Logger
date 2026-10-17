@@ -40,6 +40,7 @@ eigenen Lizenzen; deren Lizenztexte liegen den Paketen bei (im Programmordner un
 | typing_extensions | PSF-2.0 | für asyncua |
 | idna | BSD-3-Clause | Netzwerk |
 | PyMySQL | MIT | MariaDB/MySQL |
+| openpyxl, et_xmlfile | MIT | Excel-Dateien (Export/Import) |
 | psycopg, psycopg-binary | LGPL-3.0 | PostgreSQL/TimescaleDB |
 | libpq, OpenSSL (in psycopg-binary) | PostgreSQL-Lizenz, Apache-2.0 | PostgreSQL-Verbindung |
 | Python | PSF-2.0 | Laufzeit |

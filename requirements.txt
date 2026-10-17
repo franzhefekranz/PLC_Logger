@@ -20,6 +20,8 @@ PySide6-Essentials>=6.5
 pyqtgraph>=0.13
 numpy>=1.24
 Flask>=3.0
+# Excel-Dateien (.xlsx): Export der Messwerte, Import/Export der Variablen
+openpyxl>=3.1
 # Datenbanktreiber (nur fuer die jeweilige Datenbank noetig; SQLite ist in Python enthalten,
 # QuestDB braucht keinen Treiber (HTTP-Schnittstelle))
 PyMySQL>=1.1

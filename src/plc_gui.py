@@ -72,6 +72,7 @@ from plc_common import (BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE, Variable, load
                        load_plcs, remember_config_path,
                         load_settings, program_command, save_settings)
 from plc_events import EventLog, event_log_path
+from plc_export import stats
 from plc_recorder import Recorder, demo_config
 from plc_splash import LogoLabel
 from plc_svg import build_svg
@@ -1123,9 +1124,12 @@ class MainWindow(QMainWindow):
         box = QWidget()
         bl = QVBoxLayout(box)
         self.lbl_time = QLabel("–")
-        self.table = QTableWidget(0, 4)
+        # Spalten: Variable, Wert (online aktuell / offline Lineal 1), Lineal 2, Differenz und offline die Kennwerte
+        # zwischen den Linealen (Minimum, Maximum, Mittelwert, Standardabweichung).
+        self.table = QTableWidget(0, 8)
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.horizontalHeader().setMinimumSectionSize(70)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.itemChanged.connect(self.on_item_changed)
         bl.addWidget(self.lbl_time)
@@ -1250,6 +1254,11 @@ class MainWindow(QMainWindow):
         m_file.addSeparator()
         m_file.addAction(act_load)
         m_file.addAction(act_load_db)
+        act_export = QAction(tr("Werte exportieren (CSV/Excel) …"), self)
+        act_export.setShortcut("Ctrl+Shift+E")
+        act_export.setToolTip(tr("Messwerte eines Zeitbereichs als CSV- oder Excel-Datei speichern, optional verdichtet"))
+        act_export.triggered.connect(self.export_values)
+        m_file.addAction(act_export)
         m_file.addAction(act_web)
         act_events = QAction(tr("Ereignisprotokoll …"), self)
         act_events.setShortcut("Ctrl+E")
@@ -1471,7 +1480,7 @@ class MainWindow(QMainWindow):
             # Tooltip: Formel (berechnete Variable) oder SPS-Adresse.
             name.setToolTip(v.formula if v.formula else v.address)
             self.table.setItem(r, 0, name)
-            for col in (1, 2, 3):
+            for col in range(1, 8):
                 it = QTableWidgetItem("—")
                 it.setFlags(Qt.ItemFlag.ItemIsEnabled)
                 it.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -1771,9 +1780,14 @@ class MainWindow(QMainWindow):
             p.set_cursor_enabled(self.online and self.act_mousevals.isChecked())
         # Tabellenüberschriften: online 'Aktuell'; offline 'Lineal 1', 'Lineal 2' und die Differenz. Die Spalten 2 und 3 gibt es nur offline.
         self.table.setHorizontalHeaderLabels(
-            [tr("Variable"), tr("Aktuell") if self.online else tr("Lineal 1"), tr("Lineal 2"), "Δ (L2 − L1)"])
-        self.table.setColumnHidden(2, self.online)
-        self.table.setColumnHidden(3, self.online)
+            [tr("Variable"), tr("Aktuell") if self.online else tr("Lineal 1"), tr("Lineal 2"), "Δ (L2 − L1)",
+             tr("Minimum"), tr("Maximum"), tr("Mittelwert"), tr("Std.-Abw.")])
+        # Kennwerte zwischen den Linealen (Spalten 4 bis 7): Tooltip erklärt den Bereich.
+        for col in range(4, 8):
+            self.table.horizontalHeaderItem(col).setToolTip(
+                tr("Zwischen Lineal 1 und Lineal 2 (einschließlich); Standardabweichung der Stichprobe"))
+        for col in range(2, 8):
+            self.table.setColumnHidden(col, self.online)
 
     # Kontrollkästchen vor einem Namen in der Wertetabelle: Kurve ein-/ausblenden (das Diagramm macht die Arbeit).
     def on_item_changed(self, item):
@@ -2090,6 +2104,11 @@ class MainWindow(QMainWindow):
             self.set_cell(self.table.item(r, 2), b, self.vars[i])
             self.table.item(r, 3).setText(
                 "—" if math.isnan(a) or math.isnan(b) else fmt_value(b - a, dt))
+            # Kennwerte aller Messpunkte zwischen den Linealen; Mittelwert und Streuung immer mit Nachkommastellen.
+            lo, hi = min(i1, i2), max(i1, i2)
+            mn, mx, mean, sd = stats(self.y[i][lo:hi + 1])
+            for col, val, d in ((4, mn, dt), (5, mx, dt), (6, mean, "REAL"), (7, sd, "REAL")):
+                self.table.item(r, col).setText(fmt_value(val, d))
         self.update_bars(i1)  # Balken und Legende zeigen offline die Werte an Lineal 1
         self.update_legends(i1)
 
@@ -2156,6 +2175,72 @@ class MainWindow(QMainWindow):
         if self.rec is not None and self.rec.running:
             self.act_run.setChecked(False)  # stoppt das Logging (Laden ersetzt die Daten im Speicher)
         self._show_loaded(names, list(t), cols, "db", tr("Geladen: {0} ({1} Zeitpunkte)").format(label, len(t)))
+
+    def export_values(self):
+        """Messwerte eines Zeitbereichs (Lineale, sichtbarer Ausschnitt oder alles) als CSV oder Excel speichern,
+        wahlweise mit Downsampling. Grundlage: die ganze Aufzeichnung im Speicher bzw. die geladenen Daten."""
+        from plc_export import downsample, export_dialog_class, write_values
+        if self.source == "rec" and self.rec is not None:
+            t, y = self.rec.snapshot()
+        else:
+            t, y = self.t, self.y
+        t = np.asarray(t, dtype=float)
+        if len(t) == 0 or not self.vars:
+            QMessageBox.information(self, tr("Werte exportieren"), tr("Es sind keine Messwerte vorhanden."))
+            return
+        y = np.asarray(y, dtype=float).reshape(len(self.vars), len(t))
+        # Wählbare Zeitbereiche; die Lineale gibt es nur offline.
+        # Lineale: wie in der Wertetabelle die nächstgelegenen Messpunkte (einschließlich).
+        r1, r2 = self.ruler_t
+        rulers = None
+        if not self.online and None not in (r1, r2):
+            k1, k2 = (int(np.abs(t - r).argmin()) for r in (r1, r2))
+            rulers = (float(t[min(k1, k2)]), float(t[max(k1, k2)]))
+        view = tuple(self.master.plot.getViewBox().viewRange()[0]) if self.master else None
+        span = (float(t[0]), float(t[-1]))
+        ranges = [("lineale", tr("Zwischen Lineal 1 und Lineal 2") if rulers else
+                   tr("Zwischen Lineal 1 und Lineal 2 (nur im Offline-Modus)"), rulers),
+                  ("sichtbar", tr("Sichtbarer Ausschnitt"), view),
+                  ("alle", tr("Alle Daten ({0} bis {1})").format(fmt_time(span[0]), fmt_time(span[1])), span)]
+
+        def count(a, b):
+            """Messpunkte im Bereich a..b -> (Anzahl, erster, letzter Zeitpunkt)."""
+            i0, i1 = int(np.searchsorted(t, a, side="left")), int(np.searchsorted(t, b, side="right"))
+            return (i1 - i0, float(t[i0]), float(t[i1 - 1])) if i1 > i0 else (0, a, a)
+
+        n_visible = sum(1 for v in self.vars if v.name not in self.hidden)
+        dlg = export_dialog_class()(self, ranges, count, len(self.vars), n_visible)
+        if not dlg.exec() or dlg.result is None:
+            return
+        res = dlg.result
+        stem = re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "export").strip("_") or "export"
+        default = os.path.join(self.csv_dir(), f"{stem}_{res['key']}_{datetime.now():%Y%m%d_%H%M%S}.xlsx")
+        path, flt = QFileDialog.getSaveFileName(self, tr("Werte exportieren"), default,
+                                                tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
+        if not path:
+            return
+        if os.path.splitext(path)[1].lower() not in (".xlsx", ".csv"):
+            path += ".csv" if "csv" in flt.lower() else ".xlsx"
+        # Variablen und Zeitbereich auswählen, dann ggf. verdichten.
+        idx = [k for k, v in enumerate(self.vars) if not (res["visible_only"] and v.name in self.hidden)]
+        a, b = res["range"]
+        i0, i1 = int(np.searchsorted(t, a, side="left")), int(np.searchsorted(t, b, side="right"))
+        tt, yy = t[i0:i1], y[idx, i0:i1]
+        if len(tt) == 0:
+            QMessageBox.information(self, tr("Werte exportieren"), tr("Im gewählten Zeitbereich liegen keine Messwerte."))
+            return
+        dtypes = [self.vars[k].dtype for k in idx]
+        if res["interval"] > 0:
+            tt, yy = downsample(tt, yy, res["interval"], res["method"], dtypes)
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            write_values(path, tt, [self.vars[k].name for k in idx], dtypes, yy)
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.warning(self, tr("Werte exportieren"), tr("Die Datei konnte nicht geschrieben werden:\n{0}").format(e))
+            return
+        QApplication.restoreOverrideCursor()
+        self.statusBar().showMessage(tr("Exportiert: {0} ({1} Zeilen, {2} Variablen)").format(path, len(tt), len(idx)), 10000)
 
     def _show_loaded(self, names, t, cols, source, message):
         """Geladene Daten (CSV oder Datenbank) offline anzeigen."""

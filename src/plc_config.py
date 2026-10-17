@@ -45,7 +45,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
     QHeaderView, QInputDialog, QLabel, QLineEdit, QMainWindow, QMessageBox, QPushButton,
     QSpinBox, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget, QTreeWidget,
-    QTreeWidgetItem, QVBoxLayout, QWidget,
+    QTreeWidgetItem, QVBoxLayout, QWidget, QMenu,
 )
 
 # Eigene Module: Branding, Dialoge (Blöcke, Formeln), Datenmodell/Konfiguration, Treiber, Formelprüfung.
@@ -76,6 +76,10 @@ ROLE_AI = ROLE_UID + 3     # Achsen-Index
 # Spalten der Variablentabelle (Nummern) und ihre Überschriften.
 # Spalten der Variablentabelle
 (C_NAME, C_PLC, C_AXIS, C_TAG, C_TYPE, C_COLOR, C_SHOW, C_BAR, C_TEST, C_FORMULA) = range(10)
+# Spalten der Variablenliste für Import/Export (CSV/Excel). Die Kopfzeile bleibt in jeder Sprache deutsch, damit
+# Dateien austauschbar sind; beim Import zählt nur der Spaltenname (Reihenfolge und Groß-/Kleinschreibung egal).
+VAR_IO_COLS = ["Name", "Steuerung", "Diagramm", "Y-Achse", "Adresse", "Typ", "Farbe", "Werteanzeige", "Balken",
+               "Formel"]
 VAR_COLS = [tr("Name"), tr("Steuerung"), tr("Diagramm › Y-Achse"), tr("Adresse"), tr("Typ"),
             tr("Farbe"), tr("Werteanzeige"), tr("Balken"), tr("Testwert"), tr("Formel")]
 
@@ -365,6 +369,14 @@ class ConfigWindow(QMainWindow):
                          (tr("Entfernen"), self.remove_rows),
                          (tr("Verbindung testen"), self.test_connection)]:
             b = QPushButton(text); b.clicked.connect(fn); vbtn.addWidget(b)
+        # Import/Export der Variablenliste (CSV oder Excel) als Knopf mit Menü.
+        b = QPushButton(tr("Import/Export"))
+        m_io = QMenu(b)
+        m_io.addAction(tr("Variablen importieren (CSV/Excel) …"), self.import_variables)
+        m_io.addAction(tr("Variablen exportieren (CSV/Excel) …"), self.export_variables)
+        b.setMenu(m_io)
+        set_help(b, "Variablen importieren und exportieren")
+        vbtn.addWidget(b)
         rl.addLayout(vbtn)
 
         # Teilbarer Bereich: links Baum + Eigenschaften, rechts Tabelle (Verhältnis 1 : 3).
@@ -1470,6 +1482,140 @@ class ConfigWindow(QMainWindow):
                 formula=t.item(r, C_FORMULA).text(),
             ))
         return out
+
+    # ---------------------------------------------------------------------------------------
+    # Variablenliste exportieren / importieren (CSV oder Excel)
+    # ---------------------------------------------------------------------------------------
+    def export_variables(self):
+        """Variablen der Tabelle (ohne Block-Elemente) als CSV- oder Excel-Datei speichern."""
+        from plc_export import write_table
+        stem = os.path.splitext(os.path.basename(self.path))[0] if self.path else "variablen"
+        path, flt = QFileDialog.getSaveFileName(self, tr("Variablen exportieren"),
+                                                os.path.join(BASE_DIR, f"{stem}_variablen.xlsx"),
+                                                tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
+        if not path:
+            return
+        if os.path.splitext(path)[1].lower() not in (".xlsx", ".csv"):
+            path += ".csv" if "csv" in flt.lower() else ".xlsx"
+        plcs = self.plc_names()
+        rows = []
+        for v in self.collect():
+            chart = self.charts[v.chart] if 0 <= v.chart < len(self.charts) else self.charts[0]
+            axis = chart.axes[v.axis] if 0 <= v.axis < len(chart.axes) else chart.axes[0]
+            rows.append([v.name, plcs[v.plc] if 0 <= v.plc < len(plcs) else "", chart.name, axis.name,
+                         "" if v.formula else v.address, "" if v.formula else v.dtype, v.color,
+                         "ja" if v.show_value else "nein", "ja" if v.bar else "nein", v.formula])
+        try:
+            write_table(path, VAR_IO_COLS, rows, sheet="Variablen")
+        except Exception as e:
+            QMessageBox.warning(self, tr("Variablen exportieren"), tr("Die Datei konnte nicht geschrieben werden:\n{0}").format(e))
+            return
+        self.statusBar().showMessage(tr("{0} Variablen exportiert: {1}").format(len(rows), path), 8000)
+
+    def import_variables(self):
+        """Variablen aus einer CSV- oder Excel-Datei übernehmen (Spalten wie beim Export; Pflicht ist nur „Name“).
+
+        Fehlende Diagramme und Y-Achsen werden angelegt; unbekannte Steuerungen fallen auf die erste zurück."""
+        from plc_export import read_table
+        path, _ = QFileDialog.getOpenFileName(self, tr("Variablen importieren"), BASE_DIR,
+                                              tr("Excel oder CSV (*.xlsx *.csv);;Alle Dateien (*)"))
+        if not path:
+            return
+        try:
+            header, rows = read_table(path)
+        except Exception as e:
+            QMessageBox.warning(self, tr("Variablen importieren"), tr("Die Datei konnte nicht gelesen werden:\n{0}").format(e))
+            return
+        col = {h.casefold(): i for i, h in enumerate(header)}
+        if "name" not in col:
+            QMessageBox.warning(self, tr("Variablen importieren"),
+                                tr("Die erste Zeile muss die Spaltennamen enthalten, mindestens „Name“.\n"
+                                   "Erwartete Spalten: {0}").format(", ".join(VAR_IO_COLS)))
+            return
+
+        def cell(row, key):
+            i = col.get(key.casefold())
+            if i is None or i >= len(row) or row[i] is None:
+                return ""
+            v = row[i]
+            if isinstance(v, float) and v.is_integer():          # Excel liefert Zahlen (z. B. Adresse 40001)
+                v = int(v)
+            return str(v).strip()
+
+        def flag(text, default):
+            return default if not text else text.casefold() in ("ja", "j", "yes", "y", "true", "wahr", "1", "x", "on")
+
+        # Ersetzen oder anhängen, wenn schon Variablen da sind.
+        replace = True
+        if self.table.rowCount():
+            box = QMessageBox(QMessageBox.Icon.Question, tr("Variablen importieren"),
+                              tr("{0} Variablen in der Datei. Die vorhandenen {1} Variablen ersetzen oder die neuen "
+                                 "anhängen (gleiche Namen werden dann übersprungen)?").format(len(rows), self.table.rowCount()),
+                              parent=self)
+            b_rep = box.addButton(tr("Ersetzen"), QMessageBox.ButtonRole.DestructiveRole)
+            b_add = box.addButton(tr("Anhängen"), QMessageBox.ButtonRole.AcceptRole)
+            box.addButton(QMessageBox.StandardButton.Cancel)
+            box.exec()
+            if box.clickedButton() not in (b_rep, b_add):
+                return
+            replace = box.clickedButton() is b_rep
+        if replace:
+            self.table.setRowCount(0)
+        taken = {self.table.item(r, C_NAME).text() for r in range(self.table.rowCount())} | set(self.block_names())
+        plcs = [n.casefold() for n in self.plc_names()]
+        # 1. Durchgang: Variablen bilden, fehlende Diagramme/Achsen anlegen (Zuordnungen der übrigen bleiben erhalten).
+        assigns = self.assignments()
+        new, skipped, unknown_plc = [], [], set()
+        for row in rows:
+            name = cell(row, "Name")
+            if not name or name in taken:
+                if name:
+                    skipped.append(name)
+                continue
+            taken.add(name)
+            plc_name = cell(row, "Steuerung")
+            plc = plcs.index(plc_name.casefold()) if plc_name.casefold() in plcs else 0
+            if plc_name and plc_name.casefold() not in plcs:
+                unknown_plc.add(plc_name)
+            ci, ai = self._chart_axis_by_name(cell(row, "Diagramm"), cell(row, "Y-Achse"))
+            formula = cell(row, "Formel")
+            color = cell(row, "Farbe")
+            if not QColor(color).isValid():
+                color = PALETTE[(self.table.rowCount() + len(new)) % len(PALETTE)]
+            new.append(Variable(name=name, plc=plc, address="" if formula else cell(row, "Adresse"),
+                                dtype=cell(row, "Typ") or self.driver_of_plc(plc).default_type, color=color,
+                                show_value=flag(cell(row, "Werteanzeige"), True), bar=flag(cell(row, "Balken"), True),
+                                chart=ci, axis=ai, formula=formula))
+        self.set_assignments(assigns)
+        # 2. Durchgang: Zeilen anlegen und den Baum einmal neu aufbauen.
+        for v in new:
+            self.add_row(v, refresh=False)
+        self.refresh_tree()
+        msg = tr("{0} Variablen importiert.").format(len(new))
+        if skipped:
+            msg += "\n" + tr("Übersprungen (Name schon vorhanden): {0}").format(", ".join(skipped[:20])
+                                                                               + (" …" if len(skipped) > 20 else ""))
+        if unknown_plc:
+            msg += "\n" + tr("Unbekannte Steuerung (erste Steuerung verwendet): {0}").format(", ".join(sorted(unknown_plc)))
+        QMessageBox.information(self, tr("Variablen importieren"), msg)
+
+    def _chart_axis_by_name(self, chart_name, axis_name):
+        """(Diagramm, Achse) zu den Namen; fehlende werden angelegt. Leere Namen: erstes Diagramm bzw. erste Achse."""
+        if not chart_name:
+            ci = 0
+        else:
+            ci = next((k for k, c in enumerate(self.charts) if c.name.casefold() == chart_name.casefold()), None)
+            if ci is None:
+                self.charts.append(Chart(name=chart_name, axes=[Axis(name=axis_name or "Achse 1")]))
+                ci = len(self.charts) - 1
+        axes = self.charts[ci].axes
+        if not axis_name:
+            return ci, 0
+        ai = next((k for k, a in enumerate(axes) if a.name.casefold() == axis_name.casefold()), None)
+        if ai is None:
+            axes.append(Axis(name=axis_name))
+            ai = len(axes) - 1
+        return ci, ai
 
     # ---------------------------------------------------------------------------------------
     # Variablen aus SPS-Symbolen

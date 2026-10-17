@@ -431,6 +431,15 @@
 @ Verbindung testen
 > Test connection
 
+@ Import/Export
+> Import/Export
+
+@ Variablen importieren (CSV/Excel) …
+> Import variables (CSV/Excel) …
+
+@ Variablen exportieren (CSV/Excel) …
+> Export variables (CSV/Excel) …
+
 @ Öffnen…
 > Open…
 
@@ -662,6 +671,48 @@
 @ CSV-Ordner wählen
 > Choose CSV folder
 
+@ Variablen exportieren
+> Export variables
+
+@ Excel-Datei (*.xlsx);;CSV-Datei (*.csv)
+> Excel file (*.xlsx);;CSV file (*.csv)
+
+@ Die Datei konnte nicht geschrieben werden:\n{0}
+> The file could not be written:\n{0}
+
+@ {0} Variablen exportiert: {1}
+> {0} variables exported: {1}
+
+@ Variablen importieren
+> Import variables
+
+@ Excel oder CSV (*.xlsx *.csv);;Alle Dateien (*)
+> Excel or CSV (*.xlsx *.csv);;All files (*)
+
+@ Die Datei konnte nicht gelesen werden:\n{0}
+> The file could not be read:\n{0}
+
+@ Die erste Zeile muss die Spaltennamen enthalten, mindestens „Name“.\nErwartete Spalten: {0}
+> The first row must contain the column names, at least “Name”.\nExpected columns: {0}
+
+@ {0} Variablen in der Datei. Die vorhandenen {1} Variablen ersetzen oder die neuen anhängen (gleiche Namen werden dann übersprungen)?
+> {0} variables in the file. Replace the existing {1} variables or append the new ones (names that already exist are skipped)?
+
+@ Ersetzen
+> Replace
+
+@ Anhängen
+> Append
+
+@ {0} Variablen importiert.
+> {0} variables imported.
+
+@ Übersprungen (Name schon vorhanden): {0}
+> Skipped (name already exists): {0}
+
+@ Unbekannte Steuerung (erste Steuerung verwendet): {0}
+> Unknown controller (first controller used): {0}
+
 @ Steuerung wählen
 > Choose controller
 
@@ -739,9 +790,6 @@
 
 @ Fehlerhafte Trigger (werden beim Aufzeichnen übersprungen):\n\n
 > Faulty triggers (skipped during recording):\n\n
-
-@ Die Datei konnte nicht geschrieben werden:\n{0}
-> The file could not be written:\n{0}
 
 @ Gespeichert: {0}
 > Saved: {0}
@@ -1240,6 +1288,56 @@
 @ Trigger {0} übersprungen: {1}
 > Trigger {0} skipped: {1}
 
+# ---------------- plc_export.py
+
+@ Mittelwert
+> Mean
+
+@ Minimum
+> Minimum
+
+@ Maximum
+> Maximum
+
+@ Für Excel-Dateien wird das Paket openpyxl benötigt (pip install openpyxl).
+> Excel files require the openpyxl package (pip install openpyxl).
+
+@ Zu viele Zeilen für Excel ({0}; höchstens {1}). Bitte Downsampling verwenden oder als CSV speichern.
+> Too many rows for Excel ({0}; at most {1}). Please use downsampling or save as CSV.
+
+@ Messwerte
+> Values
+
+@ Werte exportieren
+> Export values
+
+@ Zeitbereich
+> Time range
+
+@ Nur eingeblendete Variablen ({0} von {1})
+> Only visible variables ({0} of {1})
+
+@ Downsampling (Werte auf ein Zeitraster verdichten)
+> Downsampling (reduce values to a fixed time grid)
+
+@ Raster:
+> Grid:
+
+@ Verfahren:
+> Method:
+
+@ Zeitstempel = Beginn des Intervalls; BOOL-Variablen bleiben 0/1 (beim Mittelwert: 1, wenn das Signal im Intervall an war).
+> Timestamp = start of the interval; BOOL variables stay 0/1 (mean: 1 if the signal was on during the interval).
+
+@ Speichern …
+> Save …
+
+@ Höchstens {0} Zeilen
+> At most {0} rows
+
+@ {0} Zeilen
+> {0} rows
+
 # ---------------- plc_formula.py
 
 @ abs(x) – Betrag
@@ -1522,6 +1620,12 @@
 @ Datei
 > File
 
+@ Werte exportieren (CSV/Excel) …
+> Export values (CSV/Excel) …
+
+@ Messwerte eines Zeitbereichs als CSV- oder Excel-Datei speichern, optional verdichtet
+> Save the values of a time range as CSV or Excel file, optionally downsampled
+
 @ Ereignisprotokoll …
 > Event log …
 
@@ -1633,6 +1737,12 @@
 @ Lineal 2
 > Ruler 2
 
+@ Std.-Abw.
+> Std. dev.
+
+@ Zwischen Lineal 1 und Lineal 2 (einschließlich); Standardabweichung der Stichprobe
+> Between ruler 1 and ruler 2 (inclusive); sample standard deviation
+
 @ Keine Variablen
 > No variables
 
@@ -1674,6 +1784,27 @@
 
 @ Geladen: {0} ({1} Zeitpunkte)
 > Loaded: {0} ({1} time points)
+
+@ Es sind keine Messwerte vorhanden.
+> There are no values.
+
+@ Zwischen Lineal 1 und Lineal 2
+> Between ruler 1 and ruler 2
+
+@ Zwischen Lineal 1 und Lineal 2 (nur im Offline-Modus)
+> Between ruler 1 and ruler 2 (offline mode only)
+
+@ Sichtbarer Ausschnitt
+> Visible section
+
+@ Alle Daten ({0} bis {1})
+> All data ({0} to {1})
+
+@ Im gewählten Zeitbereich liegen keine Messwerte.
+> There are no values in the selected time range.
+
+@ Exportiert: {0} ({1} Zeilen, {2} Variablen)
+> Exported: {0} ({1} rows, {2} variables)
 
 @ Screenshot – {0}
 > Screenshot – {0}

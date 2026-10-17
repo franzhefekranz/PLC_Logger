@@ -431,6 +431,15 @@
 @ Verbindung testen
 > 
 
+@ Import/Export
+> 
+
+@ Variablen importieren (CSV/Excel) …
+> 
+
+@ Variablen exportieren (CSV/Excel) …
+> 
+
 @ Öffnen…
 > 
 
@@ -662,6 +671,48 @@
 @ CSV-Ordner wählen
 > 
 
+@ Variablen exportieren
+> 
+
+@ Excel-Datei (*.xlsx);;CSV-Datei (*.csv)
+> 
+
+@ Die Datei konnte nicht geschrieben werden:\n{0}
+> 
+
+@ {0} Variablen exportiert: {1}
+> 
+
+@ Variablen importieren
+> 
+
+@ Excel oder CSV (*.xlsx *.csv);;Alle Dateien (*)
+> 
+
+@ Die Datei konnte nicht gelesen werden:\n{0}
+> 
+
+@ Die erste Zeile muss die Spaltennamen enthalten, mindestens „Name“.\nErwartete Spalten: {0}
+> 
+
+@ {0} Variablen in der Datei. Die vorhandenen {1} Variablen ersetzen oder die neuen anhängen (gleiche Namen werden dann übersprungen)?
+> 
+
+@ Ersetzen
+> 
+
+@ Anhängen
+> 
+
+@ {0} Variablen importiert.
+> 
+
+@ Übersprungen (Name schon vorhanden): {0}
+> 
+
+@ Unbekannte Steuerung (erste Steuerung verwendet): {0}
+> 
+
 @ Steuerung wählen
 > 
 
@@ -738,9 +789,6 @@
 > 
 
 @ Fehlerhafte Trigger (werden beim Aufzeichnen übersprungen):\n\n
-> 
-
-@ Die Datei konnte nicht geschrieben werden:\n{0}
 > 
 
 @ Gespeichert: {0}
@@ -1240,6 +1288,56 @@
 @ Trigger {0} übersprungen: {1}
 > 
 
+# ---------------- plc_export.py
+
+@ Mittelwert
+> 
+
+@ Minimum
+> 
+
+@ Maximum
+> 
+
+@ Für Excel-Dateien wird das Paket openpyxl benötigt (pip install openpyxl).
+> 
+
+@ Zu viele Zeilen für Excel ({0}; höchstens {1}). Bitte Downsampling verwenden oder als CSV speichern.
+> 
+
+@ Messwerte
+> 
+
+@ Werte exportieren
+> 
+
+@ Zeitbereich
+> 
+
+@ Nur eingeblendete Variablen ({0} von {1})
+> 
+
+@ Downsampling (Werte auf ein Zeitraster verdichten)
+> 
+
+@ Raster:
+> 
+
+@ Verfahren:
+> 
+
+@ Zeitstempel = Beginn des Intervalls; BOOL-Variablen bleiben 0/1 (beim Mittelwert: 1, wenn das Signal im Intervall an war).
+> 
+
+@ Speichern …
+> 
+
+@ Höchstens {0} Zeilen
+> 
+
+@ {0} Zeilen
+> 
+
 # ---------------- plc_formula.py
 
 @ abs(x) – Betrag
@@ -1522,6 +1620,12 @@
 @ Datei
 > 
 
+@ Werte exportieren (CSV/Excel) …
+> 
+
+@ Messwerte eines Zeitbereichs als CSV- oder Excel-Datei speichern, optional verdichtet
+> 
+
 @ Ereignisprotokoll …
 > 
 
@@ -1633,6 +1737,12 @@
 @ Lineal 2
 > 
 
+@ Std.-Abw.
+> 
+
+@ Zwischen Lineal 1 und Lineal 2 (einschließlich); Standardabweichung der Stichprobe
+> 
+
 @ Keine Variablen
 > 
 
@@ -1673,6 +1783,27 @@
 > 
 
 @ Geladen: {0} ({1} Zeitpunkte)
+> 
+
+@ Es sind keine Messwerte vorhanden.
+> 
+
+@ Zwischen Lineal 1 und Lineal 2
+> 
+
+@ Zwischen Lineal 1 und Lineal 2 (nur im Offline-Modus)
+> 
+
+@ Sichtbarer Ausschnitt
+> 
+
+@ Alle Daten ({0} bis {1})
+> 
+
+@ Im gewählten Zeitbereich liegen keine Messwerte.
+> 
+
+@ Exportiert: {0} ({1} Zeilen, {2} Variablen)
 > 
 
 @ Screenshot – {0}

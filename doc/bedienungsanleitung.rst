@@ -989,6 +989,42 @@ Datei wird gemerkt (Datei ``plc_last.txt``); Logger und Konfigurationsprogramm
    Der Logger liest die Konfiguration bei jedem **Start**. Änderungen wirken
    daher erst nach erneutem Drücken von **▶ Start**.
 
+Variablen importieren und exportieren
+----------------------------------------------------------------------
+
+Der Knopf **Import/Export** unter der Variablentabelle tauscht die Variablenliste
+mit einer **Excel-** (``.xlsx``) oder **CSV-Datei** aus – praktisch, um lange
+Listen in Excel zu bearbeiten oder aus einer Adressliste der Steuerung zu
+übernehmen.
+
+* **Variablen exportieren (CSV/Excel) …** schreibt alle Variablen der Tabelle
+  (ohne Block-Elemente, siehe `Blocklesemodus <blocklesemodus_>`__) mit den Spalten
+  ``Name``, ``Steuerung``, ``Diagramm``, ``Y-Achse``, ``Adresse``, ``Typ``,
+  ``Farbe``, ``Werteanzeige``, ``Balken`` und ``Formel``.
+* **Variablen importieren (CSV/Excel) …** liest eine solche Datei. Die erste
+  Zeile enthält die Spaltennamen; Pflicht ist nur ``Name``, Reihenfolge und
+  Groß-/Kleinschreibung sind egal. CSV-Dateien dürfen Semikolon, Komma oder
+  Tabulator als Trennzeichen haben.
+
+Beim Import gilt:
+
+* Sind schon Variablen vorhanden, fragt das Programm, ob sie **ersetzt** oder die
+  neuen **angehängt** werden sollen. Beim Anhängen werden Variablen mit bereits
+  vorhandenem Namen übersprungen.
+* ``Steuerung`` ist der Name einer Steuerung aus der Steuerungstabelle; leer oder
+  unbekannt = erste Steuerung (unbekannte Namen werden gemeldet).
+* ``Diagramm`` und ``Y-Achse`` sind Namen; fehlende Diagramme und Achsen werden
+  angelegt, leer = erstes Diagramm bzw. erste Achse.
+* ``Typ`` leer = Standardtyp des Treibers; ``Farbe`` als ``#rrggbb``, leer =
+  Farbe aus der Palette.
+* ``Werteanzeige`` und ``Balken``: ``ja``/``nein`` (auch ``1``/``0``, ``x``);
+  leer = ja.
+* Ist ``Formel`` gefüllt, entsteht eine berechnete Variable (``Adresse`` und
+  ``Typ`` werden dann ignoriert).
+
+Adressen und Formeln werden wie bei der Eingabe von Hand erst beim
+**Speichern** geprüft.
+
 Aufbau der Konfigurationsdatei (JSON)
 ----------------------------------------------------------------------
 
@@ -2197,6 +2233,13 @@ Konfiguration *Werteanzeige* aktiviert ist.
   Diagramm aus oder ein (alternativ per Rechtsklick in der Legende).
 * Die Spalten wechseln je nach Modus (*Aktuell* online, *Lineal 1 / Lineal 2 /
   Δ* offline).
+* Offline zeigt die Tabelle zusätzlich die **Kennwerte zwischen den Linealen**:
+  *Minimum*, *Maximum*, *Mittelwert* und *Std.-Abw.* (Standardabweichung der
+  Stichprobe, wie ``STABW`` in Excel). Berücksichtigt werden alle Messpunkte vom
+  Messpunkt an Lineal 1 bis zum Messpunkt an Lineal 2 (einschließlich); fehlende
+  Werte werden übergangen. Bei BOOL-Variablen ist der Mittelwert der Anteil der
+  Zeit, in der das Signal an war (0,25 = 25 %). Die Werte folgen jedem
+  Verschieben der Lineale.
 
 Y-Achsen und Skalierung
 ----------------------------------------------------------------------
@@ -3008,6 +3051,34 @@ Aufzeichnung wird dabei beendet. Zur Darstellung wird die Spalte ``Epoch``
 verwendet. Variablen, deren Name in der aktuellen Konfiguration vorhanden ist,
 übernehmen Farbe und Zuordnung zu Diagramm und Y-Achse; unbekannte Variablen
 erscheinen auf der ersten Y-Achse des ersten Diagramms.
+
+Werte exportieren (CSV/Excel)
+----------------------------------------------------------------------
+
+**Datei › Werte exportieren (CSV/Excel) …** (``Strg+Umschalt+E``) speichert
+Messwerte als CSV- oder Excel-Datei (``.xlsx``). Grundlage ist die gesamte
+Aufzeichnung im Speicher bzw. die geladene CSV-Datei oder der Datenbank-Zeitraum.
+
+* **Zeitbereich:** *Zwischen Lineal 1 und Lineal 2* (nur offline; dieselben
+  Messpunkte wie die Kennwerte der Wertetabelle), *Sichtbarer Ausschnitt* oder
+  *Alle Daten*.
+* **Nur eingeblendete Variablen:** ausgeblendete Kurven werden weggelassen.
+* **Downsampling:** verdichtet die Werte auf ein festes Zeitraster (z. B. 1 s
+  oder 60 s), etwa um lange Aufzeichnungen für Excel oder einen Bericht zu
+  verkleinern. Verfahren je Intervall: *Mittelwert*, *Minimum*, *Maximum*,
+  *Erster Wert* oder *Letzter Wert*. Der Zeitstempel einer Zeile ist der Beginn
+  ihres Intervalls; Intervalle ohne Messpunkt entfallen. BOOL-Variablen bleiben
+  0/1 (beim Mittelwert gilt 1, wenn das Signal im Intervall an war). Der Dialog
+  zeigt, wie viele Zeilen höchstens entstehen.
+
+Das Format folgt der Dateiendung bzw. dem gewählten Dateityp:
+
+* **CSV:** gleicher Aufbau wie die Aufzeichnung (``Zeit;Epoch;Variablen …``,
+  Semikolon, Dezimalpunkt) – die Datei lässt sich mit **CSV laden** wieder öffnen.
+* **Excel:** Spalte A Datum und Uhrzeit (mit Millisekunden), Spalte B ``Epoch``,
+  danach je Variable eine Spalte; fehlende Werte bleiben leer. Ein Tabellenblatt
+  fasst höchstens 1 048 575 Zeilen – bei mehr Messpunkten Downsampling verwenden
+  oder als CSV speichern.
 
 
 .. _treiber-entwickeln:
