@@ -6,6 +6,7 @@ rem  Erzeugt mit PyInstaller die beiden Programme (PLCLogger.exe, PLCKonfigurati
 rem  in EINEM gemeinsamen Ordner und baut daraus mit Inno Setup die Setup-Datei.
 rem  PLCLogger.exe laeuft mit Oberflaeche oder (Option "Headless" bzw. Parameter --headless) ohne.
 rem  Fuer den Webserver wird Chart.js einmalig nach web_static\chart.umd.js geladen und mit eingepackt.
+rem  Die Bedienungsanleitung kommt als HTML und PDF (doc\requirements.txt, tools\build_doc.py) in Installer und ZIP.
 rem
 rem  Aufruf:   build.bat              alles: Umgebung, .exe-Dateien, Installer
 rem            build.bat exe          nur die .exe-Dateien (dist\PLCDatenlogger)
@@ -17,11 +18,14 @@ rem  Ein Programm fuer alle Steuerungen: die Treiber (Paket plc_treiber: S7/snap
 rem  Modbus TCP) werden komplett eingepackt. libplctag gibt es nicht als pip-Paket: plctag.dll (64 Bit) wird einmalig
 rem  aus dem offiziellen GitHub-Release geladen (oder liegt bereits neben diesem Skript) und eingepackt.
 rem  Voraussetzungen: Python 3.9+ (py-Launcher oder python im PATH), Internetzugang fuer
-rem  pip (beim ersten Lauf), Inno Setup 6 (https://jrsoftware.org/isinfo.php) fuer den Installer.
+rem  pip (beim ersten Lauf), Inno Setup 7 oder 6 (https://jrsoftware.org/isinfo.php) fuer den Installer.
 rem  Die Versionsnummer wird unten bei VERSION eingestellt.
+rem  Ordner: Programmdateien in src\, Anleitung und Bilder in doc\, Icon/Logo/plctag.dll/sprachen im Projektordner.
 rem ====================================================================================
 setlocal EnableExtensions
 cd /d "%~dp0"
+rem  Programmmodule (plc_*, Paket plc_treiber) liegen in src: fuer PyInstaller und --collect-submodules auffindbar machen
+set "PYTHONPATH=%~dp0src"
 
 set "VERSION=2.1.0"
 rem  Version der libplctag-Bibliothek (GitHub-Release), aus der plctag.dll geladen wird.
@@ -67,7 +71,7 @@ echo [2/6] Installiere Abhaengigkeiten aus requirements.txt ...
 rem ------------------------------------------------------------------ 2. Icon
 if not exist "app.ico" (
     echo [3/6] Erzeuge Programm-Icon app.ico ...
-    "%VPY%" make_icon.py || goto :fail
+    "%VPY%" tools\make_icon.py || goto :fail
 ) else (
     echo [3/6] Vorhandene app.ico wird verwendet.
 )
@@ -104,25 +108,26 @@ rem  --windowed        keine Konsole
 rem  --collect-submodules plc_treiber  alle Treiber; --collect-all snap7/pycomm3/s7commplus/asyncua/pymodbus/serial  deren Bibliotheken;
 rem  --add-binary plctag.dll  libplctag (Logix); --collect-data pyqtgraph
 rem  --hidden-import pymysql/psycopg, --collect-all psycopg_binary  Datenbanktreiber (MariaDB, PostgreSQL/TimescaleDB)
-rem  --hidden-import PyQt6.QtSvg  fuer den SVG-Export und SVG-Logos (wird erst zur Laufzeit importiert)
+rem  --hidden-import PySide6.QtSvg  fuer den SVG-Export und SVG-Logos (wird erst zur Laufzeit importiert)
+rem  --exclude-module PyQt6/PyQt5  falls in der Umgebung noch PyQt installiert ist: nur PySide6 einpacken (LGPL)
 rem  --hidden-import plc_*  Module, die plc_logger.py erst zur Laufzeit je nach Betriebsart importiert
 rem  --collect-all flask/werkzeug  Webserver (Flask) samt Zusatzdateien; --add-data web_static  Chart.js
 echo [4/6] PyInstaller: PLCLogger ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCLogger --icon app.ico ^
-    --distpath build\p1 --workpath build\w1 ^
-    --collect-submodules plc_treiber --add-data "plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    --distpath build\p1 --workpath build\w1 --paths src ^
+    --collect-submodules plc_treiber --add-data "src\plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 ^
+    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_about --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
     --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_recorder ^
     --hidden-import plc_web --hidden-import plc_svg --hidden-import plc_util ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
-    plc_logger.py || goto :fail
+    src\plc_logger.py || goto :fail
 
 echo [5/6] PyInstaller: PLCKonfiguration ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCKonfiguration --icon app.ico ^
-    --distpath build\p2 --workpath build\w2 ^
-    --collect-submodules plc_treiber --add-data "plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PyQt6.QtSvg ^
-    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
-    plc_config.py || goto :fail
+    --distpath build\p2 --workpath build\w2 --paths src ^
+    --collect-submodules plc_treiber --add-data "src\plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 ^
+    --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_about --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    src\plc_config.py || goto :fail
 
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die
 rem  Dateien der Konfiguration, die dort noch fehlen (/XC /XN /XO = vorhandene nicht ueberschreiben).
@@ -134,10 +139,21 @@ robocopy "build\p2\PLCKonfiguration" "dist\PLCDatenlogger" /E /XC /XN /XO /NFL /
 if errorlevel 8 goto :fail
 if not exist "dist\PLCDatenlogger\PLCLogger.exe" goto :fail
 if not exist "dist\PLCDatenlogger\PLCKonfiguration.exe" goto :fail
+rem  Lizenz (LGPL-3.0-or-later) und Lizenztexte in den Programmordner (gelangen so in Installer und portables ZIP)
+for %%F in (LICENSE COPYING THIRD_PARTY_LICENSES.md) do if exist "%%F" copy /y "%%F" "dist\PLCDatenlogger\" >nul
 
 rem  Bedienungsanleitung als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
-"%VPY%" -c "import docutils.core as d; d.publish_file(source_path='bedienungsanleitung.rst', destination_path='bedienungsanleitung.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >nul 2>nul
-if errorlevel 1 echo [HINWEIS] bedienungsanleitung.html konnte nicht erzeugt werden (der Installer enthaelt dann die .rst).
+"%VPY%" -c "import docutils.core as d; d.publish_file(source_path='doc/bedienungsanleitung.rst', destination_path='doc/bedienungsanleitung.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >nul 2>nul
+if errorlevel 1 echo [HINWEIS] doc\bedienungsanleitung.html konnte nicht erzeugt werden (der Installer enthaelt dann die .rst).
+
+rem  Bedienungsanleitung als PDF (Sphinx + rinohtype, ohne LaTeX; optional: fehlt es, bleibt es bei HTML bzw. .rst)
+rem  Fester Name build\doc\Bedienungsanleitung.pdf fuer installer.iss und das portable ZIP.
+set "DOCPDF=build\doc\Bedienungsanleitung.pdf"
+if exist "%DOCPDF%" del "%DOCPDF%"
+echo [5/6] Bedienungsanleitung als PDF ...
+"%VPY%" -m pip install -r doc\requirements.txt >nul
+"%VPY%" tools\build_doc.py --copy-to "%DOCPDF%" >nul 2>nul
+if not exist "%DOCPDF%" echo [HINWEIS] Das PDF der Anleitung konnte nicht erzeugt werden (Test: "%VPY%" tools\build_doc.py).
 
 echo.
 echo [OK] Programme erzeugt: dist\PLCDatenlogger\PLCLogger.exe und PLCKonfiguration.exe
@@ -154,16 +170,16 @@ if not exist "dist\PLCDatenlogger\PLCLogger.exe" (
     echo [FEHLER] dist\PLCDatenlogger fehlt. Zuerst "build.bat exe" ausfuehren.
     goto :fail
 )
+rem  Inno Setup 7 oder 6 (neuere Version zuerst), fuer alle Benutzer oder nur fuer den eigenen Benutzer installiert
 set "ISCC="
-set "P1=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
-set "P2=%ProgramFiles%\Inno Setup 6\ISCC.exe"
-set "P3=%LocalAppData%\Programs\Inno Setup 6\ISCC.exe"
-if exist "%P1%" set "ISCC=%P1%"
-if not defined ISCC if exist "%P2%" set "ISCC=%P2%"
-if not defined ISCC if exist "%P3%" set "ISCC=%P3%"
+for %%V in (7 6) do (
+    if not defined ISCC if exist "%ProgramFiles%\Inno Setup %%V\ISCC.exe" set "ISCC=%ProgramFiles%\Inno Setup %%V\ISCC.exe"
+    if not defined ISCC if exist "%ProgramFiles(x86)%\Inno Setup %%V\ISCC.exe" set "ISCC=%ProgramFiles(x86)%\Inno Setup %%V\ISCC.exe"
+    if not defined ISCC if exist "%LocalAppData%\Programs\Inno Setup %%V\ISCC.exe" set "ISCC=%LocalAppData%\Programs\Inno Setup %%V\ISCC.exe"
+)
 if not defined ISCC where ISCC >nul 2>nul && set "ISCC=ISCC"
 if not defined ISCC (
-    echo [HINWEIS] Inno Setup 6 wurde nicht gefunden - Installer wird nicht erzeugt.
+    echo [HINWEIS] Inno Setup 7 bzw. 6 wurde nicht gefunden - Installer wird nicht erzeugt.
     echo           Installation: https://jrsoftware.org/isinfo.php   danach "build.bat installer"
     goto :done
 )
@@ -192,9 +208,10 @@ if errorlevel 8 exit /b 1
 rem  Sprachdateien zum Bearbeiten und Ergaenzen (eigene Uebersetzung: de.txt kopieren, z. B. als fr.txt)
 robocopy "sprachen" "%PDIR%\sprachen" /E /NFL /NDL /NJH /NJS /NP >nul
 if not exist "%PDIR%\Doku" mkdir "%PDIR%\Doku"
-if exist "bedienungsanleitung.html" copy /y "bedienungsanleitung.html" "%PDIR%\Doku\" >nul
-if not exist "bedienungsanleitung.html" copy /y "bedienungsanleitung.rst" "%PDIR%\Doku\" >nul
-if exist "images" robocopy "images" "%PDIR%\Doku\images" /E /NFL /NDL /NJH /NJS /NP >nul
+if exist "doc\bedienungsanleitung.html" copy /y "doc\bedienungsanleitung.html" "%PDIR%\Doku\" >nul
+if not exist "doc\bedienungsanleitung.html" copy /y "doc\bedienungsanleitung.rst" "%PDIR%\Doku\" >nul
+if exist "build\doc\Bedienungsanleitung.pdf" copy /y "build\doc\Bedienungsanleitung.pdf" "%PDIR%\Doku\" >nul
+if exist "doc\images" robocopy "doc\images" "%PDIR%\Doku\images" /E /NFL /NDL /NJH /NJS /NP >nul
 set "ZIP=dist\PLCDatenlogger_portable_%VERSION%.zip"
 if exist "%ZIP%" del "%ZIP%"
 powershell -NoProfile -Command "Compress-Archive -Path 'dist\portable\PLCDatenlogger' -DestinationPath '%ZIP%'"

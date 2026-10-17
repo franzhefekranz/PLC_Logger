@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         # x86_64: Ubuntu 22.04 (läuft auf Ubuntu 22.04+, Debian 12+ …)
-        # arm64:  Ubuntu 24.04 (PyQt6-Wheels für arm64 brauchen ein neueres glibc; läuft auf Ubuntu 24.04+, Debian 13+,
+        # arm64:  Ubuntu 24.04 (PySide6-Wheels für arm64 brauchen ein neueres glibc; läuft auf Ubuntu 24.04+, Debian 13+,
         #         Raspberry Pi OS ab Trixie). Für ältere arm64-Systeme dort direkt bauen, siehe Bedienungsanleitung.
         runner: ["ubuntu-22.04", "ubuntu-24.04-arm"]
     runs-on: ${{ matrix.runner }}

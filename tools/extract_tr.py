@@ -1,10 +1,18 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2026 Michael Taxis
 """Alle übersetzbaren Texte (tr("…"), N_("…")) sammeln und Sprachdateien schreiben.
 
 python extract_tr.py PFX ORDNER [--json ausgabe.json]   -> ORDNER/sprachen/de.txt (Vorlage)
 Vorhandene Sprachdateien (z. B. en.txt) werden ergänzt: neue Texte kommen mit leerer Übersetzung hinzu,
-vorhandene Übersetzungen bleiben erhalten, nicht mehr benutzte Texte werden entfernt."""
+vorhandene Übersetzungen bleiben erhalten, nicht mehr benutzte Texte werden entfernt.
+Liegen die Programmdateien in ORDNER/src, werden sie dort gesucht (PLC-Datenlogger: python tools/extract_tr.py plc .)."""
 import ast, glob, json, os, sys
-sys.path.insert(0, os.path.join(sys.argv[2]))
+
+def code_dir(folder):
+    src = os.path.join(folder, "src")
+    return src if os.path.isdir(src) else folder
+
+sys.path.insert(0, code_dir(sys.argv[2]))
 
 def escape(s):
     return s.replace("\\", "\\\\").replace("\n", "\\n")
@@ -23,7 +31,7 @@ def collect(pfx, folder):
             a = n.args[0]
             if isinstance(a, ast.Constant) and isinstance(a.value, str) and a.value.strip():
                 if a.value not in where:
-                    where[a.value] = os.path.relpath(path, folder)
+                    where[a.value] = os.path.relpath(path, folder).replace(os.sep, "/")
                     keys.append(a.value)
     # Texte aus dem Sprachmodul selbst
     i18n = os.path.join(folder, f"{pfx}_i18n.py")
@@ -61,11 +69,10 @@ def main():
     pfx, folder = sys.argv[1], sys.argv[2]
     app = {"s7": "S7 Datenlogger", "clx": "CLX Datenlogger", "tia": "TIA Datenlogger",
            "plc": "PLC Datenlogger"}.get(pfx, pfx)
-    keys, where = collect(pfx, folder)
+    keys, where = collect(pfx, code_dir(folder))
     lang_dir = os.path.join(folder, "sprachen")
     os.makedirs(lang_dir, exist_ok=True)
     write(os.path.join(lang_dir, "de.txt"), app, "Deutsch", keys, where, {})
-    sys.path.insert(0, folder)
     i18n = __import__(f"{pfx}_i18n")
     for fn in sorted(os.listdir(lang_dir)):
         if fn.endswith(".txt") and fn != "de.txt":

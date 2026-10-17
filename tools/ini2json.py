@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2026 Michael Taxis
 """Ältere INI-Konfigurationen einmalig in das JSON-Format umwandeln.
 
     python tools/ini2json.py anlage.ini [weitere.ini …]       -> anlage.json (neben der INI-Datei)
@@ -9,7 +11,7 @@ import argparse
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
 from plc_common import convert_ini  # noqa: E402
 
 

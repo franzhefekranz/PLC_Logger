@@ -15,11 +15,13 @@ pyserial>=3.5
 #   opcua  OPC UA
 asyncua>=1.1
 #   slmp (MELSEC), kvhostlink (KEYENCE), toyopuc (JTEKT): keine Zusatzbibliothek
-PyQt6>=6.4
+# Oberflaeche: PySide6 (offizielle Qt-Bindung, LGPL-3.0); -Essentials enthaelt alle benoetigten Module (QtWidgets, QtSvg)
+PySide6-Essentials>=6.5
 pyqtgraph>=0.13
 numpy>=1.24
 Flask>=3.0
-# Datenbanktreiber (nur fuer die jeweilige Datenbank noetig; SQLite ist in Python enthalten)
+# Datenbanktreiber (nur fuer die jeweilige Datenbank noetig; SQLite ist in Python enthalten,
+# QuestDB braucht keinen Treiber (HTTP-Schnittstelle))
 PyMySQL>=1.1
 psycopg[binary]>=3.1
 # nur fuer den Build (build.bat, build_appimage.sh)
