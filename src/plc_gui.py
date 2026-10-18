@@ -15,7 +15,7 @@ Mehrere Steuerungen werden gleichzeitig gelesen; je Steuerung zeigt eine Status-
 
 Aufbau der Datei (von oben nach unten)
 --------------------------------------
-* Hilfsfunktion:     open_log (CSV/ZIP öffnen).
+* CSV/ZIP lesen und aneinanderhängen: plc_csvjoin.
 * BarStrip:          schmale Balken für Aktualwerte neben einem Diagramm.
 * Legende:           CurveLegend (Klicks), CurveSample/BoolSample (Muster, BOOL als Zeitverlauf).
 * ChartPanel:        ein Diagramm mit mehreren Y-Achsen, Kurven, Legende, Linealen, Balken; SVG-Export.
@@ -33,18 +33,14 @@ SPS -> PlcSampler (je Steuerung ein Thread) -> Sammler-Thread -> Puffer im Recor
 Im Offline-Modus arbeitet die Oberfläche mit einer Kopie (Momentaufnahme) aller Daten: self.t (Zeiten) und
 self.y[i] (Werte der Variable i) sind numpy-Felder.
 """
-# Standardbibliothek: contextlib/io/zipfile (CSV und ZIP-Archive öffnen), csv, math, os, re, subprocess
+# Standardbibliothek: html, math, os, re, subprocess
 # (Konfigurationsprogramm starten), sys, datetime.
-import contextlib
-import csv
 import html
-import io
 import math
 import os
 import re
 import subprocess
 import sys
-import zipfile
 from datetime import datetime
 
 # numpy: schnelles Rechnen mit den Messreihen (Ausschnitte, Treppenlinien, Abtastung der BOOL-Verläufe).
@@ -78,27 +74,6 @@ from plc_splash import LogoLabel
 from plc_svg import build_svg
 from plc_util import fmt_time, fmt_value, to_step
 from plc_i18n import tr
-
-
-# ---------------------------------------------------------------------------------------
-# Hilfsfunktion
-# ---------------------------------------------------------------------------------------
-# Als Kontextmanager (with-Anweisung) verwendbar: öffnet CSV-Dateien und ZIP-Archive einheitlich als Textdatei.
-@contextlib.contextmanager
-def open_log(path):
-    """Öffnet eine CSV- oder ZIP-Datei (erste CSV im Archiv) als Textdatei."""
-    # ZIP: die erste CSV-Datei im Archiv lesen (archivierte Dateien enthalten genau eine).
-    if path.lower().endswith(".zip"):
-        with zipfile.ZipFile(path) as z:
-            name = next((n for n in z.namelist() if n.lower().endswith(".csv")), None)
-            if name is None:
-                raise ValueError(tr("Das Archiv enthält keine CSV-Datei."))
-            with z.open(name) as raw:
-                yield io.TextIOWrapper(raw, encoding="utf-8", newline="")
-    else:
-        # Normale CSV-Datei: UTF-8, newline='' (csv-Modul behandelt Zeilenenden selbst).
-        with open(path, newline="", encoding="utf-8") as f:
-            yield f
 
 
 # ---------------------------------------------------------------------------------------
@@ -1287,6 +1262,11 @@ class MainWindow(QMainWindow):
             m_file.addAction(a)
         m_file.addSeparator()
         m_file.addAction(act_load)
+        act_join = QAction(tr("CSV-Dateien aneinanderhängen und speichern …"), self)
+        act_join.setToolTip(tr("Mehrere Aufzeichnungen nach der Zeit zusammenfügen, als neue CSV-Datei speichern "
+                               "und offline anzeigen"))
+        act_join.triggered.connect(self.join_csv)
+        m_file.addAction(act_join)
         m_file.addAction(act_load_db)
         act_export = QAction(tr("Werte exportieren (CSV/Excel) …"), self)
         act_export.setShortcut("Ctrl+Shift+E")
@@ -1480,6 +1460,13 @@ class MainWindow(QMainWindow):
         self.menu_shot.addAction(self.act_shot_light)
         # PID-Optimierung: Menü 'Analyse' und Rechtsklickmenü der betroffenen Diagramme.
         self.menu_pid.clear()
+        a_xy = self.menu_pid.addAction(tr("XY-Diagramm …"))
+        a_xy.setToolTip(tr("Variablen über einer anderen Variable darstellen (z. B. Druck über Hub)"))
+        a_xy.triggered.connect(lambda _=False: self.open_analysis("xy"))
+        a_fft = self.menu_pid.addAction(tr("Frequenzanalyse (FFT) …"))
+        a_fft.setToolTip(tr("Amplitudenspektrum einer Variable, z. B. für Schwingungen"))
+        a_fft.triggered.connect(lambda _=False: self.open_analysis("fft"))
+        self.menu_pid.addSeparator()
         for ci, ch in enumerate(self.charts):
             if not ch.pid:
                 continue
@@ -1490,7 +1477,7 @@ class MainWindow(QMainWindow):
                 vb_menu.addSeparator()
                 a2 = vb_menu.addAction(tr("PID-Regler optimieren …"))
                 a2.triggered.connect(lambda _=False, c=ci: self.open_pid(c))
-        if self.menu_pid.isEmpty():
+        if not any(ch.pid for ch in self.charts):
             a = self.menu_pid.addAction(tr("PID-Optimierung (im Konfigurationsprogramm beim Diagramm einschalten)"))
             a.setEnabled(False)
         # Docks anordnen; danach die früher gespeicherte Anordnung (vom Benutzer per Drag & Drop angepasst) wiederherstellen.
@@ -1620,6 +1607,44 @@ class MainWindow(QMainWindow):
                 ranges.append((tr("Sichtbarer Bereich"), x0, x1))
         ranges.append((tr("Alle Daten"), first, last))
         dlg = PidTuneDialog(self, self.charts[ci], [v.name for v in self.vars], self._pid_data, ranges)
+        dlg.show()
+        self._pid_dialogs = [d for d in getattr(self, "_pid_dialogs", []) if d.isVisible()] + [dlg]
+
+    def analysis_ranges(self, panel=None):
+        """Wählbare Zeitbereiche für Auswertungen: [(Text, t0, t1)] (zwischen den Linealen, sichtbar, alles)."""
+        t, _y = self._pid_source()
+        if len(t) == 0:
+            return []
+        first, last = float(t[0]), float(t[-1])
+        ranges = []
+        r1, r2 = self.ruler_t
+        if not self.online and r1 is not None and r2 is not None and abs(r2 - r1) > 0:
+            ranges.append((tr("Zwischen Lineal 1 und 2"), min(r1, r2), max(r1, r2)))
+        panel = panel or self.master
+        if panel is not None:
+            x0, x1 = panel.axis_vbs[0].viewRange()[0]
+            x0, x1 = max(x0, first), min(x1, last)
+            if x1 > x0:
+                ranges.append((tr("Sichtbarer Bereich"), x0, x1))
+        ranges.append((tr("Alle Daten"), first, last))
+        return ranges
+
+    def open_analysis(self, kind):
+        """XY-Diagramm oder Frequenzanalyse öffnen (nicht modal)."""
+        from plc_analysis_dialog import FftDialog, XYDialog
+        ranges = self.analysis_ranges()
+        if not ranges or not self.vars:
+            QMessageBox.information(self, tr("Analyse"), tr("Es sind noch keine Messdaten vorhanden. Bitte aufzeichnen "
+                                                            "oder eine CSV-Datei laden."))
+            return
+        visible = [v for v in self.vars if v.name not in self.hidden]
+        if kind == "xy":
+            dlg = XYDialog(self, self.vars, self._pid_data, ranges, self.csv_dir(),
+                           x_name=visible[0].name if visible else "",
+                           y_names=[v.name for v in visible[1:2]])
+        else:
+            first = next((v.name for v in visible if v.dtype != "BOOL"), "")
+            dlg = FftDialog(self, self.vars, self._pid_data, ranges, self.csv_dir(), name=first)
         dlg.show()
         self._pid_dialogs = [d for d in getattr(self, "_pid_dialogs", []) if d.isVisible()] + [dlg]
 
@@ -2241,34 +2266,68 @@ class MainWindow(QMainWindow):
     # ---------------- CSV laden / Konfiguration ----------------
     # Gespeicherte Aufzeichnung (CSV oder ZIP-Archiv) laden und offline anzeigen.
     def load_csv(self):
-        path, _ = QFileDialog.getOpenFileName(self, tr("CSV laden"), self.csv_dir(),
-                                              tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
-        if not path:
-            return
+        """Eine oder mehrere Aufzeichnungen (CSV/ZIP) laden; mehrere Dateien werden nach der Zeit aneinandergehängt."""
+        paths, _ = QFileDialog.getOpenFileNames(self, tr("CSV laden (mehrere Dateien = aneinanderhängen)"), self.csv_dir(),
+                                                tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
+        if paths:
+            self._load_logs(paths, save=False)
+
+    def join_csv(self):
+        """Mehrere Aufzeichnungen aneinanderhängen, als neue CSV-Datei speichern und offline anzeigen."""
+        paths, _ = QFileDialog.getOpenFileNames(self, tr("CSV-Dateien zum Aneinanderhängen wählen"), self.csv_dir(),
+                                                tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
+        if paths:
+            self._load_logs(paths, save=True)
+
+    def _load_logs(self, paths, save):
+        from plc_csvjoin import read_and_join
+        from plc_export import write_values
         # Läuft gerade eine Aufzeichnung, wird sie beendet (Laden ersetzt die Daten im Speicher).
         if self.rec is not None and self.rec.running:
             self.act_run.setChecked(False)  # stoppt das Logging
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            # Dateiaufbau: Spalte 0 = Zeit (Text), Spalte 1 = Epoch (Unix-Zeit in Sekunden), ab Spalte 2 die Variablen.
-            # Die Anzeige verwendet die Epoch-Spalte; leere Felder werden zu 'kein Wert'.
-            with open_log(path) as f:
-                rd = csv.reader(f, delimiter=";")
-                names = next(rd)[2:]
-                t, cols = [], [[] for _ in names]
-                for row in rd:
-                    if len(row) < 2 + len(names):
-                        continue
-                    t.append(float(row[1]))
-                    for k in range(len(names)):
-                        s = row[2 + k]
-                        cols[k].append(float(s) if s else float("nan"))
-        except Exception as e:
-            QMessageBox.warning(self, tr("Fehler beim Laden"), str(e))
+            names, t, cols, errors = read_and_join(paths)
+        finally:
+            QApplication.restoreOverrideCursor()
+        if errors:
+            QMessageBox.warning(self, tr("Fehler beim Laden"), "\n".join(f"{os.path.basename(p)}: {e}"
+                                                                         for p, e in errors[:15]))
+        if len(t) == 0:
+            if not errors:
+                QMessageBox.information(self, tr("Leer"), tr("Die Datei enthält keine Daten."))
             return
-        if not t:
-            QMessageBox.information(self, tr("Leer"), tr("Die Datei enthält keine Daten."))
-            return
-        self._show_loaded(names, t, cols, "csv", tr("Geladen: {0} ({1} Zeilen)").format(path, len(t)))
+        n_ok = len(paths) - len(errors)
+        if n_ok > 1:
+            msg = tr("{0} Dateien aneinandergehängt: {1} bis {2} ({3} Zeilen)").format(
+                n_ok, fmt_time(t[0]), fmt_time(t[-1]), len(t))
+        else:
+            msg = tr("Geladen: {0} ({1} Zeilen)").format(next(p for p in paths if p not in dict(errors)), len(t))
+        if save:
+            stem = re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "log").strip("_") or "log"
+            default = os.path.join(self.csv_dir(), "{0}_{1:%Y%m%d_%H%M%S}-{2:%Y%m%d_%H%M%S}.csv".format(
+                stem, datetime.fromtimestamp(t[0]), datetime.fromtimestamp(t[-1])))
+            out, _ = QFileDialog.getSaveFileName(self, tr("Zusammengefügte Aufzeichnung speichern"), default,
+                                                 tr("CSV-Datei (*.csv)"))
+            if out:
+                if not out.lower().endswith(".csv"):
+                    out += ".csv"
+                if os.path.abspath(out) in {os.path.abspath(p) for p in paths}:
+                    QMessageBox.warning(self, tr("Speichern"), tr("Bitte einen neuen Dateinamen wählen – die "
+                                                                   "gewählten Dateien werden nicht überschrieben."))
+                else:
+                    ref = {v.name: v.dtype for v in self.vars}
+                    try:
+                        _c, _ch, cfg_vars = load_config(self.config_path)
+                        ref.update({v.name: v.dtype for v in cfg_vars})
+                    except Exception:
+                        pass
+                    try:
+                        write_values(out, t, names, [ref.get(n, "REAL") for n in names], cols)
+                        msg += " → " + tr("gespeichert: {0}").format(out)
+                    except OSError as e:
+                        QMessageBox.warning(self, tr("Speichern"), tr("Die Datei konnte nicht geschrieben werden:\n{0}").format(e))
+        self._show_loaded(names, t, cols, "csv", msg)
 
     def load_db(self):
         """Lesemodus Datenbank: Zeitraum und Variablen wählen, Werte laden und offline anzeigen."""
