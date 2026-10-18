@@ -3872,12 +3872,25 @@ Windows-Rechner von GitHub:
 * **Von Hand:** *Actions › Windows › Run workflow*. Die Dateien liegen danach in der
   Zusammenfassung des Laufs unter *Artifacts* (``windows-portable`` und
   ``windows-setup``).
-* **Mit einem Tag** ``v*`` (z. B. ``v2.1.0``): zusätzlich als Dateien eines
-  GitHub-Release, zusammen mit den AppImages.
+* **Mit einem Tag** ``v*`` (z. B. ``v3.0.0``): zusätzlich als Dateien eines
+  GitHub-Release, zusammen mit den AppImages. Der Text des Release kommt aus
+  ``CHANGELOG.md``.
 
-Gebaut wird mit ``build.bat`` wie auf dem eigenen PC; die Versionsnummer kommt aus
-``VERSION`` in ``build.bat``. Bilder der Anleitung (Ordner ``doc/images``) werden
-mitgenommen, wenn sie im Repository liegen.
+Gebaut wird mit ``build.bat`` wie auf dem eigenen PC. Bilder der Anleitung (Ordner
+``doc/images``) werden mitgenommen, wenn sie im Repository liegen.
+
+**Versionsnummer:** Sie steht an genau einer Stelle, ``APP_VERSION`` in
+``src/plc_common.py``; ``build.bat``, ``build_appimage.sh``, Installer, PDF-Anleitung und
+der Dialog *Über …* lesen sie von dort. Die Nummer folgt dem Schema
+``HAUPT.NEBEN.FEHLER`` (inkompatible Änderung / neue Funktionen / Fehlerbehebung); was
+sich geändert hat, steht in ``CHANGELOG.md``. Neue Version und Release:
+
+.. code-block:: console
+
+   python tools/bump_version.py neben --tag    # z. B. 3.0.0 -> 3.1.0: Nummer, CHANGELOG, Commit, Tag
+   git push && git push origin v3.1.0          # Tag hochladen: GitHub baut Installer, ZIP und AppImages
+
+Passt der Tag nicht zu ``APP_VERSION``, bricht der Workflow ab.
 
 **Anleitung als PDF:** Diese Anleitung lässt sich mit Sphinx als PDF erzeugen – ohne
 LaTeX, über rinohtype:
@@ -3919,11 +3932,11 @@ Benutzen
 
 .. code-block:: console
 
-   chmod +x PLCDatenlogger-2.1.0-x86_64.AppImage        # einmalig: ausführbar machen
-   ./PLCDatenlogger-2.1.0-x86_64.AppImage               # Logger (mit Startbild)
-   ./PLCDatenlogger-2.1.0-x86_64.AppImage --konfig      # Konfigurationsprogramm
-   ./PLCDatenlogger-2.1.0-x86_64.AppImage --ereignisse  # Ereignis-Viewer
-   ./PLCDatenlogger-2.1.0-x86_64.AppImage --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
+   chmod +x PLCDatenlogger-3.0.0-x86_64.AppImage        # einmalig: ausführbar machen
+   ./PLCDatenlogger-3.0.0-x86_64.AppImage               # Logger (mit Startbild)
+   ./PLCDatenlogger-3.0.0-x86_64.AppImage --konfig      # Konfigurationsprogramm
+   ./PLCDatenlogger-3.0.0-x86_64.AppImage --ereignisse  # Ereignis-Viewer
+   ./PLCDatenlogger-3.0.0-x86_64.AppImage --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
 
 Auf Raspberry Pi (64-Bit-System) und anderen arm64-Rechnern entsprechend die Datei
 ``…-aarch64.AppImage``. Die Daten (Konfiguration, CSV, Archiv, Ereignisse, Sprachdateien)
@@ -3945,7 +3958,7 @@ auf dem es läuft:
    sudo apt install python3-venv cmake build-essential file libxkbcommon-x11-0 libxcb-cursor0 \
         libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libegl1 libfontconfig1 libdbus-1-3
    ./build_appimage.sh
-   # Ergebnis: dist/PLCDatenlogger-2.1.0-x86_64.AppImage (bzw. -aarch64)
+   # Ergebnis: dist/PLCDatenlogger-3.0.0-x86_64.AppImage (bzw. -aarch64)
 
 * **x86_64** auf einem x86_64-Rechner bauen, **arm64** auf einem arm64-Rechner (Raspberry
   Pi 4/5 mit 64-Bit-System, Ubuntu arm64 …). PyInstaller kann nicht für eine andere

@@ -46,3 +46,4 @@ docker/.env
 .DS_Store
 Thumbs.db
 wiki/
+release_notes.md

@@ -1,0 +1,81 @@
+# Änderungen
+
+Alle nennenswerten Änderungen am PLC Datenlogger. Die Versionsnummer folgt
+[Semantic Versioning](https://semver.org/lang/de/) (`HAUPT.NEBEN.FEHLER`):
+
+* **HAUPT** – inkompatible Änderung: alte Konfigurationsdateien, Aufzeichnungen oder Aufrufe funktionieren nicht mehr
+  ohne Umstellung.
+* **NEBEN** – neue Funktionen oder Treiber, bestehende Konfigurationen laufen unverändert weiter.
+* **FEHLER** – nur Fehlerbehebungen und kleine Verbesserungen.
+
+Die Nummer steht an genau einer Stelle: `APP_VERSION` in `src/plc_common.py`. Build-Skripte, Installer, Anleitung
+und Programm lesen sie von dort. Neue Version: `python tools/bump_version.py neben` (bzw. `haupt`, `fehler` oder
+eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
+
+## [Unveröffentlicht]
+
+## [3.0.0] – 2026-10-18
+
+Erste Version des gemeinsamen **PLC Datenloggers**; er ersetzt die Einzelprogramme S7, TIA und CLX Datenlogger.
+
+### Inkompatibel
+
+* Die Konfiguration wird als **JSON** statt INI gespeichert. INI-Dateien werden nicht mehr direkt geöffnet, sondern
+  einmalig umgewandelt (*Datei › INI-Datei umwandeln …* oder `tools/ini2json.py`).
+* Oberfläche auf **PySide6** (LGPL) statt PyQt6 umgestellt; Lizenz des Programms: LGPL-3.0-or-later.
+* Neue Ordnerstruktur: Programmdateien in `src/`, Anleitung in `doc/`, Hilfsprogramme in `tools/`.
+
+### Neu – Treiber
+
+* `modbus_rtu`, `opcua` (Auswahldialog, Sicherheit, wahlweise **Subscription** statt zyklischem Lesen), `slmp`
+  (MELSEC), `kvhostlink` (KEYENCE), `toyopuc` (JTEKT), `s5as511` (S5 über PG-Schnittstelle).
+* `fins` (Omron FINS/TCP und FINS/UDP), `ads` (Beckhoff TwinCAT mit Symbolauswahl), `logo` (Siemens LOGO! 0BA7/0BA8),
+  `pccc` (Allen-Bradley MicroLogix / SLC 500).
+* Eigene Treiber als einzelne Python-Datei im Ordner `treiber` (Vorlage `_vorlage.py`).
+
+### Neu – Aufzeichnung und Auswertung
+
+* **Aufzeichnung per Trigger** mit Ringspeicher: einstellbarer Vor- und Nachlauf, maximale Dauer, je Aufnahme eine
+  CSV-Datei.
+* **Trigger-Marken** an der Zeitachse (Ereignisse, Aufnahmen, Notizen) in allen Diagrammen.
+* **Online-Zoom** der Zeitachse mit der Maus; Werte am Mauszeiger im Online-Modus.
+* **Lesemodus Datenbank**: Zeitraum aus der Datenbank laden und offline anzeigen (Rohdaten oder Mittelwerte).
+* **CSV-Dateien aneinanderhängen** und als neue Datei speichern; mehrere Dateien gemeinsam laden.
+* **Werte exportieren** (CSV/Excel, optional mit Downsampling); Statistik zwischen den Linealen.
+* **XY-Diagramm** (mit Regressionsgerade) und **Frequenzanalyse (FFT)**.
+* **PDF-Berichte** je Schicht, Tag, Woche oder Monat (automatisch, optional) oder von Hand für einen Zeitbereich.
+
+### Neu – Webserver und Bedienung
+
+* Webserver mit **HTTPS** (eigenes oder selbst signiertes Zertifikat) und **Anmeldung** mit Benutzer und Passwort.
+* Konfigurationsprogramm: Variablen **suchen und filtern** (Strg+F), Variablenliste als CSV/Excel importieren und
+  exportieren.
+* Menü **Hilfe** mit Kontexthilfe (F1) und Dialog „Über …“.
+* **Englische Bedienungsanleitung** (`doc/user_manual.rst`); F1 öffnet bei englischer Oberfläche die englische
+  Fassung. GitHub-Wiki in beiden Sprachen.
+
+### Build
+
+* Windows-Workflow (portables ZIP und Installer) und AppImages für x86_64 und arm64; Anleitung als HTML und PDF.
+* `build_appimage.sh` prüft die nötigen Werkzeuge vor dem Build; `SKIP_PLCTAG=1` baut ohne libplctag.
+
+## [2.1.0] – 2026-10-16
+
+Ausgangsstand: die Einzelprogramme S7, TIA und CLX Datenlogger und der erste PLC Datenlogger (Treiber `s7`, `tia`,
+`clx`, `modbus`), Konfiguration als INI-Datei.
+
+## Versionen und Releases
+
+```console
+python tools/bump_version.py neben          # 3.0.0 -> 3.1.0 (auch: haupt, fehler oder z. B. 3.1.0)
+python tools/bump_version.py fehler --tag   # zusätzlich Commit und Tag v3.0.1 anlegen
+git push && git push origin v3.0.1          # Tag hochladen: GitHub baut Installer, ZIP und AppImages als Release
+```
+
+Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dieser Datei den Abschnitt der neuen
+Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
+Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
+
+[Unveröffentlicht]: ../../compare/v3.0.0...HEAD
+[3.0.0]: ../../releases/tag/v3.0.0
+[2.1.0]: ../../commit/1a833dc

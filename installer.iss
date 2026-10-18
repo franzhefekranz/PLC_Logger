@@ -3,12 +3,12 @@
 ;
 ;  Packt den von build.bat erzeugten Ordner dist\PLCDatenlogger (PLCLogger.exe und
 ;  PLCKonfiguration.exe samt Bibliotheken) in eine Setup-Datei. Aufruf normalerweise ueber
-;  build.bat; manuell:  ISCC.exe /DAppVersion=1.0.0 installer.iss
+;  build.bat (übergibt APP_VERSION aus src\plc_common.py); manuell:  ISCC.exe /DAppVersion=3.0.0 installer.iss
 ;  Das Ergebnis liegt in installer\PLCDatenlogger_Setup_<Version>.exe
 ; ===========================================================================================
 
 #ifndef AppVersion
-  #define AppVersion "2.1.0"
+  #error AppVersion fehlt: über build.bat aufrufen oder ISCC.exe /DAppVersion=x.y.z installer.iss
 #endif
 #define AppName    "PLC Datenlogger"
 #define AppFolder  "PLCDatenlogger"

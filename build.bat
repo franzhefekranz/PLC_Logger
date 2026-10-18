@@ -19,7 +19,7 @@ rem  Modbus TCP) werden komplett eingepackt. libplctag gibt es nicht als pip-Pak
 rem  aus dem offiziellen GitHub-Release geladen (oder liegt bereits neben diesem Skript) und eingepackt.
 rem  Voraussetzungen: Python 3.9+ (py-Launcher oder python im PATH), Internetzugang fuer
 rem  pip (beim ersten Lauf), Inno Setup 7 oder 6 (https://jrsoftware.org/isinfo.php) fuer den Installer.
-rem  Die Versionsnummer wird unten bei VERSION eingestellt.
+rem  Die Versionsnummer kommt aus APP_VERSION in src\plc_common.py (neue Version: python tools\bump_version.py).
 rem  Ordner: Programmdateien in src\, Anleitung und Bilder in doc\, Icon/Logo/plctag.dll/sprachen im Projektordner.
 rem ====================================================================================
 setlocal EnableExtensions
@@ -27,7 +27,13 @@ cd /d "%~dp0"
 rem  Programmmodule (plc_*, Paket plc_treiber) liegen in src: fuer PyInstaller und --collect-submodules auffindbar machen
 set "PYTHONPATH=%~dp0src"
 
-set "VERSION=2.1.0"
+rem  Versionsnummer aus src\plc_common.py (Zeile  APP_VERSION = "x.y.z"; einzige Stelle, an der sie steht)
+set "VERSION="
+for /f "tokens=3" %%V in ('findstr /b /c:"APP_VERSION = " "src\plc_common.py"') do set "VERSION=%%~V"
+if not defined VERSION (
+    echo [FEHLER] APP_VERSION in src\plc_common.py nicht gefunden.
+    goto :fail
+)
 rem  Version der libplctag-Bibliothek (GitHub-Release), aus der plctag.dll geladen wird.
 set "PLCTAG_VER=2.7.2"
 set "STEP=%~1"

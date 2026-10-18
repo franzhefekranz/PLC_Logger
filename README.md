@@ -61,6 +61,13 @@ English: [User Manual](../../wiki/en-Home) ([`doc/user_manual.rst`](doc/user_man
 * **GitHub Actions:** *Actions › Windows* bzw. *Actions › AppImages › Run workflow*, oder ein Tag `v*`
   (dann zusätzlich als GitHub-Release).
 
+## Versionen
+
+Aktuelle Version und Änderungen: [`CHANGELOG.md`](CHANGELOG.md). Die Nummer (`HAUPT.NEBEN.FEHLER`) steht nur in
+`APP_VERSION` in `src/plc_common.py`. Neue Version: `python tools/bump_version.py neben --tag`, dann
+`git push && git push origin v<Version>` – der Tag startet die Workflows, die Installer, ZIP und AppImages als
+GitHub-Release veröffentlichen.
+
 Die früheren Einzelprogramme (S7, TIA und CLX Datenlogger) liegen im Branch
 [`einzelanwendungen`](../../tree/einzelanwendungen).
 
