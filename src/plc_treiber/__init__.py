@@ -13,6 +13,10 @@ Eingebaut sind
   * kvhostlink – Keyence KV über das Host-Link-Protokoll (Ethernet)
   * toyopuc – JTEKT TOYOPUC über Computer Link (Ethernet)
   * s5as511 – Siemens S5 über die PG-Schnittstelle (AS511, seriell)
+  * logo    – Siemens LOGO! 0BA7/0BA8 über S7-Kommunikation (python-snap7)
+  * fins    – Omron CJ/CS/CP/NJ über FINS/TCP oder FINS/UDP (ohne Zusatzbibliothek)
+  * ads     – Beckhoff TwinCAT 2/3 über ADS (AMS/TCP, ohne Zusatzbibliothek)
+  * pccc    – Allen-Bradley MicroLogix 1100/1400 und SLC 500 über EtherNet/IP/PCCC (pycomm3)
 
 Weitere Treiber werden beim Start automatisch geladen aus
   * dem Ordner ``treiber`` im Datenordner des Programms (eigene Treiber, bleiben bei Updates erhalten),
@@ -30,7 +34,8 @@ import sys
 from plc_treiber.base import Driver, Reader
 from plc_i18n import tr
 
-BUILTIN = ("s7", "tia", "clx", "modbus", "modbus_rtu", "opcua", "slmp", "kvhostlink", "toyopuc", "s5as511")
+BUILTIN = ("s7", "tia", "logo", "clx", "pccc", "modbus", "modbus_rtu", "opcua", "ads", "slmp", "fins", "kvhostlink",
+           "toyopuc", "s5as511")
 _drivers = None          # {id: Driver}
 _errors = []             # Ladefehler (Modul, Text) – werden im Konfigurationsprogramm angezeigt
 
