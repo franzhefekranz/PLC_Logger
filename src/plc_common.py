@@ -340,7 +340,7 @@ _GROUPS = (("steuerungen", "Steuerungen", "Steuerung"), ("diagramme", "Diagramme
            ("variablen", "Variablen", "Var"), ("bloecke", "Bloecke", "Block"), ("trigger", "Trigger", "Trigger"))
 # Schlüssel mit festem Typ in der JSON-Datei (alle übrigen bleiben Text)
 _BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "pid_aktiv", "gehen", "quittieren",
-              "web_aktiv", "web_https", "headless", "csv_aktiv", "archiv_beenden", "db_nur_aenderungen"}
+              "web_aktiv", "web_https", "headless", "csv_aktiv", "bericht_aktiv", "archiv_beenden", "db_nur_aenderungen"}
 _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "start", "fenster_s", "max_records",
              "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl"}
@@ -547,6 +547,9 @@ def default_connection() -> dict:
             # Aufzeichnung: dauernd oder nur per Trigger (Startbedingung) mit Vor- und Nachlauf (siehe *_recorder.py).
             "aufz_modus": "dauernd", "aufz_bedingung": "", "aufz_vorlauf_s": 10.0, "aufz_nachlauf_s": 10.0,
             "aufz_max_s": 0.0,
+            # PDF-Berichte je Schicht/Tag/Woche/Monat (siehe *_report.py).
+            "bericht_aktiv": 0, "bericht_zeitraum": "tag", "bericht_schichten": "06:00,14:00,22:00",
+            "bericht_beginn": "00:00", "bericht_ordner": "berichte",
             # Treibereigene Werte (JSON {Treiber: {Schlüssel: Wert}}), z. B. die importierten DB-Quellen des S7-Treibers.
             "treiberdaten": ""}
 
@@ -554,12 +557,13 @@ def default_connection() -> dict:
 # Welche Schlüssel des Abschnitts [Verbindung] Zahlen bzw. Text sind (zum Lesen mit passendem Typ).
 CONN_INT_KEYS = ("fenster_s", "balken", "max_records", "archiv_beenden",
                  "raster_spalten", "web_aktiv", "web_port", "web_intervall_ms", "headless", "web_https",
-                 "csv_aktiv", "db_port", "db_nur_aenderungen")
+                 "csv_aktiv", "db_port", "db_nur_aenderungen", "bericht_aktiv")
 CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "icon", "csv_name",
                  "archiv_ordner", "projekt", "seite_anordnung", "web_host", "web_token",
                  "db_typ", "db_host", "db_name", "db_user", "db_passwort", "db_tabelle", "db_datei",
                  "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung",
-                 "web_zertifikat", "web_schluessel", "web_benutzer")
+                 "web_zertifikat", "web_schluessel", "web_benutzer",
+                 "bericht_zeitraum", "bericht_schichten", "bericht_beginn", "bericht_ordner")
 CONN_FLOAT_KEYS = ("aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s")
 RECORD_MODES = {"dauernd": N_("Dauernd"), "trigger": N_("Per Trigger mit Vor- und Nachlauf")}
 

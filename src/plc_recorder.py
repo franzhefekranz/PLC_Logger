@@ -393,6 +393,10 @@ class Recorder:
         self.capture_mode = (conn.get("aufz_modus") == "trigger")
         self.gate = None
         self._capture_eid = None
+        # PDF-Berichte je Zeitraum (Schicht/Tag/Woche/Monat): Kennwerte und Verlauf des laufenden Zeitraums.
+        self.report_on = bool(int(conn.get("bericht_aktiv", 0) or 0))
+        self.report_acc = None
+        self._report_threads = []
 
     # ------------------------------------------------------------------ Ordner
     def csv_dir(self):
@@ -480,6 +484,8 @@ class Recorder:
                 self.emit("⚠ " + err)
             if not self.trigger_engine:
                 self.trigger_engine = None
+        if self.report_on:
+            self.report_acc = self._new_report(time.time())
         self.running = True
         self.collector = threading.Thread(target=self._collector, name="collector", daemon=True)
         self.collector.start()
@@ -516,6 +522,9 @@ class Recorder:
         self.q.put(None)                         # Ende-Marke: der Sammler verarbeitet vorher noch alles Übrige
         if self.collector:
             self.collector.join(10.0)
+        if self.report_acc is not None and self.report_acc.rows:   # Teilbericht des angefangenen Zeitraums
+            self._write_report(self.report_acc, partial=True)
+        self.report_acc = None
         if self.gate is not None and self.gate.active:   # laufende Trigger-Aufnahme abschließen
             self._capture_event("stop", time.time())
             self.gate.active = False
@@ -552,7 +561,7 @@ class Recorder:
                     os.remove(self.csv_path)
                 except OSError:
                     pass
-        for t in self._archive_threads:          # noch laufende Archivierungen (Rotation) abwarten
+        for t in self._archive_threads + self._report_threads:   # laufende Archivierungen/Berichte abwarten
             t.join(60.0)
 
     # ------------------------------------------------------------------ Datenfluss
@@ -596,6 +605,13 @@ class Recorder:
                     except OSError as e:
                         self.emit(tr("⚠ Ereignisprotokoll nicht beschreibbar: {0}").format(e))
             self._append(ts, row)
+            acc = self.report_acc
+            if acc is not None:
+                if ts >= acc.t1:                 # Zeitraum vorbei: Bericht schreiben, nächsten beginnen
+                    if acc.rows:
+                        self._write_report(acc, partial=False)
+                    acc = self.report_acc = self._new_report(ts)
+                acc.add(ts, row)
             if gate is None:
                 self._store(ts, row)
             else:                                # per Trigger: nur Vorlauf, Aufnahme und Nachlauf speichern
@@ -613,6 +629,26 @@ class Recorder:
         self._write_csv(ts, row)
         if self.db:
             self.db.put(ts, row)
+
+    # ------------------------------------------------------------------ PDF-Berichte
+    def _new_report(self, ts):
+        from plc_report import ReportAccumulator, period_bounds, period_label
+        c = self.conn
+        kind = c.get("bericht_zeitraum") or "tag"
+        t0, t1 = period_bounds(ts, kind, c.get("bericht_schichten", ""), c.get("bericht_beginn", "00:00"))
+        return ReportAccumulator(self.names, [v.dtype for v in self.vars], t0, t1, kind=kind,
+                                 label=period_label(kind, t0, t1, c.get("bericht_schichten", "")))
+
+    def _write_report(self, acc, partial):
+        """Bericht eines Zeitraums im Hintergrund schreiben (Ereignisse aus dem Ereignisprotokoll)."""
+        from plc_report import events_in, report_path, write_in_background
+        try:
+            path = report_path(self.conn, acc, self.csv_base, partial)
+            th = write_in_background(path, acc, self.charts, self.vars, self.conn.get("projekt", ""),
+                                     events_in(self.events, acc.t0, acc.t1), partial, self.emit)
+            self._report_threads = [t for t in self._report_threads if t.is_alive()] + [th]
+        except Exception as e:
+            self.emit(tr("⚠ Bericht konnte nicht erstellt werden: {0}").format(e))
 
     # ------------------------------------------------------------------ Aufzeichnung per Trigger
     def _make_gate(self):

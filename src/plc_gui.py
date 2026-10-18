@@ -1466,6 +1466,9 @@ class MainWindow(QMainWindow):
         a_fft = self.menu_pid.addAction(tr("Frequenzanalyse (FFT) …"))
         a_fft.setToolTip(tr("Amplitudenspektrum einer Variable, z. B. für Schwingungen"))
         a_fft.triggered.connect(lambda _=False: self.open_analysis("fft"))
+        a_rep = self.menu_pid.addAction(tr("PDF-Bericht erstellen …"))
+        a_rep.setToolTip(tr("Bericht mit Kennwerten, Verlauf und Ereignissen für einen Zeitbereich als PDF"))
+        a_rep.triggered.connect(lambda _=False: self.make_report())
         self.menu_pid.addSeparator()
         for ci, ch in enumerate(self.charts):
             if not ch.pid:
@@ -1628,6 +1631,48 @@ class MainWindow(QMainWindow):
                 ranges.append((tr("Sichtbarer Bereich"), x0, x1))
         ranges.append((tr("Alle Daten"), first, last))
         return ranges
+
+    def make_report(self):
+        """PDF-Bericht für einen wählbaren Zeitbereich der angezeigten Daten erstellen und öffnen."""
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from PySide6.QtWidgets import QInputDialog
+        from plc_report import ReportAccumulator, events_in, write_report
+        ranges = self.analysis_ranges()
+        if not ranges or not self.vars:
+            QMessageBox.information(self, tr("PDF-Bericht"), tr("Es sind noch keine Messdaten vorhanden."))
+            return
+        labels = [f"{text}  ({fmt_time(a)[:19]} – {fmt_time(b)[:19]})" for text, a, b in ranges]
+        choice, ok = QInputDialog.getItem(self, tr("PDF-Bericht"), tr("Zeitbereich:"), labels, len(labels) - 1, False)
+        if not ok:
+            return
+        _text, a, b = ranges[labels.index(choice)]
+        stem = re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "log").strip("_") or "log"
+        from plc_report import report_dir
+        os.makedirs(report_dir(self.conn), exist_ok=True)
+        default = os.path.join(report_dir(self.conn), f"{stem}_bericht_{datetime.fromtimestamp(a):%Y%m%d_%H%M%S}.pdf")
+        path, _ = QFileDialog.getSaveFileName(self, tr("PDF-Bericht speichern"), default, tr("PDF-Datei (*.pdf)"))
+        if not path:
+            return
+        if not path.lower().endswith(".pdf"):
+            path += ".pdf"
+        t, y = self._pid_source()
+        t = np.asarray(t, dtype=float)
+        i0, i1 = int(np.searchsorted(t, a, side="left")), int(np.searchsorted(t, b, side="right"))
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            acc = ReportAccumulator([v.name for v in self.vars], [v.dtype for v in self.vars], a, b,
+                                    label=f"{fmt_time(a)[:16]} – {fmt_time(b)[:16]}")
+            acc.add_many(t[i0:i1], np.asarray(y, dtype=float)[:, i0:i1])
+            write_report(path, acc, self.charts, self.vars, self.conn.get("projekt", ""),
+                         events_in(self.event_log(), a, b))
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.warning(self, tr("PDF-Bericht"), tr("Der Bericht konnte nicht erstellt werden:\n{0}").format(e))
+            return
+        QApplication.restoreOverrideCursor()
+        self.statusBar().showMessage(tr("Bericht erstellt: {0}").format(path), 10000)
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def open_analysis(self, kind):
         """XY-Diagramm oder Frequenzanalyse öffnen (nicht modal)."""

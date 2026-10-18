@@ -335,12 +335,13 @@ class ConfigWindow(QMainWindow):
         self.tabs.addTab(tab_web, tr("Webserver && Headless"))
         self.tabs.addTab(self._build_db_tab(), tr("Datenbank"))
         self.tabs.addTab(self._build_trigger_tab(), tr("Trigger && Ereignisse"))
+        self.tabs.addTab(self._build_report_tab(), tr("Berichte (PDF)"))
         self.tabs.setMaximumHeight(210)
         # Kontexthilfe (F1): Abschnitt der Bedienungsanleitung je Reiter; in der Steuerungstabelle der Abschnitt des
         # Treibers der aktuellen Zeile.
         for i, topic in enumerate(("Projekt, Steuerungen und Einstellungen", "Projekt, Steuerungen und Einstellungen",
                                    "Projekt, Steuerungen und Einstellungen", "Webserver (Diagramme im Browser)",
-                                   "Datenbank-Aufzeichnung", "Trigger und Ereignisprotokoll")):
+                                   "Datenbank-Aufzeichnung", "Trigger und Ereignisprotokoll", "PDF-Berichte")):
             set_help(self.tabs.widget(i), topic)
         set_help(self.plc_table, self._plc_help_topic)
 
@@ -782,6 +783,58 @@ class ConfigWindow(QMainWindow):
         lay.addSpacing(30)
         lay.addWidget(info, 1)
         return w
+
+    def _build_report_tab(self):
+        """Reiter „Berichte (PDF)“: automatische Berichte je Schicht, Tag, Woche oder Monat."""
+        from plc_report import PERIODS
+        self.chk_report = QCheckBox(tr("PDF-Bericht automatisch erstellen"))
+        self.chk_report.setToolTip(tr("Am Ende jedes Zeitraums: Kennwerte, Verlauf aller Diagramme und Ereignisse; "
+                                      "beim Stoppen ein Teilbericht"))
+        self.cb_report_period = QComboBox()
+        for key, text in PERIODS.items():
+            self.cb_report_period.addItem(tr(text), key)
+        self.ed_report_shifts = QLineEdit()
+        self.ed_report_shifts.setPlaceholderText("06:00,14:00,22:00")
+        self.ed_report_shifts.setToolTip(tr("Beginn der Schichten (Uhrzeiten, durch Komma getrennt)"))
+        self.ed_report_start = QLineEdit()
+        self.ed_report_start.setPlaceholderText("00:00")
+        self.ed_report_start.setToolTip(tr("Uhrzeit, zu der Tag, Woche (Montag) und Monat beginnen, z. B. 06:00"))
+        self.ed_report_dir = QLineEdit()
+        self.ed_report_dir.setPlaceholderText("berichte")
+        btn = QPushButton("…")
+        btn.setFixedWidth(30)
+        btn.clicked.connect(lambda: self.ed_report_dir.setText(
+            QFileDialog.getExistingDirectory(self, tr("Ordner für Berichte"), self.ed_report_dir.text() or BASE_DIR)
+            or self.ed_report_dir.text()))
+        dir_row = QHBoxLayout(); dir_row.addWidget(self.ed_report_dir); dir_row.addWidget(btn)
+        self.cb_report_period.currentIndexChanged.connect(lambda _i: self._update_report_fields())
+        self.chk_report.toggled.connect(lambda _on: self._update_report_fields())
+        form = QFormLayout()
+        form.addRow("", self.chk_report)
+        form.addRow(tr("Zeitraum:"), self.cb_report_period)
+        form.addRow(tr("Schichtbeginne:"), self.ed_report_shifts)
+        form.addRow(tr("Tagesbeginn:"), self.ed_report_start)
+        form2 = QFormLayout()
+        form2.addRow(tr("Ordner:"), dir_row)
+        info = QLabel(tr("Der Bericht enthält Minimum, Maximum, Mittelwert und Streuung je Variable, den Verlauf jedes "
+                         "Diagramms und die Ereignisse des Zeitraums. Von Hand: Logger › Analyse › PDF-Bericht."))
+        info.setWordWrap(True)
+        info.setStyleSheet("color:#555")
+        form2.addRow(info)
+        w = QWidget()
+        lay = QHBoxLayout(w)
+        lay.addLayout(form, 1)
+        lay.addSpacing(30)
+        lay.addLayout(form2, 1)
+        return w
+
+    def _update_report_fields(self):
+        on = self.chk_report.isChecked()
+        kind = self.cb_report_period.currentData()
+        self.cb_report_period.setEnabled(on)
+        self.ed_report_shifts.setEnabled(on and kind == "schicht")
+        self.ed_report_start.setEnabled(on and kind != "schicht")
+        self.ed_report_dir.setEnabled(on)
 
     def _update_trigger_summary(self):
         n = len(self.triggers)
@@ -1574,6 +1627,12 @@ class ConfigWindow(QMainWindow):
         self.ed_db_file.setText(conn.get("db_datei", "datenlogger.db"))
         self.chk_db_changes.setChecked(bool(int(conn.get("db_nur_aenderungen", 0))))
         self.ed_event_file.setText(conn.get("ereignis_datei", ""))
+        self.chk_report.setChecked(bool(int(conn.get("bericht_aktiv", 0) or 0)))
+        self.cb_report_period.setCurrentIndex(max(self.cb_report_period.findData(conn.get("bericht_zeitraum", "tag")), 0))
+        self.ed_report_shifts.setText(conn.get("bericht_schichten", "06:00,14:00,22:00"))
+        self.ed_report_start.setText(conn.get("bericht_beginn", "00:00"))
+        self.ed_report_dir.setText(conn.get("bericht_ordner", "berichte"))
+        self._update_report_fields()
         self.cb_rec_mode.setCurrentIndex(max(self.cb_rec_mode.findData(conn.get("aufz_modus", "dauernd")), 0))
         self.ed_rec_cond.setText(conn.get("aufz_bedingung", ""))
         self.sp_pre.setValue(float(conn.get("aufz_vorlauf_s", 10.0)))
@@ -1655,6 +1714,11 @@ class ConfigWindow(QMainWindow):
                 "web_schluessel": self.ed_web_key.text().strip(),
                 "web_benutzer": json.dumps(self.web_users, ensure_ascii=False) if self.web_users else "",
                 "ereignis_datei": self.ed_event_file.text().strip(),
+                "bericht_aktiv": 1 if self.chk_report.isChecked() else 0,
+                "bericht_zeitraum": self.cb_report_period.currentData() or "tag",
+                "bericht_schichten": self.ed_report_shifts.text().strip() or "06:00,14:00,22:00",
+                "bericht_beginn": self.ed_report_start.text().strip() or "00:00",
+                "bericht_ordner": self.ed_report_dir.text().strip() or "berichte",
                 "aufz_modus": self.cb_rec_mode.currentData() or "dauernd",
                 "aufz_bedingung": " ".join(self.ed_rec_cond.text().split()),
                 "aufz_vorlauf_s": self.sp_pre.value(),
@@ -1998,6 +2062,16 @@ class ConfigWindow(QMainWindow):
                                     "übersprungen):\n\n") + "\n".join(bad) + tr("\n\nTrotzdem speichern?")) \
                     != QMessageBox.StandardButton.Yes:
                 return False
+        # Berichte: Uhrzeiten prüfen.
+        if self.chk_report.isChecked():
+            for label, text in ((tr("Schichtbeginne"), self.ed_report_shifts.text()),
+                                (tr("Tagesbeginn"), self.ed_report_start.text())):
+                parts = [x.strip() for x in text.replace(";", ",").split(",") if x.strip()]
+                if any(not re.fullmatch(r"([01]?\d|2[0-3]):[0-5]\d", x) for x in parts):
+                    QMessageBox.warning(self, tr("Berichte"), tr("{0}: Uhrzeiten bitte als hh:mm, durch Komma getrennt "
+                                                                "(z. B. 06:00,14:00,22:00).").format(label))
+                    self.tabs.setCurrentIndex(6)
+                    return False
         # Aufzeichnung per Trigger: Startbedingung prüfen.
         if self.cb_rec_mode.currentData() == "trigger":
             cond = self.ed_rec_cond.text().strip()
