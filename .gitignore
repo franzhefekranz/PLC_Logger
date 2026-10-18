@@ -13,6 +13,7 @@ installer/
 appimage_build/
 appimage/
 bedienungsanleitung.html
+user_manual.html
 
 # Laufzeitdaten (Konfiguration, Aufzeichnungen, Einstellungen)
 *_last.txt

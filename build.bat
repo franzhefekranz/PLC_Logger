@@ -6,7 +6,7 @@ rem  Erzeugt mit PyInstaller die beiden Programme (PLCLogger.exe, PLCKonfigurati
 rem  in EINEM gemeinsamen Ordner und baut daraus mit Inno Setup die Setup-Datei.
 rem  PLCLogger.exe laeuft mit Oberflaeche oder (Option "Headless" bzw. Parameter --headless) ohne.
 rem  Fuer den Webserver wird Chart.js einmalig nach web_static\chart.umd.js geladen und mit eingepackt.
-rem  Die Bedienungsanleitung kommt als HTML und PDF (doc\requirements.txt, tools\build_doc.py) in Installer und ZIP.
+rem  Die Bedienungsanleitung (deutsch und englisch) kommt als HTML und PDF (doc\requirements.txt, tools\build_doc.py) in Installer und ZIP.
 rem
 rem  Aufruf:   build.bat              alles: Umgebung, .exe-Dateien, Installer
 rem            build.bat exe          nur die .exe-Dateien (dist\PLCDatenlogger)
@@ -146,18 +146,24 @@ if not exist "dist\PLCDatenlogger\PLCKonfiguration.exe" goto :fail
 rem  Lizenz (LGPL-3.0-or-later) und Lizenztexte in den Programmordner (gelangen so in Installer und portables ZIP)
 for %%F in (LICENSE COPYING THIRD_PARTY_LICENSES.md) do if exist "%%F" copy /y "%%F" "dist\PLCDatenlogger\" >nul
 
-rem  Bedienungsanleitung als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
-"%VPY%" -c "import docutils.core as d; d.publish_file(source_path='doc/bedienungsanleitung.rst', destination_path='doc/bedienungsanleitung.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >nul 2>nul
-if errorlevel 1 echo [HINWEIS] doc\bedienungsanleitung.html konnte nicht erzeugt werden (der Installer enthaelt dann die .rst).
+rem  Bedienungsanleitung (deutsch) und User Manual (englisch) als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
+for %%D in (bedienungsanleitung user_manual) do (
+  "%VPY%" -c "import docutils.core as d; d.publish_file(source_path='doc/%%D.rst', destination_path='doc/%%D.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >nul 2>nul
+  if errorlevel 1 echo [HINWEIS] doc\%%D.html konnte nicht erzeugt werden ^(der Installer enthaelt dann die .rst^).
+)
 
 rem  Bedienungsanleitung als PDF (Sphinx + rinohtype, ohne LaTeX; optional: fehlt es, bleibt es bei HTML bzw. .rst)
-rem  Fester Name build\doc\Bedienungsanleitung.pdf fuer installer.iss und das portable ZIP.
+rem  Feste Namen build\doc\Bedienungsanleitung.pdf und build\doc\User_Manual.pdf fuer installer.iss und das portable ZIP.
 set "DOCPDF=build\doc\Bedienungsanleitung.pdf"
+set "DOCPDF_EN=build\doc\User_Manual.pdf"
 if exist "%DOCPDF%" del "%DOCPDF%"
+if exist "%DOCPDF_EN%" del "%DOCPDF_EN%"
 echo [5/6] Bedienungsanleitung als PDF ...
 "%VPY%" -m pip install -r doc\requirements.txt >nul
 "%VPY%" tools\build_doc.py --copy-to "%DOCPDF%" >nul 2>nul
 if not exist "%DOCPDF%" echo [HINWEIS] Das PDF der Anleitung konnte nicht erzeugt werden (Test: "%VPY%" tools\build_doc.py).
+"%VPY%" tools\build_doc.py --lang en --copy-to "%DOCPDF_EN%" >nul 2>nul
+if not exist "%DOCPDF_EN%" echo [HINWEIS] Das englische PDF konnte nicht erzeugt werden (Test: "%VPY%" tools\build_doc.py --lang en).
 
 echo.
 echo [OK] Programme erzeugt: dist\PLCDatenlogger\PLCLogger.exe und PLCKonfiguration.exe
@@ -212,9 +218,12 @@ if errorlevel 8 exit /b 1
 rem  Sprachdateien zum Bearbeiten und Ergaenzen (eigene Uebersetzung: de.txt kopieren, z. B. als fr.txt)
 robocopy "sprachen" "%PDIR%\sprachen" /E /NFL /NDL /NJH /NJS /NP >nul
 if not exist "%PDIR%\Doku" mkdir "%PDIR%\Doku"
-if exist "doc\bedienungsanleitung.html" copy /y "doc\bedienungsanleitung.html" "%PDIR%\Doku\" >nul
-if not exist "doc\bedienungsanleitung.html" copy /y "doc\bedienungsanleitung.rst" "%PDIR%\Doku\" >nul
+for %%D in (bedienungsanleitung user_manual) do (
+  if exist "doc\%%D.html" copy /y "doc\%%D.html" "%PDIR%\Doku\" >nul
+  if not exist "doc\%%D.html" copy /y "doc\%%D.rst" "%PDIR%\Doku\" >nul
+)
 if exist "build\doc\Bedienungsanleitung.pdf" copy /y "build\doc\Bedienungsanleitung.pdf" "%PDIR%\Doku\" >nul
+if exist "build\doc\User_Manual.pdf" copy /y "build\doc\User_Manual.pdf" "%PDIR%\Doku\" >nul
 if exist "doc\images" robocopy "doc\images" "%PDIR%\Doku\images" /E /NFL /NDL /NJH /NJS /NP >nul
 set "ZIP=dist\PLCDatenlogger_portable_%VERSION%.zip"
 if exist "%ZIP%" del "%ZIP%"

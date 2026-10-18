@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (C) 2026 Michael Taxis
-"""Bedienungsanleitung (doc/bedienungsanleitung.rst) in Seiten für das GitHub-Wiki umwandeln.
+"""Bedienungsanleitung (doc/bedienungsanleitung.rst) und englisches User Manual (doc/user_manual.rst) in Seiten für
+das GitHub-Wiki umwandeln.
 
     python tools/make_wiki.py ZIELORDNER        (Repository für Bildadressen: Umgebungsvariable GITHUB_REPOSITORY)
 
 Je Hauptkapitel entsteht eine Markdown-Seite (das Kapitel „Überblick“ wird die Startseite ``Home.md``), dazu die
 Seitenleiste ``_Sidebar.md``, die Fußzeile ``_Footer.md`` und der Bilderordner ``images``. Verweise zwischen Kapiteln
-werden auf die richtige Wiki-Seite umgebogen. Benötigt pandoc (https://pandoc.org).
+werden auf die richtige Wiki-Seite umgebogen. Die englischen Seiten erhalten das Präfix ``en-`` (Startseite
+``en-Home``) und stehen in der Seitenleiste unter „User Manual (English)“. Benötigt pandoc (https://pandoc.org).
 
 Der Workflow .github/workflows/wiki.yml ruft das Skript bei jeder Änderung der Anleitung auf und überträgt das
 Ergebnis ins Wiki des Repositorys.
@@ -19,7 +21,9 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DOC = os.path.join(ROOT, "doc")
-SOURCE = os.path.join(DOC, "bedienungsanleitung.rst")
+# (Sprache, Quelle, Präfix der Seitennamen, Titel in der Seitenleiste)
+SOURCES = [("de", os.path.join(DOC, "bedienungsanleitung.rst"), "", "Bedienungsanleitung"),
+           ("en", os.path.join(DOC, "user_manual.rst"), "en-", "User Manual (English)")]
 
 
 def slug(text):
@@ -48,9 +52,10 @@ def labels(rst):
     return out
 
 
-def main(target, repo):
-    rst = open(SOURCE, encoding="utf-8").read()
-    md = subprocess.run(["pandoc", "-f", "rst", "-t", "gfm", "--wrap=none", SOURCE], check=True,
+def write_manual(target, repo, source, prefix):
+    """Eine Anleitung als Wiki-Seiten schreiben; Rückgabe: [(Kapiteltitel, Seitenname)]."""
+    rst = open(source, encoding="utf-8").read()
+    md = subprocess.run(["pandoc", "-f", "rst", "-t", "gfm", "--wrap=none", source], check=True,
                         capture_output=True, text=True, encoding="utf-8").stdout
     md = re.sub(r'<div class="contents"[^>]*>.*?</div>\s*', "", md, flags=re.S)
     title_m = re.match(r"# (.+)\n", md)
@@ -62,7 +67,7 @@ def main(target, repo):
     chapters = []                       # (Titel, Seitenname, Text)
     for k in range(1, len(parts), 2):
         head, body = parts[k].strip(), parts[k + 1]
-        name = "Home" if k == 1 else page_name(head)
+        name = prefix + ("Home" if k == 1 else page_name(head))
         chapters.append((head, name, body))
 
     # Überschrift -> (Seite, Anker) für alle Überschriften
@@ -88,17 +93,12 @@ def main(target, repo):
             return f"[{m.group(1)}]({page}" + (f"#{anchor}" if anchor else "") + ")"
         return re.sub(r"\[([^\]]+)\]\(#([\w-]+)\)", repl, text)
 
-    if os.path.isdir(target):
-        for fn in os.listdir(target):
-            if fn.endswith(".md"):
-                os.remove(os.path.join(target, fn))
-    os.makedirs(target, exist_ok=True)
     for i, (head, name, body) in enumerate(chapters):
         text = re.sub(r"(?m)^(#{3,6}) ", lambda m: m.group(1)[1:] + " ", body)     # ### -> ##
         text = fix_links(text, name).strip() + "\n"
         # Bilder über die Wiki-Adresse von GitHub (relative Pfade funktionieren nicht auf allen Wiki-Seiten)
         text = text.replace('src="images/', f'src="https://raw.githubusercontent.com/wiki/{repo}/images/')
-        heading = f"# {title}\n\n## {head}\n\n" if name == "Home" else f"# {head}\n\n"
+        heading = f"# {title}\n\n## {head}\n\n" if name == prefix + "Home" else f"# {head}\n\n"
         nav = []
         if i > 0:
             nav.append(f"← [{chapters[i - 1][0]}]({chapters[i - 1][1]})")
@@ -107,18 +107,33 @@ def main(target, repo):
         text += "\n---\n\n" + " · ".join(nav) + "\n" if nav else ""
         with open(os.path.join(target, name + ".md"), "w", encoding="utf-8") as f:
             f.write(heading + text)
+    return [(head, name) for head, name, _b in chapters]
+
+
+def main(target, repo):
+    if os.path.isdir(target):
+        for fn in os.listdir(target):
+            if fn.endswith(".md"):
+                os.remove(os.path.join(target, fn))
+    os.makedirs(target, exist_ok=True)
+    sidebar, count = [], 0
+    for _lang, source, prefix, label in SOURCES:
+        if not os.path.isfile(source):
+            continue
+        pages = write_manual(target, repo, source, prefix)
+        count += len(pages)
+        sidebar.append(f"**{label}**\n\n" + "".join(f"* [{head}]({name})\n" for head, name in pages))
     with open(os.path.join(target, "_Sidebar.md"), "w", encoding="utf-8") as f:
-        f.write("**Bedienungsanleitung**\n\n")
-        for head, name, _b in chapters:
-            f.write(f"* [{head}]({name})\n")
+        f.write("\n".join(sidebar))
     with open(os.path.join(target, "_Footer.md"), "w", encoding="utf-8") as f:
-        f.write("Automatisch erzeugt aus [`doc/bedienungsanleitung.rst`](../blob/main/doc/bedienungsanleitung.rst) – "
-                "Änderungen bitte dort vornehmen, nicht im Wiki.\n")
+        f.write("Automatisch erzeugt aus [`doc/bedienungsanleitung.rst`](../blob/main/doc/bedienungsanleitung.rst) "
+                "bzw. [`doc/user_manual.rst`](../blob/main/doc/user_manual.rst) – Änderungen bitte dort vornehmen, "
+                "nicht im Wiki. · Generated from the files above – please edit them, not the wiki.\n")
     img_src, img_dst = os.path.join(DOC, "images"), os.path.join(target, "images")
     if os.path.isdir(img_src):
         shutil.rmtree(img_dst, ignore_errors=True)
         shutil.copytree(img_src, img_dst)
-    print(f"{len(chapters)} Seiten nach {target} geschrieben")
+    print(f"{count} Seiten nach {target} geschrieben")
 
 
 if __name__ == "__main__":

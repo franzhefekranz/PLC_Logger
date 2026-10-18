@@ -3,6 +3,7 @@
 """Bedienungsanleitung (doc/bedienungsanleitung.rst) mit Sphinx als PDF bauen – ohne LaTeX (rinohtype).
 
     python tools/build_doc.py            PDF -> dist/PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf
+    python tools/build_doc.py --lang en  englische Anleitung (doc/user_manual.rst) -> dist/PLC_Datenlogger_User_Manual_<Version>.pdf
     python tools/build_doc.py --html     zusätzlich HTML-Vorschau -> build/doc/html/bedienungsanleitung.html
     python tools/build_doc.py --copy-to DATEI   das PDF zusätzlich unter festem Namen ablegen (build.bat, Installer)
 
@@ -20,9 +21,16 @@ OUT = os.path.join(ROOT, "build", "doc")
 DIST = os.path.join(ROOT, "dist")
 
 
+LANG = sys.argv[sys.argv.index("--lang") + 1].lower() if "--lang" in sys.argv[:-1] else "de"
+ROOT_DOC = "user_manual" if LANG.startswith("en") else "bedienungsanleitung"
+
+
 def sphinx(builder, target):
-    # -E: Umgebung neu lesen (Änderungen an conf.py/Stylesheet wirken sicher), -q: nur Warnungen und Fehler
-    return subprocess.call([sys.executable, "-m", "sphinx", "-b", builder, "-E", "-q", DOC, target])
+    # -E: Umgebung neu lesen (Änderungen an conf.py/Stylesheet wirken sicher), -q: nur Warnungen und Fehler;
+    # -d: eigener Zwischenspeicher je Sprache. Die Sprache liest doc/conf.py aus PLC_DOC_LANG.
+    env = dict(os.environ, PLC_DOC_LANG=LANG)
+    return subprocess.call([sys.executable, "-m", "sphinx", "-b", builder, "-E", "-q",
+                            "-d", os.path.join(OUT, "doctrees_" + LANG), DOC, target], env=env)
 
 
 def main():
@@ -32,7 +40,7 @@ def main():
     except ImportError as e:
         print(f"FEHLER: {e.name} fehlt. Bitte installieren:  pip install -r doc/requirements.txt")
         return 1
-    pdf_dir = os.path.join(OUT, "pdf")
+    pdf_dir = os.path.join(OUT, "pdf_" + LANG)
     if sphinx("rinoh", pdf_dir) != 0:
         print("FEHLER: PDF konnte nicht erzeugt werden (siehe Meldungen oben).")
         return 1
@@ -54,10 +62,10 @@ def main():
         return 1
     print(f"[OK] PDF: {os.path.relpath(dest, ROOT)}")
     if "--html" in sys.argv:
-        html_dir = os.path.join(OUT, "html")
+        html_dir = os.path.join(OUT, "html_" + LANG)
         if sphinx("html", html_dir) != 0:
             return 1
-        print(f"[OK] HTML: {os.path.relpath(os.path.join(html_dir, 'bedienungsanleitung.html'), ROOT)}")
+        print(f"[OK] HTML: {os.path.relpath(os.path.join(html_dir, ROOT_DOC + '.html'), ROOT)}")
     return 0
 
 

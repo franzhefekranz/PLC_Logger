@@ -5,7 +5,8 @@
 Kontexthilfe: F1 öffnet die HTML-Fassung der Anleitung an der Stelle, die zum Fenster, Dialog, Reiter oder Feld mit
 dem Eingabefokus passt. Die Zuordnung steht in HELP_TOPICS (Klassenname -> Überschrift der Anleitung) bzw. wird mit
 set_help() an einzelnen Widgets hinterlegt. Die Sprungmarke wird zur Laufzeit aus der HTML-Datei gelesen
-(Überschrift -> id des Abschnitts); fehlt die Überschrift, öffnet sich die Anleitung am Anfang.
+(Überschrift -> id des Abschnitts); fehlt die Überschrift, öffnet sich die Anleitung am Anfang. Ist die Oberfläche
+nicht deutsch, gilt die englische Anleitung (user_manual.*), sofern vorhanden.
 
 Der Dialog zeigt Version, Copyright, Lizenz (LGPL-3.0-or-later), die Lizenzen der Drittkomponenten
 (THIRD_PARTY_LICENSES.md) und die Versionen der verwendeten Bibliotheken. Anleitung und Lizenzdateien werden
@@ -27,13 +28,21 @@ from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QHBoxLay
 
 from plc_branding import default_pixmap
 from plc_common import APP_NAME, APP_VERSION, BASE_DIR
-from plc_i18n import tr
+from plc_i18n import current as current_language, tr
 
 COPYRIGHT = "Copyright (C) 2026 Michael Taxis"
 LICENSE_ID = "LGPL-3.0-or-later"
 # Anleitung in bevorzugter Reihenfolge: PDF (enthält die Bilder), HTML (Bilder im Ordner images), Quelltext (.rst).
 MANUAL_FILES = ("Bedienungsanleitung.pdf", "PLC_Datenlogger_Bedienungsanleitung_*.pdf",
                 "bedienungsanleitung.html", "bedienungsanleitung.rst")
+# Englische Anleitung (doc/user_manual.rst) – für alle Oberflächensprachen außer Deutsch; fehlt sie, gilt die deutsche.
+MANUAL_FILES_EN = ("User_Manual.pdf", "PLC_Datenlogger_User_Manual_*.pdf", "user_manual.html", "user_manual.rst")
+MANUAL_HTML, MANUAL_HTML_EN = "bedienungsanleitung.html", "user_manual.html"
+
+
+def english_manual() -> bool:
+    """True, wenn die englische Anleitung gilt (Oberflächensprache nicht Deutsch)."""
+    return not current_language().lower().startswith("de")
 # Bibliotheken für die Versionsliste (außer Python, Qt, PySide6): (Anzeigename, Paketname, Modulname).
 LIBRARIES = [("pyqtgraph", "pyqtgraph", "pyqtgraph"),
              ("NumPy", "numpy", "numpy"), ("Flask", "Flask", "flask"), ("python-snap7", "python-snap7", "snap7"),
@@ -71,7 +80,7 @@ def find_file(*names) -> str:
 
 def open_manual(parent=None):
     """Bedienungsanleitung mit dem Standardprogramm des Systems öffnen (PDF-Anzeige bzw. Browser)."""
-    path = find_file(*MANUAL_FILES)
+    path = (find_file(*MANUAL_FILES_EN) if english_manual() else "") or find_file(*MANUAL_FILES)
     if path and QDesktopServices.openUrl(QUrl.fromLocalFile(path)):
         return
     if path:
@@ -85,7 +94,8 @@ def open_manual(parent=None):
 # ---- Kontexthilfe (F1) -------------------------------------------------------------------------------------------
 # Überschrift der Anleitung je Fenster/Dialog (Klassenname). Wert: Text der Überschrift (wie in bedienungsanleitung.rst,
 # ohne Formatierung) oder Funktion(widget) -> Überschrift. Ein Text mit "…" am Ende passt auf die erste Überschrift,
-# die so beginnt.
+# die so beginnt. Die Themen sind immer die deutschen Überschriften; für die englische Anleitung (gleiche Gliederung,
+# Abschnitt für Abschnitt) wird der Abschnitt an derselben Position verwendet.
 HELP_TOPICS = {
     "StartWindow": "Startbild",
     "ConfigWindow": "Konfigurationsprogramm (plc_config.py)",
@@ -144,32 +154,51 @@ def _norm(text):
 _anchor_cache = {}
 
 
-def _anchors(path):
-    """Überschriften der HTML-Anleitung -> Sprungmarke (id des umgebenden Abschnitts). Zwischengespeichert."""
+def _sections(path):
+    """Überschriften der HTML-Anleitung in Reihenfolge: [(Überschrift normiert, id des Abschnitts)]. Zwischengespeichert."""
     try:
         key = (path, os.path.getmtime(path))
     except OSError:
-        return {}
+        return []
     if key not in _anchor_cache:
         with open(path, encoding="utf-8", errors="replace") as f:
             text = f.read()
-        found = {}
         # docutils/Sphinx: <section id="..."> [<span id="label"></span>] <hN>Überschrift</hN>
         pattern = r'<section[^>]*\bid="([^"]+)"[^>]*>\s*(?:<span[^>]*></span>\s*)*<h[1-6][^>]*>(.*?)</h[1-6]>'
-        for m in re.finditer(pattern, text, re.S):
-            found.setdefault(_norm(m.group(2)), m.group(1))
-        _anchor_cache.clear()
-        _anchor_cache[key] = found
+        if len(_anchor_cache) > 4:
+            _anchor_cache.clear()
+        _anchor_cache[key] = [(_norm(m.group(2)), m.group(1)) for m in re.finditer(pattern, text, re.S)]
     return _anchor_cache[key]
+
+
+def _find_index(sections, topic):
+    """Position der Überschrift (genau, oder bei "…" am Ende: erste mit diesem Anfang), sonst -1."""
+    if topic.endswith("…"):
+        start = _norm(topic[:-1])
+        return next((i for i, (t, _a) in enumerate(sections) if t.startswith(start)), -1)
+    norm = _norm(topic)
+    return next((i for i, (t, _a) in enumerate(sections) if t == norm), -1)
 
 
 def find_anchor(path, topic):
     """Sprungmarke zur Überschrift (genau, oder bei "…" am Ende: erste Überschrift mit diesem Anfang), sonst ""."""
-    anchors = _anchors(path)
-    if topic.endswith("…"):
-        start = _norm(topic[:-1])
-        return next((a for t, a in anchors.items() if t.startswith(start)), "")
-    return anchors.get(_norm(topic), "")
+    sections = _sections(path)
+    i = _find_index(sections, topic)
+    return sections[i][1] if i >= 0 else ""
+
+
+def find_anchor_en(page_de, page_en, topic):
+    """Sprungmarke in der englischen Anleitung zum deutschen Thema: Abschnitt an derselben Position wie in der
+    deutschen (beide Anleitungen sind gleich gegliedert). Englische Überschriften als Thema passen ebenfalls."""
+    sections_en = _sections(page_en)
+    i = _find_index(sections_en, topic)
+    if i >= 0:
+        return sections_en[i][1]
+    sections_de = _sections(page_de) if page_de else []
+    i = _find_index(sections_de, topic)
+    if i < 0 or len(sections_de) != len(sections_en):
+        return ""
+    return sections_en[i][1]
 
 
 def open_help(topic=None, parent=None):
@@ -177,8 +206,13 @@ def open_help(topic=None, parent=None):
 
     Windows und viele Linux-Desktops verwerfen beim Öffnen einer lokalen Datei den Teil hinter '#'. Deshalb wird eine
     kleine Weiterleitungsseite im Temp-Ordner geöffnet, die den Browser an die Sprungmarke weiterleitet."""
-    page = find_file("bedienungsanleitung.html")
-    anchor = find_anchor(page, topic) if page and topic else ""
+    page = find_file(MANUAL_HTML)
+    page_en = find_file(MANUAL_HTML_EN) if english_manual() else ""
+    if page_en:
+        anchor = find_anchor_en(page, page_en, topic) if topic else ""
+        page = page_en
+    else:
+        anchor = find_anchor(page, topic) if page and topic else ""
     if not anchor:
         open_manual(parent)
         return

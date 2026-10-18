@@ -25,6 +25,15 @@
 #if FileExists("build\doc\Bedienungsanleitung.pdf")
   #define DocPdf "Bedienungsanleitung.pdf"
 #endif
+; Englische Anleitung (User Manual): HTML bzw. .rst und PDF
+#if FileExists("doc\user_manual.html")
+  #define DocFileEn "user_manual.html"
+#else
+  #define DocFileEn "user_manual.rst"
+#endif
+#if FileExists("build\doc\User_Manual.pdf")
+  #define DocPdfEn "User_Manual.pdf"
+#endif
 
 [Setup]
 ; Eindeutige Kennung der Anwendung (Updates erkennen die bestehende Installation daran).
@@ -67,6 +76,10 @@ Source: "doc\{#DocFile}"; DestDir: "{app}\Doku"; Flags: ignoreversion
 #ifdef DocPdf
 Source: "build\doc\{#DocPdf}"; DestDir: "{app}\Doku"; Flags: ignoreversion
 #endif
+Source: "doc\{#DocFileEn}"; DestDir: "{app}\Doku"; Flags: ignoreversion
+#ifdef DocPdfEn
+Source: "build\doc\{#DocPdfEn}"; DestDir: "{app}\Doku"; Flags: ignoreversion
+#endif
 ; Bilder der Anleitung (Ordner doc\images; fehlt er, wird er übersprungen)
 Source: "doc\images\*"; DestDir: "{app}\Doku\images"; Flags: ignoreversion recursesubdirs skipifsourcedoesntexist
 
@@ -78,6 +91,10 @@ Name: "{group}\PLC Ereignisprotokoll"; Filename: "{app}\{#AppExe}"; Parameters: 
 Name: "{group}\Bedienungsanleitung"; Filename: "{app}\Doku\{#DocFile}"
 #ifdef DocPdf
 Name: "{group}\Bedienungsanleitung (PDF)"; Filename: "{app}\Doku\{#DocPdf}"
+#endif
+Name: "{group}\User Manual (English)"; Filename: "{app}\Doku\{#DocFileEn}"
+#ifdef DocPdfEn
+Name: "{group}\User Manual (English, PDF)"; Filename: "{app}\Doku\{#DocPdfEn}"
 #endif
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\PLC Datenlogger"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon

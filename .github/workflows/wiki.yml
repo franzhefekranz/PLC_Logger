@@ -1,5 +1,5 @@
 # GitHub-Wiki aus der Bedienungsanleitung erzeugen und aktualisieren.
-# Start: bei jeder Änderung von doc/bedienungsanleitung.rst oder doc/images/ auf main, oder von Hand (Actions › Wiki).
+# Start: bei jeder Änderung von doc/bedienungsanleitung.rst, doc/user_manual.rst oder doc/images/ auf main, oder von Hand (Actions › Wiki).
 # Voraussetzung (einmalig): Wiki in den Repository-Einstellungen eingeschaltet und die erste Seite angelegt
 # (GitHub legt das Wiki-Repository erst damit an). Danach überschreibt dieser Workflow die Seiten bei jeder Änderung.
 name: Wiki
@@ -35,5 +35,5 @@ jobs:
           git add -A
           if git diff --cached --quiet; then echo "Wiki ist aktuell."; exit 0; fi
           git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
-              commit -q -m "Wiki aus bedienungsanleitung.rst (${GITHUB_SHA::7})"
+              commit -q -m "Wiki aus der Anleitung (${GITHUB_SHA::7})"
           git push -q

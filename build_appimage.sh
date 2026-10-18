@@ -144,14 +144,17 @@ AD="$B/AppDir"
 rm -rf "$AD"
 mkdir -p "$AD/usr/lib/$APP" "$AD/usr/share/applications" "$AD/usr/share/icons/hicolor/256x256/apps" "$AD/usr/share/doc/$APP"
 cp -a "$B/dist/$APP/." "$AD/usr/lib/$APP/"
-cp doc/bedienungsanleitung.rst "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+cp doc/bedienungsanleitung.rst doc/user_manual.rst "$AD/usr/share/doc/$APP/" 2>/dev/null || true
 # HTML-Fassung der Anleitung erzeugen (docutils; für die Kontexthilfe F1 nötig) und mit der PDF-Fassung
 # (falls mit tools/build_doc.py erzeugt) beilegen; Menü Hilfe › Bedienungsanleitung bzw. F1 öffnen sie
-"$VPY" -c "import docutils.core as d; d.publish_file(source_path='doc/bedienungsanleitung.rst', destination_path='doc/bedienungsanleitung.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >/dev/null 2>&1 \
-    || echo "[HINWEIS] doc/bedienungsanleitung.html konnte nicht erzeugt werden (F1 öffnet dann die Anleitung am Anfang)."
-cp doc/bedienungsanleitung.html "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+# (deutsch: bedienungsanleitung, englisch: user_manual)
+for DOCN in bedienungsanleitung user_manual; do
+  "$VPY" -c "import docutils.core as d; d.publish_file(source_path='doc/$DOCN.rst', destination_path='doc/$DOCN.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >/dev/null 2>&1 \
+      || echo "[HINWEIS] doc/$DOCN.html konnte nicht erzeugt werden (F1 öffnet dann die Anleitung am Anfang)."
+  cp "doc/$DOCN.html" "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+done
 [[ -d doc/images ]] && cp -r doc/images "$AD/usr/share/doc/$APP/" || true
-cp build/doc/Bedienungsanleitung.pdf "$AD/usr/share/doc/$APP/" 2>/dev/null || true
+cp build/doc/Bedienungsanleitung.pdf build/doc/User_Manual.pdf "$AD/usr/share/doc/$APP/" 2>/dev/null || true
 # Lizenz (LGPL-3.0-or-later) und Lizenztexte: neben das Programm und nach usr/share/doc
 for f in LICENSE COPYING THIRD_PARTY_LICENSES.md; do
     if [[ -f "$f" ]]; then

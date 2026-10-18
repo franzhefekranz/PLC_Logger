@@ -2546,7 +2546,7 @@
 > Page {0}
 
 @ PLC Datenlogger – erstellt {0:%d.%m.%Y %H:%M}
-> PLC Data Logger – created {0:%Y-%m-%d %H:%M}
+> PLC Datenlogger – created {0:%Y-%m-%d %H:%M}
 
 @ Bericht {0}: {1}
 > Report {0}: {1}

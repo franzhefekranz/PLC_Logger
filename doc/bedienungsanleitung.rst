@@ -230,18 +230,19 @@ Voraussetzungen
   .. code-block:: console
 
      pip install PySide6-Essentials pyqtgraph numpy Flask    # Oberfläche, Webserver
-     pip install python-snap7                                # Treiber s7
+     pip install python-snap7                                # Treiber s7 und logo
      pip install s7commplus                                  # Treiber tia
-     pip install pycomm3                                     # Treiber clx (Tag-Liste)
+     pip install pycomm3                                     # Treiber clx (Tag-Liste), Treiber pccc
      pip install pymodbus pyserial                           # Treiber modbus_rtu
      pip install asyncua                                     # Treiber opcua
      pip install pyserial                                    # Treiber s5as511
+     pip install cryptography                                # Webserver mit HTTPS
 
   Benötigt werden nur die Bibliotheken der Treiber, die Sie tatsächlich
   verwenden. Fehlt eine, wird der Treiber trotzdem angezeigt; der
   Einstellungsdialog der Steuerung und **Treiber › Installierte Treiber …**
   zeigen dann „✗ Bibliothek fehlt“. Die Treiber ``modbus``, ``slmp``,
-  ``kvhostlink`` und ``toyopuc`` brauchen keine Bibliothek. Der Headless-Betrieb braucht kein PySide6 und kein pyqtgraph.
+  ``kvhostlink``, ``toyopuc``, ``fins`` und ``ads`` brauchen keine Bibliothek. Der Headless-Betrieb braucht kein PySide6 und kein pyqtgraph.
 * **libplctag** (nur Treiber ``clx``) ist kein pip-Paket. Benötigt wird
   ``plctag.dll`` (Windows, 64 Bit); sie liegt dem Programm bei. Sonst aus
   https://github.com/libplctag/libplctag/releases das Paket
@@ -301,7 +302,11 @@ Steuerungen einzurichten ist, hängt vom Treiber ab und steht im Kapitel
 * ``opcua``: OPC-UA-Server der Steuerung eingeschaltet, Variablen freigegeben;
   mit Sicherheit das Client-Zertifikat im Server als vertrauenswürdig freigeben.
   Meist TCP-Port 4840.
+* ``ads``: Route auf diesen PC in TwinCAT eintragen. TCP-Port 48898.
 * ``slmp``: In GX Works eine SLMP-/MC-Protokoll-Verbindung (binär) mit Port anlegen.
+* ``fins``: FINS an der Ethernet-Einheit eingeschaltet. Port 9600.
+* ``logo``: Server-Verbindung (S7) bzw. HMI-Zugriff in LOGO!Soft. TCP-Port 102.
+* ``pccc``: Nichts einzurichten. TCP-Port 44818.
 * ``kvhostlink``: Nichts einzurichten. TCP-Port 8501.
 * ``toyopuc``: In PCwin einen Computer-Link-Port einrichten.
 * ``s5as511``: PG-Adapter (20 mA) an der PG-Schnittstelle; STEP 5 währenddessen
@@ -888,12 +893,15 @@ einzeln zugewiesen. Was ein Block ist, hängt vom Treiber ab:
        hier vor allem eine bequeme Art, viele Variablen anzulegen.
    * - ``modbus_rtu``
      - wie ``modbus``.
-   * - ``opcua``
-     - **Array-Knoten** (NodeId ohne Index) + **erster Index** + Anzahl; gelesen
-       mit einem Indexbereich in einer Anfrage.
-   * - ``slmp``, ``kvhostlink``, ``toyopuc``
-     - **Startgerät** (z. B. ``D100``, ``DM100``, ``D0100``) + Anzahl; Elemente
-       lückenlos (bei ``REAL`` je 2 Wörter), bei ``BOOL`` fortlaufende Bits.
+   * - ``opcua``, ``ads``
+     - **Array-Knoten bzw. Array-Name** (ohne Index) + **erster Index** + Anzahl;
+       gelesen in einer Anfrage.
+   * - ``slmp``, ``kvhostlink``, ``toyopuc``, ``fins``, ``logo``
+     - **Startgerät bzw. Startadresse** (z. B. ``D100``, ``DM100``, ``D0100``,
+       ``VW100``) + Anzahl; Elemente lückenlos (bei ``REAL`` je 2 Wörter), bei
+       ``BOOL`` fortlaufende Bits.
+   * - ``pccc``
+     - **Erstes Element** einer N-, F-, L- oder B-Datei (z. B. ``N7:0``) + Anzahl.
    * - ``s5as511``
      - **Startadresse** (z. B. ``DB10.DW0``, ``MB0``, ``E0.0``) + Anzahl; Elemente
        lückenlos.
@@ -915,7 +923,7 @@ Block mit folgenden Angaben:
    * - Startadresse / Array
      - Siehe Tabelle oben; der Tooltip zeigt die Schreibweise des Treibers.
    * - Erster Index
-     - Nur bei Treibern mit Arrays (``tia``, ``clx``); sonst gesperrt.
+     - Nur bei Treibern mit Arrays (``tia``, ``clx``, ``opcua``, ``ads``); sonst gesperrt.
    * - Format
      - Datentyp der Elemente (Auswahl des Treibers).
    * - Anzahl
@@ -938,7 +946,7 @@ erzeugt die Variablen ``Block[0]`` bis ``Block[19]``. Beispiel (``s7``):
 Startadresse ``DB5.DBD0``, Format ``REAL``, Anzahl 20 liest die Bytes 0 bis 79
 des DB 5.
 
-Arrays lassen sich bei ``tia`` und ``clx`` auch direkt im Auswahldialog als
+Arrays lassen sich bei ``tia``, ``clx``, ``opcua`` und ``ads`` auch direkt im Auswahldialog als
 Block übernehmen (Array markieren, **Markiertes Array als Block…** oder
 Doppelklick).
 
@@ -1008,9 +1016,13 @@ Steuerungen wird zuerst gefragt, welche):
    * - ``opcua``
      - Aus OPC-UA-Server wählen…
      - Adressraum des Servers (Ordner, Variablen mit Datentyp, Arrays als Block).
+   * - ``ads``
+     - Aus TwinCAT wählen…
+     - Symboltabelle der TwinCAT-Steuerung (Baum nach Namensteilen, Typ, Kommentar,
+       Arrays als Block).
    * - übrige Treiber
      - –
-     - Modbus, MELSEC, KEYENCE, TOYOPUC und S5 liefern keine Namen; Adressen laut
+     - Modbus, MELSEC, Omron, KEYENCE, TOYOPUC, LOGO!, MicroLogix und S5 liefern keine Namen; Adressen laut
        Programm bzw. Gerätehandbuch von Hand eintragen.
 
 Allgemeines Vorgehen:
@@ -1026,7 +1038,7 @@ Allgemeines Vorgehen:
 #. **Auswählen.** Lesbare Werte anhaken. Bereits angelegte Variablen sind
    angehakt und ausgegraut. Nicht aufzeichenbare Typen (z. B. ``STRING``) sind
    grau dargestellt.
-#. **Arrays als Block** (``tia``, ``clx``): Array markieren, **Markiertes Array
+#. **Arrays als Block** (``tia``, ``clx``, ``opcua``, ``ads``): Array markieren, **Markiertes Array
    als Block…**, ersten Index und Anzahl festlegen.
 #. **Übernehmen.** Unter *Neue Variablen anlegen in* das Diagramm bzw. die Y-Achse
    wählen und **Auswahl übernehmen** drücken. Adresse und Typ kommen aus der
@@ -1326,12 +1338,12 @@ Erläuterungen:
 Ältere INI-Dateien umwandeln
 ----------------------------------------------------------------------
 
-Frühere Versionen speicherten die Konfiguration als Konfigurationsdatei. Diese werden **nicht
-mehr direkt geöffnet**, sondern einmalig in eine JSON-Datei umgewandelt; die Konfigurationsdatei
+Frühere Versionen speicherten die Konfiguration als INI-Datei. Diese werden **nicht
+mehr direkt geöffnet**, sondern einmalig in eine JSON-Datei umgewandelt; die INI-Datei
 selbst bleibt dabei unverändert:
 
 * **Konfigurationsprogramm › Datei › INI-Datei umwandeln …** – eine oder mehrere
-  Konfigurationsdateien wählen; neben jeder entsteht eine gleichnamige ``.json``-Datei. Bei einer
+  INI-Dateien wählen; neben jeder entsteht eine gleichnamige ``.json``-Datei. Bei einer
   einzelnen Datei wird das Ergebnis gleich geöffnet.
 * Wird im Konfigurationsprogramm (Öffnen, Startbild) eine INI-Datei gewählt, bietet
   es die Umwandlung direkt an.
@@ -1342,7 +1354,7 @@ selbst bleibt dabei unverändert:
      python tools/ini2json.py anlage1.ini anlage2.ini        # -> anlage1.json, anlage2.json
      python tools/ini2json.py alt.ini -o neu.json -f        # anderer Name, überschreiben
 
-Der Logger meldet beim Start mit einer Konfigurationsdatei, dass sie umgewandelt werden muss. War
+Der Logger meldet beim Start mit einer INI-Datei, dass sie umgewandelt werden muss. War
 zuletzt eine INI-Datei geöffnet und gibt es daneben bereits die umgewandelte
 ``.json``-Datei, wird diese automatisch verwendet. Alle Inhalte – auch Trigger,
 PID-Einstellungen und Blöcke – werden übernommen.
@@ -3313,7 +3325,9 @@ Umschalten
 Menü **Sprache** (im Logger und im Konfigurationsprogramm): Sprache wählen und die Frage
 nach dem Neustart bestätigen. Die Wahl gilt für beide Programme und den Ereignis-Viewer
 und wird in der Datei ``plc_einstellungen.json`` im Datenordner gespeichert. Auch die
-Standardtexte von Qt (Ja/Nein/Abbrechen, Dateidialoge) folgen der gewählten Sprache.
+Standardtexte von Qt (Ja/Nein/Abbrechen, Dateidialoge) folgen der gewählten Sprache, und
+**Hilfe › Bedienungsanleitung** (F1) öffnet die Anleitung in der gewählten Sprache (für alle
+Sprachen außer Deutsch die englische Fassung *User Manual*).
 
 Nicht übersetzt werden Daten: Namen von Variablen, Diagrammen und Triggern, die Spalten
 der CSV-Dateien und des Ereignisprotokolls (``KOMMT``, ``GEHT`` …), die Webseite des
@@ -3789,7 +3803,8 @@ Lauf (pip) und für den Installer **Inno Setup 7 oder 6**
    ``installer\PLCDatenlogger_Setup_<Version>.exe``.
 
 Das Skript legt eine virtuelle Umgebung ``.venv`` an, installiert die Pakete,
-erzeugt bei Bedarf das Icon und baut beide Programme. Die Versionsnummer wird
+erzeugt bei Bedarf das Icon und baut beide Programme. Dabei entstehen auch die deutsche
+(``bedienungsanleitung.html``) und die englische Anleitung (``user_manual.html``). Die Versionsnummer wird
 oben in ``build.bat`` bei ``VERSION`` eingestellt. Icon und Logo sind die Dateien
 ``app.ico`` und ``logo.png`` im Projektordner; zum Austauschen einfach ersetzen
 (Icon am besten mit 256×256 Pixeln, für ein scharfes Symbol in Explorer und Taskleiste).
@@ -3805,15 +3820,15 @@ einem USB-Stick), legen Sie eine leere Datei ``portable.txt`` neben die
 **Hinweise:**
 
 * Die ``.exe``-Dateien enthalten Python und alle Bibliotheken (die
-  ``plctag.dll`` sowie die Bibliotheken aller eingebauten Treiber – python-snap7, s7commplus, pycomm3 – werden mitgenommen; fehlt ``plctag.dll`` neben
+  ``plctag.dll`` sowie die Bibliotheken aller eingebauten Treiber – python-snap7, s7commplus, pycomm3, cryptography – werden mitgenommen; fehlt ``plctag.dll`` neben
   ``build.bat``, lädt das Skript sie einmalig aus dem GitHub-Release von libplctag); auf dem
   Zielrechner muss nichts installiert werden.
-* Der Logger startet die Konfiguration über **Konfiguration** in der
+* Der Logger startet die Konfiguration über **Konfig-Editor** in der
   Werkzeugleiste (``PLCKonfiguration.exe`` im selben Ordner).
 * Schlägt der Build fehl, steht die Ursache in den Meldungen des Fensters
   (häufig: kein Internet für pip, Python nicht im PATH, Virenscanner sperrt
-  ``dist``). Mit ``build.bat exe`` lässt sich der Installer-Schritt getrennt
-  wiederholen.
+  ``dist``). Mit ``build.bat exe`` bzw. ``build.bat installer`` lassen sich die
+  Schritte getrennt wiederholen.
 
 Portable Version (ohne Installation)
 ----------------------------------------------------------------------
@@ -3870,19 +3885,24 @@ LaTeX, über rinohtype:
 .. code-block:: console
 
    pip install -r doc/requirements.txt
-   python tools/build_doc.py            # -> dist\PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf
-   python tools/build_doc.py --html     # zusätzlich HTML-Vorschau in build\doc\html
+   python tools/build_doc.py              # -> dist\PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf
+   python tools/build_doc.py --lang en    # -> dist\PLC_Datenlogger_User_Manual_<Version>.pdf (englisch)
+   python tools/build_doc.py --html       # zusätzlich HTML-Vorschau in build\doc\html_de
 
 Die Einstellungen stehen in ``doc/conf.py``, das Layout in ``doc/pdf.rtt`` (Vorlage)
-und ``doc/pdf.rts`` (Schriften, Seitenumbrüche). Die Versionsnummer kommt aus
-``APP_VERSION`` in ``src/plc_common.py``. ``build.bat`` erzeugt das PDF automatisch
-und legt es zusätzlich zur HTML-Anleitung in den Installer (Startmenü-Eintrag
-*Bedienungsanleitung (PDF)*) und in das portable ZIP (Ordner ``Doku``). Gelingt das
-PDF nicht, meldet ``build.bat`` einen Hinweis und baut ohne PDF weiter.
+und ``doc/pdf.rts`` (Schriften, Seitenumbrüche). Die deutsche Anleitung ist
+``doc/bedienungsanleitung.rst``, die englische ``doc/user_manual.rst`` (gleiche Gliederung;
+Änderungen bitte in beiden vornehmen). Die Versionsnummer kommt aus
+``APP_VERSION`` in ``src/plc_common.py``. ``build.bat`` erzeugt beide PDFs automatisch
+und legt sie zusätzlich zu den HTML-Fassungen in den Installer (Startmenü-Einträge
+*Bedienungsanleitung (PDF)* und *User Manual (English, PDF)*) und in das portable ZIP
+(Ordner ``Doku``). Gelingt ein PDF nicht, meldet ``build.bat`` einen Hinweis und baut ohne
+es weiter.
 
 **Wiki:** Der Workflow ``.github/workflows/wiki.yml`` erzeugt bei jeder Änderung dieser
 Anleitung (oder der Bilder) das GitHub-Wiki neu: eine Seite je Kapitel, mit
-Seitenleiste und Bildern (Werkzeug ``tools/make_wiki.py``, benötigt pandoc). Einmalig
+Seitenleiste und Bildern, dazu die englischen Seiten mit dem Präfix ``en-`` (Werkzeug
+``tools/make_wiki.py``, benötigt pandoc). Einmalig
 vorher im Repository das Wiki einschalten und die erste Seite anlegen. Die
 Wiki-Seiten nicht von Hand bearbeiten – sie werden beim nächsten Lauf überschrieben.
 
@@ -3948,7 +3968,8 @@ Hilfe und Kontexthilfe (F1)
 Logger und Konfigurationsprogramm haben ein Menü **Hilfe**:
 
 * **Bedienungsanleitung** öffnet diese Anleitung (PDF bzw. HTML) mit dem
-  Standardprogramm des Systems.
+  Standardprogramm des Systems. Ist die Oberfläche nicht auf Deutsch eingestellt, öffnet
+  sich die englische Fassung (*User Manual*).
 * **Über PLC Datenlogger …** zeigt Version, Copyright, Lizenz, die Lizenzen der
   Drittkomponenten und die Versionen der verwendeten Bibliotheken.
 
@@ -3961,12 +3982,13 @@ Fenster passt – auch in Dialogen. Maßgeblich ist das Feld mit dem Eingabefoku
   und Y-Achse deren Abschnitt.
 * Dialoge: Verbindungseinstellungen (Abschnitt des Treibers), Variablen aus der
   Steuerung wählen, Blöcke, berechnete Variablen, Trigger, PID-Regler,
-  Datenbank-Lesemodus, Ereignisprotokoll, Notizen.
+  Datenbank-Lesemodus, Ereignisprotokoll, Notizen, Benutzer des Webservers,
+  XY-Diagramm, Frequenzanalyse.
 * Logger: Bedienelemente, Diagramme, Wertetabelle; Startbild: Abschnitt
   „Startbild“.
 
-Für die Kontexthilfe wird die HTML-Fassung ``bedienungsanleitung.html`` benötigt
-(Installer und portable Version: Unterordner ``Doku``). Fehlt sie, öffnet F1 die
+Für die Kontexthilfe wird die HTML-Fassung ``bedienungsanleitung.html`` (englisch:
+``user_manual.html``) benötigt (Installer und portable Version: Unterordner ``Doku``). Fehlt sie, öffnet F1 die
 Anleitung am Anfang.
 
 
@@ -3981,13 +4003,15 @@ Fehlersuche
      - Mögliche Ursache und Abhilfe
    * - „Verbindung fehlgeschlagen“ / LED rot
      - Verbindungsparameter (**…** in der Steuerungstabelle) und Netzwerk der
-       betroffenen Steuerung prüfen, Firewall (``s7``/``tia`` TCP 102, ``clx``
-       TCP 44818, ``modbus`` TCP 502). Die übrigen Steuerungen laufen unabhängig
+       betroffenen Steuerung prüfen, Firewall (``s7``/``tia``/``logo`` TCP 102,
+       ``clx``/``pccc`` TCP 44818, ``modbus`` TCP 502, ``fins`` UDP/TCP 9600,
+       ``ads`` TCP 48898). Die übrigen Steuerungen laufen unabhängig
        weiter.
    * - „Bibliothek fehlt“ im Einstellungsdialog bzw. unter *Installierte Treiber*
      - Bibliothek des Treibers installieren: ``pip install python-snap7``
-       (``s7``), ``pip install s7commplus`` (``tia``), ``pip install pycomm3``
-       und ``plctag.dll`` (``clx``).
+       (``s7``, ``logo``), ``pip install s7commplus`` (``tia``), ``pip install pycomm3``
+       (``pccc``; ``clx`` zusätzlich ``plctag.dll``). ``fins`` und ``ads`` brauchen
+       keine Bibliothek.
    * - Treiber fehlt in der Auswahl / „(Treiber fehlt)“
      - Eigener Treiber nicht geladen: **Treiber › Installierte Treiber …** zeigt
        die Fehlermeldung. Dateiname darf nicht mit ``_`` beginnen; Datei liegt
@@ -4000,12 +4024,19 @@ Fehlersuche
    * - ``tia``: Verbindung abgelehnt
      - TLS-Einstellung (*An* bzw. *Aus* probieren), Passwort der Zugriffsstufe,
        Zahl freier HMI-Verbindungen der CPU.
+   * - ``logo``: keine Verbindung
+     - In LOGO!Soft Comfort eine Verbindung als **Server** mit passendem TSAP
+       einrichten (Vorgabe TSAP der LOGO! ``02.00``, des Loggers ``01.00``) und das
+       Programm in die LOGO! laden. Es sind nur wenige Verbindungen gleichzeitig möglich.
    * - ``clx``: „libplctag wurde nicht gefunden“
      - ``plctag.dll`` (64 Bit) neben die Programmdateien legen bzw. Pfad in
        ``CLX_PLCTAG_LIB`` angeben. 32-Bit-Python kann die 64-Bit-DLL nicht laden.
    * - ``clx``: „PLCTAG_ERR_NOT_FOUND“ bzw. „…BAD_PARAM“
      - Den Tag gibt es nicht (Schreibweise, Präfix ``Program:Name.``) oder
        *External Access* ist *None*. Nur dieser Tag bleibt ohne Wert.
+   * - ``pccc``: Datei nicht gefunden / kein Wert
+     - Datendatei gibt es in der Steuerung nicht oder sie ist zu kurz (z. B. ``N7:120``
+       bei nur 100 Elementen). Datentabelle des Projekts prüfen.
    * - ``modbus``: „ungültige Adresse“ (Ausnahme 2)
      - Register im Gerät nicht vorhanden. Zählweise prüfen (``40001`` = ``HR0``;
        „Register 100“ im Handbuch ist oft ``HR100``). Einzelne Lücken in einem
@@ -4019,6 +4050,13 @@ Fehlersuche
    * - ``opcua``: „BadNodeIdUnknown“
      - NodeId falsch geschrieben (Namensraum ``ns=``, Anführungszeichen bei S7-1500)
        – am besten aus dem Auswahldialog übernehmen.
+   * - ``ads``: keine Verbindung / Zeitüberschreitung
+     - In der TwinCAT-Steuerung muss eine **Route** für den Logger-PC (AMS-Net-ID und
+       IP-Adresse) eingetragen sein; AMS-Net-ID und Port (TwinCAT 3: 851, TwinCAT 2:
+       801) des Ziels prüfen.
+   * - ``fins``: „FINS-Fehler …“ bzw. keine Antwort
+     - Knotennummern (Netz/Knoten/Einheit) und UDP/TCP prüfen; bei UDP darf die eigene
+       Knotennummer nicht von einem anderen Gerät belegt sein.
    * - ``slmp``: „SLMP-Fehler 0xC059“ bzw. keine Verbindung
      - Verbindung in GX Works als **binär** einrichten; Serie (Q/L bzw. iQ-R),
        Port und TCP/UDP prüfen.
@@ -4045,7 +4083,12 @@ Fehlersuche
    * - Webseite nicht erreichbar
      - Webserver in der Konfiguration eingeschaltet? Port von der Firewall frei?
        Host ``0.0.0.0`` (nicht ``127.0.0.1``) für Zugriffe von anderen Geräten.
-       Mit Zugriffscode: ``/?token=CODE`` anhängen.
+       Mit Zugriffscode: ``/?token=CODE`` anhängen. Bei eingeschaltetem HTTPS
+       ``https://`` verwenden.
+   * - Browser warnt vor dem Zertifikat
+     - Beim selbst signierten Zertifikat normal: Fingerabdruck vergleichen
+       (**Datei › Webserver-Adresse …**) und die Ausnahme bestätigen, oder ein
+       Zertifikat der Firmen-CA verwenden.
    * - Logger startet ohne Fenster
      - In der Konfiguration ist *Headless-Modus* aktiv. Mit ``--gui`` starten oder
        die Option abschalten.
@@ -4056,12 +4099,15 @@ Fehlersuche
    * - „Keine Variablen“ beim Start
      - Zuerst im Konfigurationsprogramm Variablen anlegen und speichern, oder
        den Demo-Modus verwenden.
+   * - Es wird keine CSV-Datei geschrieben
+     - Bei *Aufzeichnung: Per Trigger mit Vor- und Nachlauf* entstehen Dateien nur, während die
+       Startbedingung erfüllt ist (Statusleiste *⏸ wartet auf Trigger*).
    * - Änderungen der Konfiguration wirken nicht
      - Der Logger lädt die Konfiguration beim Start. **■ Stop** und erneut
        **▶ Start** drücken.
    * - Diagramm ist leer
      - Aufzeichnung läuft nicht, oder die Variable ist über das Häkchen in der
-       Wertetabelle ausgeblendet. Im Menü *Ansicht › Diagramme* prüfen, ob das
+       Wertetabelle ausgeblendet. Im Menü *Ansicht › Seiten / Diagramme* prüfen, ob das
        Diagramm eingeblendet ist.
    * - Kurve einer Y-Achse ist nicht sichtbar
      - Feste Achsengrenzen liegen außerhalb der Werte. **Y-Auto** aktivieren

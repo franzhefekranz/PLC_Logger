@@ -33,7 +33,7 @@ Kapitel „Treiber entwickeln“ der Anleitung).
 | Ordner | Inhalt |
 |---|---|
 | `src/` | Programmdateien (`plc_*.py`) und das Treiberpaket `plc_treiber/` |
-| `doc/` | Bedienungsanleitung (`bedienungsanleitung.rst`) und ihre Bilder (`images/`) |
+| `doc/` | Bedienungsanleitung (`bedienungsanleitung.rst`), englisches User Manual (`user_manual.rst`) und ihre Bilder (`images/`) |
 | `sprachen/` | Sprachdateien |
 | `tools/` | Hilfsprogramme (Sprachdateien, Wiki, Icon, INI-Umwandlung) |
 | `docker/` | Testumgebung mit TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics und Grafana |
@@ -50,6 +50,7 @@ python src/plc_logger.py            # Logger  (--demo: ohne Steuerung)
 ```
 
 Ausführliche Anleitung: im [Wiki](../../wiki) (wird automatisch aus [`doc/bedienungsanleitung.rst`](doc/bedienungsanleitung.rst) erzeugt).
+English: [User Manual](../../wiki/en-Home) ([`doc/user_manual.rst`](doc/user_manual.rst)).
 
 ## Bauen
 
