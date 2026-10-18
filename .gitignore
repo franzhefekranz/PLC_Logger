@@ -23,6 +23,8 @@ settings.json
 !**/sprachen/*
 logs/
 archiv/
+web_tls/
+berichte/
 ereignisse/
 taglisten/
 treiber/

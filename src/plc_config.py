@@ -301,8 +301,31 @@ class ConfigWindow(QMainWindow):
         form_web2.addRow(tr("Zugriffscode:"), self.ed_web_token)
         form_web2.addRow(tr("Aktualisierung im Browser:"), self.sp_web_int)
         form_web2.addRow("", self.chk_headless)
+        # HTTPS und Anmeldung (Benutzer mit Passwort; gespeichert wird nur ein Hash).
+        self.chk_https = QCheckBox(tr("HTTPS (verschlüsselt)"))
+        self.chk_https.setToolTip(tr("Ohne eigenes Zertifikat wird einmalig ein selbstsigniertes erzeugt (Ordner "
+                                     "web_tls); der Browser fragt dann beim ersten Aufruf nach"))
+        self.ed_web_cert = QLineEdit()
+        self.ed_web_cert.setPlaceholderText(tr("leer = selbstsigniert"))
+        self.ed_web_key = QLineEdit()
+        self.ed_web_key.setPlaceholderText(tr("leer = im Zertifikat enthalten"))
+        self.web_users = {}
+        self.lbl_web_users = QLabel("")
+        btn_users = QPushButton(tr("Benutzer …"))
+        btn_users.setToolTip(tr("Anmeldung mit Benutzer und Passwort einrichten"))
+        btn_users.clicked.connect(self.edit_web_users)
+        users_row = QHBoxLayout(); users_row.addWidget(btn_users); users_row.addWidget(self.lbl_web_users, 1)
+        self.chk_https.toggled.connect(lambda on: (self.ed_web_cert.setEnabled(on), self.ed_web_key.setEnabled(on)))
+        form_web3 = QFormLayout()
+        form_web3.addRow("", self.chk_https)
+        form_web3.addRow(tr("Zertifikat (PEM):"), self._file_row(self.ed_web_cert, tr("Zertifikat wählen"),
+                                                                tr("Zertifikat (*.pem *.crt *.cer);;Alle Dateien (*)")))
+        form_web3.addRow(tr("Schlüssel (PEM):"), self._file_row(self.ed_web_key, tr("Schlüssel wählen"),
+                                                               tr("Schlüssel (*.pem *.key);;Alle Dateien (*)")))
+        form_web3.addRow(tr("Anmeldung:"), users_row)
         tab_web = QWidget()
-        wl0 = QHBoxLayout(tab_web); wl0.addLayout(form_web1, 1); wl0.addSpacing(30); wl0.addLayout(form_web2, 1)
+        wl0 = QHBoxLayout(tab_web); wl0.addLayout(form_web1, 1); wl0.addSpacing(20); wl0.addLayout(form_web2, 1)
+        wl0.addSpacing(20); wl0.addLayout(form_web3, 1)
 
         # Die vier Reiter bilden den oberen Fensterbereich.
         self.tabs = QTabWidget()
@@ -870,8 +893,8 @@ class ConfigWindow(QMainWindow):
         QApplication.restoreOverrideCursor()
         QMessageBox.information(self, tr("Datenbank"), text)
 
-    def _file_row(self, edit, title):
-        """Zeile mit Eingabefeld und '…'-Knopf zur Auswahl einer Bilddatei (Logo/Icon)."""
+    def _file_row(self, edit, title, filt=None):
+        """Zeile mit Eingabefeld und '…'-Knopf zur Auswahl einer Datei (Standard: Bilddatei für Logo/Icon)."""
         btn = QPushButton("…")
         btn.setFixedWidth(30)
 
@@ -879,7 +902,7 @@ class ConfigWindow(QMainWindow):
         def pick():
             p, _ = QFileDialog.getOpenFileName(
                 self, title, edit.text() or BASE_DIR,
-                tr("Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)"))
+                filt or tr("Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)"))
             if p:
                 edit.setText(p)
         btn.clicked.connect(pick)
@@ -1484,6 +1507,21 @@ class ConfigWindow(QMainWindow):
             btn.setStyleSheet(f"background-color: {c.name()}")
             self.refresh_tree()
 
+    def _update_web_users(self):
+        n = len(self.web_users)
+        self.lbl_web_users.setText(tr("keine (ohne Anmeldung)") if not n else
+                                   tr("{0} Benutzer: {1}").format(n, ", ".join(sorted(self.web_users))[:60]))
+
+    def edit_web_users(self):
+        from plc_web_dialog import WebUsersDialog
+        dlg = WebUsersDialog(self, self.web_users)
+        if dlg.exec():
+            self.web_users = dlg.users
+            self._update_web_users()
+            if self.web_users and not self.chk_https.isChecked():
+                self.statusBar().showMessage(tr("Tipp: HTTPS einschalten, sonst werden Passwörter unverschlüsselt "
+                                                "übertragen."), 10000)
+
     def _update_rec_mode(self):
         on = self.cb_rec_mode.currentData() == "trigger"
         for w in (self.ed_rec_cond, self.sp_pre, self.sp_post, self.sp_max):
@@ -1555,6 +1593,14 @@ class ConfigWindow(QMainWindow):
         self.ed_web_token.setText(conn.get("web_token", ""))
         self.sp_web_int.setValue(int(conn.get("web_intervall_ms", 1000)))
         self.chk_headless.setChecked(bool(conn.get("headless", 0)))
+        from plc_webauth import parse_users
+        self.chk_https.setChecked(bool(int(conn.get("web_https", 0) or 0)))
+        self.ed_web_cert.setText(conn.get("web_zertifikat", ""))
+        self.ed_web_key.setText(conn.get("web_schluessel", ""))
+        self.ed_web_cert.setEnabled(self.chk_https.isChecked())
+        self.ed_web_key.setEnabled(self.chk_https.isChecked())
+        self.web_users = parse_users(conn.get("web_benutzer", ""))
+        self._update_web_users()
         self.charts = charts
         self.prop_key = None
         self.table.setRowCount(0)
@@ -1604,6 +1650,10 @@ class ConfigWindow(QMainWindow):
                 "web_token": self.ed_web_token.text().strip(),
                 "web_intervall_ms": self.sp_web_int.value(),
                 "headless": 1 if self.chk_headless.isChecked() else 0,
+                "web_https": 1 if self.chk_https.isChecked() else 0,
+                "web_zertifikat": self.ed_web_cert.text().strip(),
+                "web_schluessel": self.ed_web_key.text().strip(),
+                "web_benutzer": json.dumps(self.web_users, ensure_ascii=False) if self.web_users else "",
                 "ereignis_datei": self.ed_event_file.text().strip(),
                 "aufz_modus": self.cb_rec_mode.currentData() or "dauernd",
                 "aufz_bedingung": " ".join(self.ed_rec_cond.text().split()),

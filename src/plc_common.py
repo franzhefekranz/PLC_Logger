@@ -340,12 +340,12 @@ _GROUPS = (("steuerungen", "Steuerungen", "Steuerung"), ("diagramme", "Diagramme
            ("variablen", "Variablen", "Var"), ("bloecke", "Bloecke", "Block"), ("trigger", "Trigger", "Trigger"))
 # Schlüssel mit festem Typ in der JSON-Datei (alle übrigen bleiben Text)
 _BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "pid_aktiv", "gehen", "quittieren",
-              "web_aktiv", "headless", "csv_aktiv", "archiv_beenden", "db_nur_aenderungen"}
+              "web_aktiv", "web_https", "headless", "csv_aktiv", "archiv_beenden", "db_nur_aenderungen"}
 _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "start", "fenster_s", "max_records",
              "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl"}
 _FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude", "aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s"}
-_JSON_KEYS = {"treiberdaten"}                    # Text mit JSON-Inhalt -> verschachteltes Objekt
+_JSON_KEYS = {"treiberdaten", "web_benutzer"}                    # Text mit JSON-Inhalt -> verschachteltes Objekt
 
 
 class ConfigFormatError(ValueError):
@@ -536,6 +536,8 @@ def default_connection() -> dict:
             "projekt": "", "archiv_beenden": 1, "seite_anordnung": "", "raster_spalten": 0,
             "web_aktiv": 0, "web_host": "0.0.0.0", "web_port": 8080, "web_token": "",
             "web_intervall_ms": 1000, "headless": 0,
+            # HTTPS (eigenes oder selbstsigniertes Zertifikat) und Anmeldung (JSON {Benutzer: Passwort-Hash}).
+            "web_https": 0, "web_zertifikat": "", "web_schluessel": "", "web_benutzer": "",
             # Aufzeichnungsziele: CSV-Datei (abschaltbar) und optional eine Datenbank (siehe *_db.py).
             "csv_aktiv": 1, "db_typ": "", "db_host": "localhost", "db_port": 0, "db_name": "datenlogger",
             "db_user": "", "db_passwort": "", "db_tabelle": "messwerte", "db_datei": "datenlogger.db",
@@ -551,12 +553,13 @@ def default_connection() -> dict:
 
 # Welche Schlüssel des Abschnitts [Verbindung] Zahlen bzw. Text sind (zum Lesen mit passendem Typ).
 CONN_INT_KEYS = ("fenster_s", "balken", "max_records", "archiv_beenden",
-                 "raster_spalten", "web_aktiv", "web_port", "web_intervall_ms", "headless",
+                 "raster_spalten", "web_aktiv", "web_port", "web_intervall_ms", "headless", "web_https",
                  "csv_aktiv", "db_port", "db_nur_aenderungen")
 CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "icon", "csv_name",
                  "archiv_ordner", "projekt", "seite_anordnung", "web_host", "web_token",
                  "db_typ", "db_host", "db_name", "db_user", "db_passwort", "db_tabelle", "db_datei",
-                 "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung")
+                 "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung",
+                 "web_zertifikat", "web_schluessel", "web_benutzer")
 CONN_FLOAT_KEYS = ("aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s")
 RECORD_MODES = {"dauernd": N_("Dauernd"), "trigger": N_("Per Trigger mit Vor- und Nachlauf")}
 

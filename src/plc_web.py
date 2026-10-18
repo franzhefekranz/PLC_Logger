@@ -16,22 +16,39 @@ Adressen
 ``/api/data``     Messdaten eines Zeitfensters (Parameter: window = Sekunden, end = Endzeit, max = Punkte je Kurve)
 ``/api/status``   Zustand der Steuerungen und letzte Werte
 
-Zugriffsschutz: Ist in der Konfiguration ein Zugriffscode (web_token) eingetragen, müssen alle Aufrufe ihn als
-``?token=...`` mitschicken (die Seite übernimmt ihn aus ihrer Adresse). Die Verbindung ist unverschlüsselt (HTTP)
-– nur in vertrauenswürdigen Netzen verwenden.
+Zugriffsschutz
+--------------
+* Anmeldung (web_benutzer): Benutzer mit Passwort (gespeichert nur als Hash, siehe ``hash_password``). Ohne gültige
+  Anmeldung leitet die Seite auf ``/login`` um; die Anmeldung gilt bis zum Abmelden bzw. 12 Stunden (Sitzungs-Cookie,
+  HttpOnly, SameSite=Strict, bei HTTPS zusätzlich Secure). Nach 5 Fehlversuchen ist eine Adresse 60 s gesperrt.
+* Zugriffscode (web_token): alternativ oder zusätzlich – Aufrufe mit ``?token=...`` sind ohne Anmeldung erlaubt
+  (z. B. für ein fest installiertes Anzeigegerät).
+* HTTPS (web_https): verschlüsselte Verbindung. Ohne eigenes Zertifikat erzeugt das Programm einmalig ein
+  selbstsigniertes (Ordner ``web_tls`` im Datenordner); der Browser zeigt dann beim ersten Aufruf eine Warnung, die
+  man nach Prüfen des Fingerabdrucks (Menü „Webserver-Adresse“) bestätigt. Ohne HTTPS ist die Verbindung
+  unverschlüsselt – Passwörter und Werte sind im Netz lesbar; dann nur in vertrauenswürdigen Netzen verwenden.
 """
+import datetime as _dt
 import gzip
+import hashlib
+import hmac
+import html
+import ipaddress
 import json
 import os
+import secrets
 import socket
+import ssl
 import sys
 import threading
+import time
 
-from flask import Flask, Response, abort, request, send_from_directory
+from flask import Flask, Response, abort, redirect, request, send_from_directory, session
 from werkzeug.serving import make_server
 
 from plc_common import BASE_DIR
 from plc_util import decimate_minmax
+from plc_webauth import check_password, hash_password, parse_users  # noqa: F401 (hash_password: Schnittstelle)
 
 # Ersatzquelle für Chart.js, falls web_static/chart.umd.js fehlt (benötigt Internet auf dem Anzeigegerät).
 CDN_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.js"
@@ -76,10 +93,99 @@ def local_ip():
         return "127.0.0.1"
 
 
-def create_app(get_rec, token="", refresh_ms=1000):
-    """Flask-Anwendung. ``get_rec`` liefert bei jedem Aufruf den aktuellen Recorder (oder None)."""
+# ---------------------------------------------------------------------------------------
+# Benutzer, Passwörter und Zertifikat
+# ---------------------------------------------------------------------------------------
+def tls_dir():
+    return os.path.join(BASE_DIR, "web_tls")
+
+
+def ensure_self_signed(cert_path=None, key_path=None):
+    """Selbstsigniertes Zertifikat (RSA 2048, 10 Jahre, für Rechnername, lokale IP und localhost) anlegen, falls es
+    fehlt -> (Zertifikat, Schlüssel). Benötigt das Paket „cryptography“."""
+    cert_path = cert_path or os.path.join(tls_dir(), "zertifikat.pem")
+    key_path = key_path or os.path.join(tls_dir(), "schluessel.pem")
+    if os.path.exists(cert_path) and os.path.exists(key_path):
+        return cert_path, key_path
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
+    os.makedirs(os.path.dirname(cert_path), exist_ok=True)
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    host = socket.gethostname() or "localhost"
+    names = [x509.DNSName(host), x509.DNSName("localhost")]
+    for ip in {local_ip(), "127.0.0.1"}:
+        try:
+            names.append(x509.IPAddress(ipaddress.ip_address(ip)))
+        except ValueError:
+            pass
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, host),
+                         x509.NameAttribute(NameOID.ORGANIZATION_NAME, "PLC Datenlogger")])
+    now = _dt.datetime.now(_dt.timezone.utc)
+    cert = (x509.CertificateBuilder().subject_name(subject).issuer_name(subject).public_key(key.public_key())
+            .serial_number(x509.random_serial_number()).not_valid_before(now - _dt.timedelta(days=1))
+            .not_valid_after(now + _dt.timedelta(days=3650))
+            .add_extension(x509.SubjectAlternativeName(names), critical=False)
+            .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
+            .sign(key, hashes.SHA256()))
+    with open(key_path, "wb") as f:
+        f.write(key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.TraditionalOpenSSL,
+                                  serialization.NoEncryption()))
+    try:
+        os.chmod(key_path, 0o600)
+    except OSError:
+        pass
+    with open(cert_path, "wb") as f:
+        f.write(cert.public_bytes(serialization.Encoding.PEM))
+    return cert_path, key_path
+
+
+def cert_fingerprint(cert_path):
+    """SHA-256-Fingerabdruck eines PEM-Zertifikats (AA:BB:…) zum Vergleich im Browser; Fehler -> ""."""
+    try:
+        with open(cert_path, "rb") as f:
+            pem = f.read().decode("ascii", "replace")
+        der = ssl.PEM_cert_to_DER_cert(pem[pem.index("-----BEGIN CERTIFICATE-----"):])
+        h = hashlib.sha256(der).hexdigest().upper()
+        return ":".join(h[i:i + 2] for i in range(0, len(h), 2))
+    except (OSError, ValueError):
+        return ""
+
+
+def _secret_key():
+    """Schlüssel für die Sitzungs-Cookies (bleibt über Neustarts gleich: Anmeldung bleibt gültig)."""
+    path = os.path.join(tls_dir(), "sitzung.key")
+    try:
+        with open(path, "rb") as f:
+            k = f.read()
+        if len(k) >= 32:
+            return k
+    except OSError:
+        pass
+    k = secrets.token_bytes(32)
+    try:
+        os.makedirs(tls_dir(), exist_ok=True)
+        with open(path, "wb") as f:
+            f.write(k)
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+    return k
+
+
+def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
+    """Flask-Anwendung. ``get_rec`` liefert bei jedem Aufruf den aktuellen Recorder (oder None).
+
+    users: {Name: Passwort-Hash} – nicht leer = Anmeldung erforderlich; https: Cookies nur über HTTPS senden."""
     app = Flask(__name__, static_folder=None)    # eigene Route für statische Dateien (siehe unten)
     app.config["JSON_AS_ASCII"] = False
+    users = dict(users or {})
+    app.secret_key = _secret_key()
+    app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict", SESSION_COOKIE_SECURE=bool(https),
+                      SESSION_COOKIE_NAME="plc_sitzung", PERMANENT_SESSION_LIFETIME=_dt.timedelta(hours=12))
+    failures = {}                                # Fehlversuche je Adresse: [Anzahl, Zeit des letzten]
+    fail_lock = threading.Lock()
 
     def reply(obj, status=200):
         """JSON-Antwort, bei größeren Daten und gzip-fähigem Browser komprimiert (spart Mobilfunk-Datenvolumen)."""
@@ -90,16 +196,79 @@ def create_app(get_rec, token="", refresh_ms=1000):
             headers["Content-Encoding"] = "gzip"
         return Response(raw, status=status, mimetype="application/json", headers=headers)
 
+    def token_ok():
+        sent = request.args.get("token", "") or request.headers.get("X-Token", "")
+        return bool(token) and hmac.compare_digest(sent.encode(), token.encode())
+
+    def logged_in():
+        u = session.get("user")
+        return bool(u) and u in users
+
     @app.before_request
-    def check_token():
-        """Zugriffscode prüfen (Chart.js-Datei ist frei abrufbar, sie enthält keine Daten)."""
-        if token and not request.path.startswith("/static/"):
-            if request.args.get("token", "") != token and request.headers.get("X-Token", "") != token:
-                abort(401)
+    def check_access():
+        """Anmeldung bzw. Zugriffscode prüfen (Chart.js-Datei und Anmeldeseite sind frei abrufbar)."""
+        if request.path.startswith("/static/") or request.path in ("/login", "/logout"):
+            return None
+        if not token and not users:
+            return None
+        if token_ok() or (users and logged_in()):
+            return None
+        if users:                                # zur Anmeldung (Seite) bzw. 401 mit Hinweis (Daten)
+            if request.path.startswith("/api/"):
+                return Response('{"login":true}', status=401, mimetype="application/json", headers={"X-Login": "1"})
+            return redirect("login")
+        abort(401)
+
+    @app.after_request
+    def security_headers(resp):
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("Referrer-Policy", "no-referrer")
+        if https:
+            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        return resp
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if not users:
+            return redirect("./")
+        err = ""
+        if request.method == "POST":
+            ip = request.remote_addr or "?"
+            with fail_lock:
+                n, last = failures.get(ip, (0, 0.0))
+                if n >= 5 and time.time() - last < 60:
+                    err = "Zu viele Fehlversuche – bitte eine Minute warten."
+            if not err:
+                name = (request.form.get("benutzer") or "").strip()
+                pw = request.form.get("passwort") or ""
+                if name in users and check_password(users[name], pw):
+                    with fail_lock:
+                        failures.pop(ip, None)
+                    session.clear()
+                    session["user"] = name
+                    session.permanent = True
+                    return redirect("./")
+                time.sleep(0.8)                  # bremst das Durchprobieren von Passwörtern
+                with fail_lock:
+                    n, _last = failures.get(ip, (0, 0.0))
+                    failures[ip] = (n + 1, time.time())
+                err = "Benutzer oder Passwort falsch."
+        page = (LOGIN_HTML.replace("__ERR__", html.escape(err))
+                .replace("__WARN__", "" if https else '<p class="warn">Unverschlüsselte Verbindung (HTTP): '
+                         'Passwort und Werte sind im Netz lesbar.</p>'))
+        return Response(page, mimetype="text/html", headers={"Cache-Control": "no-store"})
+
+    @app.route("/logout")
+    def logout():
+        session.clear()
+        return redirect("login" if users else "./")
 
     @app.route("/")
     def index():
-        return Response(INDEX_HTML.replace("__CDN__", CDN_URL), mimetype="text/html")
+        user = session.get("user") if users else ""
+        out = '<a id="logout" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>" if user else ""
+        return Response(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out), mimetype="text/html")
 
     @app.route("/static/<path:name>")
     def static_file(name):
@@ -186,18 +355,54 @@ def create_app(get_rec, token="", refresh_ms=1000):
     return app
 
 
+def web_settings(conn):
+    """Einstellungen des Webservers aus der Konfiguration -> Tupel (zum Vergleichen und für WebServer)."""
+    return (conn.get("web_host", "0.0.0.0") or "0.0.0.0", int(conn.get("web_port", 8080) or 8080),
+            conn.get("web_token", "") or "", int(conn.get("web_intervall_ms", 1000) or 1000),
+            bool(int(conn.get("web_https", 0) or 0)), conn.get("web_zertifikat", "") or "",
+            conn.get("web_schluessel", "") or "", json.dumps(parse_users(conn.get("web_benutzer", "")), sort_keys=True))
+
+
 class WebServer:
     """Startet die Flask-Anwendung in einem eigenen Thread (werkzeug-Server, mehrere Anfragen gleichzeitig)."""
 
-    def __init__(self, get_rec, host="0.0.0.0", port=8080, token="", refresh_ms=1000):
+    def __init__(self, get_rec, host="0.0.0.0", port=8080, token="", refresh_ms=1000, https=False, cert="", key="",
+                 users=None):
         self.host, self.port = host, int(port)
-        self.app = create_app(get_rec, token, refresh_ms)
+        self.https = bool(https)
+        self.cert, self.key = cert, key
+        self.users = parse_users(users) if not isinstance(users, dict) else dict(users)
+        self.token = token
+        self.app = create_app(get_rec, token, refresh_ms, self.users, self.https)
         self.srv = None
         self.thread = None
 
+    @classmethod
+    def from_conn(cls, get_rec, conn):
+        host, port, token, refresh, https, cert, key, users = web_settings(conn)
+        return cls(get_rec, host, port, token, refresh, https, cert, key, json.loads(users))
+
+    def _ssl_context(self):
+        """TLS-Kontext: eigenes Zertifikat (Pfade relativ zum Datenordner) oder das selbstsignierte."""
+        cert, key = self.cert, self.key
+        if cert:
+            cert = cert if os.path.isabs(cert) else os.path.join(BASE_DIR, cert)
+            key = (key if os.path.isabs(key) else os.path.join(BASE_DIR, key)) if key else ""
+        else:
+            cert, key = ensure_self_signed()
+        ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+        ctx.load_cert_chain(cert, key or None)
+        self.cert_used = cert
+        return ctx
+
+    def fingerprint(self):
+        return cert_fingerprint(getattr(self, "cert_used", "")) if self.https else ""
+
     def start(self):
-        """Server starten; wirft OSError, wenn der Port belegt ist."""
-        self.srv = make_server(self.host, self.port, self.app, threaded=True)
+        """Server starten; wirft OSError, wenn der Port belegt ist (bzw. ssl.SSLError/ImportError bei HTTPS)."""
+        ctx = self._ssl_context() if self.https else None
+        self.srv = make_server(self.host, self.port, self.app, threaded=True, ssl_context=ctx)
         self.thread = threading.Thread(target=self.srv.serve_forever, name="webserver", daemon=True)
         self.thread.start()
 
@@ -209,7 +414,7 @@ class WebServer:
     def url(self):
         """Adresse für Tablet/Smartphone im selben Netz."""
         host = local_ip() if self.host in ("0.0.0.0", "") else self.host
-        return f"http://{host}:{self.port}/"
+        return f"{'https' if self.https else 'http'}://{host}:{self.port}/"
 
 
 # ---------------------------------------------------------------------------------------
@@ -267,12 +472,13 @@ body.max .card:not(.max){display:none}
 .it.off{opacity:.4}.it.dim{opacity:.55}.it.hl .nm{font-weight:700}
 .msg{padding:30px;text-align:center;color:var(--mute);grid-column:1/-1}
 .info{font-size:12px;color:var(--mute)}
+#logout{color:var(--mute);text-decoration:none;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
 </style>
 </head>
 <body>
 <header>
  <div class="row"><h1 id="proj">PLC Datenlogger</h1><div class="leds" id="leds"></div>
-  <span class="info" id="info"></span></div>
+  <span class="info" id="info"></span><span style="flex:1"></span>__LOGOUT__</div>
  <div class="ctrl" style="margin-top:6px">
   <select id="win" title="Zeitfenster"></select>
   <button id="back" title="Zurück in der Zeit">◀</button>
@@ -493,7 +699,8 @@ function apply(res){
  });
 }
 function fetchJson(u){return fetch(api(u),{cache:'no-store'}).then(function(r){
- if(r.status===401)throw new Error('Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)');
+ if(r.status===401){if(r.headers.get('X-Login')){location.href='login';throw new Error('Anmeldung erforderlich');}
+  throw new Error('Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)');}
  if(!r.ok)throw new Error('Serverfehler '+r.status);return r.json();});}
 function loadConfig(){
  return fetchJson('/api/config').then(function(c){
@@ -544,6 +751,45 @@ document.addEventListener('fullscreenchange',function(){if(!document.fullscreenE
 window.addEventListener('popstate',function(){if(maxCo)exitMax(true);});
 })();
 </script>
+</body>
+</html>
+"""
+
+
+# Anmeldeseite (eigenständig, ohne JavaScript)
+LOGIN_HTML = r"""<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anmelden – PLC Datenlogger</title>
+<style>
+:root{--bg:#10151b;--card:#18202a;--fg:#dfe6ee;--mute:#8b98a7;--line:#2a3544;--accent:#4aa3ff;color-scheme:dark}
+@media (prefers-color-scheme:light){:root{--bg:#f2f4f7;--card:#fff;--fg:#1b2430;--mute:#5b6878;--line:#d5dbe3;
+ --accent:#0a6fd6;color-scheme:light}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);
+ color:var(--fg);font:15px/1.4 system-ui,"Segoe UI",Roboto,Arial,sans-serif;padding:16px}
+form{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;width:100%;max-width:340px}
+h1{font-size:18px;margin:0 0 16px}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);
+ font:inherit}
+button{margin-top:18px;width:100%;padding:10px;border:0;border-radius:6px;background:var(--accent);color:#fff;
+ font:inherit;font-weight:600;cursor:pointer}
+.err{color:#ff5252;min-height:1.4em;margin:10px 0 0}
+.warn{color:#ffc107;font-size:12px;margin:12px 0 0}
+</style>
+</head>
+<body>
+<form method="post" action="login" autocomplete="on">
+ <h1>PLC Datenlogger</h1>
+ <label for="b">Benutzer</label><input id="b" name="benutzer" autocomplete="username" required autofocus>
+ <label for="p">Passwort</label><input id="p" name="passwort" type="password" autocomplete="current-password" required>
+ <button type="submit">Anmelden</button>
+ <p class="err">__ERR__</p>
+ __WARN__
+</form>
 </body>
 </html>
 """

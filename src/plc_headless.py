@@ -88,10 +88,12 @@ def run(config_path, demo=False):
         if conn.get("web_aktiv"):
             try:
                 from plc_web import WebServer
-                web = WebServer(lambda: rec, conn.get("web_host", "0.0.0.0"), conn.get("web_port", 8080),
-                                conn.get("web_token", ""), conn.get("web_intervall_ms", 1000))
+                web = WebServer.from_conn(lambda: rec, conn)
                 web.start()
-                log.info("Webserver läuft: %s", web.url())
+                log.info("Webserver läuft: %s%s", web.url(),
+                         f" (Anmeldung: {len(web.users)} Benutzer)" if web.users else "")
+                if web.fingerprint():
+                    log.info("HTTPS-Zertifikat SHA-256: %s", web.fingerprint())
             except Exception as e:                    # Port belegt, Flask fehlt ...
                 log.error("Webserver konnte nicht gestartet werden: %s", e)
                 web = None

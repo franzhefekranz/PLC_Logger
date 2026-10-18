@@ -1818,19 +1818,19 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # Webserver passend zur Konfiguration starten, neu starten (geänderte Einstellungen) oder beenden.
     def _apply_web(self):
+        from plc_web import web_settings
         want = bool(self.conn.get("web_aktiv"))
-        key = (self.conn.get("web_host", "0.0.0.0"), int(self.conn.get("web_port", 8080)),
-               self.conn.get("web_token", ""), int(self.conn.get("web_intervall_ms", 1000)))
+        key = web_settings(self.conn)
         if self.web is not None and (not want or self._web_key != key):
             self.web.stop()
             self.web = None
         if want and self.web is None:
             try:
                 from plc_web import WebServer
-                self.web = WebServer(lambda: self.rec, *key)
+                self.web = WebServer.from_conn(lambda: self.rec, self.conn)
                 self.web.start()
                 self._web_key = key
-            except Exception as e:                  # Port belegt, Flask fehlt ...
+            except Exception as e:                  # Port belegt, Flask fehlt, Zertifikat ungültig ...
                 self.web = None
                 self.statusBar().showMessage(tr("Webserver nicht gestartet: {0}").format(e), 20000)
         self.lbl_web.setText(tr("Web: {0}   ").format(self.web.url()) if self.web else "")
@@ -1841,9 +1841,21 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, tr("Webserver"), tr("Der Webserver ist nicht aktiviert.\n"
                                     "Aktivierung: Konfigurationsprogramm → Webserver."))
             return
-        url = self.web.url() + (tr("?token={0}").format(self._web_key[2]) if self._web_key[2] else "")
-        QGuiApplication.clipboard().setText(url)
-        QMessageBox.information(self, tr("Webserver"), tr("Adresse für Tablet/Smartphone im selben Netz:\n\n{0}\n\n(in die Zwischenablage kopiert)").format(url))
+        url = self.web.url()
+        token_url = url + "?token=" + self.web.token if self.web.token else ""
+        QGuiApplication.clipboard().setText(token_url if token_url and not self.web.users else url)
+        text = tr("Adresse für Tablet/Smartphone im selben Netz:\n\n{0}").format(url)
+        if self.web.users:
+            text += "\n\n" + tr("Anmeldung erforderlich ({0} Benutzer).").format(len(self.web.users))
+        if token_url:
+            text += "\n\n" + tr("Mit Zugriffscode (ohne Anmeldung):\n{0}").format(token_url)
+        fp = self.web.fingerprint()
+        if fp:
+            text += "\n\n" + tr("HTTPS-Zertifikat, SHA-256-Fingerabdruck (zum Vergleich mit der Anzeige im Browser):"
+                                  "\n{0}").format(fp)
+        elif not self.web.https:
+            text += "\n\n" + tr("Hinweis: unverschlüsselte Verbindung (HTTP).")
+        QMessageBox.information(self, tr("Webserver"), text + "\n\n" + tr("(Adresse in die Zwischenablage kopiert)"))
 
     def set_layout(self, mode):
         """Anordnung wechseln: baut die Seiten neu auf (Gruppierung/Ausrichtung hängen vom Modus ab)."""
