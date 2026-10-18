@@ -64,6 +64,27 @@ echo "== $NAME $VERSION – AppImage für $ARCH"
 B="build/linux-$ARCH"
 mkdir -p "$B" dist
 
+# ------------------------------------------------------------------ 0. Werkzeuge prüfen (vor dem langen Build)
+PLCTAG_VER="2.7.2"
+LIB="$B/libplctag.so"
+MISSING=()
+"$PY" -c 'import venv, ensurepip' 2>/dev/null || MISSING+=(python3-venv)
+command -v file >/dev/null || MISSING+=(file)
+command -v curl >/dev/null || command -v wget >/dev/null || MISSING+=(curl)
+if [[ ! -f "$LIB" && "${SKIP_PLCTAG:-0}" != "1" ]]; then
+    command -v cmake >/dev/null || MISSING+=(cmake)
+    { command -v cc >/dev/null && command -v make >/dev/null; } || MISSING+=(build-essential)
+    command -v git >/dev/null || command -v curl >/dev/null || MISSING+=(git)
+fi
+if (( ${#MISSING[@]} )); then
+    echo "[FEHLER] Es fehlen Werkzeuge für den Build: ${MISSING[*]}"
+    echo "         Debian/Ubuntu/Mint:  sudo apt install ${MISSING[*]} libxkbcommon-x11-0 libxcb-cursor0 \\"
+    echo "                              libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libegl1 libfontconfig1 libdbus-1-3"
+    echo "         Fedora:              sudo dnf install cmake gcc gcc-c++ make file python3"
+    echo "         Ohne libplctag (Treiber clx dann ohne Funktion):  SKIP_PLCTAG=1 ./build_appimage.sh"
+    exit 1
+fi
+
 # ------------------------------------------------------------------ 1. Python-Umgebung
 if [[ ! -x "$B/venv/bin/python" ]]; then
     echo "[1/6] Python-Umgebung anlegen ..."
@@ -100,9 +121,9 @@ EXTRA=()
 [[ -f web_static/chart.umd.js ]] && EXTRA+=(--add-data "$PWD/web_static:web_static")
 
 # ------------------------------------------------------------------ 2b. libplctag (natives Linux-Gegenstück zu plctag.dll)
-PLCTAG_VER="2.7.2"
-LIB="$B/libplctag.so"
-if [[ ! -f "$LIB" ]]; then
+if [[ ! -f "$LIB" && "${SKIP_PLCTAG:-0}" == "1" ]]; then
+    echo "[HINWEIS] SKIP_PLCTAG=1: libplctag wird nicht gebaut – der Treiber clx funktioniert im AppImage nicht."
+elif [[ ! -f "$LIB" ]]; then
     echo "[2/6] libplctag $PLCTAG_VER aus dem Quelltext bauen (cmake, gcc) ..."
     rm -rf "$B/libplctag-src"
     if ! git clone -q --depth 1 --branch "v$PLCTAG_VER" https://github.com/libplctag/libplctag.git "$B/libplctag-src"; then
@@ -114,7 +135,7 @@ if [[ ! -f "$LIB" ]]; then
     cmake --build "$B/libplctag-src/build" --target plctag_dyn -j"$(nproc)" >/dev/null
     cp "$(find "$B/libplctag-src/build" -name 'libplctag.so*' -type f | head -1)" "$LIB"
 fi
-EXTRA+=(--add-binary "$PWD/$LIB:.")
+[[ -f "$LIB" ]] && EXTRA+=(--add-binary "$PWD/$LIB:.")
 
 # ------------------------------------------------------------------ 3. PyInstaller (ein Programm für alles)
 echo "[3/6] PyInstaller ..."
