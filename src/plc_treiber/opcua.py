@@ -16,6 +16,11 @@ Werte werden mit ihrem OPC-UA-Datentyp geliefert; die Spalte „Typ“ dient nur
 Index) + erster Index + Anzahl – der Ausschnitt wird mit einem Indexbereich in EINER Anfrage gelesen. Der
 Auswahldialog durchsucht den Adressraum des Servers.
 
+Betriebsart: zyklisch lesen (Read-Anfragen im Takt der Steuerung, Standard) oder Subscription – der Server meldet
+nur Änderungen (Abtastrate und Meldeintervall einstellbar); der Treiber hält die zuletzt gemeldeten Werte und liefert
+sie im Takt der Steuerung. Spart bei vielen, selten wechselnden Werten Netzlast und Serverleistung. Die Verbindung wird
+dabei alle paar Sekunden mit einer kleinen Leseanfrage geprüft.
+
 Sicherheit: ohne, oder Signieren/Verschlüsseln (Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss). Ohne eigenes
 Zertifikat erzeugt der Treiber beim ersten Verbinden ein selbstsigniertes (Ordner ``opcua`` im Datenordner); es muss
 im Server ggf. als vertrauenswürdig freigegeben werden.
@@ -25,6 +30,7 @@ import os
 import re
 import socket
 import threading
+import time
 
 from plc_i18n import tr
 from plc_treiber.base import NAN, BrowseResult, Driver, Param, Reader
@@ -123,6 +129,31 @@ class _Request:
     __slots__ = ("nodeid", "index_range", "items", "lo", "n")
 
 
+MODES = [("lesen", tr("Zyklisch lesen (Read)")), ("abo", tr("Subscription (Server meldet Änderungen)"))]
+_ALIVE_S = 5.0                                    # Subscription: Verbindung so oft mit einer Leseanfrage prüfen
+
+
+class _SubHandler:
+    """Empfängt die Änderungsmeldungen der Subscription (im Thread von asyncua) und legt sie im Leser ab."""
+
+    def __init__(self, reader):
+        self.reader = reader
+
+    def datachange_notification(self, node, val, data):
+        try:
+            handle = data.subscription_data.client_handle
+            dv = data.monitored_item.Value
+        except AttributeError:
+            return
+        self.reader._on_change(handle, val, getattr(dv, "StatusCode", None) if dv is not None else None)
+
+    def event_notification(self, event):
+        pass
+
+    def status_change_notification(self, status):
+        self.reader._sub_failed = str(getattr(status, "Status", status))
+
+
 class OpcUaReader(Reader):
     """Liest alle Knoten einer Steuerung mit möglichst wenigen Read-Anfragen (Fehler je Knoten getrennt)."""
 
@@ -131,6 +162,13 @@ class OpcUaReader(Reader):
         self.client = None
         self.requests = []
         self._plan_done = False
+        # Subscription: letzte Meldung je Anfrage {Index: (Wert, Status)}; Zuordnung Client-Handle -> Index.
+        self.mode = str(plc.params.get("modus", "lesen"))
+        self.sub = None
+        self._cache, self._handles = {}, {}
+        self._lock = threading.Lock()
+        self._sub_failed = None
+        self._alive_t = 0.0
 
     def _plan(self):
         from asyncua import ua
@@ -170,8 +208,66 @@ class OpcUaReader(Reader):
             self.client = make_client(p)
         except Exception as e:
             raise ConnectionError(f"{p.get('endpoint', '')}: {type(e).__name__}: {e}") from None
-        self.read()
+        if self.mode == "abo":
+            # Anfangswerte einmal lesen (liefert auch Fehler je Knoten), danach nur noch Änderungen empfangen.
+            out = self._read_all()
+            with self._lock:
+                self._cache = {i: v for i, v in enumerate(self._first) if v is not None}
+            try:
+                self._subscribe()
+            except Exception as e:
+                self.close()
+                raise ConnectionError(tr("Subscription fehlgeschlagen: {0}: {1}").format(type(e).__name__, e)) from None
+            del out
+        else:
+            self.read()
         return max(0, len(self.vars) - len(self.errors))
+
+    # ---- Subscription
+    def _subscribe(self):
+        from asyncua import ua
+        p = self.plc.params
+        period = float(p.get("melde_ms", 0) or 0) or float(self.plc.intervall_ms)
+        sampling = float(p.get("abtast_ms", 0) or 0) or period
+        self._sub_failed = None
+        self.sub = self.client.create_subscription(period, _SubHandler(self))
+        mirs, self._handles = [], {}
+        for k, r in enumerate(self.requests):
+            # direkt am asyncio-Objekt: die Sync-Hülle älterer asyncua-Versionen kennt die Abtastrate nicht
+            mir = self.sub.aio_obj._make_monitored_item_request(self.client.get_node(r.nodeid), ua.AttributeIds.Value,
+                                                               None, 0, ua.MonitoringMode.Reporting, sampling)
+            if r.index_range:
+                mir.ItemToMonitor.IndexRange = r.index_range
+            self._handles[mir.RequestedParameters.ClientHandle] = k
+            mirs.append(mir)
+        chunk = max(1, int(p.get("knoten_je_anfrage", 500)))
+        for i in range(0, len(mirs), chunk):
+            results = self.sub.create_monitored_items(mirs[i:i + chunk])
+            for mir, res in zip(mirs[i:i + chunk], results):
+                if isinstance(res, ua.StatusCode):           # Knoten lässt sich nicht beobachten
+                    r = self.requests[self._handles[mir.RequestedParameters.ClientHandle]]
+                    for _p, _i, addr in r.items:
+                        self.errors[addr] = tr("Subscription: {0}").format(getattr(res, "name", res))
+        self._alive_t = time.monotonic()
+
+    def _on_change(self, handle, val, status):
+        k = self._handles.get(handle)
+        if k is not None:
+            with self._lock:
+                self._cache[k] = (val, status)
+
+    def _check_alive(self):
+        """Subscription: Verbindung regelmäßig mit einer kleinen Leseanfrage prüfen (Serverzustand)."""
+        if self._sub_failed:
+            raise ConnectionError(tr("Subscription beendet: {0}").format(self._sub_failed))
+        now = time.monotonic()
+        if now - self._alive_t < _ALIVE_S:
+            return
+        self._alive_t = now
+        try:
+            self.client.get_node("i=2259").read_value()        # Server_ServerStatus_State
+        except Exception as e:
+            raise ConnectionError(f"{type(e).__name__}: {e}") from None
 
     def _read_chunk(self, reqs):
         from asyncua import ua
@@ -188,9 +284,24 @@ class OpcUaReader(Reader):
         return self.client.tloop.post(aio.uaclient.read(params))
 
     def read(self):
-        out = [NAN] * len(self.vars)
         if self.client is None:
             raise ConnectionError(tr("nicht verbunden"))
+        if self.mode != "abo" or self.sub is None:
+            return self._read_all()
+        self._check_alive()
+        out = [NAN] * len(self.vars)
+        with self._lock:
+            cache = dict(self._cache)
+        for k, r in enumerate(self.requests):
+            if k in cache:
+                val, status = cache[k]
+                self._apply(r, val, status, out)
+        return out
+
+    def _read_all(self):
+        """Alle Knoten mit Read-Anfragen lesen (zyklischer Betrieb; bei Subscription für die Anfangswerte)."""
+        out = [NAN] * len(self.vars)
+        self._first = [None] * len(self.requests)
         chunk = max(1, int(self.plc.params.get("knoten_je_anfrage", 500)))
         for i in range(0, len(self.requests), chunk):
             reqs = self.requests[i:i + chunk]
@@ -198,33 +309,45 @@ class OpcUaReader(Reader):
                 results = self._read_chunk(reqs)
             except Exception as e:
                 raise ConnectionError(f"{type(e).__name__}: {e}") from None
-            for r, dv in zip(reqs, results):
-                status = dv.StatusCode
-                if status is not None and not status.is_good() and not getattr(status, "is_uncertain", lambda: False)():
-                    text = status.name if hasattr(status, "name") else str(status)
-                    for _p, _i, addr in r.items:
-                        self.errors[addr] = text
-                    continue
+            for k, (r, dv) in enumerate(zip(reqs, results)):
                 val = dv.Value.Value if dv.Value is not None else None
-                for pos, sub, addr in r.items:
-                    if sub is None:
-                        f = to_float(val) if not isinstance(val, (list, tuple)) else NAN
-                        if isinstance(val, (list, tuple)):
-                            self.errors[addr] = tr("Array – bitte als Block lesen")
-                            continue
-                    else:
-                        # sub = Array-Index; manche Server ignorieren den Indexbereich und liefern das ganze Array
-                        seq = val if isinstance(val, (list, tuple)) else [val]
-                        k = sub - r.lo if len(seq) == r.n else sub
-                        f = to_float(seq[k]) if 0 <= k < len(seq) else NAN
-                    if math.isnan(f) and val is not None and not isinstance(val, float):
-                        self.errors[addr] = tr("Datentyp nicht darstellbar: {0}").format(type(val).__name__)
-                    else:
-                        self.errors.pop(addr, None)
-                    out[pos] = f
+                self._first[i + k] = (val, dv.StatusCode)
+                self._apply(r, val, dv.StatusCode, out)
         return out
 
+    def _apply(self, r, val, status, out):
+        """Wert (bzw. Array-Ausschnitt) einer Anfrage in die Ausgabeliste übertragen; Fehler je Variable merken."""
+        if status is not None and not status.is_good() and not getattr(status, "is_uncertain", lambda: False)():
+            text = status.name if hasattr(status, "name") else str(status)
+            for _p, _i, addr in r.items:
+                self.errors[addr] = text
+            return
+        for pos, sub, addr in r.items:
+            if sub is None:
+                f = to_float(val) if not isinstance(val, (list, tuple)) else NAN
+                if isinstance(val, (list, tuple)):
+                    self.errors[addr] = tr("Array – bitte als Block lesen")
+                    continue
+            else:
+                # sub = Array-Index; manche Server ignorieren den Indexbereich und liefern das ganze Array
+                seq = val if isinstance(val, (list, tuple)) else [val]
+                k = sub - r.lo if len(seq) == r.n else sub
+                f = to_float(seq[k]) if 0 <= k < len(seq) else NAN
+            if math.isnan(f) and val is not None and not isinstance(val, float):
+                self.errors[addr] = tr("Datentyp nicht darstellbar: {0}").format(type(val).__name__)
+            else:
+                self.errors.pop(addr, None)
+            out[pos] = f
+
     def close(self):
+        if self.sub is not None:
+            try:
+                self.sub.delete()
+            except Exception:
+                pass
+            self.sub = None
+        with self._lock:
+            self._cache = {}
         if self.client is not None:
             close_client(self.client)
             self.client = None
@@ -238,6 +361,8 @@ class OpcUaDriver(Driver):
         Param("endpoint", tr("Endpunkt"), "text", "opc.tcp://192.168.0.10:4840",
               tip=tr("Adresse des OPC-UA-Servers, z. B. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, "
                      "S7-1500: 4840, Kepware: 49320)")),
+        Param("modus", tr("Betriebsart"), "choice", "lesen", choices=MODES,
+              tip=tr("Subscription: der Server meldet nur Änderungen (weniger Netzlast bei vielen Werten)")),
         Param("sicherheit", tr("Sicherheit"), "choice", "none", choices=SECURITY),
         Param("benutzer", tr("Benutzer"), "text", "", tip=tr("Leer = anonym")),
         Param("passwort", tr("Passwort"), "password", "",
@@ -247,6 +372,10 @@ class OpcUaDriver(Driver):
         Param("schluessel", tr("Privater Schlüssel"), "text", "", advanced=True,
               tip=tr("Schlüsseldatei (.pem) zum Client-Zertifikat")),
         Param("timeout_s", tr("Zeitlimit"), "float", 4.0, minimum=0.5, maximum=120, suffix=" s", advanced=True),
+        Param("melde_ms", tr("Meldeintervall (Subscription)"), "int", 0, minimum=0, maximum=3_600_000, suffix=" ms",
+              advanced=True, tip=tr("So oft schickt der Server gesammelte Änderungen (0 = Intervall der Steuerung)")),
+        Param("abtast_ms", tr("Abtastrate (Subscription)"), "int", 0, minimum=0, maximum=3_600_000, suffix=" ms",
+              advanced=True, tip=tr("So oft prüft der Server die Werte auf Änderung (0 = wie das Meldeintervall)")),
         Param("knoten_je_anfrage", tr("Knoten je Anfrage"), "int", 500, minimum=1, maximum=10000, advanced=True,
               tip=tr("Höchstzahl Knoten je Read-Anfrage (Server begrenzen das teilweise, z. B. auf 100)")),
     ]
@@ -261,7 +390,8 @@ class OpcUaDriver(Driver):
     def summary(self, plc):
         p = plc.params
         sec = str(p.get("sicherheit", "none"))
-        return str(p.get("endpoint", "")) + ("" if sec == "none" else f" ({sec.split(',')[0]})")
+        return (str(p.get("endpoint", "")) + ("" if sec == "none" else f" ({sec.split(',')[0]})")
+                + (", Subscription" if p.get("modus") == "abo" else ""))
 
     def check_params(self, params):
         url = str(params.get("endpoint", "")).strip()
