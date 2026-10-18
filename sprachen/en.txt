@@ -71,6 +71,148 @@
 @ &Über {0} …
 > &About {0} …
 
+# ---------------- plc_analysis.py
+
+@ Hann (Standard)
+> Hann (default)
+
+@ Hamming
+> Hamming
+
+@ Blackman
+> Blackman
+
+@ Rechteck (ohne Fenster)
+> Rectangle (no window)
+
+@ Flat-Top (genaue Amplituden)
+> Flat-top (accurate amplitudes)
+
+# ---------------- plc_analysis_dialog.py
+
+@ Zeitbereich:
+> Time range:
+
+@ Aktualisieren
+> Refresh
+
+@ Daten neu holen (z. B. während einer laufenden Aufzeichnung)
+> Fetch the data again (e.g. during a running recording)
+
+@ Bild speichern …
+> Save image …
+
+@ Werte speichern (CSV) …
+> Save values (CSV) …
+
+@ Schließen
+> Close
+
+@ Bild speichern
+> Save image
+
+@ PNG-Bild (*.png)
+> PNG image (*.png)
+
+@ Die Datei konnte nicht geschrieben werden.
+> The file could not be written.
+
+@ Werte speichern
+> Save values
+
+@ Es sind keine Werte vorhanden.
+> There are no values.
+
+@ CSV-Datei (*.csv)
+> CSV file (*.csv)
+
+@ XY-Diagramm
+> XY chart
+
+@ Punkte
+> Points
+
+@ Linie (zeitliche Reihenfolge)
+> Line (in time order)
+
+@ Linie und Punkte
+> Line and points
+
+@ Ausgleichsgerade und Korrelation
+> Regression line and correlation
+
+@ X-Achse:
+> X axis:
+
+@ Darstellung:
+> Display:
+
+@ <b>Y-Achse</b> (eine oder mehrere Variablen)
+> <b>Y axis</b> (one or more variables)
+
+@ Bitte eine X-Variable und mindestens eine Y-Variable wählen.
+> Please choose an X variable and at least one Y variable.
+
+@ Im gewählten Zeitbereich liegen keine Messwerte.
+> There are no values in the selected time range.
+
+@ {0}: r = {1:.4f}, Gerade y = {2:.5g}·x {3:+.5g}
+> {0}: r = {1:.4f}, line y = {2:.5g}·x {3:+.5g}
+
+@ {0} Messpunkte im Zeitbereich.
+> {0} data points in the time range.
+
+@ Frequenzanalyse (FFT)
+> Frequency analysis (FFT)
+
+@ Mittelwert abziehen
+> Subtract mean
+
+@ Linearen Trend abziehen
+> Subtract linear trend
+
+@ nichts abziehen
+> Subtract nothing
+
+@ Frequenz [Hz]
+> Frequency [Hz]
+
+@ Periodendauer [s]
+> Period [s]
+
+@ Amplitude logarithmisch
+> Logarithmic amplitude
+
+@ Variable:
+> Variable:
+
+@ Fenster:
+> Window:
+
+@ Vorbehandlung:
+> Preprocessing:
+
+@ Die Werte werden auf gleichmäßige Abstände umgerechnet. Höchste Frequenz = halbe Abtastrate; feinere Auflösung durch einen längeren Zeitbereich.
+> The values are resampled to equal intervals. Highest frequency = half the sampling rate; finer resolution with a longer time range.
+
+@ Zu wenige Messwerte im gewählten Zeitbereich (mindestens 8).
+> Too few values in the selected time range (at least 8).
+
+@ Periodendauer
+> Period
+
+@ Frequenz
+> Frequency
+
+@ Amplitude
+> Amplitude
+
+@ {0} Werte, Abtastrate {1:.4g} Hz (Abstand {2:.4g} s), Auflösung {3:.4g} Hz, höchste Frequenz {4:.4g} Hz, Effektivwert {5:.4g}
+> {0} values, sampling rate {1:.4g} Hz (interval {2:.4g} s), resolution {3:.4g} Hz, highest frequency {4:.4g} Hz, RMS {5:.4g}
+
+@ Stärkste Frequenzen: 
+> Strongest frequencies: 
+
 # ---------------- plc_block_dialog.py
 
 @ Name
@@ -207,6 +349,12 @@
 @ Raster (Grid)
 > Grid
 
+@ Dauernd
+> Continuous
+
+@ Per Trigger mit Vor- und Nachlauf
+> By trigger with pre- and post-trigger time
+
 # ---------------- plc_config.py
 
 @ Typ
@@ -277,6 +425,42 @@
 
 @ Archiv-Ordner:
 > Archive folder:
+
+@ Per Trigger: in CSV-Datei/Datenbank wird nur geschrieben, wenn die Startbedingung erfüllt ist – mit den Werten der Vorlaufzeit davor und der Nachlaufzeit danach. Jede Aufnahme bekommt eine eigene CSV-Datei. Die Anzeige läuft immer.
+> By trigger: the CSV file/database is written only while the start condition is met – including the values of the pre-trigger time before and the post-trigger time after. Each capture gets its own CSV file. The display always runs.
+
+@ z. B. {Druck} > 5 or {Störung} == 1
+> e.g. {Druck} > 5 or {Störung} == 1
+
+@ Bedingung wie bei Triggern und berechneten Variablen; wahr (≠ 0) startet die Aufnahme
+> Condition as for triggers and computed variables; true (≠ 0) starts the capture
+
+@ Bedingung mit dem Formeleditor bearbeiten
+> Edit the condition in the formula editor
+
+@ So viele Sekunden vor dem Trigger werden mitgespeichert (Ringspeicher)
+> This many seconds before the trigger are saved as well (ring buffer)
+
+@ So lange wird nach dem Ende der Bedingung weiter gespeichert
+> Saving continues this long after the condition has ended
+
+@ Höchstdauer einer Aufnahme (0 = unbegrenzt); danach muss die Bedingung erst wieder falsch werden
+> Maximum duration of a capture (0 = unlimited); afterwards the condition must become false again first
+
+@ Vorlauf
+> Pre-trigger
+
+@ Nachlauf
+> Post-trigger
+
+@ max.
+> max.
+
+@ Aufzeichnung:
+> Recording:
+
+@ Startbedingung:
+> Start condition:
 
 @ Bilddatei (PNG/SVG/JPG), wird im Logger rechts oben angezeigt
 > Image file (PNG/SVG/JPG), shown in the logger at the top right
@@ -350,6 +534,45 @@
 @ Aktualisierung im Browser:
 > Browser refresh:
 
+@ HTTPS (verschlüsselt)
+> HTTPS (encrypted)
+
+@ Ohne eigenes Zertifikat wird einmalig ein selbstsigniertes erzeugt (Ordner web_tls); der Browser fragt dann beim ersten Aufruf nach
+> Without a certificate of your own, a self-signed one is created once (folder web_tls); the browser asks for confirmation on the first visit
+
+@ leer = selbstsigniert
+> empty = self-signed
+
+@ leer = im Zertifikat enthalten
+> empty = contained in the certificate
+
+@ Benutzer …
+> Users …
+
+@ Anmeldung mit Benutzer und Passwort einrichten
+> Set up login with user name and password
+
+@ Zertifikat (PEM):
+> Certificate (PEM):
+
+@ Zertifikat wählen
+> Choose certificate
+
+@ Zertifikat (*.pem *.crt *.cer);;Alle Dateien (*)
+> Certificate (*.pem *.crt *.cer);;All files (*)
+
+@ Schlüssel (PEM):
+> Key (PEM):
+
+@ Schlüssel wählen
+> Choose key
+
+@ Schlüssel (*.pem *.key);;Alle Dateien (*)
+> Key (*.pem *.key);;All files (*)
+
+@ Anmeldung:
+> Login:
+
 @ Projekt && Steuerungen
 > Project && controllers
 
@@ -367,6 +590,9 @@
 
 @ Trigger && Ereignisse
 > Triggers && events
+
+@ Berichte (PDF)
+> Reports (PDF)
 
 @ Auto-Skalierung
 > Auto scaling
@@ -412,6 +638,27 @@
 
 @ <b>Diagramme › Y-Achsen › Variablen</b><br>Variable auf eine Y-Achse oder auf eine andere Variable ziehen
 > <b>Charts › Y axes › Variables</b><br>Drag a variable onto a Y axis or onto another variable
+
+@ Suchen: Name, Adresse, Formel … (* ? als Platzhalter, -Wort schließt aus)
+> Search: name, address, formula … (* ? as wildcards, -word excludes)
+
+@ Mehrere Wörter müssen alle vorkommen; Strg+F springt hierher
+> All words must match; Ctrl+F jumps here
+
+@ Nur Variablen dieser Steuerung zeigen
+> Show only variables of this controller
+
+@ alle Arten
+> all kinds
+
+@ nur gelesene
+> read only
+
+@ nur berechnete
+> computed only
+
+@ ohne Adresse
+> without address
 
 @ <b>Variablen</b>
 > <b>Variables</b>
@@ -560,6 +807,36 @@
 @ Ein Trigger schreibt einen Eintrag mit Zeitstempel ins Ereignisprotokoll, sobald seine Bedingung erfüllt ist (z. B. <code>{Temperatur} &gt; 80</code>). Offene Ereignisse zeigt der Logger in der Statusleiste an; quittiert wird im Ereignis-Viewer.
 > A trigger writes a time-stamped entry to the event log as soon as its condition is met (e.g. <code>{Temperatur} &gt; 80</code>). The logger shows open events in the status bar; they are acknowledged in the event viewer.
 
+@ PDF-Bericht automatisch erstellen
+> Create PDF report automatically
+
+@ Am Ende jedes Zeitraums: Kennwerte, Verlauf aller Diagramme und Ereignisse; beim Stoppen ein Teilbericht
+> At the end of each period: statistics, trend of all charts and events; a partial report when stopping
+
+@ Beginn der Schichten (Uhrzeiten, durch Komma getrennt)
+> Start of the shifts (times, separated by commas)
+
+@ Uhrzeit, zu der Tag, Woche (Montag) und Monat beginnen, z. B. 06:00
+> Time at which day, week (Monday) and month start, e.g. 06:00
+
+@ Ordner für Berichte
+> Folder for reports
+
+@ Zeitraum:
+> Period:
+
+@ Schichtbeginne:
+> Shift starts:
+
+@ Tagesbeginn:
+> Day start:
+
+@ Ordner:
+> Folder:
+
+@ Der Bericht enthält Minimum, Maximum, Mittelwert und Streuung je Variable, den Verlauf jedes Diagramms und die Ereignisse des Zeitraums. Von Hand: Logger › Analyse › PDF-Bericht.
+> The report contains minimum, maximum, mean and standard deviation per variable, the trend of every chart and the events of the period. Manually: Logger › Analysis › PDF report.
+
 @ keine Trigger angelegt
 > no triggers defined
 
@@ -664,6 +941,30 @@
 
 @ {0} Blöcke mit {1} Variablen – werden mit je einer Anfrage gelesen.
 > {0} blocks with {1} variables – each read with a single request.
+
+@ alle Steuerungen
+> all controllers
+
+@ {0} von {1}
+> {0} of {1}
+
+@ {0} Variablen
+> {0} variables
+
+@ keine (ohne Anmeldung)
+> none (no login)
+
+@ {0} Benutzer: {1}
+> {0} users: {1}
+
+@ Tipp: HTTPS einschalten, sonst werden Passwörter unverschlüsselt übertragen.
+> Tip: switch on HTTPS, otherwise passwords are transmitted unencrypted.
+
+@ Startbedingung
+> Start condition
+
+@ Startbedingung der Aufzeichnung
+> Start condition of the recording
 
 @ Archiv-Ordner wählen
 > Choose archive folder
@@ -791,6 +1092,30 @@
 @ Fehlerhafte Trigger (werden beim Aufzeichnen übersprungen):\n\n
 > Faulty triggers (skipped during recording):\n\n
 
+@ Schichtbeginne
+> Shift starts
+
+@ Tagesbeginn
+> Day start
+
+@ Berichte
+> Reports
+
+@ {0}: Uhrzeiten bitte als hh:mm, durch Komma getrennt (z. B. 06:00,14:00,22:00).
+> {0}: please enter times as hh:mm, separated by commas (e.g. 06:00,14:00,22:00).
+
+@ keine Startbedingung angegeben
+> no start condition given
+
+@ unbekannte Variablen: 
+> unknown variables: 
+
+@ Aufzeichnung per Trigger
+> Recording by trigger
+
+@ Startbedingung: {0}
+> Start condition: {0}
+
 @ Gespeichert: {0}
 > Saved: {0}
 
@@ -850,6 +1175,17 @@
 
 @ Verbindung fehlgeschlagen
 > Connection failed
+
+# ---------------- plc_csvjoin.py
+
+@ Das Archiv enthält keine CSV-Datei.
+> The archive contains no CSV file.
+
+@ Die Datei ist leer.
+> The file is empty.
+
+@ Unbekannter Aufbau (erwartet: Zeit;Epoch;Variablen …)
+> Unknown layout (expected: Zeit;Epoch;variables …)
 
 # ---------------- plc_db.py
 
@@ -1077,9 +1413,6 @@
 @ Abbrechen
 > Cancel
 
-@ Schließen
-> Close
-
 @ Breche ab …
 > Cancelling …
 
@@ -1276,9 +1609,6 @@
 @ Name fehlt oder enthält ';'
 > Name missing or contains ';'
 
-@ unbekannte Variablen: 
-> unknown variables: 
-
 @ Meldetext: unbekannte Variablen 
 > Message text: unknown variables 
 
@@ -1287,6 +1617,12 @@
 
 @ Trigger {0} übersprungen: {1}
 > Trigger {0} skipped: {1}
+
+@ gegangen: {0}
+> gone: {0}
+
+@ quittiert: {0} ({1})
+> acknowledged: {0} ({1})
 
 # ---------------- plc_export.py
 
@@ -1518,9 +1854,6 @@
 
 # ---------------- plc_gui.py
 
-@ Das Archiv enthält keine CSV-Datei.
-> The archive contains no CSV file.
-
 @ Zum Umordnen ziehen und auf die Titelzeile eines anderen Diagramms ablegen
 > Drag to reorder and drop onto the title bar of another chart
 
@@ -1602,6 +1935,12 @@
 @ Im Online-Modus Zeit und Werte aller Kurven an der Mausposition anzeigen
 > In online mode, show time and values of all curves at the mouse position
 
+@ Trigger-Marken an der Zeitachse
+> Trigger marks on the time axis
+
+@ Ereignisse, Beginn von Trigger-Aufnahmen und Notizen als senkrechte Linie im Diagramm
+> Events, start of trigger captures and notes as a vertical line in the chart
+
 @ Screenshot
 > Screenshot
 
@@ -1619,6 +1958,12 @@
 
 @ Datei
 > File
+
+@ CSV-Dateien aneinanderhängen und speichern …
+> Join CSV files and save …
+
+@ Mehrere Aufzeichnungen nach der Zeit zusammenfügen, als neue CSV-Datei speichern und offline anzeigen
+> Join several recordings by time, save them as a new CSV file and show them offline
 
 @ Werte exportieren (CSV/Excel) …
 > Export values (CSV/Excel) …
@@ -1668,6 +2013,24 @@
 @ Diagramme
 > Charts
 
+@ XY-Diagramm …
+> XY chart …
+
+@ Variablen über einer anderen Variable darstellen (z. B. Druck über Hub)
+> Plot variables against another variable (e.g. pressure over stroke)
+
+@ Frequenzanalyse (FFT) …
+> Frequency analysis (FFT) …
+
+@ Amplitudenspektrum einer Variable, z. B. für Schwingungen
+> Amplitude spectrum of a variable, e.g. for oscillations
+
+@ PDF-Bericht erstellen …
+> Create PDF report …
+
+@ Bericht mit Kennwerten, Verlauf und Ereignissen für einen Zeitbereich als PDF
+> Report with statistics, trend and events for a time range as PDF
+
 @ PID-Optimierung: {0} …
 > PID tuning: {0} …
 
@@ -1686,6 +2049,15 @@
 @ \nZykluszeit {0:.0f} ms
 > \nCycle time {0:.0f} ms
 
+@ ⏺ Aufnahme läuft
+> ⏺ Capturing
+
+@ ⏸ wartet auf Trigger
+> ⏸ waiting for trigger
+
+@ Aufzeichnung per Trigger: gespeichert wird nur bei erfüllter Startbedingung (mit Vor- und Nachlauf)
+> Recording by trigger: data is saved only while the start condition is met (with pre- and post-trigger time)
+
 @ Es sind noch keine (oder zu wenige) Messdaten vorhanden. Bitte aufzeichnen oder eine CSV-Datei laden.
 > There are no (or too few) measured values yet. Please record or load a CSV file.
 
@@ -1697,6 +2069,27 @@
 
 @ Alle Daten
 > All data
+
+@ PDF-Bericht
+> PDF report
+
+@ Es sind noch keine Messdaten vorhanden.
+> There are no measurements yet.
+
+@ PDF-Bericht speichern
+> Save PDF report
+
+@ PDF-Datei (*.pdf)
+> PDF file (*.pdf)
+
+@ Der Bericht konnte nicht erstellt werden:\n{0}
+> The report could not be created:\n{0}
+
+@ Bericht erstellt: {0}
+> Report created: {0}
+
+@ Es sind noch keine Messdaten vorhanden. Bitte aufzeichnen oder eine CSV-Datei laden.
+> There are no measurements yet. Please record or load a CSV file.
 
 @ 🔔 {0} offen
 > 🔔 {0} open
@@ -1722,11 +2115,23 @@
 @ Der Webserver ist nicht aktiviert.\nAktivierung: Konfigurationsprogramm → Webserver.
 > The web server is not enabled.\nEnable it: configuration program → Web server.
 
-@ ?token={0}
-> ?token={0}
+@ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}
+> Address for tablet/smartphone on the same network:\n\n{0}
 
-@ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}\n\n(in die Zwischenablage kopiert)
-> Address for tablet/smartphone in the same network:\n\n{0}\n\n(copied to the clipboard)
+@ Anmeldung erforderlich ({0} Benutzer).
+> Login required ({0} users).
+
+@ Mit Zugriffscode (ohne Anmeldung):\n{0}
+> With access code (no login):\n{0}
+
+@ HTTPS-Zertifikat, SHA-256-Fingerabdruck (zum Vergleich mit der Anzeige im Browser):\n{0}
+> HTTPS certificate, SHA-256 fingerprint (to compare with the browser's display):\n{0}
+
+@ Hinweis: unverschlüsselte Verbindung (HTTP).
+> Note: unencrypted connection (HTTP).
+
+@ (Adresse in die Zwischenablage kopiert)
+> (address copied to the clipboard)
 
 @ Aktuell
 > Current
@@ -1767,8 +2172,14 @@
 @ Offline
 > Offline
 
+@ CSV laden (mehrere Dateien = aneinanderhängen)
+> Load CSV (several files = join)
+
 @ CSV/ZIP (*.csv *.zip);;Alle Dateien (*)
 > CSV/ZIP (*.csv *.zip);;All files (*)
+
+@ CSV-Dateien zum Aneinanderhängen wählen
+> Choose CSV files to join
 
 @ Fehler beim Laden
 > Error while loading
@@ -1779,8 +2190,20 @@
 @ Die Datei enthält keine Daten.
 > The file contains no data.
 
+@ {0} Dateien aneinandergehängt: {1} bis {2} ({3} Zeilen)
+> {0} files joined: {1} to {2} ({3} rows)
+
 @ Geladen: {0} ({1} Zeilen)
 > Loaded: {0} ({1} rows)
+
+@ Zusammengefügte Aufzeichnung speichern
+> Save joined recording
+
+@ Bitte einen neuen Dateinamen wählen – die gewählten Dateien werden nicht überschrieben.
+> Please choose a new file name – the selected files are not overwritten.
+
+@ gespeichert: {0}
+> saved: {0}
 
 @ Geladen: {0} ({1} Zeitpunkte)
 > Loaded: {0} ({1} time points)
@@ -1799,9 +2222,6 @@
 
 @ Alle Daten ({0} bis {1})
 > All data ({0} to {1})
-
-@ Im gewählten Zeitbereich liegen keine Messwerte.
-> There are no values in the selected time range.
 
 @ Exportiert: {0} ({1} Zeilen, {2} Variablen)
 > Exported: {0} ({1} rows, {2} variables)
@@ -1971,9 +2391,6 @@
 @ Stellwert:
 > Controller output:
 
-@ Zeitbereich:
-> Time range:
-
 @ Zeitbereich wählen und „Strecke bestimmen und berechnen“ klicken.
 > Choose a time range and click “Identify process and calculate”.
 
@@ -2051,11 +2468,17 @@
 @ Starte …
 > Starting …
 
-@ Aufzeichnung gestartet → 
-> Recording started → 
+@ CSV-Ordner {0}
+> CSV folder {0}
+
+@ Aufzeichnung per Trigger: warte auf „{0}“ (Vorlauf {1:g} s, Nachlauf {2:g} s) → {3}
+> Recording by trigger: waiting for “{0}” (pre-trigger {1:g} s, post-trigger {2:g} s) → {3}
 
 @ nur Anzeige (weder CSV noch Datenbank)
 > display only (neither CSV nor database)
+
+@ Aufzeichnung gestartet → 
+> Recording started → 
 
 @ {0} Trigger aktiv → Ereignisprotokoll {1}
 > {0} triggers active → event log {1}
@@ -2066,6 +2489,9 @@
 @ gestoppt
 > stopped
 
+@ Gestoppt – {0} Trigger-Aufnahmen
+> Stopped – {0} trigger captures
+
 @ Gestoppt
 > Stopped
 
@@ -2075,8 +2501,91 @@
 @ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
 > ⚠ Event log not writable: {0}
 
+@ ⚠ Bericht konnte nicht erstellt werden: {0}
+> ⚠ Report could not be created: {0}
+
+@ ⚠ Aufzeichnung per Trigger: {0} – es wird dauernd aufgezeichnet
+> ⚠ Recording by trigger: {0} – recording continuously instead
+
+@ Aufnahme
+> Capture
+
 @ ⚠ CSV-Fehler: {0}
 > ⚠ CSV error: {0}
+
+@ Aufnahme {0} gestartet: {1}
+> Capture {0} started: {1}
+
+@ ○ Aufnahme {0} beendet ({1} Zeilen){2}
+> ○ Capture {0} finished ({1} rows){2}
+
+# ---------------- plc_report.py
+
+@ Schicht
+> Shift
+
+@ Tag
+> Day
+
+@ Woche
+> Week
+
+@ Monat
+> Month
+
+@ Schicht {0} ({1:%H:%M}–{2:%H:%M}) am {1:%d.%m.%Y}
+> Shift {0} ({1:%H:%M}–{2:%H:%M}) on {1:%Y-%m-%d}
+
+@ Schicht {0:%d.%m.%Y %H:%M}–{1:%H:%M}
+> Shift {0:%Y-%m-%d %H:%M}–{1:%H:%M}
+
+@ KW {0}/{1}
+> Week {0}/{1}
+
+@ Seite {0}
+> Page {0}
+
+@ PLC Datenlogger – erstellt {0:%d.%m.%Y %H:%M}
+> PLC Data Logger – created {0:%Y-%m-%d %H:%M}
+
+@ Bericht {0}: {1}
+> Report {0}: {1}
+
+@  (unvollständig)
+>  (incomplete)
+
+@ Messdaten:
+> Measurements:
+
+@ {0} Zeilen, {1} bis {2}
+> {0} rows, {1} to {2}
+
+@ Hinweis:
+> Note:
+
+@ Kennwerte
+> Statistics
+
+@ {0:.1f} % ein
+> {0:.1f} % on
+
+@ {0}× ein
+> {0}× on
+
+@ Verlauf
+> Trend
+
+@ Ereignisse und Notizen
+> Events and notes
+
+@ Text
+> Text
+
+@ Gegangen
+> Gone
+
+@ Keine Ereignisse im Zeitraum.
+> No events in this period.
 
 # ---------------- plc_splash.py
 
@@ -2214,6 +2723,59 @@
 @ {0} Trigger, davon {1} aktiv.
 > {0} triggers, {1} of them active.
 
+# ---------------- plc_web_dialog.py
+
+@ Passwort für {0}
+> Password for {0}
+
+@ Neues Passwort:
+> New password:
+
+@ Wiederholen:
+> Repeat:
+
+@ Mindestens {0} Zeichen.
+> At least {0} characters.
+
+@ Passwort
+> Password
+
+@ Das Passwort ist zu kurz (mindestens {0} Zeichen).
+> The password is too short (at least {0} characters).
+
+@ Die beiden Eingaben stimmen nicht überein.
+> The two entries do not match.
+
+@ Webserver – Benutzer
+> Web server – users
+
+@ Hinzufügen …
+> Add …
+
+@ Passwort ändern …
+> Change password …
+
+@ Ohne Benutzer ist keine Anmeldung nötig (nur der Zugriffscode schützt, falls eingetragen). Für Anmeldungen über das Netz HTTPS einschalten, sonst ist das Passwort mitlesbar.
+> Without users no login is needed (only the access code protects, if set). For logins over the network switch on HTTPS, otherwise the password can be read.
+
+@ Benutzer hinzufügen
+> Add user
+
+@ Benutzername:
+> User name:
+
+@ Benutzer
+> User
+
+@ Den Benutzer gibt es schon.
+> This user already exists.
+
+@ Benutzer entfernen
+> Remove user
+
+@ Benutzer „{0}“ entfernen?
+> Remove user “{0}”?
+
 # ---------------- plc_treiber/__init__.py
 
 @ {0} (Treiber fehlt)
@@ -2227,6 +2789,181 @@
 
 @ Treiber-Kürzel „{0}“ ist bereits vergeben
 > Driver ID “{0}” is already taken
+
+# ---------------- plc_treiber/ads.py
+
+@ Zielport nicht gefunden (SPS-Laufzeit gestartet? Port 851/801)
+> Target port not found (PLC runtime started? port 851/801)
+
+@ Zielrechner nicht gefunden – Route in TwinCAT anlegen (AMS-Net-ID und IP dieses Rechners)
+> Target machine not found – add a route in TwinCAT (AMS Net ID and IP of this computer)
+
+@ Port gesperrt
+> Port disabled
+
+@ Dienst nicht unterstützt
+> Service not supported
+
+@ Indexgruppe ungültig
+> Invalid index group
+
+@ Indexoffset ungültig
+> Invalid index offset
+
+@ Datengröße passt nicht
+> Data size does not match
+
+@ Daten ungültig
+> Invalid data
+
+@ Symbol nicht gefunden
+> Symbol not found
+
+@ Symbolversion ungültig (SPS neu geladen?)
+> Invalid symbol version (PLC downloaded again?)
+
+@ Zeitüberschreitung
+> Timeout
+
+@ Zu viele Unteranfragen
+> Too many sub-requests
+
+@ ADS-Fehler 0x{0:X}: {1}
+> ADS error 0x{0:X}: {1}
+
+@ AMS-Net-ID mit 6 Zahlen erwartet, z. B. 5.12.34.56.1.1
+> AMS Net ID with 6 numbers expected, e.g. 5.12.34.56.1.1
+
+@ AMS-Net-ID: Zahlen 0 … 255
+> AMS Net ID: numbers 0 … 255
+
+@ Bitadresse mit Bitnummer, z. B. %MX2.3
+> Bit address with bit number, e.g. %MX2.3
+
+@ Ungültige ADS-Adresse „{0}“ (z. B. MAIN.fTemperatur, GVL.aWerte[3], %MW10, 0x4020:16)
+> Invalid ADS address “{0}” (e.g. MAIN.fTemperatur, GVL.aWerte[3], %MW10, 0x4020:16)
+
+@ Verbindung von der Steuerung getrennt
+> Connection closed by the controller
+
+@ nicht verbunden
+> not connected
+
+@ Ungültige ADS-Antwort
+> Invalid ADS response
+
+@ ADS-Antwort zu kurz
+> ADS response too short
+
+@ Typ {0} wird nicht unterstützt
+> Type {0} is not supported
+
+@ Antwort zu kurz
+> Response too short
+
+@ Beckhoff TwinCAT (ADS)
+> Beckhoff TwinCAT (ADS)
+
+@ TwinCAT 2/3 über ADS (AMS/TCP), symbolisch oder Indexgruppe/-offset; Route erforderlich
+> TwinCAT 2/3 via ADS (AMS/TCP), symbolic or index group/offset; route required
+
+@ IP-Adresse
+> IP address
+
+@ AMS-Net-ID der Steuerung
+> AMS Net ID of the controller
+
+@ z. B. 5.12.34.56.1.1 (leer = IP-Adresse + .1.1)
+> e.g. 5.12.34.56.1.1 (empty = IP address + .1.1)
+
+@ AMS-Port
+> AMS port
+
+@ 851 = SPS-Laufzeit 1 (TwinCAT 3), 852 … weitere; 801 = TwinCAT 2
+> 851 = PLC runtime 1 (TwinCAT 3), 852 … further; 801 = TwinCAT 2
+
+@ Eigene AMS-Net-ID
+> Own AMS Net ID
+
+@ Muss zur Route in der Steuerung passen (leer = eigene IP-Adresse + .1.1)
+> Must match the route in the controller (empty = own IP address + .1.1)
+
+@ Eigener AMS-Port
+> Own AMS port
+
+@ TCP-Port
+> TCP port
+
+@ Variablen je Anfrage
+> Variables per request
+
+@ Höchstzahl Teile je Summenanfrage (TwinCAT: 500)
+> Maximum number of parts per sum request (TwinCAT: 500)
+
+@ Zeitlimit
+> Timeout
+
+@ Symbol
+> Symbol
+
+@ Symbolname (MAIN.fTemperatur, GVL.aWerte[3], .gWert), %MW10/%MD4/%MX2.3/%IW0/%QX0.1 oder Indexgruppe:Offset (0x4020:16)
+> Symbol name (MAIN.fTemperatur, GVL.aWerte[3], .gWert), %MW10/%MD4/%MX2.3/%IW0/%QX0.1 or index group:offset (0x4020:16)
+
+@ Array-Name ohne Index, z. B. MAIN.aWerte
+> Array name without index, e.g. MAIN.aWerte
+
+@ Aus TwinCAT wählen…
+> Choose from TwinCAT…
+
+@ Array-Name (Symbol ohne Index) erwartet, z. B. MAIN.aWerte
+> Array name (symbol without index) expected, e.g. MAIN.aWerte
+
+# ---------------- plc_treiber/ads_browser.py
+
+@ TwinCAT – Variablen wählen ({0})
+> TwinCAT – choose variables ({0})
+
+@ Lese Symboltabelle …
+> Reading symbol table …
+
+@ Filter (Name, Typ, Kommentar) …
+> Filter (name, type, comment) …
+
+@ Kommentar
+> Comment
+
+@ Markiertes Array als Block …
+> Selected array as block …
+
+@ Neue Variablen anlegen in:
+> Create new variables in:
+
+@ Auswahl übernehmen
+> Apply selection
+
+@ {0} aufzeichenbare Symbole. Variablen anhaken; Arrays per Doppelklick als Block.
+> {0} recordable symbols. Tick variables; double-click arrays to add them as a block.
+
+@ Symboltabelle nicht lesbar: {0}
+> Symbol table not readable: {0}
+
+@ bereits in der Liste
+> already in the list
+
+@ Block
+> Block
+
+@ Bitte ein Array aus Zahlen markieren.
+> Please select an array of numbers.
+
+@ Array als Block – {0}
+> Array as block – {0}
+
+@ Erster Index:
+> First index:
+
+@ Anzahl:
+> Count:
 
 # ---------------- plc_treiber/base.py
 
@@ -2250,9 +2987,6 @@
 @ ControlLogix, CompactLogix, Micro800; Tag-Namen wie in Studio 5000
 > ControlLogix, CompactLogix, Micro800; tag names as in Studio 5000
 
-@ IP-Adresse
-> IP address
-
 @ CIP-Pfad
 > CIP path
 
@@ -2261,9 +2995,6 @@
 
 @ Steuerungstyp
 > Controller type
-
-@ Zeitlimit
-> Timeout
 
 @ Zeitlimit je Lesezyklus
 > Timeout per read cycle
@@ -2283,9 +3014,6 @@
 @ Ungültiger Tag-Name „{0}“
 > Invalid tag name “{0}”
 
-@ Typ {0} wird nicht unterstützt
-> Type {0} is not supported
-
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
 > Array tag “{0}” is empty or invalid (specify without index).
 
@@ -2293,9 +3021,6 @@
 
 @ Array als Block übernehmen
 > Add array as block
-
-@ Erster Index:
-> First index:
 
 @ Anzahl (max. 1000):
 > Count (max. 1000):
@@ -2332,12 +3057,6 @@
 
 @ Datentyp
 > Data type
-
-@ Auswahl übernehmen
-> Apply selection
-
-@ Neue Variablen anlegen in:
-> Create new variables in:
 
 @ zwischengespeicherte Liste – mit „Tag-Liste laden“ aktualisieren
 > cached list – update with “Load tag list”
@@ -2380,9 +3099,6 @@
 
 @ Typ wird nicht aufgezeichnet
 > Type is not recorded
-
-@ bereits in der Liste
-> already in the list
 
 @ {0} Tags
 > {0} tags
@@ -2430,6 +3146,149 @@
 @ keine Antwort innerhalb von {0} ms
 > no response within {0} ms
 
+# ---------------- plc_treiber/fins.py
+
+@ lokaler Knoten nicht im Netz
+> local node not in network
+
+@ Token-Zeitüberschreitung
+> token timeout
+
+@ Zielknoten nicht im Netz
+> destination node not in network
+
+@ Zieleinheit fehlt
+> destination unit missing
+
+@ Antwort-Zeitüberschreitung
+> response timeout
+
+@ Befehl nicht unterstützt
+> Command not supported
+
+@ Zieladresse falsch (Knoten/Netz)
+> wrong destination address (node/network)
+
+@ Befehl zu lang
+> command too long
+
+@ Befehl zu kurz
+> command too short
+
+@ Anzahl Elemente passt nicht
+> number of elements does not match
+
+@ Bereich existiert nicht
+> area does not exist
+
+@ Adresse außerhalb des Bereichs
+> Address out of range
+
+@ Adressbereich überschritten
+> address range exceeded
+
+@ Antwort zu lang (weniger Wörter je Anfrage)
+> response too long (fewer words per request)
+
+@ Bereich geschützt
+> area protected
+
+@ Ungültige Omron-Adresse „{0}“ (z. B. D100, W10, H5, CIO0.05, E0_100, T5)
+> Invalid Omron address “{0}” (e.g. D100, W10, H5, CIO0.05, E0_100, T5)
+
+@ Bank nur beim erweiterten Datenspeicher (E0_100): {0}
+> Bank only for extended data memory (E0_100): {0}
+
+@ Erweiterter Datenspeicher mit Bank angeben, z. B. E0_100: {0}
+> Specify extended data memory with bank, e.g. E0_100: {0}
+
+@ Bank 0 … 24 erwartet: {0}
+> Bank 0 … 24 expected: {0}
+
+@ „{0}“: Adresse größer als {1}
+> “{0}”: address greater than {1}
+
+@ Bitnummer 00 … 15 erwartet: {0}
+> Bit number 00 … 15 expected: {0}
+
+@ Timer/Zähler: nur der Istwert (ohne Bit) ist lesbar: {0}
+> Timer/counter: only the present value (without bit) is readable: {0}
+
+@ Keine FINS/TCP-Antwort
+> No FINS/TCP response
+
+@ FINS/TCP abgelehnt (Fehler 0x{0:08X}) – Knotennummer belegt?
+> FINS/TCP rejected (error 0x{0:08X}) – node number in use?
+
+@ Unerwartete FINS/TCP-Antwort
+> Unexpected FINS/TCP response
+
+@ Ungültige FINS/TCP-Antwort
+> Invalid FINS/TCP response
+
+@ FINS/TCP-Fehler 0x{0:08X}
+> FINS/TCP error 0x{0:08X}
+
+@ Ungültige FINS-Antwort
+> Invalid FINS response
+
+@ FINS-Fehler 0x{0:04X}: {1}
+> FINS error 0x{0:04X}: {1}
+
+@ FINS-Antwort zu kurz
+> FINS response too short
+
+@ Omron (FINS)
+> Omron (FINS)
+
+@ CJ, CS, CP, NJ/NX über Ethernet; FINS/TCP oder FINS/UDP, Port 9600
+> CJ, CS, CP, NJ/NX via Ethernet; FINS/TCP or FINS/UDP, port 9600
+
+@ Port
+> Port
+
+@ Protokoll
+> Protocol
+
+@ Zielknoten
+> Destination node
+
+@ FINS-Knotennummer der Steuerung (0 = automatisch: TCP von der Steuerung, UDP letztes IP-Byte)
+> FINS node number of the controller (0 = automatic: TCP from the controller, UDP last IP byte)
+
+@ Quellknoten
+> Source node
+
+@ Eigene FINS-Knotennummer (0 = automatisch)
+> Own FINS node number (0 = automatic)
+
+@ Zielnetz
+> Destination network
+
+@ Quellnetz
+> Source network
+
+@ Wörter je Anfrage
+> Words per request
+
+@ Ältere CPUs/CP1 über UDP: ggf. kleiner (z. B. 500)
+> Older CPUs/CP1 via UDP: smaller if necessary (e.g. 500)
+
+@ Lücke zusammenfassen bis
+> Merge gaps up to
+
+@  Wörter
+>  words
+
+@ Omron-Adresse: D100, W10, H5, A300, CIO100 (oder 100), E0_100, T5, C3; Bits: D100.05, 0.01
+> Omron address: D100, W10, H5, A300, CIO100 (or 100), E0_100, T5, C3; bits: D100.05, 0.01
+
+@ Startadresse, z. B. D100 (Elemente folgen lückenlos)
+> Start address, e.g. D100 (elements follow without gaps)
+
+@ Bitnummer nur beim Typ BOOL
+> Bit number only with type BOOL
+
 # ---------------- plc_treiber/kvhostlink.py
 
 @ Gerätenummer ungültig
@@ -2465,12 +3324,6 @@
 @ Bitnummer 0–15 erwartet: {0}
 > Bit number 0–15 expected: {0}
 
-@ nicht verbunden
-> not connected
-
-@ Verbindung von der Steuerung getrennt
-> Connection closed by the controller
-
 @ KV-Fehler {0}: {1} ({2})
 > KV error {0}: {1} ({2})
 
@@ -2486,20 +3339,8 @@
 @ KV-8000/7000/5000/3000/Nano, KV-X über Ethernet, Host-Link-Protokoll (Port 8501)
 > KV-8000/7000/5000/3000/Nano, KV-X via Ethernet, Host Link protocol (port 8501)
 
-@ Port
-> Port
-
 @ Host-Link-Port, Standard 8501
 > Host Link port, default 8501
-
-@ Wörter je Anfrage
-> Words per request
-
-@ Lücke zusammenfassen bis
-> Merge gaps up to
-
-@  Wörter
->  words
 
 @ Gerät
 > Device
@@ -2513,11 +3354,67 @@
 @ Bitgeräte haben den Typ BOOL
 > Bit devices have the type BOOL
 
-@ Bitnummer nur beim Typ BOOL
-> Bit number only with type BOOL
-
 @ Timer/Zähler: Istwert als DINT/UDINT lesen
 > Timer/counter: read the current value as DINT/UDINT
+
+# ---------------- plc_treiber/logo.py
+
+@ VM-Adresse größer als 1469: {0}
+> VM address greater than 1469: {0}
+
+@ Bitadresse ohne B/W/D schreiben, z. B. V10.3: {0}
+> Write bit addresses without B/W/D, e.g. V10.3: {0}
+
+@ {0} gibt es bei der LOGO! {1} nicht im VM
+> {0} does not exist in the VM of the LOGO! {1}
+
+@ {0}: Nummer 1 … {1} erwartet
+> {0}: number 1 … {1} expected
+
+@ Ungültige LOGO!-Adresse „{0}“ (z. B. VW10, V2.3, I1, Q2, M5, AI1, AM3)
+> Invalid LOGO! address “{0}” (e.g. VW10, V2.3, I1, Q2, M5, AI1, AM3)
+
+@ Bitadresse nur mit Typ BOOL
+> Bit address only with type BOOL
+
+@ keine Verbindung
+> no connection
+
+@ Siemens LOGO! (0BA7/0BA8)
+> Siemens LOGO! (0BA7/0BA8)
+
+@ LOGO! 7 und 8 über S7-Kommunikation (python-snap7); VM-Adressen oder I/Q/M/AI/AQ/AM
+> LOGO! 7 and 8 via S7 communication (python-snap7); VM addresses or I/Q/M/AI/AQ/AM
+
+@ LOGO! 8 (0BA8, 8.FS4, 8.3, 8.4)
+> LOGO! 8 (0BA8, 8.FS4, 8.3, 8.4)
+
+@ LOGO! 7 (0BA7)
+> LOGO! 7 (0BA7)
+
+@ Bestimmt, wo I/Q/M/AI/AQ/AM im Variablenspeicher liegen
+> Determines where I/Q/M/AI/AQ/AM are located in the variable memory
+
+@ TSAP der LOGO!
+> TSAP of the LOGO!
+
+@ Wie in LOGO!Soft bei der Server-Verbindung („Lokaler TSAP“), z. B. 02.00 oder 20.00
+> As in LOGO!Soft for the server connection (“Local TSAP”), e.g. 02.00 or 20.00
+
+@ TSAP des Loggers
+> TSAP of the logger
+
+@ Wie in LOGO!Soft bei der Server-Verbindung („Entfernter TSAP“), z. B. 01.00 oder 10.00
+> As in LOGO!Soft for the server connection (“Remote TSAP”), e.g. 01.00 or 10.00
+
+@ LOGO!: VW10, VD20, V2.3, VB5, I1, Q2, M5, NI1, AI1, AQ1, AM3
+> LOGO!: VW10, VD20, V2.3, VB5, I1, Q2, M5, NI1, AI1, AQ1, AM3
+
+@ Startadresse im VM, z. B. VW100 (Elemente folgen lückenlos)
+> Start address in the VM, e.g. VW100 (elements follow without gaps)
+
+@ TSAP als hh.hh (z. B. 02.00) oder Zahl angeben
+> Enter TSAP as hh.hh (e.g. 02.00) or a number
 
 # ---------------- plc_treiber/modbus.py
 
@@ -2684,8 +3581,23 @@
 @ Signieren und verschlüsseln
 > Sign and encrypt
 
+@ Zyklisch lesen (Read)
+> Read cyclically (Read)
+
+@ Subscription (Server meldet Änderungen)
+> Subscription (server reports changes)
+
 @ Ungültige NodeId: {0}
 > Invalid NodeId: {0}
+
+@ Subscription fehlgeschlagen: {0}: {1}
+> Subscription failed: {0}: {1}
+
+@ Subscription: {0}
+> Subscription: {0}
+
+@ Subscription beendet: {0}
+> Subscription ended: {0}
 
 @ Array – bitte als Block lesen
 > Array – please read it as a block
@@ -2705,17 +3617,17 @@
 @ Adresse des OPC-UA-Servers, z. B. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)
 > Address of the OPC UA server, e.g. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)
 
+@ Betriebsart
+> Operating mode
+
+@ Subscription: der Server meldet nur Änderungen (weniger Netzlast bei vielen Werten)
+> Subscription: the server reports only changes (less network load with many values)
+
 @ Sicherheit
 > Security
 
-@ Benutzer
-> User
-
 @ Leer = anonym
 > Empty = anonymous
-
-@ Passwort
-> Password
 
 @ Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.
 > Note: it is stored in plain text in the configuration file.
@@ -2731,6 +3643,18 @@
 
 @ Schlüsseldatei (.pem) zum Client-Zertifikat
 > Key file (.pem) for the client certificate
+
+@ Meldeintervall (Subscription)
+> Publishing interval (subscription)
+
+@ So oft schickt der Server gesammelte Änderungen (0 = Intervall der Steuerung)
+> How often the server sends collected changes (0 = interval of the controller)
+
+@ Abtastrate (Subscription)
+> Sampling interval (subscription)
+
+@ So oft prüft der Server die Werte auf Änderung (0 = wie das Meldeintervall)
+> How often the server checks the values for changes (0 = like the publishing interval)
 
 @ Knoten je Anfrage
 > Nodes per request
@@ -2770,26 +3694,46 @@
 @ Filter (geladene Knoten) …
 > Filter (loaded nodes) …
 
-@ Markiertes Array als Block …
-> Selected array as block …
-
 @ Verbunden. Ordner aufklappen, Variablen anhaken; Arrays per Doppelklick als Block.
 > Connected. Expand folders, tick variables; double-click arrays to add them as a block.
 
 @ Datentyp nicht aufzeichenbar
 > Data type cannot be recorded
 
-@ Block
-> Block
+# ---------------- plc_treiber/pccc.py
 
-@ Bitte ein Array aus Zahlen markieren.
-> Please select an array of numbers.
+@ Bitnummer 0 … 15 erwartet: {0}
+> Bit number 0 … 15 expected: {0}
 
-@ Array als Block – {0}
-> Array as block – {0}
+@ Ungültige Adresse „{0}“ (z. B. N7:0, F8:2, B3:0/5, T4:0.ACC, I:0/1)
+> Invalid address “{0}” (e.g. N7:0, F8:2, B3:0/5, T4:0.ACC, I:0/1)
 
-@ Anzahl:
-> Count:
+@ Lesefehler: {0}
+> Read error: {0}
+
+@ kein Wert
+> no value
+
+@ Allen-Bradley MicroLogix / SLC 500 (PCCC)
+> Allen-Bradley MicroLogix / SLC 500 (PCCC)
+
+@ MicroLogix 1100/1400, SLC 5/05 über EtherNet/IP (pycomm3); Adressen wie N7:0, F8:2, B3:0/5
+> MicroLogix 1100/1400, SLC 5/05 via EtherNet/IP (pycomm3); addresses like N7:0, F8:2, B3:0/5
+
+@ Nur bei SLC 5/03/04 hinter einem ENBT-/Brückenmodul, z. B. bp/1 (leer = direkt)
+> Only for SLC 5/03/04 behind an ENBT/bridge module, e.g. bp/1 (empty = direct)
+
+@ RSLogix-500-Adresse: N7:0, F8:2, L9:0, B3:0/5, N7:10/3, T4:0.ACC, C5:1.PRE, I:0/1, O:0/2
+> RSLogix 500 address: N7:0, F8:2, L9:0, B3:0/5, N7:10/3, T4:0.ACC, C5:1.PRE, I:0/1, O:0/2
+
+@ Erstes Element, z. B. N7:0 (Elemente derselben Datei folgen lückenlos)
+> First element, e.g. N7:0 (elements of the same file follow without gaps)
+
+@ BOOL braucht eine Bitadresse, z. B. B3:0/5
+> BOOL needs a bit address, e.g. B3:0/5
+
+@ Blöcke nur in N-, F-, L- und B-Dateien
+> Blocks only in N, F, L and B files
 
 # ---------------- plc_treiber/s5as511.py
 
@@ -3068,9 +4012,6 @@
 @ Anzahl Punkte zu groß
 > Number of points too large
 
-@ Adresse außerhalb des Bereichs
-> Address out of range
-
 @ Datenlänge passt nicht
 > Data length does not match
 
@@ -3127,9 +4068,6 @@
 
 @ In GX Works eingestellter SLMP-Port (z. B. 5007, 5000, 1025)
 > SLMP port set in GX Works (e.g. 5007, 5000, 1025)
-
-@ Protokoll
-> Protocol
 
 @ Serie
 > Series
@@ -3189,9 +4127,6 @@
 
 @ Rolle
 > Role
-
-@ Variablen je Anfrage
-> Variables per request
 
 @ Höchstzahl Variablen je Leseanfrage (größere Mengen werden aufgeteilt)
 > Maximum number of variables per read request (larger sets are split)
@@ -3270,9 +4205,6 @@
 @ {0} Variablen ({1})
 > {0} variables ({1})
 
-@ {0} Variablen
-> {0} variables
-
 @ Bitte ein eindimensionales Array aus Zahlen oder BOOL markieren (z. B. Array[1..100] of Real).
 > Please select a one-dimensional array of numbers or BOOL (e.g. Array[1..100] of Real).
 
@@ -3328,9 +4260,6 @@
 
 @ Relaisbefehl: falsche Länge
 > Relay command: wrong length
-
-@ Befehl nicht unterstützt
-> Command not supported
 
 @ Zugriff verweigert (Schlüssel/Modus)
 > Access denied (key switch/mode)
@@ -3423,11 +4352,6 @@
 
 @ Bibliothek fehlt: {0}
 > Library missing: {0}
-
-# ---------------- plc_treiber/word_common.py
-
-@ Antwort zu kurz
-> Response too short
 
 # ---------------- plc_i18n.py
 

@@ -112,13 +112,16 @@ rem  --hidden-import PySide6.QtSvg  fuer den SVG-Export und SVG-Logos (wird erst
 rem  --exclude-module PyQt6/PyQt5  falls in der Umgebung noch PyQt installiert ist: nur PySide6 einpacken (LGPL)
 rem  --hidden-import plc_*  Module, die plc_logger.py erst zur Laufzeit je nach Betriebsart importiert
 rem  --collect-all flask/werkzeug  Webserver (Flask) samt Zusatzdateien; --add-data web_static  Chart.js
+rem  --hidden-import cryptography.*  selbstsigniertes HTTPS-Zertifikat des Webservers (wird erst bei Bedarf importiert)
 echo [4/6] PyInstaller: PLCLogger ...
 "%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCLogger --icon app.ico ^
     --distpath build\p1 --workpath build\w1 --paths src ^
     --collect-submodules plc_treiber --add-data "src\plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 ^
     --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_about --hidden-import plc_export --collect-all openpyxl --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
     --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_recorder ^
-    --hidden-import plc_web --hidden-import plc_svg --hidden-import plc_util ^
+    --hidden-import plc_web --hidden-import plc_svg --hidden-import plc_util --hidden-import plc_webauth ^
+    --hidden-import plc_report --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog ^
+    --hidden-import cryptography.x509 --hidden-import cryptography.hazmat.primitives.asymmetric.rsa ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
     src\plc_logger.py || goto :fail
 
@@ -127,6 +130,7 @@ echo [5/6] PyInstaller: PLCKonfiguration ...
     --distpath build\p2 --workpath build\w2 --paths src ^
     --collect-submodules plc_treiber --add-data "src\plc_treiber\_vorlage.py;plc_treiber" --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 ^
     --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_about --hidden-import plc_export --collect-all openpyxl --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
+    --hidden-import plc_webauth --hidden-import plc_web_dialog --hidden-import plc_report ^
     src\plc_config.py || goto :fail
 
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die

@@ -71,6 +71,148 @@
 @ &Über {0} …
 > 
 
+# ---------------- plc_analysis.py
+
+@ Hann (Standard)
+> 
+
+@ Hamming
+> 
+
+@ Blackman
+> 
+
+@ Rechteck (ohne Fenster)
+> 
+
+@ Flat-Top (genaue Amplituden)
+> 
+
+# ---------------- plc_analysis_dialog.py
+
+@ Zeitbereich:
+> 
+
+@ Aktualisieren
+> 
+
+@ Daten neu holen (z. B. während einer laufenden Aufzeichnung)
+> 
+
+@ Bild speichern …
+> 
+
+@ Werte speichern (CSV) …
+> 
+
+@ Schließen
+> 
+
+@ Bild speichern
+> 
+
+@ PNG-Bild (*.png)
+> 
+
+@ Die Datei konnte nicht geschrieben werden.
+> 
+
+@ Werte speichern
+> 
+
+@ Es sind keine Werte vorhanden.
+> 
+
+@ CSV-Datei (*.csv)
+> 
+
+@ XY-Diagramm
+> 
+
+@ Punkte
+> 
+
+@ Linie (zeitliche Reihenfolge)
+> 
+
+@ Linie und Punkte
+> 
+
+@ Ausgleichsgerade und Korrelation
+> 
+
+@ X-Achse:
+> 
+
+@ Darstellung:
+> 
+
+@ <b>Y-Achse</b> (eine oder mehrere Variablen)
+> 
+
+@ Bitte eine X-Variable und mindestens eine Y-Variable wählen.
+> 
+
+@ Im gewählten Zeitbereich liegen keine Messwerte.
+> 
+
+@ {0}: r = {1:.4f}, Gerade y = {2:.5g}·x {3:+.5g}
+> 
+
+@ {0} Messpunkte im Zeitbereich.
+> 
+
+@ Frequenzanalyse (FFT)
+> 
+
+@ Mittelwert abziehen
+> 
+
+@ Linearen Trend abziehen
+> 
+
+@ nichts abziehen
+> 
+
+@ Frequenz [Hz]
+> 
+
+@ Periodendauer [s]
+> 
+
+@ Amplitude logarithmisch
+> 
+
+@ Variable:
+> 
+
+@ Fenster:
+> 
+
+@ Vorbehandlung:
+> 
+
+@ Die Werte werden auf gleichmäßige Abstände umgerechnet. Höchste Frequenz = halbe Abtastrate; feinere Auflösung durch einen längeren Zeitbereich.
+> 
+
+@ Zu wenige Messwerte im gewählten Zeitbereich (mindestens 8).
+> 
+
+@ Periodendauer
+> 
+
+@ Frequenz
+> 
+
+@ Amplitude
+> 
+
+@ {0} Werte, Abtastrate {1:.4g} Hz (Abstand {2:.4g} s), Auflösung {3:.4g} Hz, höchste Frequenz {4:.4g} Hz, Effektivwert {5:.4g}
+> 
+
+@ Stärkste Frequenzen: 
+> 
+
 # ---------------- plc_block_dialog.py
 
 @ Name
@@ -207,6 +349,12 @@
 @ Raster (Grid)
 > 
 
+@ Dauernd
+> 
+
+@ Per Trigger mit Vor- und Nachlauf
+> 
+
 # ---------------- plc_config.py
 
 @ Typ
@@ -276,6 +424,42 @@
 > 
 
 @ Archiv-Ordner:
+> 
+
+@ Per Trigger: in CSV-Datei/Datenbank wird nur geschrieben, wenn die Startbedingung erfüllt ist – mit den Werten der Vorlaufzeit davor und der Nachlaufzeit danach. Jede Aufnahme bekommt eine eigene CSV-Datei. Die Anzeige läuft immer.
+> 
+
+@ z. B. {Druck} > 5 or {Störung} == 1
+> 
+
+@ Bedingung wie bei Triggern und berechneten Variablen; wahr (≠ 0) startet die Aufnahme
+> 
+
+@ Bedingung mit dem Formeleditor bearbeiten
+> 
+
+@ So viele Sekunden vor dem Trigger werden mitgespeichert (Ringspeicher)
+> 
+
+@ So lange wird nach dem Ende der Bedingung weiter gespeichert
+> 
+
+@ Höchstdauer einer Aufnahme (0 = unbegrenzt); danach muss die Bedingung erst wieder falsch werden
+> 
+
+@ Vorlauf
+> 
+
+@ Nachlauf
+> 
+
+@ max.
+> 
+
+@ Aufzeichnung:
+> 
+
+@ Startbedingung:
 > 
 
 @ Bilddatei (PNG/SVG/JPG), wird im Logger rechts oben angezeigt
@@ -350,6 +534,45 @@
 @ Aktualisierung im Browser:
 > 
 
+@ HTTPS (verschlüsselt)
+> 
+
+@ Ohne eigenes Zertifikat wird einmalig ein selbstsigniertes erzeugt (Ordner web_tls); der Browser fragt dann beim ersten Aufruf nach
+> 
+
+@ leer = selbstsigniert
+> 
+
+@ leer = im Zertifikat enthalten
+> 
+
+@ Benutzer …
+> 
+
+@ Anmeldung mit Benutzer und Passwort einrichten
+> 
+
+@ Zertifikat (PEM):
+> 
+
+@ Zertifikat wählen
+> 
+
+@ Zertifikat (*.pem *.crt *.cer);;Alle Dateien (*)
+> 
+
+@ Schlüssel (PEM):
+> 
+
+@ Schlüssel wählen
+> 
+
+@ Schlüssel (*.pem *.key);;Alle Dateien (*)
+> 
+
+@ Anmeldung:
+> 
+
 @ Projekt && Steuerungen
 > 
 
@@ -366,6 +589,9 @@
 > 
 
 @ Trigger && Ereignisse
+> 
+
+@ Berichte (PDF)
 > 
 
 @ Auto-Skalierung
@@ -411,6 +637,27 @@
 > 
 
 @ <b>Diagramme › Y-Achsen › Variablen</b><br>Variable auf eine Y-Achse oder auf eine andere Variable ziehen
+> 
+
+@ Suchen: Name, Adresse, Formel … (* ? als Platzhalter, -Wort schließt aus)
+> 
+
+@ Mehrere Wörter müssen alle vorkommen; Strg+F springt hierher
+> 
+
+@ Nur Variablen dieser Steuerung zeigen
+> 
+
+@ alle Arten
+> 
+
+@ nur gelesene
+> 
+
+@ nur berechnete
+> 
+
+@ ohne Adresse
 > 
 
 @ <b>Variablen</b>
@@ -560,6 +807,36 @@
 @ Ein Trigger schreibt einen Eintrag mit Zeitstempel ins Ereignisprotokoll, sobald seine Bedingung erfüllt ist (z. B. <code>{Temperatur} &gt; 80</code>). Offene Ereignisse zeigt der Logger in der Statusleiste an; quittiert wird im Ereignis-Viewer.
 > 
 
+@ PDF-Bericht automatisch erstellen
+> 
+
+@ Am Ende jedes Zeitraums: Kennwerte, Verlauf aller Diagramme und Ereignisse; beim Stoppen ein Teilbericht
+> 
+
+@ Beginn der Schichten (Uhrzeiten, durch Komma getrennt)
+> 
+
+@ Uhrzeit, zu der Tag, Woche (Montag) und Monat beginnen, z. B. 06:00
+> 
+
+@ Ordner für Berichte
+> 
+
+@ Zeitraum:
+> 
+
+@ Schichtbeginne:
+> 
+
+@ Tagesbeginn:
+> 
+
+@ Ordner:
+> 
+
+@ Der Bericht enthält Minimum, Maximum, Mittelwert und Streuung je Variable, den Verlauf jedes Diagramms und die Ereignisse des Zeitraums. Von Hand: Logger › Analyse › PDF-Bericht.
+> 
+
 @ keine Trigger angelegt
 > 
 
@@ -663,6 +940,30 @@
 > 
 
 @ {0} Blöcke mit {1} Variablen – werden mit je einer Anfrage gelesen.
+> 
+
+@ alle Steuerungen
+> 
+
+@ {0} von {1}
+> 
+
+@ {0} Variablen
+> 
+
+@ keine (ohne Anmeldung)
+> 
+
+@ {0} Benutzer: {1}
+> 
+
+@ Tipp: HTTPS einschalten, sonst werden Passwörter unverschlüsselt übertragen.
+> 
+
+@ Startbedingung
+> 
+
+@ Startbedingung der Aufzeichnung
 > 
 
 @ Archiv-Ordner wählen
@@ -791,6 +1092,30 @@
 @ Fehlerhafte Trigger (werden beim Aufzeichnen übersprungen):\n\n
 > 
 
+@ Schichtbeginne
+> 
+
+@ Tagesbeginn
+> 
+
+@ Berichte
+> 
+
+@ {0}: Uhrzeiten bitte als hh:mm, durch Komma getrennt (z. B. 06:00,14:00,22:00).
+> 
+
+@ keine Startbedingung angegeben
+> 
+
+@ unbekannte Variablen: 
+> 
+
+@ Aufzeichnung per Trigger
+> 
+
+@ Startbedingung: {0}
+> 
+
 @ Gespeichert: {0}
 > 
 
@@ -849,6 +1174,17 @@
 > 
 
 @ Verbindung fehlgeschlagen
+> 
+
+# ---------------- plc_csvjoin.py
+
+@ Das Archiv enthält keine CSV-Datei.
+> 
+
+@ Die Datei ist leer.
+> 
+
+@ Unbekannter Aufbau (erwartet: Zeit;Epoch;Variablen …)
 > 
 
 # ---------------- plc_db.py
@@ -1077,9 +1413,6 @@
 @ Abbrechen
 > 
 
-@ Schließen
-> 
-
 @ Breche ab …
 > 
 
@@ -1276,9 +1609,6 @@
 @ Name fehlt oder enthält ';'
 > 
 
-@ unbekannte Variablen: 
-> 
-
 @ Meldetext: unbekannte Variablen 
 > 
 
@@ -1286,6 +1616,12 @@
 > 
 
 @ Trigger {0} übersprungen: {1}
+> 
+
+@ gegangen: {0}
+> 
+
+@ quittiert: {0} ({1})
 > 
 
 # ---------------- plc_export.py
@@ -1518,9 +1854,6 @@
 
 # ---------------- plc_gui.py
 
-@ Das Archiv enthält keine CSV-Datei.
-> 
-
 @ Zum Umordnen ziehen und auf die Titelzeile eines anderen Diagramms ablegen
 > 
 
@@ -1602,6 +1935,12 @@
 @ Im Online-Modus Zeit und Werte aller Kurven an der Mausposition anzeigen
 > 
 
+@ Trigger-Marken an der Zeitachse
+> 
+
+@ Ereignisse, Beginn von Trigger-Aufnahmen und Notizen als senkrechte Linie im Diagramm
+> 
+
 @ Screenshot
 > 
 
@@ -1618,6 +1957,12 @@
 > 
 
 @ Datei
+> 
+
+@ CSV-Dateien aneinanderhängen und speichern …
+> 
+
+@ Mehrere Aufzeichnungen nach der Zeit zusammenfügen, als neue CSV-Datei speichern und offline anzeigen
 > 
 
 @ Werte exportieren (CSV/Excel) …
@@ -1668,6 +2013,24 @@
 @ Diagramme
 > 
 
+@ XY-Diagramm …
+> 
+
+@ Variablen über einer anderen Variable darstellen (z. B. Druck über Hub)
+> 
+
+@ Frequenzanalyse (FFT) …
+> 
+
+@ Amplitudenspektrum einer Variable, z. B. für Schwingungen
+> 
+
+@ PDF-Bericht erstellen …
+> 
+
+@ Bericht mit Kennwerten, Verlauf und Ereignissen für einen Zeitbereich als PDF
+> 
+
 @ PID-Optimierung: {0} …
 > 
 
@@ -1686,6 +2049,15 @@
 @ \nZykluszeit {0:.0f} ms
 > 
 
+@ ⏺ Aufnahme läuft
+> 
+
+@ ⏸ wartet auf Trigger
+> 
+
+@ Aufzeichnung per Trigger: gespeichert wird nur bei erfüllter Startbedingung (mit Vor- und Nachlauf)
+> 
+
 @ Es sind noch keine (oder zu wenige) Messdaten vorhanden. Bitte aufzeichnen oder eine CSV-Datei laden.
 > 
 
@@ -1696,6 +2068,27 @@
 > 
 
 @ Alle Daten
+> 
+
+@ PDF-Bericht
+> 
+
+@ Es sind noch keine Messdaten vorhanden.
+> 
+
+@ PDF-Bericht speichern
+> 
+
+@ PDF-Datei (*.pdf)
+> 
+
+@ Der Bericht konnte nicht erstellt werden:\n{0}
+> 
+
+@ Bericht erstellt: {0}
+> 
+
+@ Es sind noch keine Messdaten vorhanden. Bitte aufzeichnen oder eine CSV-Datei laden.
 > 
 
 @ 🔔 {0} offen
@@ -1722,10 +2115,22 @@
 @ Der Webserver ist nicht aktiviert.\nAktivierung: Konfigurationsprogramm → Webserver.
 > 
 
-@ ?token={0}
+@ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}
 > 
 
-@ Adresse für Tablet/Smartphone im selben Netz:\n\n{0}\n\n(in die Zwischenablage kopiert)
+@ Anmeldung erforderlich ({0} Benutzer).
+> 
+
+@ Mit Zugriffscode (ohne Anmeldung):\n{0}
+> 
+
+@ HTTPS-Zertifikat, SHA-256-Fingerabdruck (zum Vergleich mit der Anzeige im Browser):\n{0}
+> 
+
+@ Hinweis: unverschlüsselte Verbindung (HTTP).
+> 
+
+@ (Adresse in die Zwischenablage kopiert)
 > 
 
 @ Aktuell
@@ -1767,7 +2172,13 @@
 @ Offline
 > 
 
+@ CSV laden (mehrere Dateien = aneinanderhängen)
+> 
+
 @ CSV/ZIP (*.csv *.zip);;Alle Dateien (*)
+> 
+
+@ CSV-Dateien zum Aneinanderhängen wählen
 > 
 
 @ Fehler beim Laden
@@ -1779,7 +2190,19 @@
 @ Die Datei enthält keine Daten.
 > 
 
+@ {0} Dateien aneinandergehängt: {1} bis {2} ({3} Zeilen)
+> 
+
 @ Geladen: {0} ({1} Zeilen)
+> 
+
+@ Zusammengefügte Aufzeichnung speichern
+> 
+
+@ Bitte einen neuen Dateinamen wählen – die gewählten Dateien werden nicht überschrieben.
+> 
+
+@ gespeichert: {0}
 > 
 
 @ Geladen: {0} ({1} Zeitpunkte)
@@ -1798,9 +2221,6 @@
 > 
 
 @ Alle Daten ({0} bis {1})
-> 
-
-@ Im gewählten Zeitbereich liegen keine Messwerte.
 > 
 
 @ Exportiert: {0} ({1} Zeilen, {2} Variablen)
@@ -1971,9 +2391,6 @@
 @ Stellwert:
 > 
 
-@ Zeitbereich:
-> 
-
 @ Zeitbereich wählen und „Strecke bestimmen und berechnen“ klicken.
 > 
 
@@ -2051,10 +2468,16 @@
 @ Starte …
 > 
 
-@ Aufzeichnung gestartet → 
+@ CSV-Ordner {0}
+> 
+
+@ Aufzeichnung per Trigger: warte auf „{0}“ (Vorlauf {1:g} s, Nachlauf {2:g} s) → {3}
 > 
 
 @ nur Anzeige (weder CSV noch Datenbank)
+> 
+
+@ Aufzeichnung gestartet → 
 > 
 
 @ {0} Trigger aktiv → Ereignisprotokoll {1}
@@ -2066,6 +2489,9 @@
 @ gestoppt
 > 
 
+@ Gestoppt – {0} Trigger-Aufnahmen
+> 
+
 @ Gestoppt
 > 
 
@@ -2075,7 +2501,90 @@
 @ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
 > 
 
+@ ⚠ Bericht konnte nicht erstellt werden: {0}
+> 
+
+@ ⚠ Aufzeichnung per Trigger: {0} – es wird dauernd aufgezeichnet
+> 
+
+@ Aufnahme
+> 
+
 @ ⚠ CSV-Fehler: {0}
+> 
+
+@ Aufnahme {0} gestartet: {1}
+> 
+
+@ ○ Aufnahme {0} beendet ({1} Zeilen){2}
+> 
+
+# ---------------- plc_report.py
+
+@ Schicht
+> 
+
+@ Tag
+> 
+
+@ Woche
+> 
+
+@ Monat
+> 
+
+@ Schicht {0} ({1:%H:%M}–{2:%H:%M}) am {1:%d.%m.%Y}
+> 
+
+@ Schicht {0:%d.%m.%Y %H:%M}–{1:%H:%M}
+> 
+
+@ KW {0}/{1}
+> 
+
+@ Seite {0}
+> 
+
+@ PLC Datenlogger – erstellt {0:%d.%m.%Y %H:%M}
+> 
+
+@ Bericht {0}: {1}
+> 
+
+@  (unvollständig)
+> 
+
+@ Messdaten:
+> 
+
+@ {0} Zeilen, {1} bis {2}
+> 
+
+@ Hinweis:
+> 
+
+@ Kennwerte
+> 
+
+@ {0:.1f} % ein
+> 
+
+@ {0}× ein
+> 
+
+@ Verlauf
+> 
+
+@ Ereignisse und Notizen
+> 
+
+@ Text
+> 
+
+@ Gegangen
+> 
+
+@ Keine Ereignisse im Zeitraum.
 > 
 
 # ---------------- plc_splash.py
@@ -2214,6 +2723,59 @@
 @ {0} Trigger, davon {1} aktiv.
 > 
 
+# ---------------- plc_web_dialog.py
+
+@ Passwort für {0}
+> 
+
+@ Neues Passwort:
+> 
+
+@ Wiederholen:
+> 
+
+@ Mindestens {0} Zeichen.
+> 
+
+@ Passwort
+> 
+
+@ Das Passwort ist zu kurz (mindestens {0} Zeichen).
+> 
+
+@ Die beiden Eingaben stimmen nicht überein.
+> 
+
+@ Webserver – Benutzer
+> 
+
+@ Hinzufügen …
+> 
+
+@ Passwort ändern …
+> 
+
+@ Ohne Benutzer ist keine Anmeldung nötig (nur der Zugriffscode schützt, falls eingetragen). Für Anmeldungen über das Netz HTTPS einschalten, sonst ist das Passwort mitlesbar.
+> 
+
+@ Benutzer hinzufügen
+> 
+
+@ Benutzername:
+> 
+
+@ Benutzer
+> 
+
+@ Den Benutzer gibt es schon.
+> 
+
+@ Benutzer entfernen
+> 
+
+@ Benutzer „{0}“ entfernen?
+> 
+
 # ---------------- plc_treiber/__init__.py
 
 @ {0} (Treiber fehlt)
@@ -2226,6 +2788,181 @@
 > 
 
 @ Treiber-Kürzel „{0}“ ist bereits vergeben
+> 
+
+# ---------------- plc_treiber/ads.py
+
+@ Zielport nicht gefunden (SPS-Laufzeit gestartet? Port 851/801)
+> 
+
+@ Zielrechner nicht gefunden – Route in TwinCAT anlegen (AMS-Net-ID und IP dieses Rechners)
+> 
+
+@ Port gesperrt
+> 
+
+@ Dienst nicht unterstützt
+> 
+
+@ Indexgruppe ungültig
+> 
+
+@ Indexoffset ungültig
+> 
+
+@ Datengröße passt nicht
+> 
+
+@ Daten ungültig
+> 
+
+@ Symbol nicht gefunden
+> 
+
+@ Symbolversion ungültig (SPS neu geladen?)
+> 
+
+@ Zeitüberschreitung
+> 
+
+@ Zu viele Unteranfragen
+> 
+
+@ ADS-Fehler 0x{0:X}: {1}
+> 
+
+@ AMS-Net-ID mit 6 Zahlen erwartet, z. B. 5.12.34.56.1.1
+> 
+
+@ AMS-Net-ID: Zahlen 0 … 255
+> 
+
+@ Bitadresse mit Bitnummer, z. B. %MX2.3
+> 
+
+@ Ungültige ADS-Adresse „{0}“ (z. B. MAIN.fTemperatur, GVL.aWerte[3], %MW10, 0x4020:16)
+> 
+
+@ Verbindung von der Steuerung getrennt
+> 
+
+@ nicht verbunden
+> 
+
+@ Ungültige ADS-Antwort
+> 
+
+@ ADS-Antwort zu kurz
+> 
+
+@ Typ {0} wird nicht unterstützt
+> 
+
+@ Antwort zu kurz
+> 
+
+@ Beckhoff TwinCAT (ADS)
+> 
+
+@ TwinCAT 2/3 über ADS (AMS/TCP), symbolisch oder Indexgruppe/-offset; Route erforderlich
+> 
+
+@ IP-Adresse
+> 
+
+@ AMS-Net-ID der Steuerung
+> 
+
+@ z. B. 5.12.34.56.1.1 (leer = IP-Adresse + .1.1)
+> 
+
+@ AMS-Port
+> 
+
+@ 851 = SPS-Laufzeit 1 (TwinCAT 3), 852 … weitere; 801 = TwinCAT 2
+> 
+
+@ Eigene AMS-Net-ID
+> 
+
+@ Muss zur Route in der Steuerung passen (leer = eigene IP-Adresse + .1.1)
+> 
+
+@ Eigener AMS-Port
+> 
+
+@ TCP-Port
+> 
+
+@ Variablen je Anfrage
+> 
+
+@ Höchstzahl Teile je Summenanfrage (TwinCAT: 500)
+> 
+
+@ Zeitlimit
+> 
+
+@ Symbol
+> 
+
+@ Symbolname (MAIN.fTemperatur, GVL.aWerte[3], .gWert), %MW10/%MD4/%MX2.3/%IW0/%QX0.1 oder Indexgruppe:Offset (0x4020:16)
+> 
+
+@ Array-Name ohne Index, z. B. MAIN.aWerte
+> 
+
+@ Aus TwinCAT wählen…
+> 
+
+@ Array-Name (Symbol ohne Index) erwartet, z. B. MAIN.aWerte
+> 
+
+# ---------------- plc_treiber/ads_browser.py
+
+@ TwinCAT – Variablen wählen ({0})
+> 
+
+@ Lese Symboltabelle …
+> 
+
+@ Filter (Name, Typ, Kommentar) …
+> 
+
+@ Kommentar
+> 
+
+@ Markiertes Array als Block …
+> 
+
+@ Neue Variablen anlegen in:
+> 
+
+@ Auswahl übernehmen
+> 
+
+@ {0} aufzeichenbare Symbole. Variablen anhaken; Arrays per Doppelklick als Block.
+> 
+
+@ Symboltabelle nicht lesbar: {0}
+> 
+
+@ bereits in der Liste
+> 
+
+@ Block
+> 
+
+@ Bitte ein Array aus Zahlen markieren.
+> 
+
+@ Array als Block – {0}
+> 
+
+@ Erster Index:
+> 
+
+@ Anzahl:
 > 
 
 # ---------------- plc_treiber/base.py
@@ -2250,9 +2987,6 @@
 @ ControlLogix, CompactLogix, Micro800; Tag-Namen wie in Studio 5000
 > 
 
-@ IP-Adresse
-> 
-
 @ CIP-Pfad
 > 
 
@@ -2260,9 +2994,6 @@
 > 
 
 @ Steuerungstyp
-> 
-
-@ Zeitlimit
 > 
 
 @ Zeitlimit je Lesezyklus
@@ -2283,18 +3014,12 @@
 @ Ungültiger Tag-Name „{0}“
 > 
 
-@ Typ {0} wird nicht unterstützt
-> 
-
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
 > 
 
 # ---------------- plc_treiber/clx_browser.py
 
 @ Array als Block übernehmen
-> 
-
-@ Erster Index:
 > 
 
 @ Anzahl (max. 1000):
@@ -2331,12 +3056,6 @@
 > 
 
 @ Datentyp
-> 
-
-@ Auswahl übernehmen
-> 
-
-@ Neue Variablen anlegen in:
 > 
 
 @ zwischengespeicherte Liste – mit „Tag-Liste laden“ aktualisieren
@@ -2379,9 +3098,6 @@
 > 
 
 @ Typ wird nicht aufgezeichnet
-> 
-
-@ bereits in der Liste
 > 
 
 @ {0} Tags
@@ -2430,6 +3146,149 @@
 @ keine Antwort innerhalb von {0} ms
 > 
 
+# ---------------- plc_treiber/fins.py
+
+@ lokaler Knoten nicht im Netz
+> 
+
+@ Token-Zeitüberschreitung
+> 
+
+@ Zielknoten nicht im Netz
+> 
+
+@ Zieleinheit fehlt
+> 
+
+@ Antwort-Zeitüberschreitung
+> 
+
+@ Befehl nicht unterstützt
+> 
+
+@ Zieladresse falsch (Knoten/Netz)
+> 
+
+@ Befehl zu lang
+> 
+
+@ Befehl zu kurz
+> 
+
+@ Anzahl Elemente passt nicht
+> 
+
+@ Bereich existiert nicht
+> 
+
+@ Adresse außerhalb des Bereichs
+> 
+
+@ Adressbereich überschritten
+> 
+
+@ Antwort zu lang (weniger Wörter je Anfrage)
+> 
+
+@ Bereich geschützt
+> 
+
+@ Ungültige Omron-Adresse „{0}“ (z. B. D100, W10, H5, CIO0.05, E0_100, T5)
+> 
+
+@ Bank nur beim erweiterten Datenspeicher (E0_100): {0}
+> 
+
+@ Erweiterter Datenspeicher mit Bank angeben, z. B. E0_100: {0}
+> 
+
+@ Bank 0 … 24 erwartet: {0}
+> 
+
+@ „{0}“: Adresse größer als {1}
+> 
+
+@ Bitnummer 00 … 15 erwartet: {0}
+> 
+
+@ Timer/Zähler: nur der Istwert (ohne Bit) ist lesbar: {0}
+> 
+
+@ Keine FINS/TCP-Antwort
+> 
+
+@ FINS/TCP abgelehnt (Fehler 0x{0:08X}) – Knotennummer belegt?
+> 
+
+@ Unerwartete FINS/TCP-Antwort
+> 
+
+@ Ungültige FINS/TCP-Antwort
+> 
+
+@ FINS/TCP-Fehler 0x{0:08X}
+> 
+
+@ Ungültige FINS-Antwort
+> 
+
+@ FINS-Fehler 0x{0:04X}: {1}
+> 
+
+@ FINS-Antwort zu kurz
+> 
+
+@ Omron (FINS)
+> 
+
+@ CJ, CS, CP, NJ/NX über Ethernet; FINS/TCP oder FINS/UDP, Port 9600
+> 
+
+@ Port
+> 
+
+@ Protokoll
+> 
+
+@ Zielknoten
+> 
+
+@ FINS-Knotennummer der Steuerung (0 = automatisch: TCP von der Steuerung, UDP letztes IP-Byte)
+> 
+
+@ Quellknoten
+> 
+
+@ Eigene FINS-Knotennummer (0 = automatisch)
+> 
+
+@ Zielnetz
+> 
+
+@ Quellnetz
+> 
+
+@ Wörter je Anfrage
+> 
+
+@ Ältere CPUs/CP1 über UDP: ggf. kleiner (z. B. 500)
+> 
+
+@ Lücke zusammenfassen bis
+> 
+
+@  Wörter
+> 
+
+@ Omron-Adresse: D100, W10, H5, A300, CIO100 (oder 100), E0_100, T5, C3; Bits: D100.05, 0.01
+> 
+
+@ Startadresse, z. B. D100 (Elemente folgen lückenlos)
+> 
+
+@ Bitnummer nur beim Typ BOOL
+> 
+
 # ---------------- plc_treiber/kvhostlink.py
 
 @ Gerätenummer ungültig
@@ -2465,12 +3324,6 @@
 @ Bitnummer 0–15 erwartet: {0}
 > 
 
-@ nicht verbunden
-> 
-
-@ Verbindung von der Steuerung getrennt
-> 
-
 @ KV-Fehler {0}: {1} ({2})
 > 
 
@@ -2486,19 +3339,7 @@
 @ KV-8000/7000/5000/3000/Nano, KV-X über Ethernet, Host-Link-Protokoll (Port 8501)
 > 
 
-@ Port
-> 
-
 @ Host-Link-Port, Standard 8501
-> 
-
-@ Wörter je Anfrage
-> 
-
-@ Lücke zusammenfassen bis
-> 
-
-@  Wörter
 > 
 
 @ Gerät
@@ -2513,10 +3354,66 @@
 @ Bitgeräte haben den Typ BOOL
 > 
 
-@ Bitnummer nur beim Typ BOOL
+@ Timer/Zähler: Istwert als DINT/UDINT lesen
 > 
 
-@ Timer/Zähler: Istwert als DINT/UDINT lesen
+# ---------------- plc_treiber/logo.py
+
+@ VM-Adresse größer als 1469: {0}
+> 
+
+@ Bitadresse ohne B/W/D schreiben, z. B. V10.3: {0}
+> 
+
+@ {0} gibt es bei der LOGO! {1} nicht im VM
+> 
+
+@ {0}: Nummer 1 … {1} erwartet
+> 
+
+@ Ungültige LOGO!-Adresse „{0}“ (z. B. VW10, V2.3, I1, Q2, M5, AI1, AM3)
+> 
+
+@ Bitadresse nur mit Typ BOOL
+> 
+
+@ keine Verbindung
+> 
+
+@ Siemens LOGO! (0BA7/0BA8)
+> 
+
+@ LOGO! 7 und 8 über S7-Kommunikation (python-snap7); VM-Adressen oder I/Q/M/AI/AQ/AM
+> 
+
+@ LOGO! 8 (0BA8, 8.FS4, 8.3, 8.4)
+> 
+
+@ LOGO! 7 (0BA7)
+> 
+
+@ Bestimmt, wo I/Q/M/AI/AQ/AM im Variablenspeicher liegen
+> 
+
+@ TSAP der LOGO!
+> 
+
+@ Wie in LOGO!Soft bei der Server-Verbindung („Lokaler TSAP“), z. B. 02.00 oder 20.00
+> 
+
+@ TSAP des Loggers
+> 
+
+@ Wie in LOGO!Soft bei der Server-Verbindung („Entfernter TSAP“), z. B. 01.00 oder 10.00
+> 
+
+@ LOGO!: VW10, VD20, V2.3, VB5, I1, Q2, M5, NI1, AI1, AQ1, AM3
+> 
+
+@ Startadresse im VM, z. B. VW100 (Elemente folgen lückenlos)
+> 
+
+@ TSAP als hh.hh (z. B. 02.00) oder Zahl angeben
 > 
 
 # ---------------- plc_treiber/modbus.py
@@ -2684,7 +3581,22 @@
 @ Signieren und verschlüsseln
 > 
 
+@ Zyklisch lesen (Read)
+> 
+
+@ Subscription (Server meldet Änderungen)
+> 
+
 @ Ungültige NodeId: {0}
+> 
+
+@ Subscription fehlgeschlagen: {0}: {1}
+> 
+
+@ Subscription: {0}
+> 
+
+@ Subscription beendet: {0}
 > 
 
 @ Array – bitte als Block lesen
@@ -2705,16 +3617,16 @@
 @ Adresse des OPC-UA-Servers, z. B. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)
 > 
 
+@ Betriebsart
+> 
+
+@ Subscription: der Server meldet nur Änderungen (weniger Netzlast bei vielen Werten)
+> 
+
 @ Sicherheit
 > 
 
-@ Benutzer
-> 
-
 @ Leer = anonym
-> 
-
-@ Passwort
 > 
 
 @ Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.
@@ -2730,6 +3642,18 @@
 > 
 
 @ Schlüsseldatei (.pem) zum Client-Zertifikat
+> 
+
+@ Meldeintervall (Subscription)
+> 
+
+@ So oft schickt der Server gesammelte Änderungen (0 = Intervall der Steuerung)
+> 
+
+@ Abtastrate (Subscription)
+> 
+
+@ So oft prüft der Server die Werte auf Änderung (0 = wie das Meldeintervall)
 > 
 
 @ Knoten je Anfrage
@@ -2770,25 +3694,45 @@
 @ Filter (geladene Knoten) …
 > 
 
-@ Markiertes Array als Block …
-> 
-
 @ Verbunden. Ordner aufklappen, Variablen anhaken; Arrays per Doppelklick als Block.
 > 
 
 @ Datentyp nicht aufzeichenbar
 > 
 
-@ Block
+# ---------------- plc_treiber/pccc.py
+
+@ Bitnummer 0 … 15 erwartet: {0}
 > 
 
-@ Bitte ein Array aus Zahlen markieren.
+@ Ungültige Adresse „{0}“ (z. B. N7:0, F8:2, B3:0/5, T4:0.ACC, I:0/1)
 > 
 
-@ Array als Block – {0}
+@ Lesefehler: {0}
 > 
 
-@ Anzahl:
+@ kein Wert
+> 
+
+@ Allen-Bradley MicroLogix / SLC 500 (PCCC)
+> 
+
+@ MicroLogix 1100/1400, SLC 5/05 über EtherNet/IP (pycomm3); Adressen wie N7:0, F8:2, B3:0/5
+> 
+
+@ Nur bei SLC 5/03/04 hinter einem ENBT-/Brückenmodul, z. B. bp/1 (leer = direkt)
+> 
+
+@ RSLogix-500-Adresse: N7:0, F8:2, L9:0, B3:0/5, N7:10/3, T4:0.ACC, C5:1.PRE, I:0/1, O:0/2
+> 
+
+@ Erstes Element, z. B. N7:0 (Elemente derselben Datei folgen lückenlos)
+> 
+
+@ BOOL braucht eine Bitadresse, z. B. B3:0/5
+> 
+
+@ Blöcke nur in N-, F-, L- und B-Dateien
 > 
 
 # ---------------- plc_treiber/s5as511.py
@@ -3068,9 +4012,6 @@
 @ Anzahl Punkte zu groß
 > 
 
-@ Adresse außerhalb des Bereichs
-> 
-
 @ Datenlänge passt nicht
 > 
 
@@ -3126,9 +4067,6 @@
 > 
 
 @ In GX Works eingestellter SLMP-Port (z. B. 5007, 5000, 1025)
-> 
-
-@ Protokoll
 > 
 
 @ Serie
@@ -3188,9 +4126,6 @@
 > 
 
 @ Rolle
-> 
-
-@ Variablen je Anfrage
 > 
 
 @ Höchstzahl Variablen je Leseanfrage (größere Mengen werden aufgeteilt)
@@ -3270,9 +4205,6 @@
 @ {0} Variablen ({1})
 > 
 
-@ {0} Variablen
-> 
-
 @ Bitte ein eindimensionales Array aus Zahlen oder BOOL markieren (z. B. Array[1..100] of Real).
 > 
 
@@ -3327,9 +4259,6 @@
 > 
 
 @ Relaisbefehl: falsche Länge
-> 
-
-@ Befehl nicht unterstützt
 > 
 
 @ Zugriff verweigert (Schlüssel/Modus)
@@ -3422,11 +4351,6 @@
 > 
 
 @ Bibliothek fehlt: {0}
-> 
-
-# ---------------- plc_treiber/word_common.py
-
-@ Antwort zu kurz
 > 
 
 # ---------------- plc_i18n.py

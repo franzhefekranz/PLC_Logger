@@ -107,6 +107,11 @@ HELP_TOPICS = {
     "PidTuneDialog": "Berechnen (Logger)",
     "AboutDialog": "Lizenz",
     "ExportDialog": "Werte exportieren (CSV/Excel)",
+    "AdsBrowserDialog": "Variablen aus der Steuerung wählen",
+    "XYDialog": "XY-Diagramm",
+    "FftDialog": "Frequenzanalyse (FFT)",
+    "WebUsersDialog": "HTTPS und Anmeldung",
+    "PasswordDialog": "HTTPS und Anmeldung",
 }
 
 

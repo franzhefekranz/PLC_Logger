@@ -2,8 +2,9 @@
 
 **PLC Datenlogger** – liest zyklisch Werte aus Steuerungen vieler Hersteller, zeichnet sie als CSV und/oder in einer
 Datenbank (SQLite, MariaDB, TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics) auf und zeigt sie als y-t-Diagramme an: in der Oberfläche (PySide6, pyqtgraph), im Browser (Webserver) oder
-ohne Oberfläche (Headless). Mit Trigger und Ereignisprotokoll, PID-Regler-Optimierung, Lesemodus für die Datenbank,
-Sprachumschaltung (Deutsch/Englisch).
+ohne Oberfläche (Headless). Mit Trigger und Ereignisprotokoll (Marken an der Zeitachse), Aufzeichnung per Trigger
+mit Vor- und Nachlauf, PID-Regler-Optimierung, XY-Diagramm und FFT, PDF-Berichten je Schicht/Tag/Woche/Monat,
+Lesemodus für die Datenbank, Webserver mit HTTPS und Anmeldung, Sprachumschaltung (Deutsch/Englisch).
 
 Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung mischen. Eingebaute Treiber:
 
@@ -11,11 +12,15 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 |---|---|
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) |
 | `tia` | Siemens S7-1200/1500 symbolisch, auch optimierte Bausteine (s7commplus) |
+| `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) |
+| `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) |
 | `modbus` | Modbus TCP |
 | `modbus_rtu` | Modbus RTU seriell, mehrere Geräte je Schnittstelle (pymodbus) |
-| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua) |
+| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), zyklisch oder Subscription |
+| `ads` | Beckhoff TwinCAT 2/3 über ADS, mit Symbolauswahl |
 | `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC-Protokoll) |
+| `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) |
 | `kvhostlink` | KEYENCE KV (Host Link) |
 | `toyopuc` | JTEKT TOYOPUC (Computer Link) |
 | `s5as511` | Siemens S5 über die PG-Schnittstelle (AS511) |

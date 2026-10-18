@@ -62,6 +62,19 @@ Treiber. Eingebaut sind:
    * - ``s5as511``
      - Siemens S5 über die PG-Schnittstelle (AS511, seriell, 20-mA-Adapter)
      - pyserial; ``DB10.DW4``, ``EW0``, ``MW10``, ``T5``
+   * - ``logo``
+     - Siemens LOGO! 0BA7 und 0BA8 (LOGO! 8, 8.FS4, 8.3, 8.4)
+     - python-snap7; ``VW10``, ``V2.3``, ``I1``, ``Q2``, ``M5``, ``AI1``, ``AM3``
+   * - ``pccc``
+     - Allen-Bradley MicroLogix 1100/1400, SLC 5/05 (EtherNet/IP, PCCC)
+     - pycomm3; ``N7:0``, ``F8:2``, ``B3:0/5``, ``T4:0.ACC``
+   * - ``ads``
+     - Beckhoff TwinCAT 2/3 über ADS (AMS/TCP)
+     - keine Zusatzbibliothek; ``MAIN.fTemperatur``, ``GVL.aWerte[3]``, ``%MW10``;
+       Auswahl aus der Symboltabelle
+   * - ``fins``
+     - Omron CJ, CS, CP, NJ/NX über FINS/TCP oder FINS/UDP
+     - keine Zusatzbibliothek; ``D100``, ``W10``, ``CIO0.05``, ``E0_100``
 
 Weitere Treiber lassen sich **ohne Änderung des Programms** ergänzen: Eine
 Python-Datei im Ordner ``treiber`` des Datenordners genügt (siehe
@@ -102,11 +115,18 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
        ``tia.py``/``tia_io.py``/``tia_taglist.py``/``tia_browser.py``,
        ``clx.py``/``plc_io.py``/``plc_taglist.py``/``plc_browser.py``,
        ``modbus.py``, ``modbus_rtu.py``, ``opcua.py``/``opcua_browser.py``,
-       ``slmp.py``, ``kvhostlink.py``, ``toyopuc.py`` (gemeinsame Grundlage
-       ``word_common.py``), ``s5as511.py`` und ``_vorlage.py`` (Vorlage für eigene
-       Treiber).
-   * - ``plc_web.py``
-     - Webserver (Flask) mit Chart.js-Seite zum Ansehen der Diagramme im Browser.
+       ``slmp.py``, ``kvhostlink.py``, ``toyopuc.py``, ``fins.py`` (gemeinsame Grundlage
+       ``word_common.py``), ``s5as511.py``, ``logo.py``, ``pccc.py``,
+       ``ads.py``/``ads_browser.py`` und ``_vorlage.py`` (Vorlage für eigene Treiber).
+   * - ``plc_web.py``, ``plc_webauth.py``, ``plc_web_dialog.py``
+     - Webserver (Flask) mit Chart.js-Seite zum Ansehen der Diagramme im Browser; HTTPS,
+       Benutzer und Passwörter, Benutzerverwaltung im Konfigurationsprogramm.
+   * - ``plc_report.py``
+     - PDF-Berichte (Kennwerte, Verlauf, Ereignisse) je Schicht/Tag/Woche/Monat oder von Hand.
+   * - ``plc_analysis.py``, ``plc_analysis_dialog.py``
+     - XY-Diagramm und Frequenzanalyse (FFT) im Logger.
+   * - ``plc_csvjoin.py``
+     - Aufzeichnungen (CSV/ZIP) lesen und aneinanderhängen.
    * - ``plc_svg.py``
      - SVG-Export eines Diagramms (unabhängig von Qt).
    * - ``plc_util.py``
@@ -176,8 +196,15 @@ Funktionsumfang:
   automatischer ZIP-Archivierung (Name/Jahr/Monat/Tag), Datenbank-Aufzeichnung mit
   Lesemodus (Zeitraum aus der Datenbank wählen und anzeigen)
 * Berechnete Variablen aus Formeln (z. B. Mittelwert, Differenz, Integral)
-* Trigger und Ereignisprotokoll mit Quittierung und eigenen Notizen
+* Trigger und Ereignisprotokoll mit Quittierung und eigenen Notizen; Trigger-Marken an der
+  Zeitachse der Diagramme
+* **Aufzeichnung per Trigger** mit Ringspeicher: Vor- und Nachlauf einstellbar, jede Aufnahme
+  in einer eigenen CSV-Datei
 * PID-Regler-Optimierung aus aufgezeichneten Sprungantworten
+* **XY-Diagramm** und **Frequenzanalyse (FFT)**
+* **PDF-Berichte** je Schicht, Tag, Woche oder Monat (automatisch) bzw. für einen Zeitbereich
+* CSV-Dateien aneinanderhängen und als neue Datei speichern
+* Webserver wahlweise mit **HTTPS und Anmeldung**
 * Mehrere Diagramme, je Diagramm mehrere Y-Achsen; Seiten/Tabs, Raster-Anordnung
 * Legende mit Livewerten, Online-/Offline-Modus mit Linealen, Balken für Aktualwerte
 * Screenshots einzelner Diagramme als PNG oder SVG
@@ -372,7 +399,7 @@ Der obere Fensterbereich ist in mehrere Reiter gegliedert.
 
        * **Name** – eindeutig, auch für die Status-LED.
        * **Treiber** – Auswahl aus allen geladenen Treibern (``s7``, ``tia``,
-         ``clx``, ``modbus`` und eigene). Beim Wechsel des Treibers werden die
+         ``logo``, ``clx``, ``pccc``, ``modbus``, ``opcua``, ``ads``, ``fins`` … und eigene). Beim Wechsel des Treibers werden die
          Verbindungsparameter auf dessen Standardwerte gesetzt; die IP-Adresse
          bleibt erhalten. Die Typlisten der Variablen dieser Steuerung
          passen sich an.
@@ -443,6 +470,16 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
    * - Beim Beenden archivieren
      - Ist das Häkchen gesetzt (Standard), wird beim Beenden des Loggers auch die
        aktuelle, noch nicht volle CSV-Datei gepackt und archiviert.
+   * - Aufzeichnung
+     - *Dauernd* (Standard) oder *Per Trigger mit Vor- und Nachlauf*: dann wird nur
+       gespeichert, wenn die Startbedingung erfüllt ist (siehe
+       `Aufzeichnung per Trigger (Vor- und Nachlauf) <trigger-aufzeichnung_>`__).
+   * - Startbedingung
+     - Bedingung wie bei Triggern, z. B. ``{Druck} > 5 or {Störung} == 1``; **…**
+       öffnet den Formeleditor.
+   * - Vorlauf, Nachlauf, max.
+     - Sekunden vor dem Trigger (Ringspeicher), nach dem Ende der Bedingung, und die
+       Höchstdauer einer Aufnahme (*unbegrenzt* = 0).
 
 **Reiter „Anzeige“**
 
@@ -507,6 +544,29 @@ Trigger-Editor, **Ereignisprotokoll anzeigen …** den Ereignis-Viewer, und unte
 *Ereignisdatei* lässt sich der Speicherort des Ereignisprotokolls wählen (leer =
 neben der CSV-Datei). Einzelheiten im Kapitel `Trigger und Ereignisprotokoll <ereignisse_>`__.
 
+**Reiter „Berichte (PDF)“**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Feld
+     - Bedeutung
+   * - PDF-Bericht automatisch erstellen
+     - Am Ende jedes Zeitraums schreibt der Logger einen Bericht (auch im
+       Headless-Betrieb); beim Stoppen entsteht ein Teilbericht.
+   * - Zeitraum
+     - *Schicht*, *Tag*, *Woche* (ab Montag) oder *Monat*.
+   * - Schichtbeginne
+     - Uhrzeiten, durch Komma getrennt, z. B. ``06:00,14:00,22:00``.
+   * - Tagesbeginn
+     - Uhrzeit, zu der Tag, Woche und Monat beginnen (z. B. ``06:00`` für einen
+       Produktionstag).
+   * - Ordner
+     - Zielordner (Standard ``berichte`` im Datenordner).
+
+Einzelheiten im Kapitel `PDF-Berichte <pdf-berichte_>`__.
+
 **Reiter „Webserver & Headless“**
 
 .. figure:: images/config_web_headless.png
@@ -535,6 +595,14 @@ neben der CSV-Datei). Einzelheiten im Kapitel `Trigger und Ereignisprotokoll <er
    * - Headless-Modus
      - Der Logger startet ohne Oberfläche und zeichnet nur auf (siehe
        `Headless-Betrieb (nur Aufzeichnung) <headless_>`__).
+   * - HTTPS (verschlüsselt)
+     - Verschlüsselte Verbindung. Ohne eigenes Zertifikat erzeugt das Programm
+       einmalig ein selbstsigniertes (Ordner ``web_tls``).
+   * - Zertifikat / Schlüssel (PEM)
+     - Optional eigenes Zertifikat und Schlüssel (z. B. von der Firmen-CA).
+   * - Anmeldung
+     - **Benutzer …** legt Benutzer mit Passwort an (gespeichert wird nur ein Hash).
+       Ohne Benutzer ist keine Anmeldung nötig. Siehe `HTTPS und Anmeldung <https-anmeldung_>`__.
 
 Aufbau: Diagramme, Y-Achsen und Variablen
 ----------------------------------------------------------------------
@@ -661,6 +729,28 @@ Jede Zeile der Variablentabelle beschreibt einen Wert einer Steuerung:
      - Ergebnis von **Verbindung testen**.
    * - Formel
      - Nur bei berechneten Variablen: die Formel (Doppelklick öffnet den Editor).
+
+.. _variablen-suchen:
+
+Variablen suchen und filtern
+----------------------------------------------------------------------
+
+Über der Variablentabelle stehen ein **Suchfeld** und zwei Auswahllisten
+(``Strg+F`` springt ins Suchfeld):
+
+* **Suchtext** – durchsucht Name, Adresse, Formel, Zuordnung (Diagramm › Y-Achse),
+  Typ und Steuerung; Groß-/Kleinschreibung egal. Mehrere Wörter müssen alle
+  vorkommen (``temp db10``), ``*`` und ``?`` sind Platzhalter (``DB?.DBD*``), ein
+  Wort mit vorangestelltem ``-`` schließt aus (``temp -soll``).
+* **Steuerung** – nur Variablen einer Steuerung (berechnete Variablen bleiben sichtbar).
+* **Art** – *nur gelesene*, *nur berechnete* oder *ohne Adresse* (noch unvollständige
+  Zeilen).
+
+Rechts steht, wie viele Variablen gerade zu sehen sind (*12 von 340*); das Suchfeld
+ist gelb hinterlegt, solange ein Filter wirkt. Ausgeblendete Variablen bleiben in
+der Konfiguration und werden mitgespeichert. **Entfernen** löscht nur markierte,
+sichtbare Zeilen. Eine neu angelegte Variable, die nicht zum Filter passt, setzt
+den Filter zurück.
 
 Zuordnung per Drag & Drop
 ----------------------------------------------------------------------
@@ -1402,6 +1492,40 @@ speichert sie im Ordner ``taglisten`` zwischen.
    ``s7commplus`` ist eine **inoffizielle** Implementierung, nicht von Siemens.
    Neue Konfigurationen zuerst an einer nicht sicherheitsrelevanten Anlage testen.
 
+Treiber ``logo`` – Siemens LOGO! (0BA7/0BA8)
+----------------------------------------------------------------------
+
+Für LOGO! 7 (0BA7) und LOGO! 8 (0BA8, 8.FS4, 8.3, 8.4) über S7-Kommunikation;
+Bibliothek ``python-snap7`` (wie beim Treiber ``s7``).
+
+**In der LOGO! einrichten:** In LOGO!Soft Comfort unter *Extras › Ethernet-Verbindungen*
+(LOGO! 8: *Online-Einstellungen › Zugriffskontrolle*) den Zugriff für HMI bzw. eine
+**Server-Verbindung (S7)** anlegen. Die TSAP-Werte dieser Verbindung müssen zu den
+Parametern hier passen: *Lokaler TSAP* der LOGO! = **TSAP der LOGO!**, *Entfernter TSAP*
+= **TSAP des Loggers**. LOGO! 8 mit freigegebenem HMI-Zugriff: ``02.00`` und ``01.00``
+(Vorgabe).
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse
+     - Adresse der LOGO!.
+   * - Gerät
+     - *LOGO! 8* oder *LOGO! 7* – bestimmt, wo I, Q, M, AI, AQ, AM im
+       Variablenspeicher (VM) liegen.
+   * - TSAP der LOGO! / TSAP des Loggers
+     - Als ``hh.hh`` (z. B. ``02.00``, ``20.00``) oder Zahl (``0x0200``).
+
+**Adressen:** Variablenspeicher direkt (``V10`` bzw. ``VB10`` = Byte, ``VW12`` = Wort,
+``VD20`` = Doppelwort, ``V10.3`` = Bit) oder die LOGO!-Operanden ``I1`` … ``I24``,
+``Q1`` … ``Q20``, ``M1`` … ``M64``, ``NI``, ``NQ`` (BOOL) und ``AI1`` … ``AI8``, ``AQ``,
+``AM1`` … ``AM64``, ``NAI``, ``NAQ`` (INT). Werte im VM sind wie bei S7 „Big Endian“.
+Benachbarte Adressen werden zu einer Anfrage zusammengefasst; Blöcke: Startadresse im VM
+(z. B. ``VW100``), die Elemente folgen lückenlos.
+
 Treiber ``clx`` – Allen-Bradley Logix (EtherNet/IP)
 ----------------------------------------------------------------------
 
@@ -1445,6 +1569,32 @@ Bereiche selbst auf. BOOL-Arrays nicht als Block.
 **Auswahldialog „Aus Tag-Liste wählen…“:** Controller-Tags und (Häkchen
 *Programm-Tags*) die Tags aller Programme, mit UDTs, Arrays (höchstens 500
 Elemente einzeln) und Filter; Zwischenspeicher im Ordner ``taglisten``.
+
+Treiber ``pccc`` – Allen-Bradley MicroLogix / SLC 500 (PCCC)
+----------------------------------------------------------------------
+
+Für die älteren Allen-Bradley-Steuerungen mit Dateiadressen (RSLogix 500):
+MicroLogix 1100/1400, SLC 5/05 sowie SLC 5/03/04 über ein Ethernet-Brückenmodul.
+Bibliothek ``pycomm3`` (SLCDriver, EtherNet/IP mit PCCC-Befehlen). ControlLogix,
+CompactLogix und Micro800 laufen über den Treiber ``clx``.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse
+     - Adresse der Steuerung bzw. des Ethernet-Moduls.
+   * - CIP-Pfad (Erweitert)
+     - Nur hinter einem Brückenmodul, z. B. ``bp/1``; sonst leer.
+
+**Adressen** in RSLogix-500-Schreibweise: ``N7:0`` (INT), ``F8:2`` (REAL), ``L9:0``
+(DINT, MicroLogix 1100/1400), ``B3:2`` (Wort) bzw. ``B3:0/5`` und ``N7:10/3`` (Bits,
+Typ BOOL), ``T4:0.ACC``/``T4:0.PRE``/``C5:1.ACC`` (Ist-/Vorgabewerte),
+``T4:0.DN`` (Statusbit), ``I:0/1``, ``O:0/2``, ``S:1/5``. Nahe beieinander liegende
+Elemente derselben N-, F-, L- oder B-Datei werden mit **einer** Anfrage gelesen;
+Blöcke: erstes Element, z. B. ``N7:0``.
 
 Treiber ``modbus`` – Modbus TCP
 ----------------------------------------------------------------------
@@ -1577,6 +1727,12 @@ OPC-UA-Modul, Kepware/KEPServerEX. Bibliothek: ``asyncua``.
      - z. B. ``opc.tcp://192.168.0.10:4840`` (Codesys, TwinCAT, S7-1500: Port
        4840; Kepware: 49320). Ein Pfad nach dem Port gehört dazu, falls der Server
        ihn verlangt.
+   * - Betriebsart
+     - *Zyklisch lesen (Read)* (Standard) oder *Subscription* – der Server meldet nur
+       Änderungen (siehe unten).
+   * - Meldeintervall, Abtastrate (Erweitert, nur Subscription)
+     - Wie oft der Server gesammelte Änderungen schickt bzw. die Werte prüft;
+       ``0`` = Intervall der Steuerung.
    * - Sicherheit
      - *Keine*, oder *Basic256Sha256*, *Aes128Sha256RsaOaep*, *Aes256Sha256RsaPss*
        jeweils mit *Signieren* bzw. *Signieren und verschlüsseln* – was der Server
@@ -1623,6 +1779,59 @@ Knoten. Name der neuen Variable ist der Pfad aus den Anzeigenamen.
 Alle Knoten einer Steuerung werden je Zyklus mit möglichst wenigen Read-Anfragen
 gelesen. Ein ungültiger Knoten (z. B. *BadNodeIdUnknown*) betrifft nur seine
 eigene Variable.
+
+**Subscription:** Statt in jedem Zyklus alle Knoten zu lesen, richtet der Treiber
+beim Verbinden ein Abonnement ein; der Server meldet nur noch geänderte Werte. Der
+Logger zeichnet weiterhin im Intervall der Steuerung auf (mit dem zuletzt gemeldeten
+Wert). Das spart bei vielen, selten wechselnden Werten Netzlast und Serverleistung.
+Die Anfangswerte werden einmal gelesen; die Verbindung prüft der Treiber alle paar
+Sekunden mit einer kleinen Leseanfrage und verbindet bei Bedarf neu. Arrays (Blöcke)
+werden mit Indexbereich abonniert.
+
+Treiber ``ads`` – Beckhoff TwinCAT (ADS)
+----------------------------------------------------------------------
+
+Für TwinCAT 2 und 3 über das Beckhoff-Protokoll ADS (AMS/TCP, Port 48898) – ohne
+Zusatzbibliothek und ohne TwinCAT auf dem Logger-Rechner. (Alternativ funktioniert
+TwinCAT auch über den Treiber ``opcua``, wenn der TF6100-Server lizenziert ist.)
+
+**Route anlegen:** Die Steuerung beantwortet ADS-Anfragen nur von Rechnern, für die
+eine **Route** eingetragen ist: im TwinCAT-System-Manager bzw. XAE unter
+*SYSTEM › Routes* (oder im TwinCAT-Symbol der Steuerung) eine statische Route mit der
+**AMS-Net-ID dieses Rechners** (Parameter *Eigene AMS-Net-ID*, Standard: IP-Adresse + ``.1.1``)
+und seiner IP-Adresse anlegen. Ohne Route meldet der Treiber
+„ADS-Fehler 0x7: Zielrechner nicht gefunden“.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse
+     - Adresse der Steuerung.
+   * - AMS-Net-ID der Steuerung
+     - z. B. ``5.12.34.56.1.1`` (TwinCAT zeigt sie im Router an); leer = IP + ``.1.1``.
+   * - AMS-Port
+     - ``851`` = erste SPS-Laufzeit von TwinCAT 3 (``852`` … weitere), ``801`` = TwinCAT 2.
+   * - Eigene AMS-Net-ID, eigener AMS-Port (Erweitert)
+     - Muss zur Route passen; leer = eigene IP-Adresse + ``.1.1``.
+   * - Variablen je Anfrage (Erweitert)
+     - Höchstzahl Teile einer Summenanfrage (TwinCAT: 500).
+
+**Adressen:** symbolisch wie im SPS-Projekt – ``MAIN.fTemperatur``,
+``GVL.aWerte[3]``, ``MAIN.stMotor.nDrehzahl``, TwinCAT 2 global ``.gWert`` – oder
+Merker/E/A ``%MW10``, ``%MD4``, ``%MX2.3``, ``%IW0``, ``%QX0.1`` bzw. Indexgruppe:Offset
+(``0x4020:16``). Symbolnamen werden beim Verbinden einmal aufgelöst; danach werden alle
+Variablen mit Summenanfragen gelesen (bis zu 500 je Anfrage). Nach einem Download in die
+Steuerung verbindet der Treiber neu und löst die Namen erneut auf.
+
+**Blöcke:** Array-Name ohne Index (``MAIN.aWerte``) + erster Index + Anzahl – der
+Ausschnitt wird am Stück gelesen.
+
+**Auswahldialog „Aus TwinCAT wählen…“:** liest die Symboltabelle der Steuerung und zeigt
+sie als Baum (``MAIN`` › ``Pumpe`` › ``fDruck``) mit Typ und Kommentar; Filterfeld,
+Variablen anhaken, Arrays aus Zahlen per Doppelklick als Block übernehmen.
 
 Treiber ``slmp`` – Mitsubishi MELSEC (SLMP / MC-Protokoll)
 ----------------------------------------------------------------------
@@ -1683,6 +1892,36 @@ gelesen.
 
 Fehlerantworten der Steuerung erscheinen mit Code, z. B. *SLMP-Fehler 0xC056:
 Adresse außerhalb des Bereichs*; betroffen ist nur die jeweilige Anfrage.
+
+Treiber ``fins`` – Omron (FINS)
+----------------------------------------------------------------------
+
+Für Omron CJ1/CJ2, CS1, CP1L/CP1H (Ethernet), CP2E und NJ/NX (mit FINS-Freigabe)
+über FINS/TCP oder FINS/UDP, Port 9600 – ohne Zusatzbibliothek.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - IP-Adresse, Port
+     - Adresse der Steuerung bzw. der Ethernet-Einheit; Port 9600.
+   * - Protokoll
+     - *FINS/TCP* (empfohlen; die Steuerung vergibt die Knotennummern) oder *FINS/UDP*.
+   * - Ziel-/Quellknoten, Ziel-/Quellnetz (Erweitert)
+     - FINS-Adressen. ``0`` = automatisch: bei TCP von der Steuerung, bei UDP das letzte
+       Byte der IP-Adresse (Steuerung bzw. eigener Rechner). Bei UDP muss die
+       Knotentabelle der Steuerung zur Adresse dieses Rechners passen.
+   * - Wörter je Anfrage (Erweitert)
+     - Höchstens 999 (ältere CPUs über UDP ggf. weniger).
+
+**Adressen** in Omron-Schreibweise (dezimal): ``D100``/``DM100``, ``W10``, ``H20``,
+``A300``, ``CIO100`` (oder nur ``100``), erweiterter Datenspeicher ``E0_100`` (Bank 0 …
+24), Timer-/Zähler-Istwerte ``T5``, ``C3``; Bits mit Punkt und Bitnummer 00 … 15:
+``D100.05``, ``CIO0.01``, ``W3.15`` (Typ BOOL). DINT/REAL/LREAL belegen 2 bzw. 4
+Wörter, niederwertiges Wort zuerst (wie CX-Programmer). Benachbarte Adressen ergeben
+eine Anfrage; Blöcke: Startadresse, Elemente lückenlos.
 
 Treiber ``kvhostlink`` – KEYENCE KV (Host Link)
 ----------------------------------------------------------------------
@@ -2021,6 +2260,11 @@ das Diagramm, verschwindet die Anzeige. Abschalten: **Ansicht › Werte am
 Mauszeiger (online)** (die Einstellung bleibt gespeichert). Im Offline-Modus
 übernehmen die Lineale diese Aufgabe.
 
+**Zoomen mit der Maus (nur Zeitachse):** Auch online lässt sich die Zeitachse mit dem
+**Mausrad** (bzw. Ziehen mit der rechten Maustaste) zoomen; die Y-Achsen bleiben
+unverändert. Die neue Breite wird als **Fenster [s]** übernommen, das rechte Ende
+folgt weiter den neuesten Werten.
+
 Offline-Modus
 ----------------------------------------------------------------------
 
@@ -2082,6 +2326,21 @@ Die Wertetabelle zeigt dann:
 Über der Tabelle werden die Zeitpunkte von L1 und L2 sowie die Zeitdifferenz
 **Δt** in Sekunden angezeigt. Verwendet wird jeweils der zeitlich nächste
 Messwert (ohne Interpolation).
+
+.. _trigger-marken:
+
+Trigger-Marken an der Zeitachse
+----------------------------------------------------------------------
+
+Ereignisse aus dem Ereignisprotokoll erscheinen in allen Diagrammen als **senkrechte
+gestrichelte Linie** mit einem Kurztext unten an der Zeitachse (▲ Name des Triggers):
+rot = *Alarm*, orange = *Warnung*, blau = *Info*, grün = Beginn einer
+`Aufzeichnung per Trigger <trigger-aufzeichnung_>`__, grau = Notiz. Der Tooltip zeigt
+Zeit, Text sowie Gehen- und Quittierzeit. Die Marken gibt es online und offline,
+auch beim Anzeigen einer geladenen CSV-Datei oder eines Datenbank-Zeitraums (aus dem
+Ereignisprotokoll der Konfiguration). Bei sehr vielen Ereignissen im sichtbaren
+Bereich werden höchstens 150 gezeigt. Abschalten: **Ansicht › Trigger-Marken an der
+Zeitachse**.
 
 .. _seiten:
 
@@ -2329,9 +2588,9 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
   Die Adresse zeigt im Logger **Datei › Webserver-Adresse …**; beim Start steht sie
   außerdem im Log. Gegebenenfalls muss die Firewall den Port freigeben.
 * **Zugriffscode:** Ist im Reiter ein Code eingetragen, wird die Seite mit
-  ``http://…:8080/?token=CODE`` aufgerufen. Ohne Code kann jeder im Netzwerk
-  zusehen; die Seite ist nur lesend, es gibt keine Steuerfunktion. Für Zugriffe
-  aus dem Internet gehört der Server hinter einen Reverse-Proxy mit HTTPS.
+  ``http://…:8080/?token=CODE`` aufgerufen. Ohne Code und ohne Anmeldung kann jeder
+  im Netzwerk zusehen; die Seite ist nur lesend, es gibt keine Steuerfunktion.
+* **HTTPS und Anmeldung:** siehe unten.
 * **Darstellung:** Die Seite zeigt je Seite (Tab) die Diagramme mit Chart.js, mit
   mehreren Y-Achsen, BOOL-Signalen als Treppenlinie und Status-LEDs der
   Steuerungen. Die Anzeige passt sich der Bildschirmgröße an.
@@ -2353,6 +2612,35 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
 
 Der Server überträgt nur die sichtbaren Daten, auf die Bildschirmbreite reduziert
 (Minimum und Maximum je Abschnitt bleiben erhalten), und komprimiert sie.
+
+.. _https-anmeldung:
+
+HTTPS und Anmeldung
+----------------------------------------------------------------------
+
+**HTTPS** (Reiter *Webserver & Headless*, *HTTPS (verschlüsselt)*): Die Seite ist dann
+unter ``https://<IP>:<Port>/`` erreichbar. Ohne eigenes Zertifikat erzeugt der Logger
+beim ersten Start ein **selbstsigniertes** (RSA 2048, zehn Jahre gültig, für
+Rechnername, IP-Adresse und ``localhost``; Ordner ``web_tls`` im Datenordner). Der
+Browser warnt beim ersten Aufruf, weil er den Aussteller nicht kennt: Fingerabdruck
+vergleichen und die Ausnahme bestätigen. Den **SHA-256-Fingerabdruck** zeigt
+**Datei › Webserver-Adresse …** (im Headless-Betrieb steht er in der Logdatei). Mit
+einem Zertifikat der Firmen-CA (PEM-Dateien für Zertifikat und Schlüssel eintragen)
+entfällt die Warnung. Benötigt das Paket ``cryptography`` (in der Installation enthalten).
+
+**Anmeldung:** Mit **Benutzer …** Benutzer anlegen (Name und Passwort, mindestens
+8 Zeichen); gespeichert wird nur ein Hash des Passworts (PBKDF2-SHA256), nicht das
+Passwort selbst. Ist mindestens ein Benutzer eingetragen, zeigt der Browser zuerst eine
+Anmeldeseite; die Anmeldung gilt 12 Stunden bzw. bis **⎋ Abmelden** (rechts oben auf der
+Seite). Nach fünf Fehlversuchen ist die Adresse eine Minute gesperrt. Ein zusätzlich
+eingetragener Zugriffscode erlaubt weiterhin den Zugriff ohne Anmeldung
+(``?token=CODE``, z. B. für ein fest installiertes Anzeigegerät).
+
+.. note::
+
+   Ohne HTTPS werden Passwörter und Messwerte unverschlüsselt übertragen. Anmeldung
+   deshalb zusammen mit HTTPS verwenden. Für Zugriffe aus dem Internet gehört der
+   Server zusätzlich hinter ein VPN oder einen Reverse-Proxy.
 
 .. _headless:
 
@@ -2766,6 +3054,47 @@ erscheinen im Viewer grün hinterlegt mit 📝 und müssen nicht quittiert werde
    18;2026-10-16 09:12:00.000;NOTIZ;Notiz;Notiz;Ventil V12 getauscht;mmuster
 
 
+.. _trigger-aufzeichnung:
+
+Aufzeichnung per Trigger (Vor- und Nachlauf)
+======================================================================
+
+Statt dauernd aufzuzeichnen, kann der Logger nur dann in CSV-Datei und Datenbank
+schreiben, wenn etwas passiert – mit den Werten **vor** dem Ereignis (Vorlauf) und
+**danach** (Nachlauf). Typische Anwendungen: Störungsanalyse, Prüfzyklen, Chargen.
+
+**Einstellen** (Konfigurationsprogramm, Reiter *Aufzeichnung*):
+
+* **Aufzeichnung:** *Per Trigger mit Vor- und Nachlauf*.
+* **Startbedingung:** eine Bedingung wie bei Triggern, z. B. ``{Druck} > 5``,
+  ``{Störung} == 1`` oder ``abs(ddt({Kraft})) > 100``; **…** öffnet den Formeleditor
+  mit Variablenliste und Prüfung. Verwendbar sind alle Variablen einschließlich der
+  berechneten.
+* **Vorlauf:** so viele Sekunden vor dem Trigger werden mitgespeichert. Dafür hält der
+  Logger die letzten Messwerte in einem **Ringspeicher**.
+* **Nachlauf:** so lange wird nach dem Ende der Bedingung weiter gespeichert. Wird die
+  Bedingung in dieser Zeit erneut wahr, verlängert sich die Aufnahme.
+* **max.:** Höchstdauer einer Aufnahme (*unbegrenzt* = 0). Danach endet die Aufnahme
+  auch bei weiter erfüllter Bedingung; die nächste beginnt erst, wenn die Bedingung
+  einmal falsch war.
+
+**Ablauf:** Nach dem Start zeigt die Statusleiste *⏸ wartet auf Trigger*. Wird die
+Bedingung wahr, beginnt eine Aufnahme (*⏺ Aufnahme läuft*): eine **neue CSV-Datei**
+(``<CSV-Name>_<Datum>_<Uhrzeit>.csv``) mit dem Vorlauf und allen folgenden Werten bis
+zum Ende des Nachlaufs. Jede Aufnahme bekommt ihre eigene Datei; sie bleibt im CSV-Ordner.
+Mit Datenbank werden dieselben Zeilen in die Datenbank geschrieben. Beginn und Ende
+stehen als Ereignis *Aufnahme* (Priorität *Info*, ohne Quittierpflicht) im
+Ereignisprotokoll und erscheinen als grüne `Trigger-Marke <trigger-marken_>`__ im Diagramm.
+
+Die **Anzeige** im Logger (und im Webserver) läuft immer weiter, auch zwischen den
+Aufnahmen. Ist die Startbedingung fehlerhaft (z. B. unbekannte Variable), meldet der
+Logger das und zeichnet sicherheitshalber dauernd auf.
+
+.. tip::
+
+   Mehrere Aufnahmen lassen sich mit **Datei › CSV-Dateien aneinanderhängen und speichern …**
+   wieder zu einer Datei zusammenfügen (siehe `Mehrere CSV-Dateien aneinanderhängen <csv-verbinden_>`__).
+
 .. _pid-optimierung:
 
 PID-Regler-Optimierung
@@ -2891,6 +3220,84 @@ Hinweise
   Minute) – nach einigen Minuten Aufzeichnung lässt sich die Optimierung ausprobieren.
 * **Übernahme in die Steuerung:** *PIDE* mit unabhängigen Verstärkungen: ``PGain`` = Kp, ``IGain`` = Ki·60 [1/min], ``DGain`` = Kd/60 [min]. *PIDE* abhängige Form bzw. *PID*-Anweisung: ``Kc`` = Kp, Ti und Td in **Minuten** (Werte aus der Tabelle durch 60 teilen). *PIDE* rechnet in % der Bereiche ``PVEUMax/Min`` und ``CVEUMax/Min`` – Kp entsprechend umrechnen.
 
+
+.. _analyse:
+
+Analyse: XY-Diagramm und Frequenzanalyse
+======================================================================
+
+Beide Auswertungen stehen im Logger im Menü **Analyse** und arbeiten mit den
+angezeigten Daten – während der Aufzeichnung, offline oder mit einer geladenen
+CSV-Datei bzw. einem Datenbank-Zeitraum. Der **Zeitbereich** ist wählbar: *Zwischen
+Lineal 1 und 2* (offline), *Sichtbarer Bereich* oder *Alle Daten*. Die Fenster bleiben
+neben dem Hauptfenster offen; **Aktualisieren** holt die Daten neu. **Bild speichern …**
+legt das Diagramm als PNG ab, **Werte speichern (CSV) …** die dargestellten Werte.
+
+XY-Diagramm
+----------------------------------------------------------------------
+
+Eine oder mehrere Variablen (Y) über einer anderen Variable (X) – z. B. Druck über
+Hub, Kraft über Weg oder eine Kennlinie. **X-Achse** wählen, **Y-Achse** in der Liste
+anhaken (Farben wie in der Konfiguration). Darstellung als *Punkte*, *Linie (zeitliche
+Reihenfolge)* oder beides. **Ausgleichsgerade und Korrelation** zeichnet je Y-Variable
+die Regressionsgerade und nennt den Korrelationskoeffizienten *r* sowie die
+Geradengleichung.
+
+Frequenzanalyse (FFT)
+----------------------------------------------------------------------
+
+Das **Amplitudenspektrum** einer Variable, z. B. um Schwingungen, Pendeln eines
+Regelkreises oder periodische Störungen zu finden. Die Messwerte werden zuerst auf
+gleichmäßige Abstände (üblicher Messabstand) umgerechnet; fehlende Werte werden
+überbrückt.
+
+* **Fenster:** *Hann* (Standard), *Hamming*, *Blackman*, *Flat-Top* (genaue Amplituden)
+  oder *Rechteck* (ohne Fenster).
+* **Vorbehandlung:** Mittelwert oder linearen Trend abziehen (sonst überdeckt der
+  Gleichanteil die kleinen Frequenzen).
+* **X-Achse:** Frequenz in Hz oder Periodendauer in s (logarithmisch); Amplitude
+  wahlweise logarithmisch.
+
+Unter dem Diagramm stehen Abtastrate, Auflösung (= 1 / Dauer des Zeitbereichs), höchste
+darstellbare Frequenz (halbe Abtastrate) und die **stärksten Frequenzen** mit
+Periodendauer und Amplitude (gelbe Dreiecke im Diagramm). Ein Sinus der Amplitude *A*
+erscheint etwa mit der Höhe *A*.
+
+.. tip::
+
+   Für feine Frequenzauflösung einen langen Zeitbereich wählen; für hohe Frequenzen ein
+   kurzes Intervall der Steuerung (bei 100 ms sind höchstens 5 Hz sichtbar).
+
+.. _pdf-berichte:
+
+PDF-Berichte
+======================================================================
+
+Ein Bericht fasst einen Zeitraum auf wenigen Seiten zusammen:
+
+* **Kopf:** Projekt, Zeitraum, Datenbasis (Anzahl der Messzeilen, erste und letzte Messung).
+* **Kennwerte** je Variable: Minimum, Maximum, Mittelwert, Standardabweichung, letzter
+  Wert und Anzahl gültiger Werte; bei BOOL-Variablen der Anteil der Zeit mit Wert 1
+  (Einschaltdauer) und die Zahl der Einschaltvorgänge.
+* **Verlauf** jedes Diagramms der Konfiguration mit seinen Y-Achsen; BOOL-Variablen als
+  Spuren unter dem Diagramm (Höhe = Anteil der Zeit mit Wert 1). Spitzen bleiben erhalten
+  (Minimum und Maximum je Zeitabschnitt).
+* **Ereignisse und Notizen** des Zeitraums aus dem Ereignisprotokoll.
+
+**Automatisch** (Konfigurationsprogramm, Reiter *Berichte (PDF)*): Am Ende jeder
+**Schicht**, jedes **Tages**, jeder **Woche** oder jedes **Monats** schreibt der Logger den
+Bericht in den Ordner ``berichte`` (Name ``<CSV-Name>_bericht_<Zeitraum>_<Beginn>.pdf``) –
+auch im Headless-Betrieb. Dafür sammelt er während der Aufzeichnung die Kennwerte und eine
+verdichtete Fassung des Verlaufs, unabhängig davon, wie viele Messwerte er im Speicher hält.
+Beim Stoppen bzw. Beenden entsteht ein **Teilbericht** (Zusatz ``_teil``, Titel
+„unvollständig“) für den angefangenen Zeitraum. Schichten beginnen zu den eingestellten
+Uhrzeiten; Tag, Woche (Montag) und Monat zum *Tagesbeginn*.
+
+**Von Hand:** **Analyse › PDF-Bericht erstellen …** – Zeitbereich wählen (zwischen den
+Linealen, sichtbar, alles), Dateinamen bestätigen; der Bericht öffnet sich anschließend
+im PDF-Betrachter.
+
+Die PDF-Dateien entstehen ohne Zusatzprogramm (Standardschrift Helvetica, Vektorgrafik).
 
 .. _sprache:
 
@@ -3045,12 +3452,34 @@ Beispiel:
 CSV-Datei laden
 ----------------------------------------------------------------------
 
-**CSV laden** öffnet eine CSV- oder ZIP-Datei (bei ZIP-Archiven die erste
-CSV im Archiv) und zeigt sie im Offline-Modus an. Eine laufende
+**CSV laden** öffnet eine oder mehrere CSV- oder ZIP-Dateien (bei ZIP-Archiven die
+erste CSV im Archiv) und zeigt sie im Offline-Modus an; mehrere Dateien werden dabei
+nach der Zeit aneinandergehängt (siehe unten). Eine laufende
 Aufzeichnung wird dabei beendet. Zur Darstellung wird die Spalte ``Epoch``
 verwendet. Variablen, deren Name in der aktuellen Konfiguration vorhanden ist,
 übernehmen Farbe und Zuordnung zu Diagramm und Y-Achse; unbekannte Variablen
 erscheinen auf der ersten Y-Achse des ersten Diagramms.
+
+.. _csv-verbinden:
+
+Mehrere CSV-Dateien aneinanderhängen
+----------------------------------------------------------------------
+
+**Datei › CSV-Dateien aneinanderhängen und speichern …** wählt mehrere Aufzeichnungen
+(CSV oder archivierte ZIP-Dateien, auch aus verschiedenen Archiv-Ordnern) und fügt sie
+zu einer zusammen; das Ergebnis wird als **neue CSV-Datei** gespeichert (Vorschlag:
+``<CSV-Name>_<Beginn>-<Ende>.csv``) und offline angezeigt. Die gewählten Dateien bleiben
+unverändert.
+
+* Die Reihenfolge der Auswahl spielt keine Rolle: alle Zeilen werden nach der Zeit sortiert.
+* Spalten werden über den Variablennamen zugeordnet. Fehlt eine Variable in einer Datei
+  (z. B. später hinzugefügt), bleibt sie dort leer.
+* Doppelte Zeitpunkte (überlappende Dateien) werden nur einmal übernommen.
+* An Lücken zwischen den Dateien (z. B. zwischen zwei Aufnahmen per Trigger) wird eine
+  leere Zeile eingefügt, damit die Kurven dort unterbrochen sind.
+
+Wer die Dateien nur ansehen will, wählt sie einfach zusammen in **CSV laden** – dann ohne
+Speichern.
 
 Werte exportieren (CSV/Excel)
 ----------------------------------------------------------------------
@@ -3666,11 +4095,14 @@ Bekannte Einschränkungen
   verschiedener Steuerungen (auch verschiedener Treiber) verknüpfen – es zählt
   der jeweils letzte Wert. Die Messzeitpunkte der Steuerungen sind nicht synchron.
 * Nur lesender Zugriff; der Logger schreibt nichts in die Steuerungen.
-* ``opcua``: gelesen wird zyklisch (kein Abonnement); Strukturen und Texte sind nicht aufzeichenbar.
+* ``opcua``: Strukturen und Texte sind nicht aufzeichenbar.
 * ``s5as511``: langsam (9600 Baud); nur lesend; Datenbaustein-Adressen werden beim
   Verbinden ermittelt.
-* ``slmp``, ``kvhostlink``, ``toyopuc``, ``s5as511`` wurden gegen Protokoll-Simulatoren
-  getestet; vor dem Produktiveinsatz an der realen Steuerung mit **Verbindung testen** prüfen.
+* ``slmp``, ``kvhostlink``, ``toyopuc``, ``s5as511``, ``fins``, ``ads`` und ``logo`` wurden
+  gegen Protokoll-Simulatoren getestet, ``pccc`` nur mit einer nachgebildeten Bibliothek;
+  vor dem Produktiveinsatz an der realen Steuerung mit **Verbindung testen** prüfen.
+* ``ads``: nur Datentypen mit fester Größe (Zahlen, BOOL), keine Referenzen/Zeiger und
+  Eigenschaften; eine Route in der Steuerung ist nötig.
 * ``s7``: nur nicht optimierte Bausteine; Namen nur über DB-Quellen.
 * ``tia``: inoffizielle Bibliothek; Funktion hängt von Firmware und
   Schutzeinstellungen der CPU ab.
@@ -3680,7 +4112,12 @@ Bekannte Einschränkungen
   Bereichs nicht lesbar, schlägt der gesamte Block fehl.
 * Eigene Treiber laufen mit den Rechten des Programms; nur Treiber aus
   vertrauenswürdiger Quelle in den Treiber-Ordner legen.
-* Der Webserver ist nur lesend und ohne Verschlüsselung (HTTP).
+* Der Webserver ist nur lesend; ohne HTTPS unverschlüsselt.
+* PDF-Berichte verwenden die Standardschrift Helvetica: Zeichen außerhalb des westeuropäischen
+  Zeichensatzes (Windows-1252) erscheinen als „?“.
+* Automatische Berichte und die Aufzeichnung per Trigger beziehen sich auf eine laufende
+  Aufzeichnung; nach einem Neustart beginnt der Berichtszeitraum mit den neuen Daten
+  (Teilbericht beim Stoppen).
 * Berechnete Variablen kennen nur Werte der aktuellen Messung (außer ``ddt``,
   ``integ`` und ``avg``); beim Laden einer CSV-Datei werden sie aus der Datei
   übernommen.
