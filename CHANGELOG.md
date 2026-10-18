@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Build
+
+* Release-Workflows: Tags auch mit großem „V“ (z. B. `V3.0.0`); von Hand mit Angabe eines vorhandenen Tags
+  startbar, um dessen Release nachträglich mit Installer, ZIP und AppImages zu füllen.
+
 ## [3.0.0] – 2026-10-18
 
 Erste Version des gemeinsamen **PLC Datenloggers**; er ersetzt die Einzelprogramme S7, TIA und CLX Datenlogger.

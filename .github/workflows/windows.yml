@@ -10,28 +10,38 @@ name: Windows
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Vorhandener Tag (z. B. v3.0.0): diesen Stand bauen und die Dateien an sein Release hängen; leer = nur Artefakte"
+        required: false
+        default: ""
   push:
-    tags: ["v*"]
+    tags: ["v*", "V*"]
 
 permissions:
   contents: write
 
 jobs:
   windows:
+    env:
+      # Tag, zu dem ein Release gehört: Tag-Push oder von Hand angegebener Tag (leer = nur Artefakte)
+      REL_TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-python@v5
         id: py
         with:
           python-version: "3.12"
       - name: Tag und Versionsnummer prüfen, Release-Text aus CHANGELOG.md
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.REL_TAG != ''
         shell: bash
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          python tools/bump_version.py --check-tag "$GITHUB_REF"
+          python tools/bump_version.py --check-tag "${REL_TAG,,}"
           python tools/bump_version.py --notes > release_notes.md
       - name: Inno Setup installieren
         run: choco install innosetup -y --no-progress
@@ -52,10 +62,10 @@ jobs:
           path: installer/*_Setup_*.exe
           if-no-files-found: warn
       - name: Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.REL_TAG != ''
         uses: softprops/action-gh-release@v2
         with:
-          name: PLC Datenlogger ${{ github.ref_name }}
+          tag_name: ${{ env.REL_TAG }}
           body_path: release_notes.md
           files: |
             dist/*_portable_*.zip

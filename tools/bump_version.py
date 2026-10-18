@@ -98,7 +98,7 @@ def main(argv):
         tag = argv[argv.index("--check-tag") + 1]
         tag = tag.rsplit("/", 1)[-1]                          # auch refs/tags/v3.0.0
         version = fmt(current_version())
-        if tag != "v" + version:
+        if tag.lower() != "v" + version:                     # auch "V3.0.0" (Großbuchstabe beim Anlegen auf GitHub)
             sys.exit(f"FEHLER: Tag {tag} passt nicht zu APP_VERSION {version} (erwartet v{version}). "
                      f"Erst  python tools/bump_version.py {tag.lstrip('v')}  ausführen.")
         print(f"[OK] Tag {tag} = APP_VERSION {version}")
