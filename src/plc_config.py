@@ -53,7 +53,7 @@ from PySide6.QtWidgets import (
 from plc_branding import app_icon, set_windows_app_id
 from plc_about import set_help
 from plc_block_dialog import BlockEditor
-from plc_common import (CONFIG_EXT, ConfigFormatError, convert_ini, read_config_store, BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE,
+from plc_common import (RECORD_MODES, CONFIG_EXT, ConfigFormatError, convert_ini, read_config_store, BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE,
                        Axis, Block, Chart, Plc, Variable, default_connection, driver_store,
                        last_config_path, load_blocks, load_config, load_plcs,
                        remember_config_path, save_config,
@@ -214,8 +214,40 @@ class ConfigWindow(QMainWindow):
         form_rec2 = QFormLayout()
         form_rec2.addRow(tr("Archiv-Ordner:"), arch_row)
         form_rec2.addRow("", self.chk_arch_end)
+        # Aufzeichnung dauernd oder per Trigger: Startbedingung, Vorlauf (Ringspeicher), Nachlauf, Höchstdauer.
+        self.cb_rec_mode = QComboBox()
+        for key, text in RECORD_MODES.items():
+            self.cb_rec_mode.addItem(tr(text), key)
+        self.cb_rec_mode.setToolTip(tr("Per Trigger: in CSV-Datei/Datenbank wird nur geschrieben, wenn die Startbedingung "
+                                       "erfüllt ist – mit den Werten der Vorlaufzeit davor und der Nachlaufzeit danach. "
+                                       "Jede Aufnahme bekommt eine eigene CSV-Datei. Die Anzeige läuft immer."))
+        self.ed_rec_cond = QLineEdit()
+        self.ed_rec_cond.setPlaceholderText(tr("z. B. {Druck} > 5 or {Störung} == 1"))
+        self.ed_rec_cond.setToolTip(tr("Bedingung wie bei Triggern und berechneten Variablen; wahr (≠ 0) startet die Aufnahme"))
+        btn_cond = QPushButton("…")
+        btn_cond.setFixedWidth(30)
+        btn_cond.setToolTip(tr("Bedingung mit dem Formeleditor bearbeiten"))
+        btn_cond.clicked.connect(self.edit_rec_condition)
+        cond_row = QHBoxLayout(); cond_row.addWidget(self.ed_rec_cond); cond_row.addWidget(btn_cond)
+        self.sp_pre = QDoubleSpinBox(); self.sp_pre.setRange(0, 86400); self.sp_pre.setDecimals(1); self.sp_pre.setSuffix(" s")
+        self.sp_pre.setToolTip(tr("So viele Sekunden vor dem Trigger werden mitgespeichert (Ringspeicher)"))
+        self.sp_post = QDoubleSpinBox(); self.sp_post.setRange(0, 86400); self.sp_post.setDecimals(1); self.sp_post.setSuffix(" s")
+        self.sp_post.setToolTip(tr("So lange wird nach dem Ende der Bedingung weiter gespeichert"))
+        self.sp_max = QDoubleSpinBox(); self.sp_max.setRange(0, 7 * 86400); self.sp_max.setDecimals(0)
+        self.sp_max.setSuffix(" s"); self.sp_max.setSpecialValueText(tr("unbegrenzt"))
+        self.sp_max.setToolTip(tr("Höchstdauer einer Aufnahme (0 = unbegrenzt); danach muss die Bedingung erst "
+                                  "wieder falsch werden"))
+        prepost = QHBoxLayout()
+        for lbl, w in ((tr("Vorlauf"), self.sp_pre), (tr("Nachlauf"), self.sp_post), (tr("max."), self.sp_max)):
+            prepost.addWidget(QLabel(lbl)); prepost.addWidget(w)
+        self.cb_rec_mode.currentIndexChanged.connect(lambda _i: self._update_rec_mode())
+        form_rec3 = QFormLayout()
+        form_rec3.addRow(tr("Aufzeichnung:"), self.cb_rec_mode)
+        form_rec3.addRow(tr("Startbedingung:"), cond_row)
+        form_rec3.addRow("", prepost)
         tab_rec = QWidget()
-        rl0 = QHBoxLayout(tab_rec); rl0.addLayout(form_rec1, 1); rl0.addSpacing(30); rl0.addLayout(form_rec2, 1)
+        rl0 = QHBoxLayout(tab_rec); rl0.addLayout(form_rec1, 1); rl0.addSpacing(20); rl0.addLayout(form_rec2, 1)
+        rl0.addSpacing(20); rl0.addLayout(form_rec3, 1)
 
         # ---- Reiter 3: Anzeige ----
         # Logo und Programm-Icon: Dateiauswahl mit Durchsuchen-Knopf (siehe _file_row).
@@ -358,7 +390,35 @@ class ConfigWindow(QMainWindow):
         set_help(self.table, "Variablen anlegen")
         right = QWidget()
         rl = QVBoxLayout(right); rl.setContentsMargins(0, 0, 0, 0)
-        rl.addWidget(QLabel(tr("<b>Variablen</b>")))
+        # Suchen und Filtern: Text (Name, Adresse, Formel, Zuordnung) und Steuerung; ausgeblendete Zeilen bleiben
+        # erhalten und werden mitgespeichert.
+        self.ed_filter = QLineEdit()
+        self.ed_filter.setClearButtonEnabled(True)
+        self.ed_filter.setPlaceholderText(tr("Suchen: Name, Adresse, Formel … (* ? als Platzhalter, -Wort schließt aus)"))
+        self.ed_filter.setToolTip(tr("Mehrere Wörter müssen alle vorkommen; Strg+F springt hierher"))
+        self.ed_filter.textChanged.connect(lambda _t: self.apply_var_filter())
+        self.cb_filter_plc = QComboBox()
+        self.cb_filter_plc.setToolTip(tr("Nur Variablen dieser Steuerung zeigen"))
+        self.cb_filter_plc.currentIndexChanged.connect(lambda _i: self.apply_var_filter())
+        self.cb_filter_kind = QComboBox()
+        for text, key in ((tr("alle Arten"), ""), (tr("nur gelesene"), "plc"), (tr("nur berechnete"), "calc"),
+                          (tr("ohne Adresse"), "empty")):
+            self.cb_filter_kind.addItem(text, key)
+        self.cb_filter_kind.currentIndexChanged.connect(lambda _i: self.apply_var_filter())
+        self.lbl_filter = QLabel("")
+        self.lbl_filter.setStyleSheet("color:#555")
+        frow = QHBoxLayout()
+        frow.addWidget(QLabel(tr("<b>Variablen</b>")))
+        frow.addSpacing(12)
+        frow.addWidget(self.ed_filter, 1)
+        frow.addWidget(self.cb_filter_plc)
+        frow.addWidget(self.cb_filter_kind)
+        frow.addWidget(self.lbl_filter)
+        rl.addLayout(frow)
+        act_find = QAction(self)
+        act_find.setShortcut(QKeySequence.StandardKey.Find)
+        act_find.triggered.connect(lambda: (self.ed_filter.setFocus(), self.ed_filter.selectAll()))
+        self.addAction(act_find)
         rl.addWidget(self.table, 1)
         # Aktionen rund um Variablen: Symbolbaum, Blöcke, Formeln, manuelles Anlegen, Entfernen, Test.
         vbtn = QHBoxLayout()
@@ -621,6 +681,9 @@ class ConfigWindow(QMainWindow):
             cb.setCurrentIndex(min(max(i, 0), len(names) - 1))
             cb.blockSignals(False)
             self.update_row_driver(r)
+        if hasattr(self, "cb_filter_plc"):
+            self._fill_filter_plcs()
+            self.apply_var_filter()
 
     def on_plc_item_changed(self, item):
         if item.column() == P_NAME:
@@ -1241,6 +1304,12 @@ class ConfigWindow(QMainWindow):
         self.update_row_driver(r)
         if refresh:
             self.refresh_tree()
+            self.apply_var_filter()
+            if self.table.isRowHidden(r):           # neue Zeile passt nicht zum Filter: Filter zurücksetzen
+                self.ed_filter.clear()
+                self.cb_filter_plc.setCurrentIndex(0)
+                self.cb_filter_kind.setCurrentIndex(0)
+            self.table.scrollToItem(self.table.item(r, C_NAME))
 
     def _var_row_of(self, widget):
         for r in range(self.table.rowCount()):
@@ -1346,13 +1415,66 @@ class ConfigWindow(QMainWindow):
     def on_var_item_changed(self, item):
         if item.column() == C_NAME:
             self.refresh_tree()
+        if item.column() in (C_NAME, C_TAG, C_FORMULA):
+            self.apply_var_filter()
 
-    # Markierte Zeilen von unten nach oben löschen.
+    # ---------- Suchen und Filtern ----------
+    def _fill_filter_plcs(self):
+        """Auswahl „Steuerung“ des Filters an die Steuerungen anpassen (Auswahl bleibt, soweit möglich)."""
+        cb = self.cb_filter_plc
+        cur = cb.currentData()
+        cb.blockSignals(True)
+        cb.clear()
+        cb.addItem(tr("alle Steuerungen"), -1)
+        for i, n in enumerate(self.plc_names()):
+            cb.addItem(n, i)
+        k = cb.findData(cur if cur is not None else -1)
+        cb.setCurrentIndex(max(k, 0))
+        cb.blockSignals(False)
+
+    def var_row_matches(self, r):
+        """Passt die Variablenzeile r zu Suchtext, Steuerung und Art?"""
+        from plc_util import text_filter
+        t = self.table
+        name = t.item(r, C_NAME).text() if t.item(r, C_NAME) else ""
+        addr = t.item(r, C_TAG).text() if t.item(r, C_TAG) else ""
+        formula = t.item(r, C_FORMULA).text() if t.item(r, C_FORMULA) else ""
+        axis = t.cellWidget(r, C_AXIS).currentText() if t.cellWidget(r, C_AXIS) else ""
+        typ = t.cellWidget(r, C_TYPE).currentText() if t.cellWidget(r, C_TYPE) else ""
+        plc = t.cellWidget(r, C_PLC).currentText() if t.cellWidget(r, C_PLC) else ""
+        want_plc = self.cb_filter_plc.currentData()
+        if want_plc not in (None, -1) and not formula and self.plc_of_row(r) != want_plc:
+            return False
+        kind = self.cb_filter_kind.currentData() or ""
+        if (kind == "plc" and formula) or (kind == "calc" and not formula) or \
+                (kind == "empty" and (formula or addr.strip())):
+            return False
+        return text_filter(self.ed_filter.text())(name, addr, formula, axis, typ, plc)
+
+    def apply_var_filter(self):
+        """Nicht passende Zeilen ausblenden (sie bleiben in der Konfiguration)."""
+        if not hasattr(self, "ed_filter"):
+            return
+        if self.cb_filter_plc.count() != len(self.plc_names()) + 1:
+            self._fill_filter_plcs()
+        n = self.table.rowCount()
+        shown = 0
+        for r in range(n):
+            ok = self.var_row_matches(r)
+            self.table.setRowHidden(r, not ok)
+            shown += ok
+        active = shown != n or bool(self.ed_filter.text().strip())
+        self.lbl_filter.setText(tr("{0} von {1}").format(shown, n) if active else tr("{0} Variablen").format(n))
+        self.ed_filter.setStyleSheet("QLineEdit{background:#fff8c4}" if self.ed_filter.text().strip() else "")
+
+    # Markierte Zeilen von unten nach oben löschen (bei aktivem Filter nur die sichtbaren).
     def remove_rows(self):
-        rows = sorted({i.row() for i in self.table.selectedIndexes()}, reverse=True)
+        rows = sorted({i.row() for i in self.table.selectedIndexes() if not self.table.isRowHidden(i.row())},
+                      reverse=True)
         for r in rows:
             self.table.removeRow(r)
         self.refresh_tree()
+        self.apply_var_filter()
 
     # Farbe per Farbdialog ändern; Knopf und Baumsymbol werden aktualisiert.
     def pick_color(self, btn):
@@ -1361,6 +1483,18 @@ class ConfigWindow(QMainWindow):
             btn.setProperty("color", c.name())
             btn.setStyleSheet(f"background-color: {c.name()}")
             self.refresh_tree()
+
+    def _update_rec_mode(self):
+        on = self.cb_rec_mode.currentData() == "trigger"
+        for w in (self.ed_rec_cond, self.sp_pre, self.sp_post, self.sp_max):
+            w.setEnabled(on)
+
+    def edit_rec_condition(self):
+        """Startbedingung der Aufzeichnung per Trigger im Formeleditor bearbeiten (wie berechnete Variablen)."""
+        dlg = FormulaEditor(self, self.available_names(), tr("Startbedingung"), self.ed_rec_cond.text(), set())
+        dlg.setWindowTitle(tr("Startbedingung der Aufzeichnung"))
+        if dlg.exec():
+            self.ed_rec_cond.setText(dlg.result_formula)
 
     def pick_arch_dir(self):
         d = QFileDialog.getExistingDirectory(self, tr("Archiv-Ordner wählen"), self.ed_arch.text() or BASE_DIR)
@@ -1402,6 +1536,12 @@ class ConfigWindow(QMainWindow):
         self.ed_db_file.setText(conn.get("db_datei", "datenlogger.db"))
         self.chk_db_changes.setChecked(bool(int(conn.get("db_nur_aenderungen", 0))))
         self.ed_event_file.setText(conn.get("ereignis_datei", ""))
+        self.cb_rec_mode.setCurrentIndex(max(self.cb_rec_mode.findData(conn.get("aufz_modus", "dauernd")), 0))
+        self.ed_rec_cond.setText(conn.get("aufz_bedingung", ""))
+        self.sp_pre.setValue(float(conn.get("aufz_vorlauf_s", 10.0)))
+        self.sp_post.setValue(float(conn.get("aufz_nachlauf_s", 10.0)))
+        self.sp_max.setValue(float(conn.get("aufz_max_s", 0.0)))
+        self._update_rec_mode()
         self._update_db_fields()
         self.ed_logo.setText(conn.get("logo", ""))
         self.ed_icon.setText(conn.get("icon", ""))
@@ -1426,6 +1566,8 @@ class ConfigWindow(QMainWindow):
         self._loading = False
         self.load_props()
         self.refresh_tree()
+        self._fill_filter_plcs()
+        self.apply_var_filter()
         self.update_title()
 
     # Verbindungs- und Anzeigeeinstellungen aus den Feldern als Wörterbuch (für die Konfigurationsdatei und für Tests).
@@ -1462,7 +1604,12 @@ class ConfigWindow(QMainWindow):
                 "web_token": self.ed_web_token.text().strip(),
                 "web_intervall_ms": self.sp_web_int.value(),
                 "headless": 1 if self.chk_headless.isChecked() else 0,
-                "ereignis_datei": self.ed_event_file.text().strip()}
+                "ereignis_datei": self.ed_event_file.text().strip(),
+                "aufz_modus": self.cb_rec_mode.currentData() or "dauernd",
+                "aufz_bedingung": " ".join(self.ed_rec_cond.text().split()),
+                "aufz_vorlauf_s": self.sp_pre.value(),
+                "aufz_nachlauf_s": self.sp_post.value(),
+                "aufz_max_s": self.sp_max.value()}
 
     # Alle Tabellenzeilen als Variable-Objekte einsammeln (einschließlich Zuordnung und Formel).
     def collect(self):
@@ -1800,6 +1947,17 @@ class ConfigWindow(QMainWindow):
             if QMessageBox.question(self, tr("Trigger prüfen"), tr("Fehlerhafte Trigger (werden beim Aufzeichnen "
                                     "übersprungen):\n\n") + "\n".join(bad) + tr("\n\nTrotzdem speichern?")) \
                     != QMessageBox.StandardButton.Yes:
+                return False
+        # Aufzeichnung per Trigger: Startbedingung prüfen.
+        if self.cb_rec_mode.currentData() == "trigger":
+            cond = self.ed_rec_cond.text().strip()
+            f, err = check_formula(cond) if cond else (None, tr("keine Startbedingung angegeben"))
+            if f is not None:
+                missing = [n for n in f.refs if n not in avail_all]
+                err = (tr("unbekannte Variablen: ") + ", ".join(missing)) if missing else ""
+            if err:
+                QMessageBox.warning(self, tr("Aufzeichnung per Trigger"), tr("Startbedingung: {0}").format(err))
+                self.tabs.setCurrentIndex(1)
                 return False
         # Datei schreiben (Verbindung, Steuerungen, Diagramme/Achsen, Variablen, Blöcke, danach die Trigger).
         try:

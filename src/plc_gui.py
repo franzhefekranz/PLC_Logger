@@ -525,6 +525,9 @@ class ChartPanel(QWidget):
             self.plot.addItem(ln, ignoreBounds=True)
             self.rulers.append(ln)
 
+        # Trigger-Marken: senkrechte, gestrichelte Linien mit Beschriftung unten an der Zeitachse (Ereignisse, Beginn von
+        # Trigger-Aufnahmen, Notizen). Die Linien werden wiederverwendet (set_marks), damit beim Scrollen nichts neu entsteht.
+        self.mark_lines = []
         # Werte am Mauszeiger (nur online, siehe MainWindow._apply_mode): senkrechte Linie am nächsten Messpunkt, Punkte
         # auf den Kurven und ein Kästchen mit Uhrzeit und Werten. Alles mit ignoreBounds (beeinflusst die Skalierung nicht).
         self.cursor_enabled = False
@@ -672,6 +675,29 @@ class ChartPanel(QWidget):
         self.cursor_text.setHtml("<div style='color:#dddddd'>" + "<br>".join(lines) + "</div>")
         self.cursor_text.setPos(ts, y1)
         self._show_cursor(True)
+
+    def set_marks(self, marks):
+        """Trigger-Marken setzen: [(Zeit, Kurztext, Farbe, Tooltip)] (nur die im sichtbaren Bereich)."""
+        while len(self.mark_lines) < len(marks):
+            ln = pg.InfiniteLine(angle=90, movable=False, label="",
+                                 labelOpts={"position": 0.03, "anchors": [(0, 1), (0, 1)],
+                                            "fill": pg.mkBrush(20, 20, 20, 170)})
+            ln.setZValue(5)
+            self.plot.addItem(ln, ignoreBounds=True)
+            self.mark_lines.append(ln)
+        for k, ln in enumerate(self.mark_lines):
+            if k >= len(marks):
+                if ln.isVisible():
+                    ln.setVisible(False)
+                continue
+            ts, text, col, tip = marks[k]
+            ln.setPen(pg.mkPen(col, width=1.5, style=Qt.PenStyle.DashLine))
+            ln.setPos(ts)
+            ln.label.setFormat("▲ " + text.replace("{", "{{").replace("}", "}}"))
+            ln.label.setColor(col)
+            ln.setToolTip(tip)
+            ln.label.setToolTip(tip)
+            ln.setVisible(True)
 
     # Balken ein-/ausblenden; ohne Balken-Variablen bleibt der Streifen immer ausgeblendet.
     def set_bars_visible(self, flag):
@@ -1065,6 +1091,8 @@ class MainWindow(QMainWindow):
         self.event_viewer = None
         self._offline_events = None
         self._ev_seen = None
+        # Trigger-Marken an der Zeitachse: alle Marken des Ereignisprotokolls (sortiert) und die zuletzt gezeigten.
+        self._marks, self._mark_times, self._marks_key, self._marks_shown = [], [], None, None
         # Oberfläche und Anzeige aufbauen, dann den 100-ms-Takt starten, der die Anzeige aktualisiert (refresh).
         self._build_ui()
         self.act_demo.setChecked(demo)
@@ -1203,6 +1231,12 @@ class MainWindow(QMainWindow):
         self.act_mousevals.setChecked(bool(load_settings().get("mauswerte", True)))
         self.act_mousevals.setToolTip(tr("Im Online-Modus Zeit und Werte aller Kurven an der Mausposition anzeigen"))
         self.act_mousevals.toggled.connect(lambda on: (save_settings(mauswerte=on), self._apply_mode()))
+        # Trigger-Marken an der Zeitachse (Ereignisse, Aufnahmen per Trigger, Notizen); Einstellung bleibt gespeichert.
+        self.act_marks = QAction(tr("Trigger-Marken an der Zeitachse"), self)
+        self.act_marks.setCheckable(True)
+        self.act_marks.setChecked(bool(load_settings().get("marken", True)))
+        self.act_marks.setToolTip(tr("Ereignisse, Beginn von Trigger-Aufnahmen und Notizen als senkrechte Linie im Diagramm"))
+        self.act_marks.toggled.connect(lambda on: (save_settings(marken=on), self.show_marks(force=True)))
 
         # Screenshot-Menü (Einträge je Diagramm werden in _rebuild erzeugt) und die Option für hellen Hintergrund.
         self.menu_shot = QMenu(tr("Screenshot"), self)  # wird je Diagramm gefüllt
@@ -1332,6 +1366,7 @@ class MainWindow(QMainWindow):
         add_help_menu(self)
         m_view.addAction(self.act_vals)
         m_view.addAction(self.act_mousevals)
+        m_view.addAction(self.act_marks)
         m_view.addAction(self.act_bars)
         # Logo rechts oben in der Menüleiste (Eckenwidget), 28 Pixel hoch.
         self.logo_lbl = LogoLabel()                # Strg + Umschalt + Doppelklick: verstecktes Info-Fenster
@@ -1339,6 +1374,10 @@ class MainWindow(QMainWindow):
         self.logo_lbl.setContentsMargins(8, 0, 8, 0)
         self.menuBar().setCornerWidget(self.logo_lbl, Qt.Corner.TopRightCorner)  # Logo rechts oben
         # Statusleiste: links die Meldungen, rechts die Webserver-Adresse und je Steuerung eine Status-LED.
+        # Aufzeichnung per Trigger: „wartet“ bzw. „Aufnahme läuft“ (nur in dieser Betriebsart sichtbar).
+        self.lbl_capture = QLabel("")
+        self.lbl_capture.setVisible(False)
+        self.statusBar().addPermanentWidget(self.lbl_capture)
         self.lbl_web = QLabel("")
         self.statusBar().addPermanentWidget(self.lbl_web)
         # Zähler der offenen (unquittierten) Ereignisse; Klick öffnet den Ereignis-Viewer zum Quittieren.
@@ -1383,6 +1422,7 @@ class MainWindow(QMainWindow):
         self.curves = [None] * len(self.vars)
         self.master = None
         self.ruler_t = [None, None]
+        self._marks_shown = None                 # neue Diagramme: Marken beim nächsten Anzeigen neu setzen
         show_bars = self.act_bars.isChecked()
 
         # Pro Diagramm ein ChartPanel (Kurven, Legende, Balken, Lineale) anlegen.
@@ -1525,6 +1565,23 @@ class MainWindow(QMainWindow):
             led.set_state(state, f"{name}: {text}" + (tr("\nZykluszeit {0:.0f} ms").format(ms) if ms else ""))
         if rec.events.version != self._ev_seen:          # neues Ereignis: Zähler sofort aktualisieren
             self.update_event_button()
+        self._update_capture_label(rec.capture_state() if rec.running else None)
+
+    def _update_capture_label(self, state):
+        """Anzeige der Aufzeichnung per Trigger in der Statusleiste."""
+        if state == getattr(self, "_cap_state", None):
+            return
+        self._cap_state = state
+        self.lbl_capture.setVisible(state is not None)
+        if state == "rec":
+            self.lbl_capture.setText(tr("⏺ Aufnahme läuft"))
+            self.lbl_capture.setStyleSheet("QLabel{background:#2e7d32;color:white;font-weight:bold;"
+                                           "border-radius:3px;padding:0 6px}")
+        elif state == "wait":
+            self.lbl_capture.setText(tr("⏸ wartet auf Trigger"))
+            self.lbl_capture.setStyleSheet("QLabel{color:#2e7d32;padding:0 6px}")
+        self.lbl_capture.setToolTip(tr("Aufzeichnung per Trigger: gespeichert wird nur bei erfüllter Startbedingung "
+                                       "(mit Vor- und Nachlauf)"))
 
     # ---------------------------------------------------------------------------------------
     # PID-Regler-Optimierung
@@ -1588,6 +1645,7 @@ class MainWindow(QMainWindow):
             pass
         n = log.open_count()
         self._ev_seen = log.version
+        self.update_marks_source(log)
         if self.event_viewer is not None and self.event_viewer.log is not log:
             self.event_viewer.set_log(log)
         if getattr(self, "_ev_shown", None) == (n, log.path):
@@ -1601,6 +1659,46 @@ class MainWindow(QMainWindow):
             self.btn_events.setText("🔔 0")
             self.btn_events.setStyleSheet("")
         self.btn_events.setToolTip(tr("{0} offene (nicht quittierte) Ereignisse\n{1}\nKlicken: Ereignisprotokoll öffnen und quittieren").format(n, log.path))
+
+    # ---- Trigger-Marken an der Zeitachse
+    def update_marks_source(self, log=None):
+        """Marken neu aus dem Ereignisprotokoll lesen, wenn es sich geändert hat."""
+        from plc_events import event_marks
+        log = log or self.event_log()
+        key = (log.path, log.version)
+        if key == self._marks_key:
+            return
+        self._marks_key = key
+        try:
+            self._marks = event_marks(log.events())
+        except (OSError, ValueError):
+            self._marks = []
+        self._mark_times = [m[0] for m in self._marks]
+        self.show_marks(force=True)
+
+    def show_marks(self, x0=None, x1=None, force=False):
+        """Marken im sichtbaren Zeitbereich in allen Diagrammen anzeigen (höchstens 150 je Diagramm)."""
+        import bisect
+        if not self.panels:
+            return
+        if x0 is None or x1 is None:
+            if not self.master:
+                return
+            x0, x1 = self.master.plot.getViewBox().viewRange()[0]
+        sel = []
+        if self.act_marks.isChecked() and self._marks:
+            i0 = bisect.bisect_left(self._mark_times, x0)
+            i1 = bisect.bisect_right(self._mark_times, x1)
+            sel = self._marks[i0:i1]
+            if len(sel) > 150:                       # sehr viele Marken: gleichmäßig ausdünnen
+                step = len(sel) / 150.0
+                sel = [sel[int(k * step)] for k in range(150)]
+        key = tuple(m[0] for m in sel) + (self._marks_key,)
+        if key == self._marks_shown and not force:
+            return
+        self._marks_shown = key
+        for p in self.panels:
+            p.set_marks(sel)
 
     # Notiz von Hand ins Ereignisprotokoll (offline mit dem Zeitpunkt von Lineal 1).
     def add_note(self):
@@ -1772,8 +1870,9 @@ class MainWindow(QMainWindow):
     def _apply_mode(self):
         """Online/Offline: Mausbedienung, Lineale und Tabellenspalten umschalten."""
         for p in self.panels:
-            # Mausbedienung der Zeitachse nur offline (zum Verschieben/Zoomen); y bleibt unveränderlich (Skalierung über die Konfiguration).
-            p.plot.getViewBox().setMouseEnabled(x=not self.online, y=False)
+            # Mausbedienung nur der Zeitachse: offline Verschieben und Zoomen, online Zoomen (Mausrad ändert das
+            # Anzeigefenster, siehe on_xrange); y bleibt unveränderlich (Skalierung über die Konfiguration).
+            p.plot.getViewBox().setMouseEnabled(x=True, y=False)
             # Lineale sind nur offline sichtbar, die Werte am Mauszeiger nur online.
             for ln in p.rulers:
                 ln.setVisible(not self.online)
@@ -1935,8 +2034,9 @@ class MainWindow(QMainWindow):
         self._block = True
         self.master.plot.setXRange(t_end - w, t_end, padding=0)  # andere Diagramme sind X-verknüpft
         self._block = False
-        # BOOL-Streifen in den Legenden für den sichtbaren Zeitbereich nachführen.
+        # BOOL-Streifen in den Legenden und Trigger-Marken für den sichtbaren Zeitbereich nachführen.
         self.update_bool_strips(t_end - w, t_end)
+        self.show_marks(t_end - w, t_end)
         # Wertetabelle, Balken und Legende mit dem letzten Messwert aktualisieren.
         self.update_values(len(tt) - 1)
         # Werte am Mauszeiger: die Kurven sind unter der Maus weitergelaufen.
@@ -1983,6 +2083,7 @@ class MainWindow(QMainWindow):
         self.master.plot.setXRange(x0, x0 + w, padding=0)
         self._block = False
         self.update_bool_strips(x0, x0 + w)
+        self.show_marks(x0, x0 + w)
 
     def update_bool_strips(self, x0, x1):
         """Zeitverlauf der BOOL-Streifen in den Legenden für den sichtbaren Bereich x0..x1 setzen."""
@@ -2008,10 +2109,20 @@ class MainWindow(QMainWindow):
     # Der Benutzer hat die Zeitachse mit der Maus verschoben/gezoomt: Scrollleiste und Fensterbreite nachführen.
     def on_xrange(self, _vb, rng):
         """Maus-Pan/Zoom im Offline-Modus -> Scrollbar und Fensterbreite nachführen."""
-        # Nicht reagieren, wenn das Programm selbst den Bereich gesetzt hat (_block), online (nur offline bedienbar) oder ohne Daten.
-        if self._block or self.online or self.snap_t1 <= self.snap_t0:
+        # Nicht reagieren, wenn das Programm selbst den Bereich gesetzt hat (_block) oder ohne Daten.
+        if self._block:
             return
         x0, x1 = rng
+        if self.online:
+            # Online: Mausrad bzw. Ziehen mit der rechten Maustaste zoomt nur die Zeitachse. Übernommen wird die neue
+            # Breite als Anzeigefenster; das rechte Ende folgt weiter den neuesten Werten (beim nächsten Takt).
+            w = max(1, int(round(x1 - x0)))
+            if w != self.win_spin.value():
+                self.win_spin.setValue(min(w, self.win_spin.maximum()))   # löst on_window_changed -> dirty aus
+            self.dirty = True
+            return
+        if self.snap_t1 <= self.snap_t0:
+            return
         self.view_x = (x0, x1)
         # Position der Scrollleiste aus dem neuen Ausschnitt: Anteil von x0 am verfügbaren Scrollbereich.
         span = (self.snap_t1 - self.snap_t0) - (x1 - x0)
@@ -2021,6 +2132,7 @@ class MainWindow(QMainWindow):
         self.win_spin.setValue(max(1, int(round(x1 - x0))))
         self._block = False
         self.update_bool_strips(x0, x1)
+        self.show_marks(x0, x1)
 
     # ---------------------------------------------------------------------------------------
     # Lineale (nur offline)

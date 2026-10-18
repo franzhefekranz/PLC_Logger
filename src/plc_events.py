@@ -357,3 +357,44 @@ class TriggerEngine:
                     st.on = False
                     if t.gehen:
                         self.log.go(st.eid, t, ts)
+
+
+# ---------------------------------------------------------------------------------------
+# Marken für die Diagramme (Zeitachse)
+# ---------------------------------------------------------------------------------------
+MARK_COLORS = {"Alarm": "#e53935", "Warnung": "#fb8c00", "Info": "#42a5f5", NOTE: "#9e9e9e"}
+CAPTURE_COLOR = "#43a047"            # Beginn einer Trigger-Aufnahme (Trigger „Aufnahme“, siehe plc_recorder)
+
+
+def parse_stamp(text):
+    """Zeitstempel des Protokolls (lokale Zeit, „JJJJ-MM-TT hh:mm:ss.mmm“) -> Unix-Zeit oder None."""
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.strptime(text.strip(), fmt).timestamp()
+        except (ValueError, AttributeError):
+            continue
+    return None
+
+
+def event_marks(events):
+    """Ereignisse (EventLog.events()) -> nach Zeit sortierte Marken [(Zeit, Kurztext, Farbe, Tooltip)].
+
+    Eine Marke je KOMMT-Eintrag und je Notiz, am Zeitpunkt des Kommens."""
+    out = []
+    for e in events:
+        ts = parse_stamp(e.zeit)
+        if ts is None:
+            continue
+        if e.notiz:
+            short, col = (e.text.splitlines() or [""])[0][:40], MARK_COLORS[NOTE]
+        else:
+            short = e.trigger
+            col = CAPTURE_COLOR if e.trigger == "Aufnahme" else MARK_COLORS.get(e.prio, "#42a5f5")
+        tip = f"{e.zeit[:19]}  {tr(e.prio)} – {e.trigger}\n{e.text}"
+        if e.gegangen:
+            tip += "\n" + tr("gegangen: {0}").format(e.gegangen[11:19])
+        if e.quittiert:
+            tip += "\n" + tr("quittiert: {0} ({1})").format(e.quittiert[11:19], e.benutzer)
+        out.append((ts, short, col, tip))
+    out.sort(key=lambda m: m[0])
+    return out

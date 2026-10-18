@@ -344,7 +344,7 @@ _BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "pid_aktiv",
 _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "start", "fenster_s", "max_records",
              "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl"}
-_FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude"}
+_FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude", "aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s"}
 _JSON_KEYS = {"treiberdaten"}                    # Text mit JSON-Inhalt -> verschachteltes Objekt
 
 
@@ -542,6 +542,9 @@ def default_connection() -> dict:
             "db_nur_aenderungen": 0,
             # Ereignisprotokoll der Trigger (leer = <CSV-Ordner>/<CSV-Name>_ereignisse.csv, siehe *_events.py).
             "ereignis_datei": "",
+            # Aufzeichnung: dauernd oder nur per Trigger (Startbedingung) mit Vor- und Nachlauf (siehe *_recorder.py).
+            "aufz_modus": "dauernd", "aufz_bedingung": "", "aufz_vorlauf_s": 10.0, "aufz_nachlauf_s": 10.0,
+            "aufz_max_s": 0.0,
             # Treibereigene Werte (JSON {Treiber: {Schlüssel: Wert}}), z. B. die importierten DB-Quellen des S7-Treibers.
             "treiberdaten": ""}
 
@@ -553,7 +556,9 @@ CONN_INT_KEYS = ("fenster_s", "balken", "max_records", "archiv_beenden",
 CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "icon", "csv_name",
                  "archiv_ordner", "projekt", "seite_anordnung", "web_host", "web_token",
                  "db_typ", "db_host", "db_name", "db_user", "db_passwort", "db_tabelle", "db_datei",
-                 "ereignis_datei", "treiberdaten")
+                 "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung")
+CONN_FLOAT_KEYS = ("aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s")
+RECORD_MODES = {"dauernd": N_("Dauernd"), "trigger": N_("Per Trigger mit Vor- und Nachlauf")}
 
 
 # Kennzeichen der Konfigurationsdateien der Einzelprogramme: Parameter der Steuerung -> Treiber.
@@ -767,6 +772,10 @@ def load_config(path: str = None):
         # Zahlenwerte mit Vorgabe lesen (ungültiger Text -> ValueError; die Datei wird bewusst nicht still repariert).
         for key in CONN_INT_KEYS:
             conn[key] = s.getint(key, conn[key])
+        for key in CONN_FLOAT_KEYS:
+            conn[key] = max(0.0, s.getfloat(key, conn[key]))
+        if conn["aufz_modus"] not in RECORD_MODES:
+            conn["aufz_modus"] = "dauernd"
         # S7-Datenlogger: importierte DB-Quellen in die Treiberdaten des Treibers "s7" übernehmen.
         if s.get("symbolquellen", "").strip() and not conn["treiberdaten"].strip():
             import json

@@ -44,7 +44,7 @@ from plc_events import EventLog, Trigger, TriggerEngine, event_log_path, load_tr
 from plc_formula import Formula, FormulaError
 from plc_util import fmt_csv
 from plc_db import DbWriter, describe as db_describe, db_settings
-from plc_i18n import tr
+from plc_i18n import N_, tr
 
 # Verbindungszustände einer Steuerung (für Status-LED und Meldungen).
 ST_OFF, ST_CONNECTING, ST_OK, ST_ERROR = "off", "connecting", "ok", "error"
@@ -157,6 +157,66 @@ class DemoLoop:
         self.last = el
         self.hist.append((el, self.u))
         return sp, self.y + random.gauss(0, 0.15), self.u
+
+
+# ---------------------------------------------------------------------------------------
+# Triggergesteuerte Aufzeichnung (Vor- und Nachlauf)
+# ---------------------------------------------------------------------------------------
+class CaptureGate:
+    """Entscheidet je Messzeile, ob sie in CSV-Datei/Datenbank geschrieben wird (Einstellung „Per Trigger“).
+
+    Ein Ringspeicher hält die Zeilen der letzten ``pre_s`` Sekunden. Wird die Startbedingung wahr, beginnt eine
+    Aufnahme: zuerst der Inhalt des Ringspeichers (Vorlauf), dann jede neue Zeile. Ist die Bedingung wieder falsch,
+    läuft die Aufnahme noch ``post_s`` Sekunden weiter (Nachlauf); wird sie in dieser Zeit erneut wahr, verlängert
+    sich die Aufnahme. ``max_s`` (> 0) begrenzt die Dauer einer Aufnahme; danach muss die Bedingung erst wieder
+    falsch werden, bevor die nächste Aufnahme beginnen kann.
+
+    ``feed`` liefert (zu schreibende Zeilen [(Zeit, Zeile)], Ereignis) mit Ereignis None, "start" oder "stop"."""
+
+    def __init__(self, condition, pre_s=10.0, post_s=10.0, max_s=0.0):
+        self.formula = Formula(condition)             # FormulaError bei ungültiger Bedingung
+        self.condition = condition
+        self.pre, self.post, self.max = max(0.0, float(pre_s)), max(0.0, float(post_s)), max(0.0, float(max_s))
+        self.ring = collections.deque()
+        self.active = False
+        self.armed = True
+        self.t_trigger = self.last_true = None
+        self.rows = 0                                 # Zeilen der laufenden Aufnahme
+        self.captures = 0                             # Anzahl der Aufnahmen seit dem Start
+
+    def check(self, ts, values):
+        try:
+            r = self.formula.evaluate(ts, values)
+        except Exception:
+            r = float("nan")
+        return r == r and r != 0                      # NaN (kein Wert) gilt als „nicht erfüllt“
+
+    def feed(self, ts, row, values):
+        cond = self.check(ts, values)
+        if not self.active:
+            self.ring.append((ts, row))
+            while self.ring and self.ring[0][0] < ts - self.pre:
+                self.ring.popleft()
+            if not cond:
+                self.armed = True
+                return [], None
+            if not self.armed:
+                return [], None
+            rows = list(self.ring)
+            self.ring.clear()
+            self.active, self.t_trigger, self.last_true = True, ts, ts
+            self.rows = len(rows)
+            self.captures += 1
+            return rows, "start"
+        self.rows += 1
+        if cond:
+            self.last_true = ts
+        too_long = self.max > 0 and ts - self.t_trigger >= self.max
+        if too_long or (not cond and ts - self.last_true >= self.post):
+            self.active = False
+            self.armed = not cond
+            return [(ts, row)], "stop"
+        return [(ts, row)], None
 
 
 # ---------------------------------------------------------------------------------------
@@ -329,6 +389,10 @@ class Recorder:
             self.triggers = demo_triggers()
         self.events = EventLog(event_log_path(conn))
         self.trigger_engine = None               # TriggerEngine, solange die Aufzeichnung läuft
+        # Aufzeichnung per Trigger (Vor-/Nachlauf): CaptureGate, solange die Aufzeichnung läuft (sonst dauernd).
+        self.capture_mode = (conn.get("aufz_modus") == "trigger")
+        self.gate = None
+        self._capture_eid = None
 
     # ------------------------------------------------------------------ Ordner
     def csv_dir(self):
@@ -404,7 +468,8 @@ class Recorder:
         if self.running:
             return
         self.stop_evt.clear()
-        if self.csv_on:
+        self.gate = self._make_gate() if self.capture_mode else None
+        if self.csv_on and self.gate is None:
             self.open_csv()
         if self.db_conf["typ"]:
             self.db = DbWriter(self.conn, self.names, self.emit)
@@ -429,8 +494,15 @@ class Recorder:
                 s = PlcSampler(self, k, plc, self.plc_vars[k])
                 self.samplers.append(s)
                 s.start()
-        targets = ([self.csv_path] if self.csv_on else []) + ([db_describe(self.db_conf)] if self.db else [])
-        self.emit(tr("Aufzeichnung gestartet → ") + (" und ".join(targets) or tr("nur Anzeige (weder CSV noch Datenbank)")))
+        if self.gate is not None:
+            targets = ([tr("CSV-Ordner {0}").format(self.csv_dir())] if self.csv_on else []) + \
+                      ([db_describe(self.db_conf)] if self.db else [])
+            self.emit(tr("Aufzeichnung per Trigger: warte auf „{0}“ (Vorlauf {1:g} s, Nachlauf {2:g} s) → {3}").format(
+                self.gate.condition, self.gate.pre, self.gate.post,
+                " und ".join(targets) or tr("nur Anzeige (weder CSV noch Datenbank)")))
+        else:
+            targets = ([self.csv_path] if self.csv_on else []) + ([db_describe(self.db_conf)] if self.db else [])
+            self.emit(tr("Aufzeichnung gestartet → ") + (" und ".join(targets) or tr("nur Anzeige (weder CSV noch Datenbank)")))
         if self.trigger_engine:
             self.emit(tr("{0} Trigger aktiv → Ereignisprotokoll {1}").format(len(self.trigger_engine.states), self.events.path))
 
@@ -444,6 +516,9 @@ class Recorder:
         self.q.put(None)                         # Ende-Marke: der Sammler verarbeitet vorher noch alles Übrige
         if self.collector:
             self.collector.join(10.0)
+        if self.gate is not None and self.gate.active:   # laufende Trigger-Aufnahme abschließen
+            self._capture_event("stop", time.time())
+            self.gate.active = False
         if self.db:                              # Datenbank: restliche Werte schreiben, Thread beenden
             self.db.stop()
             if self.db.buf:
@@ -456,7 +531,10 @@ class Recorder:
                 self.csv_fh = self.csv_w = None
         for k in range(len(self.plcs)):
             self.set_status(k, ST_OFF, tr("gestoppt"))
-        self.emit(tr("Gestoppt") + (tr(" – gespeichert in {0}").format(self.csv_path) if self.csv_on else ""))
+        if self.gate is not None:
+            self.emit(tr("Gestoppt – {0} Trigger-Aufnahmen").format(self.gate.captures))
+        else:
+            self.emit(tr("Gestoppt") + (tr(" – gespeichert in {0}").format(self.csv_path) if self.csv_on else ""))
 
     def shutdown(self, archive=None):
         """Aufzeichnung beenden. Mit ``archive`` (Standard: Einstellung ``archiv_beenden``) wird die aktuelle
@@ -502,7 +580,9 @@ class Recorder:
                 cur[gi] = val
             row = cur.copy()
             engine = self.trigger_engine
-            if self.computed_idx or engine:
+            gate = self.gate
+            byname = None
+            if self.computed_idx or engine or gate:
                 # Formeln in Tabellenreihenfolge: spätere dürfen frühere verwenden.
                 byname = {self.names[i]: row[i] for i in range(n) if i not in self.formulas}
                 for i in self.computed_idx:
@@ -516,10 +596,82 @@ class Recorder:
                     except OSError as e:
                         self.emit(tr("⚠ Ereignisprotokoll nicht beschreibbar: {0}").format(e))
             self._append(ts, row)
-            self._write_csv(ts, row)
-            if self.db:
-                self.db.put(ts, row)
+            if gate is None:
+                self._store(ts, row)
+            else:                                # per Trigger: nur Vorlauf, Aufnahme und Nachlauf speichern
+                rows, event = gate.feed(ts, row, {k: float(v) for k, v in byname.items()})
+                if event == "start":
+                    self._capture_event("start", gate.t_trigger)
+                for t_, r_ in rows:
+                    self._store(t_, r_)
+                if event == "stop":
+                    self._capture_event("stop", ts)
         self._flush_if_due(force=True)
+
+    def _store(self, ts, row):
+        """Zeile in die CSV-Datei und die Datenbank schreiben."""
+        self._write_csv(ts, row)
+        if self.db:
+            self.db.put(ts, row)
+
+    # ------------------------------------------------------------------ Aufzeichnung per Trigger
+    def _make_gate(self):
+        """CaptureGate aus den Einstellungen; bei Fehlern Meldung und dauernde Aufzeichnung (es geht nichts verloren)."""
+        cond = (self.conn.get("aufz_bedingung") or "").strip()
+        try:
+            if not cond:
+                raise FormulaError(tr("keine Startbedingung angegeben"))
+            gate = CaptureGate(cond, self.conn.get("aufz_vorlauf_s", 10.0), self.conn.get("aufz_nachlauf_s", 10.0),
+                               self.conn.get("aufz_max_s", 0.0))
+            missing = [n for n in gate.formula.refs if n not in self.names]
+            if missing:
+                raise FormulaError(tr("unbekannte Variablen: ") + ", ".join(missing))
+            return gate
+        except FormulaError as e:
+            self.emit(tr("⚠ Aufzeichnung per Trigger: {0} – es wird dauernd aufgezeichnet").format(e))
+            return None
+
+    CAPTURE_TRIGGER = Trigger(name=N_("Aufnahme"), prio="Info", quittieren=False, gehen=True)
+
+    def _capture_event(self, kind, ts):
+        """Beginn/Ende einer Trigger-Aufnahme: CSV-Datei öffnen bzw. schließen, Ereignisprotokoll und Meldung."""
+        g = self.gate
+        if kind == "start":
+            if self.csv_on:
+                try:
+                    self.open_csv()
+                except OSError as e:
+                    self.emit(tr("⚠ CSV-Fehler: {0}").format(e))
+            text = tr("Aufnahme {0} gestartet: {1}").format(g.captures, g.condition)
+            try:
+                self._capture_eid = self.events.come(self.CAPTURE_TRIGGER, text, ts)
+            except OSError as e:
+                self.emit(tr("⚠ Ereignisprotokoll nicht beschreibbar: {0}").format(e))
+            self.emit("● " + text + (f" → {self.csv_path}" if self.csv_on else ""))
+            return
+        path = self.csv_path if self.csv_fh else ""
+        if self.csv_fh:
+            try:
+                self.csv_fh.close()
+            except OSError as e:
+                self.emit(tr("⚠ CSV-Fehler: {0}").format(e))
+            self.csv_fh = self.csv_w = None
+            self._csv_pending = False            # fertige Aufnahme bleibt im CSV-Ordner
+        if self._capture_eid is not None:
+            try:
+                self.events.go(self._capture_eid, self.CAPTURE_TRIGGER, ts)
+            except OSError:
+                pass
+            self._capture_eid = None
+        self.emit(tr("○ Aufnahme {0} beendet ({1} Zeilen){2}").format(
+            g.captures, g.rows, f" → {path}" if path else ""))
+
+    def capture_state(self):
+        """Zustand der Aufzeichnung per Trigger: None (dauernd), "wait" oder "rec"."""
+        g = self.gate
+        if g is None:
+            return None
+        return "rec" if g.active else "wait"
 
     def _append(self, ts, row):
         """Zeile an die Puffer anhängen; bei Überlauf das älteste Zehntel verwerfen."""

@@ -113,3 +113,34 @@ def time_ticks(t0, t1, target=7):
         out.append((t, d.strftime("%H:%M:%S") if step < 60 else d.strftime("%H:%M")))
         t += step
     return out
+
+
+def text_filter(pattern):
+    """Suchtext -> Prüffunktion f(*Felder) -> bool (für Such-/Filterfelder).
+
+    Groß-/Kleinschreibung egal; mehrere Wörter müssen alle vorkommen (in irgendeinem Feld); ``*`` und ``?`` sind
+    Platzhalter; ein Wort mit vorangestelltem ``-`` schließt aus. Leerer Suchtext: alles passt."""
+    import fnmatch
+    import re
+    words = [w for w in str(pattern or "").lower().split() if w not in ("", "-")]
+    if not words:
+        return lambda *fields: True
+    tests = []
+    for w in words:
+        neg = w.startswith("-")
+        w = w[1:] if neg else w
+        if any(c in w for c in "*?["):
+            rx = re.compile(fnmatch.translate(w).replace(r"\Z", "").rstrip("$"), re.S)
+            match = (lambda rx: lambda s: rx.search(s) is not None)(rx)
+        else:
+            match = (lambda w: lambda s: w in s)(w)
+        tests.append((neg, match))
+
+    def check(*fields):
+        texts = [str(f or "").lower() for f in fields]
+        for neg, match in tests:
+            hit = any(match(t) for t in texts)
+            if hit == neg:
+                return False
+        return True
+    return check
