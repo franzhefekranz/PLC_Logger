@@ -60,7 +60,7 @@ CONFIG_FILE = os.path.join(BASE_DIR, "plc_config.json")
 
 # Programmname und Version (Startbild, Info-Dialog, Fenstertitel).
 APP_NAME = "PLC Datenlogger"
-APP_VERSION = "3.0.0"
+APP_VERSION = "3.1.0"
 # Programmdateien der installierten Windows-Version.
 LOGGER_EXE, CONFIG_EXE = "PLCLogger.exe", "PLCKonfiguration.exe"
 # Persönliche Einstellungen (Sprache, Startbild, zuletzt benutzte Konfigurationen) – JSON im Datenordner.
