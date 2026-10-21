@@ -88,6 +88,7 @@ Name: "{group}\PLC Datenlogger"; Filename: "{app}\{#AppExe}"
 Name: "{group}\PLC Konfiguration"; Filename: "{app}\{#ConfigExe}"
 Name: "{group}\PLC Datenlogger (Headless, nur Aufzeichnung)"; Filename: "{app}\{#AppExe}"; Parameters: "--headless"
 Name: "{group}\PLC Ereignisprotokoll"; Filename: "{app}\{#AppExe}"; Parameters: "--ereignisse"
+Name: "{group}\PLC IO-Check"; Filename: "{app}\{#AppExe}"; Parameters: "--iocheck"
 Name: "{group}\Bedienungsanleitung"; Filename: "{app}\Doku\{#DocFile}"
 #ifdef DocPdf
 Name: "{group}\Bedienungsanleitung (PDF)"; Filename: "{app}\Doku\{#DocPdf}"

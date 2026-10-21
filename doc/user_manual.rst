@@ -276,6 +276,8 @@ Without a file name, the **last used** configuration file is opened (default:
      - Open the user interface even if the configuration asks for *headless*.
    * - ``--demo``
      - Simulated values instead of a PLC connection (see `Demo mode <demo-modus_>`__).
+   * - ``--iocheck``
+     - Open only the `IO check <io-check_>`__ (commissioning: check the signal list).
 
 The logger can open the configuration program itself (**Config editor** in the
 toolbar), and the configuration program can start the logger (**File › Start logger
@@ -3226,6 +3228,145 @@ rulers, visible, all), confirm the file name; the report then opens in the PDF v
 The PDF files are created without additional programs (standard font Helvetica, vector
 graphics). The texts in the report follow the language of the program.
 
+.. _io-check:
+
+IO check (commissioning)
+======================================================================
+
+The IO check helps to test all inputs and outputs of a plant during commissioning:
+every signal of the IO list is shown live and checked off; what has just moved is shown
+at the top, and swapped signals are noticed immediately. The IO check reads from the
+controllers of the configuration itself – no recording needs to be running.
+
+Opening: in the logger **Analysis › IO check …**, standalone with ``PLCLogger.exe
+--iocheck`` (start menu *PLC IO-Check*; AppImage: ``--iocheck``), optionally with a
+configuration or a saved test progress (``*.iocheck.json``). **▶ Start reading** (F5)
+connects to the controllers; with **Demo** the signals are simulated (to try it out
+without a controller).
+
+.. note::
+
+   The IO check only reads. Outputs are switched as before with the engineering tool
+   (watch/force table) or the program and checked off in the IO check.
+
+Importing the IO list
+----------------------------------------------------------------------
+
+**Import IO list …** reads a CSV or Excel table, e.g. from EPLAN, the TIA Portal tag
+table (export to Excel) or an own list. The columns are recognized by their heading
+(case does not matter):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Field
+     - Recognized headings (selection)
+   * - Address (required)
+     - Address, Adresse, Logical Address / Logische Adresse, Operand, Tag name, NodeId
+   * - Symbol
+     - Symbol, Name, Variable, Signal
+   * - Comment
+     - Comment, Kommentar, Description, Function
+   * - Device tag
+     - BMK, Device tag, Betriebsmittelkennzeichen
+   * - Group
+     - Group, Cabinet, Station, Module, Gruppe, Schrank
+   * - Type
+     - Type, Kind, Signal type (DI/DO/AI/AO, Input/Output …)
+   * - Data type
+     - Data Type, Datentyp (Bool, Int, Word, Real …)
+   * - Controller
+     - Controller, PLC, Steuerung – name of the controller in the configuration;
+       empty = first
+   * - Measuring range
+     - Range / Messbereich (e.g. ``0 … 10 bar``, ``4-20 mA``) or separate *Eng min/max*,
+       *Unit*; raw values with *Raw min/max* (default 0 … 27648)
+
+If type and data type are missing, they are derived from the address: ``E0.0``/``%I0.0``
+= digital input, ``A4.0``/``%Q4.0`` = digital output, ``EW256``/``%IW256``/``PEW256`` =
+analog input, ``AW``/``%QW`` = analog output. For the driver ``s7`` ``%`` and ``P`` are
+removed, for ``ads`` the TwinCAT notation (``%IX0.1``) and for ``tia`` the symbol name
+(``IArea.<Name>``) is used. Rows without address (intermediate headings) and duplicate
+addresses are skipped. On a second import the list can be replaced or extended.
+
+Signal list and test status
+----------------------------------------------------------------------
+
+The table shows per signal the status, live value (digital: LED and 0/1; analog: value
+in engineering units and raw value), address, symbol, comment, device tag, group, type,
+check time, checker and remark. A change flashes yellow briefly. Above the table:
+search field, filters for group, type and status and the progress (“312 of 480 checked –
+305 OK, 4 faults, 3 skipped”).
+
+* **✓ OK** (Ctrl+1), **✗ Fault …** (Ctrl+2, asks for a remark), **– Skipped**
+  (Ctrl+3), **Reset** (Ctrl+0) – for the selected rows. Time and checker (Windows or
+  Linux user) are entered.
+* The **remark** can be edited directly in the table by double-click.
+* **Check off digital signals automatically** (optional, off): a signal with status
+  *open* becomes OK as soon as it has changed 0→1→0 – e.g. sensor actuated and
+  released. Only signals in the IO list or a scan range are checked off; the list
+  therefore determines which signals are to be tested.
+
+What has moved? (swapped signals)
+----------------------------------------------------------------------
+
+On the right the latest changes are listed, the newest in large print at the top (time,
+signal, e.g. ``0 → 1`` or ``4.98 → 7.51 bar``). This way a signal can be found without
+knowing its address: trigger it in the field and read which one arrived. Double-click on
+an entry selects the signal.
+
+The **selected signal** in the list or matrix is regarded as *expected*. If another
+digital input changes instead (and the expected one does not), a red warning “Swapped?
+Expected B12, got B13” appears with a beep; the entry is marked red.
+
+Checking analog values
+----------------------------------------------------------------------
+
+If an analog signal is selected, the **Analog value** box shows the scaled value, the
+raw value and fault values. The measuring range (raw value at 0 and 100 %, engineering
+range, unit) can be adjusted there.
+
+* **Test points 0/50/100 %:** if the value stays within the **tolerance** (toolbar,
+  default 1 % of the measuring range) of a test point for 1 s, it is taken over – e.g.
+  feed 4, 12 and 20 mA with a calibrator. **Take over** takes the current value by hand.
+  When all three points are within tolerance, the signal becomes OK.
+* **Fault values** (Siemens raw values): 32767 = overflow or wire break, −32768 =
+  underflow, 27649 … 32511 = overrange, below −4864 = underflow (wire break with
+  4 … 20 mA). With other raw ranges: value outside the measuring range.
+
+.. _io-matrix:
+
+Matrix and scanning ranges
+----------------------------------------------------------------------
+
+The **Matrix** tab shows all binary signals as **LEDs**: Siemens bit addresses by byte
+(row) and bit (column 0 … 7), separated into inputs, outputs and memory; other addresses
+in sequence.
+
+* LED green = input 1, orange = output 1, grey = 0, red = not readable.
+* Background green with ✓ = checked, red with ✗ = fault, grey with – = skipped. A blue
+  dot means: 0→1 seen, but not yet 1→0 again. A yellow frame marks a change that has
+  just happened, a blue frame the selected signal.
+* Click selects the signal (also in the list), double-click switches OK on/off,
+  right-click opens the status selection; the tooltip shows symbol, comment, device tag
+  and status.
+
+**Scan ranges …** reads contiguous bits also without an IO list, e.g. start address
+``E0.0`` (I0.0) and 256 bits (= E0.0 … E31.7) or ``A0.0`` (Q0.0) and 64 bits – useful
+if there is no list yet. Addresses in the notation of the driver of the selected
+controller; signals that are in the IO list keep their symbol and status. For ``s7``
+neighbouring addresses are read with one request per range.
+
+Saving and result
+----------------------------------------------------------------------
+
+**Save** stores the test progress as ``*.iocheck.json`` (signals, status, remarks, test
+points, scan ranges, options). After the first save, every change is saved immediately –
+you can stop at any time and continue the next day with **Open …**. **Export result …**
+writes the list with status, check time, checker, remark and test points as Excel or CSV
+file.
+
 .. _sprache:
 
 Switching and translating the language
@@ -3889,7 +4030,7 @@ window – also in dialogs. The field with the input focus decides:
   table and for the properties of chart and Y axis their section.
 * Dialogs: connection settings (section of the driver), select variables from the
   controller, blocks, calculated variables, triggers, PID controller, database read mode,
-  event log, notes, web server users, XY chart, frequency analysis.
+  event log, notes, web server users, XY chart, frequency analysis, IO check.
 * Logger: controls, charts, value table; start screen: section “Start screen”.
 
 The context help needs the HTML version ``user_manual.html`` (German:

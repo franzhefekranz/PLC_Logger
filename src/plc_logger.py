@@ -13,12 +13,13 @@ Aufruf
 ------
     plc_logger.py [Konfigurationsdatei] [--config DATEI] [--headless | --gui] [--demo]
     plc_logger.py --ereignisse [Konfigurationsdatei | Ereignisdatei.csv]
+    plc_logger.py --iocheck [Konfigurationsdatei | Prüfstand.iocheck.json] [--demo]
     plc_logger.py --konfig [Konfigurationsdatei]     (Konfigurationsprogramm, z. B. im Linux-AppImage)
 
 Ohne Dateiangabe wird die zuletzt benutzte Konfiguration geöffnet (Standard: plc_config.json). ``--gui`` öffnet die
 Oberfläche auch dann, wenn die Konfiguration den Headless-Modus verlangt; ``--headless`` erzwingt ihn.
 ``--ereignisse`` öffnet nur den Ereignis-Viewer (Ereignisse der Trigger anzeigen und quittieren), z. B. neben einem
-Headless-Logger.
+Headless-Logger. ``--iocheck`` öffnet nur den IO-Check (Inbetriebnahme: Signalliste prüfen).
 """
 import argparse
 import os
@@ -38,6 +39,8 @@ def parse_args(argv):
                       help="Konfigurationsprogramm öffnen (eine Programmdatei für alles, z. B. AppImage)")
     mode.add_argument("--ereignisse", action="store_true",
                       help="nur den Ereignis-Viewer öffnen (Ereignisse anzeigen und quittieren)")
+    mode.add_argument("--iocheck", action="store_true",
+                      help="nur den IO-Check öffnen (Inbetriebnahme: Signalliste prüfen)")
     ap.add_argument("--demo", action="store_true", help="simulierte Werte statt SPS-Verbindung")
     return ap.parse_args(argv)
 
@@ -51,6 +54,9 @@ def main(argv=None):
     if args.ereignisse:
         from plc_event_viewer import run_viewer
         return run_viewer(explicit)
+    if args.iocheck:
+        from plc_iocheck_dialog import run_iocheck
+        return run_iocheck(explicit, demo=args.demo)
     path = os.path.abspath(explicit) if explicit else last_config_path()
     if explicit and os.path.exists(path):
         remember_config_path(path)                    # die nächste Sitzung öffnet dieselbe Datei

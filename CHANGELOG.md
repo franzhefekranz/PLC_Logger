@@ -14,6 +14,18 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check** für die Inbetriebnahme (*Analyse › IO-Check …* oder `--iocheck`, Startmenü *PLC IO-Check*):
+  * IO-Liste aus CSV/Excel importieren (EPLAN, TIA-Portal-Variablentabelle, eigene Liste); Spalten werden an der
+    Überschrift erkannt, Signalart und Datentyp aus der Adresse abgeleitet.
+  * Signalliste mit Live-Werten, Prüfstatus (OK / Fehler / übersprungen) mit Zeit, Prüfer und Bemerkung, Filter
+    und Fortschritt; optional digitale Signale nach 0→1→0 automatisch abhaken.
+  * „Was hat sich bewegt?“: letzte Wechsel, Warnung bei Vertauschung (anderes Signal als das gewählte).
+  * Analogwerte: Skalierung, Fehlerwerte (Drahtbruch, Über-/Unterlauf), Prüfpunkte 0/50/100 % mit Toleranz.
+  * Matrix: Binärsignale als LEDs (Byte × Bit), geprüfte abgehakt und farbig; Bereiche ohne IO-Liste scannen.
+  * Prüfstand speichern (`*.iocheck.json`, danach automatisch), Ergebnis als Excel/CSV.
+
 ### Build
 
 * Release-Workflows: Tags auch mit großem „V“ (z. B. `V3.0.0`); von Hand mit Angabe eines vorhandenen Tags

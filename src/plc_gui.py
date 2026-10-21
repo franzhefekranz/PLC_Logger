@@ -1460,6 +1460,10 @@ class MainWindow(QMainWindow):
         self.menu_shot.addAction(self.act_shot_light)
         # PID-Optimierung: Menü 'Analyse' und Rechtsklickmenü der betroffenen Diagramme.
         self.menu_pid.clear()
+        a_io = self.menu_pid.addAction(tr("IO-Check …"))
+        a_io.setToolTip(tr("Inbetriebnahme: Signalliste prüfen, Ein-/Ausgänge als Matrix, Vertauschungen erkennen"))
+        a_io.triggered.connect(lambda _=False: self.open_iocheck())
+        self.menu_pid.addSeparator()
         a_xy = self.menu_pid.addAction(tr("XY-Diagramm …"))
         a_xy.setToolTip(tr("Variablen über einer anderen Variable darstellen (z. B. Druck über Hub)"))
         a_xy.triggered.connect(lambda _=False: self.open_analysis("xy"))
@@ -1673,6 +1677,17 @@ class MainWindow(QMainWindow):
         QApplication.restoreOverrideCursor()
         self.statusBar().showMessage(tr("Bericht erstellt: {0}").format(path), 10000)
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def open_iocheck(self):
+        """IO-Check (eigenes Fenster, liest selbst aus den Steuerungen der Konfiguration)."""
+        from plc_iocheck_dialog import IoCheckWindow
+        win = getattr(self, "_iocheck", None)
+        if win is None or not win.isVisible():
+            self._iocheck = win = IoCheckWindow(config_path=self.config_path, plcs=self.plcs,
+                                                demo=self.act_demo.isChecked())
+        win.show()
+        win.raise_()
+        win.activateWindow()
 
     def open_analysis(self, kind):
         """XY-Diagramm oder Frequenzanalyse öffnen (nicht modal)."""

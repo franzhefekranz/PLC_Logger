@@ -2013,6 +2013,12 @@
 @ Diagramme
 > 
 
+@ IO-Check …
+> 
+
+@ Inbetriebnahme: Signalliste prüfen, Ein-/Ausgänge als Matrix, Vertauschungen erkennen
+> 
+
 @ XY-Diagramm …
 > 
 
@@ -2250,6 +2256,370 @@
 @ Beende … (Aufzeichnung stoppen, CSV archivieren)
 > 
 
+# ---------------- plc_iocheck.py
+
+@ Digitaleingang
+> 
+
+@ Digitalausgang
+> 
+
+@ Analogeingang
+> 
+
+@ Analogausgang
+> 
+
+@ OK
+> 
+
+@ Fehler
+> 
+
+@ übersprungen
+> 
+
+@ Die Tabelle hat keine Spalte „Adresse“ (erkannt werden z. B. Adresse, Address, Logische Adresse, Operand, Tag-Name).
+> 
+
+@ Zeile {0}: Adresse {1} doppelt – übersprungen
+> 
+
+@ Eingänge
+> 
+
+@ Ausgänge
+> 
+
+@ Merker
+> 
+
+@ Weitere Signale
+> 
+
+@ Überlauf bzw. Drahtbruch (32767)
+> 
+
+@ Unterlauf bzw. Drahtbruch (−32768)
+> 
+
+@ Überlauf
+> 
+
+@ Übersteuerungsbereich (> 100 %)
+> 
+
+@ Unterlauf (Drahtbruch bei 4 … 20 mA?)
+> 
+
+@ Untersteuerungsbereich (< 0 %)
+> 
+
+@ Außerhalb des Messbereichs
+> 
+
+@ automatisch (0→1→0 erkannt)
+> 
+
+@ Vertauschung? Erwartet {0}, gekommen {1}
+> 
+
+@ Prüfpunkte 0/50/100 % in Toleranz
+> 
+
+@ {0} ist keine IO-Check-Datei.
+> 
+
+@ Symbol
+> 
+
+@ Kommentar
+> 
+
+@ BMK
+> 
+
+@ Gruppe
+> 
+
+@ Status
+> 
+
+@ Geprüft am
+> 
+
+@ Prüfer
+> 
+
+@ Bemerkung
+> 
+
+@ Messpunkte
+> 
+
+@ IO-Check
+> 
+
+@ Treiber {0}: {1}
+> 
+
+@ Verbunden mit {0}
+> 
+
+@ Lesefehler: {0} – neuer Verbindungsversuch
+> 
+
+@ Getrennt
+> 
+
+@ Demo-Modus (simulierte Werte)
+> 
+
+# ---------------- plc_iocheck_dialog.py
+
+@ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
+> 
+
+@ Wert: {0}
+> 
+
+@ Status: {0}
+> 
+
+@ Zurücksetzen
+> 
+
+@ Bereiche scannen
+> 
+
+@ Zusammenhängende Bits ohne IO-Liste lesen und in der Matrix anzeigen, z. B. Startadresse E0.0 und 256 Bits (= E0.0 … E31.7). Adressen in der Schreibweise des Treibers; Signale, die schon in der IO-Liste stehen, werden übernommen.
+> 
+
+@ Startadresse
+> 
+
+@ Anzahl Bits
+> 
+
+@ Hinzufügen
+> 
+
+@ Analogwert
+> 
+
+@ Einheit
+> 
+
+@ Prüfpunkt
+> 
+
+@ Soll
+> 
+
+@ Gemessen
+> 
+
+@ Übernehmen
+> 
+
+@ Aktuellen Wert als Messpunkt übernehmen
+> 
+
+@ Messpunkte löschen
+> 
+
+@ Wert 1 s lang in Toleranz um 0/50/100 % → Messpunkt wird automatisch übernommen.
+> 
+
+@ Analogwert: {0}
+> 
+
+@ Rohwert: {0}
+> 
+
+@ (jetzt in Toleranz)
+> 
+
+@ IO-Liste importieren …
+> 
+
+@ Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
+> 
+
+@ Öffnen …
+> 
+
+@ Gespeicherten IO-Check öffnen
+> 
+
+@ Prüfstand speichern (*.iocheck.json)
+> 
+
+@ Speichern unter …
+> 
+
+@ Ergebnis exportieren …
+> 
+
+@ Prüfergebnis als CSV oder Excel speichern
+> 
+
+@ ▶ Lesen starten
+> 
+
+@ Signale zyklisch aus den Steuerungen lesen
+> 
+
+@ Simulierte Werte statt Verbindung zur Steuerung
+> 
+
+@ Digitale Signale automatisch abhaken
+> 
+
+@ Optional: Ein Signal mit Status „offen“ wird OK, sobald es 0→1→0 gewechselt hat (z. B. Sensor betätigt und losgelassen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.
+> 
+
+@ Toleranz Analog:
+> 
+
+@ Zulässige Abweichung der Analog-Prüfpunkte in % des Messbereichs
+> 
+
+@ Suchen (Adresse, Symbol, Kommentar, BMK) …
+> 
+
+@ Alle Typen
+> 
+
+@ Alle Status
+> 
+
+@ ✓ OK
+> 
+
+@ ✗ Fehler …
+> 
+
+@ – Übersprungen
+> 
+
+@ Signalliste
+> 
+
+@ Bereiche scannen …
+> 
+
+@ Zusammenhängende Ein-/Ausgänge ohne IO-Liste lesen, z. B. E0.0 … E31.7
+> 
+
+@ Eingang 1
+> 
+
+@ Ausgang 1
+> 
+
+@ geprüft
+> 
+
+@ 0→1 gesehen
+> 
+
+@ eben gewechselt
+> 
+
+@ Klick: Signal wählen · Doppelklick: OK an/aus · Rechtsklick: Status
+> 
+
+@ Matrix
+> 
+
+@ Was hat sich bewegt?
+> 
+
+@ Signal
+> 
+
+@ Wechsel
+> 
+
+@ Bereich {0}: {1}
+> 
+
+@ Alle Gruppen
+> 
+
+@ (nicht gespeichert)
+> 
+
+@ {0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen
+> 
+
+@ Speichern fehlgeschlagen: {0}
+> 
+
+@ IO-Liste importieren
+> 
+
+@ Tabellen (*.xlsx *.xlsm *.csv *.txt);;Alle Dateien (*)
+> 
+
+@ Keine Signale gefunden.
+> 
+
+@ {0} Signale gelesen. Vorhandene Liste ersetzen oder ergänzen?
+> 
+
+@ Ergänzen
+> 
+
+@ {0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.
+> 
+
+@ IO-Check öffnen
+> 
+
+@ IO-Check (*.iocheck.json);;Alle Dateien (*)
+> 
+
+@ IO-Check speichern
+> 
+
+@ IO-Check (*.iocheck.json)
+> 
+
+@ Ergebnis exportieren
+> 
+
+@ Excel (*.xlsx);;CSV (*.csv)
+> 
+
+@ Ergebnis gespeichert: {0}
+> 
+
+@ In der Konfiguration ist keine Steuerung angelegt (oder „Demo“ einschalten).
+> 
+
+@ Der Prüfstand ist nicht gespeichert. Jetzt speichern?
+> 
+
+@ Bemerkung (z. B. Verdrahtung, Sensor defekt):
+> 
+
+@ Erwartet: {0}
+> 
+
+@ Zuerst eine IO-Liste importieren oder Bereiche scannen.
+> 
+
+@ In der Konfiguration ist keine Steuerung angelegt.
+> 
+
+@ Unbekannte Steuerung in der IO-Liste: {0}
+> 
+
+@ ■ Lesen stoppen
+> 
+
 # ---------------- plc_logger.py
 
 @ Neue Konfiguration
@@ -2438,25 +2808,13 @@
 @ ⚠ Archivierung von {0} fehlgeschlagen: {1} (CSV-Datei bleibt erhalten)
 > 
 
-@ Demo-Modus (simulierte Werte)
-> 
-
-@ Treiber {0}: {1}
-> 
-
 @ Verbunden mit {0} ({1} Variablen)
 > 
 
 @ Verbindung zu {0} fehlgeschlagen: {1}
 > 
 
-@ Lesefehler: {0} – neuer Verbindungsversuch
-> 
-
 @ [{0}] Variable {1}: {2}
-> 
-
-@ Getrennt
 > 
 
 @ deaktiviert
@@ -2903,9 +3261,6 @@
 @ Zeitlimit
 > 
 
-@ Symbol
-> 
-
 @ Symbolname (MAIN.fTemperatur, GVL.aWerte[3], .gWert), %MW10/%MD4/%MX2.3/%IW0/%QX0.1 oder Indexgruppe:Offset (0x4020:16)
 > 
 
@@ -2927,9 +3282,6 @@
 > 
 
 @ Filter (Name, Typ, Kommentar) …
-> 
-
-@ Kommentar
 > 
 
 @ Markiertes Array als Block …

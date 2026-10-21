@@ -4,7 +4,8 @@
 Datenbank (SQLite, MariaDB, TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics) auf und zeigt sie als y-t-Diagramme an: in der Oberfläche (PySide6, pyqtgraph), im Browser (Webserver) oder
 ohne Oberfläche (Headless). Mit Trigger und Ereignisprotokoll (Marken an der Zeitachse), Aufzeichnung per Trigger
 mit Vor- und Nachlauf, PID-Regler-Optimierung, XY-Diagramm und FFT, PDF-Berichten je Schicht/Tag/Woche/Monat,
-Lesemodus für die Datenbank, Webserver mit HTTPS und Anmeldung, Sprachumschaltung (Deutsch/Englisch).
+Lesemodus für die Datenbank, Webserver mit HTTPS und Anmeldung, IO-Check für die Inbetriebnahme (Signalliste,
+Matrix, Vertauschungen, Analog-Prüfpunkte), Sprachumschaltung (Deutsch/Englisch).
 
 Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung mischen. Eingebaute Treiber:
 

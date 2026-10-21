@@ -126,7 +126,7 @@ echo [4/6] PyInstaller: PLCLogger ...
     --hidden-import plc_db --hidden-import plc_db_dialog --hidden-import plc_events --hidden-import plc_event_viewer --hidden-import plc_trigger_dialog --hidden-import plc_pid --hidden-import plc_pid_dialog --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_about --hidden-import plc_export --collect-all openpyxl --hidden-import plc_block_dialog --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary %ADDDLL% ^
     --hidden-import plc_gui --hidden-import plc_headless --hidden-import plc_recorder ^
     --hidden-import plc_web --hidden-import plc_svg --hidden-import plc_util --hidden-import plc_webauth ^
-    --hidden-import plc_report --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog ^
+    --hidden-import plc_report --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog ^
     --hidden-import cryptography.x509 --hidden-import cryptography.hazmat.primitives.asymmetric.rsa ^
     --collect-all flask --collect-all werkzeug %ADDWEB% ^
     src\plc_logger.py || goto :fail

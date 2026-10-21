@@ -2013,6 +2013,12 @@
 @ Diagramme
 > Charts
 
+@ IO-Check …
+> IO check …
+
+@ Inbetriebnahme: Signalliste prüfen, Ein-/Ausgänge als Matrix, Vertauschungen erkennen
+> Commissioning: check the signal list, inputs/outputs as a matrix, detect swapped signals
+
 @ XY-Diagramm …
 > XY chart …
 
@@ -2250,6 +2256,370 @@
 @ Beende … (Aufzeichnung stoppen, CSV archivieren)
 > Closing … (stopping recording, archiving CSV)
 
+# ---------------- plc_iocheck.py
+
+@ Digitaleingang
+> Digital input
+
+@ Digitalausgang
+> Digital output
+
+@ Analogeingang
+> Analog input
+
+@ Analogausgang
+> Analog output
+
+@ OK
+> OK
+
+@ Fehler
+> Fault
+
+@ übersprungen
+> skipped
+
+@ Die Tabelle hat keine Spalte „Adresse“ (erkannt werden z. B. Adresse, Address, Logische Adresse, Operand, Tag-Name).
+> The table has no “Address” column (recognized e.g. Address, Adresse, Logical Address, Operand, Tag name).
+
+@ Zeile {0}: Adresse {1} doppelt – übersprungen
+> Row {0}: address {1} duplicated – skipped
+
+@ Eingänge
+> Inputs
+
+@ Ausgänge
+> Outputs
+
+@ Merker
+> Memory (M)
+
+@ Weitere Signale
+> Other signals
+
+@ Überlauf bzw. Drahtbruch (32767)
+> Overflow or wire break (32767)
+
+@ Unterlauf bzw. Drahtbruch (−32768)
+> Underflow or wire break (−32768)
+
+@ Überlauf
+> Overflow
+
+@ Übersteuerungsbereich (> 100 %)
+> Overrange (> 100 %)
+
+@ Unterlauf (Drahtbruch bei 4 … 20 mA?)
+> Underflow (wire break with 4 … 20 mA?)
+
+@ Untersteuerungsbereich (< 0 %)
+> Underrange (< 0 %)
+
+@ Außerhalb des Messbereichs
+> Outside the measuring range
+
+@ automatisch (0→1→0 erkannt)
+> automatic (0→1→0 detected)
+
+@ Vertauschung? Erwartet {0}, gekommen {1}
+> Swapped? Expected {0}, got {1}
+
+@ Prüfpunkte 0/50/100 % in Toleranz
+> Test points 0/50/100 % within tolerance
+
+@ {0} ist keine IO-Check-Datei.
+> {0} is not an IO check file.
+
+@ Symbol
+> Symbol
+
+@ Kommentar
+> Comment
+
+@ BMK
+> Device tag
+
+@ Gruppe
+> Group
+
+@ Status
+> Status
+
+@ Geprüft am
+> Checked at
+
+@ Prüfer
+> Checked by
+
+@ Bemerkung
+> Remark
+
+@ Messpunkte
+> Test points
+
+@ IO-Check
+> IO check
+
+@ Treiber {0}: {1}
+> Driver {0}: {1}
+
+@ Verbunden mit {0}
+> Connected to {0}
+
+@ Lesefehler: {0} – neuer Verbindungsversuch
+> Read error: {0} – trying to reconnect
+
+@ Getrennt
+> Disconnected
+
+@ Demo-Modus (simulierte Werte)
+> Demo mode (simulated values)
+
+# ---------------- plc_iocheck_dialog.py
+
+@ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
+> Measuring range {0} … {1} {2} (raw value {3} … {4})
+
+@ Wert: {0}
+> Value: {0}
+
+@ Status: {0}
+> Status: {0}
+
+@ Zurücksetzen
+> Reset
+
+@ Bereiche scannen
+> Scan ranges
+
+@ Zusammenhängende Bits ohne IO-Liste lesen und in der Matrix anzeigen, z. B. Startadresse E0.0 und 256 Bits (= E0.0 … E31.7). Adressen in der Schreibweise des Treibers; Signale, die schon in der IO-Liste stehen, werden übernommen.
+> Read contiguous bits without an IO list and show them in the matrix, e.g. start address E0.0 (I0.0) and 256 bits (= E0.0 … E31.7). Addresses in the notation of the driver; signals already in the IO list are reused.
+
+@ Startadresse
+> Start address
+
+@ Anzahl Bits
+> Number of bits
+
+@ Hinzufügen
+> Add
+
+@ Analogwert
+> Analog value
+
+@ Einheit
+> Unit
+
+@ Prüfpunkt
+> Test point
+
+@ Soll
+> Target
+
+@ Gemessen
+> Measured
+
+@ Übernehmen
+> Take over
+
+@ Aktuellen Wert als Messpunkt übernehmen
+> Take the current value as test point
+
+@ Messpunkte löschen
+> Clear test points
+
+@ Wert 1 s lang in Toleranz um 0/50/100 % → Messpunkt wird automatisch übernommen.
+> Value within tolerance of 0/50/100 % for 1 s → the test point is taken over automatically.
+
+@ Analogwert: {0}
+> Analog value: {0}
+
+@ Rohwert: {0}
+> Raw value: {0}
+
+@ (jetzt in Toleranz)
+> (within tolerance now)
+
+@ IO-Liste importieren …
+> Import IO list …
+
+@ Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
+> Import the signal list from CSV/Excel (EPLAN, TIA Portal tag table, own list)
+
+@ Öffnen …
+> Open …
+
+@ Gespeicherten IO-Check öffnen
+> Open a saved IO check
+
+@ Prüfstand speichern (*.iocheck.json)
+> Save the test progress (*.iocheck.json)
+
+@ Speichern unter …
+> Save as …
+
+@ Ergebnis exportieren …
+> Export result …
+
+@ Prüfergebnis als CSV oder Excel speichern
+> Save the test result as CSV or Excel
+
+@ ▶ Lesen starten
+> ▶ Start reading
+
+@ Signale zyklisch aus den Steuerungen lesen
+> Read the signals cyclically from the controllers
+
+@ Simulierte Werte statt Verbindung zur Steuerung
+> Simulated values instead of a connection to the controller
+
+@ Digitale Signale automatisch abhaken
+> Check off digital signals automatically
+
+@ Optional: Ein Signal mit Status „offen“ wird OK, sobald es 0→1→0 gewechselt hat (z. B. Sensor betätigt und losgelassen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.
+> Optional: a signal with status “open” becomes OK as soon as it has changed 0→1→0 (e.g. sensor actuated and released). Only signals from the list or the scan ranges are checked.
+
+@ Toleranz Analog:
+> Analog tolerance:
+
+@ Zulässige Abweichung der Analog-Prüfpunkte in % des Messbereichs
+> Permissible deviation of the analog test points in % of the measuring range
+
+@ Suchen (Adresse, Symbol, Kommentar, BMK) …
+> Search (address, symbol, comment, device tag) …
+
+@ Alle Typen
+> All types
+
+@ Alle Status
+> All statuses
+
+@ ✓ OK
+> ✓ OK
+
+@ ✗ Fehler …
+> ✗ Fault …
+
+@ – Übersprungen
+> – Skipped
+
+@ Signalliste
+> Signal list
+
+@ Bereiche scannen …
+> Scan ranges …
+
+@ Zusammenhängende Ein-/Ausgänge ohne IO-Liste lesen, z. B. E0.0 … E31.7
+> Read contiguous inputs/outputs without an IO list, e.g. E0.0 … E31.7
+
+@ Eingang 1
+> Input 1
+
+@ Ausgang 1
+> Output 1
+
+@ geprüft
+> checked
+
+@ 0→1 gesehen
+> 0→1 seen
+
+@ eben gewechselt
+> just changed
+
+@ Klick: Signal wählen · Doppelklick: OK an/aus · Rechtsklick: Status
+> Click: select signal · Double-click: OK on/off · Right-click: status
+
+@ Matrix
+> Matrix
+
+@ Was hat sich bewegt?
+> What has moved?
+
+@ Signal
+> Signal
+
+@ Wechsel
+> Change
+
+@ Bereich {0}: {1}
+> Range {0}: {1}
+
+@ Alle Gruppen
+> All groups
+
+@ (nicht gespeichert)
+> (not saved)
+
+@ {0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen
+> {0} of {1} checked – {2} OK, {3} faults, {4} skipped
+
+@ Speichern fehlgeschlagen: {0}
+> Saving failed: {0}
+
+@ IO-Liste importieren
+> Import IO list
+
+@ Tabellen (*.xlsx *.xlsm *.csv *.txt);;Alle Dateien (*)
+> Tables (*.xlsx *.xlsm *.csv *.txt);;All files (*)
+
+@ Keine Signale gefunden.
+> No signals found.
+
+@ {0} Signale gelesen. Vorhandene Liste ersetzen oder ergänzen?
+> {0} signals read. Replace the existing list or add to it?
+
+@ Ergänzen
+> Add
+
+@ {0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.
+> {0} signals imported: {1} DI, {2} DO, {3} AI, {4} AO.
+
+@ IO-Check öffnen
+> Open IO check
+
+@ IO-Check (*.iocheck.json);;Alle Dateien (*)
+> IO check (*.iocheck.json);;All files (*)
+
+@ IO-Check speichern
+> Save IO check
+
+@ IO-Check (*.iocheck.json)
+> IO check (*.iocheck.json)
+
+@ Ergebnis exportieren
+> Export result
+
+@ Excel (*.xlsx);;CSV (*.csv)
+> Excel (*.xlsx);;CSV (*.csv)
+
+@ Ergebnis gespeichert: {0}
+> Result saved: {0}
+
+@ In der Konfiguration ist keine Steuerung angelegt (oder „Demo“ einschalten).
+> No controller is defined in the configuration (or switch on “Demo”).
+
+@ Der Prüfstand ist nicht gespeichert. Jetzt speichern?
+> The test progress has not been saved. Save now?
+
+@ Bemerkung (z. B. Verdrahtung, Sensor defekt):
+> Remark (e.g. wiring, sensor defective):
+
+@ Erwartet: {0}
+> Expected: {0}
+
+@ Zuerst eine IO-Liste importieren oder Bereiche scannen.
+> First import an IO list or scan ranges.
+
+@ In der Konfiguration ist keine Steuerung angelegt.
+> No controller is defined in the configuration.
+
+@ Unbekannte Steuerung in der IO-Liste: {0}
+> Unknown controller in the IO list: {0}
+
+@ ■ Lesen stoppen
+> ■ Stop reading
+
 # ---------------- plc_logger.py
 
 @ Neue Konfiguration
@@ -2438,26 +2808,14 @@
 @ ⚠ Archivierung von {0} fehlgeschlagen: {1} (CSV-Datei bleibt erhalten)
 > ⚠ Archiving of {0} failed: {1} (CSV file is kept)
 
-@ Demo-Modus (simulierte Werte)
-> Demo mode (simulated values)
-
-@ Treiber {0}: {1}
-> Driver {0}: {1}
-
 @ Verbunden mit {0} ({1} Variablen)
 > Connected to {0} ({1} variables)
 
 @ Verbindung zu {0} fehlgeschlagen: {1}
 > Connection to {0} failed: {1}
 
-@ Lesefehler: {0} – neuer Verbindungsversuch
-> Read error: {0} – trying to reconnect
-
 @ [{0}] Variable {1}: {2}
 > [{0}] Variable {1}: {2}
-
-@ Getrennt
-> Disconnected
 
 @ deaktiviert
 > disabled
@@ -2903,9 +3261,6 @@
 @ Zeitlimit
 > Timeout
 
-@ Symbol
-> Symbol
-
 @ Symbolname (MAIN.fTemperatur, GVL.aWerte[3], .gWert), %MW10/%MD4/%MX2.3/%IW0/%QX0.1 oder Indexgruppe:Offset (0x4020:16)
 > Symbol name (MAIN.fTemperatur, GVL.aWerte[3], .gWert), %MW10/%MD4/%MX2.3/%IW0/%QX0.1 or index group:offset (0x4020:16)
 
@@ -2928,9 +3283,6 @@
 
 @ Filter (Name, Typ, Kommentar) …
 > Filter (name, type, comment) …
-
-@ Kommentar
-> Comment
 
 @ Markiertes Array als Block …
 > Selected array as block …

@@ -279,6 +279,8 @@ des Loggers:
      - Oberfläche öffnen, auch wenn die Konfiguration *Headless* verlangt.
    * - ``--demo``
      - Simulierte Werte statt SPS-Verbindung (siehe `Demo-Modus <demo-modus_>`__).
+   * - ``--iocheck``
+     - Nur den `IO-Check <io-check_>`__ öffnen (Inbetriebnahme: Signalliste prüfen).
 
 Der Logger kann das Konfigurationsprogramm auch selbst öffnen
 (**Konfig-Editor** in der Werkzeugleiste), und das Konfigurationsprogramm kann den
@@ -3311,6 +3313,145 @@ im PDF-Betrachter.
 
 Die PDF-Dateien entstehen ohne Zusatzprogramm (Standardschrift Helvetica, Vektorgrafik).
 
+.. _io-check:
+
+IO-Check (Inbetriebnahme)
+======================================================================
+
+Der IO-Check hilft bei der Inbetriebnahme, alle Ein- und Ausgänge einer Anlage zu
+prüfen: Jedes Signal der IO-Liste wird live angezeigt und abgehakt; was sich gerade
+bewegt hat, steht oben, vertauschte Signale fallen sofort auf. Der IO-Check liest
+selbst aus den Steuerungen der Konfiguration – eine Aufzeichnung muss nicht laufen.
+
+Öffnen: im Logger **Analyse › IO-Check …**, eigenständig mit ``PLCLogger.exe
+--iocheck`` (Startmenü *PLC IO-Check*; AppImage: ``--iocheck``), optional mit einer
+Konfiguration oder einem gespeicherten Prüfstand (``*.iocheck.json``). **▶ Lesen
+starten** (F5) verbindet sich mit den Steuerungen; mit **Demo** werden die Signale
+simuliert (zum Ausprobieren ohne Steuerung).
+
+.. note::
+
+   Der IO-Check liest nur. Ausgänge werden wie bisher über das Engineering-Werkzeug
+   (Beobachtungs-/Forcetabelle) bzw. das Programm geschaltet und im IO-Check abgehakt.
+
+IO-Liste importieren
+----------------------------------------------------------------------
+
+**IO-Liste importieren …** übernimmt eine CSV- oder Excel-Tabelle, z. B. aus EPLAN, die
+Variablentabelle des TIA Portals (Export nach Excel) oder eine eigene Liste. Die Spalten
+werden an ihrer Überschrift erkannt (Groß-/Kleinschreibung egal):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Feld
+     - Erkannte Überschriften (Auswahl)
+   * - Adresse (Pflicht)
+     - Adresse, Address, Logische Adresse / Logical Address, Operand, Tag-Name, NodeId
+   * - Symbol
+     - Symbol, Name, Variable, Signal
+   * - Kommentar
+     - Kommentar, Comment, Beschreibung, Funktion, Bezeichnung
+   * - BMK
+     - BMK, Betriebsmittelkennzeichen, Kennzeichen, AKZ
+   * - Gruppe
+     - Gruppe, Schrank, Baugruppe, Ort, Station, Modul
+   * - Typ
+     - Typ, Art, Signalart (DI/DO/AI/AO, DE/DA/AE/AA, Eingang/Ausgang …)
+   * - Datentyp
+     - Datentyp, Data Type (Bool, Int, Word, Real …)
+   * - Steuerung
+     - Steuerung, SPS, PLC – Name der Steuerung in der Konfiguration; leer = erste
+   * - Messbereich
+     - Messbereich (z. B. ``0 … 10 bar``, ``4-20 mA``) oder getrennt *Messbereich
+       von/bis*, *Einheit*; Rohwerte mit *Rohwert min/max* (Vorgabe 0 … 27648)
+
+Fehlen Typ und Datentyp, werden sie aus der Adresse abgeleitet: ``E0.0``/``%I0.0`` =
+Digitaleingang, ``A4.0``/``%Q4.0`` = Digitalausgang, ``EW256``/``%IW256``/``PEW256`` =
+Analogeingang, ``AW``/``%QW`` = Analogausgang. Für den Treiber ``s7`` werden ``%``
+und ``P`` entfernt, für ``ads`` die TwinCAT-Schreibweise (``%IX0.1``) und für ``tia``
+der Symbolname (``IArea.<Name>``) verwendet. Zeilen ohne Adresse (Zwischenüberschriften)
+und doppelte Adressen entfallen. Beim zweiten Import lässt sich die Liste ersetzen oder
+ergänzen.
+
+Signalliste und Prüfstatus
+----------------------------------------------------------------------
+
+Die Tabelle zeigt je Signal Status, Live-Wert (Digital: LED und 0/1; Analog: Wert in
+technischer Einheit und Rohwert), Adresse, Symbol, Kommentar, BMK, Gruppe, Typ,
+Prüfzeit, Prüfer und Bemerkung. Ein Wechsel leuchtet kurz gelb auf. Über der Tabelle:
+Suchfeld, Filter nach Gruppe, Typ und Status sowie der Fortschritt („312 von 480
+geprüft – 305 OK, 4 Fehler, 3 übersprungen“).
+
+* **✓ OK** (Strg+1), **✗ Fehler …** (Strg+2, fragt nach einer Bemerkung),
+  **– Übersprungen** (Strg+3), **Zurücksetzen** (Strg+0) – für die markierten Zeilen.
+  Zeit und Prüfer (Windows- bzw. Linux-Benutzer) werden eingetragen.
+* Die **Bemerkung** lässt sich per Doppelklick direkt in der Tabelle bearbeiten.
+* **Digitale Signale automatisch abhaken** (optional, aus): Ein Signal mit Status
+  *offen* wird OK, sobald es 0→1→0 gewechselt hat – z. B. Sensor betätigt und
+  losgelassen. Abgehakt werden nur Signale, die in der IO-Liste bzw. einem Scan-Bereich
+  stehen; welche Signale zu prüfen sind, bestimmt also die Liste.
+
+Was hat sich bewegt? (Vertauschungen)
+----------------------------------------------------------------------
+
+Rechts stehen die letzten Wechsel, der neueste groß oben (Zeit, Signal, z. B. ``0 → 1``
+bzw. ``4.98 → 7.51 bar``). So findet man ein Signal, ohne die Adresse zu kennen: im Feld
+auslösen und ablesen, welches kam. Doppelklick auf einen Eintrag wählt das Signal.
+
+Das in der Liste oder Matrix **gewählte Signal** gilt als *erwartet*. Wechselt
+stattdessen ein anderer Digitaleingang (und das erwartete nicht), erscheint eine rote
+Warnung „Vertauschung? Erwartet B12, gekommen B13“ mit Signalton; der Eintrag wird rot
+markiert.
+
+Analogwerte prüfen
+----------------------------------------------------------------------
+
+Ist ein Analogsignal gewählt, zeigt das Feld **Analogwert** den skalierten Wert, den
+Rohwert und Fehlerwerte. Messbereich (Rohwert bei 0 und 100 %, technischer Bereich,
+Einheit) lässt sich dort anpassen.
+
+* **Prüfpunkte 0/50/100 %:** Liegt der Wert 1 s lang innerhalb der **Toleranz** (in der
+  Werkzeugleiste, Vorgabe 1 % des Messbereichs) um einen Prüfpunkt, wird er übernommen –
+  z. B. 4, 12 und 20 mA mit einem Kalibrator einspeisen. **Übernehmen** übernimmt den
+  aktuellen Wert von Hand. Sind alle drei Punkte in Toleranz, wird das Signal OK.
+* **Fehlerwerte** (Siemens-Rohwerte): 32767 = Überlauf bzw. Drahtbruch, −32768 =
+  Unterlauf, 27649 … 32511 = Übersteuerungsbereich, unter −4864 = Unterlauf (bei
+  4 … 20 mA Drahtbruch). Bei anderen Rohwertbereichen: Wert außerhalb des Messbereichs.
+
+.. _io-matrix:
+
+Matrix und Bereiche scannen
+----------------------------------------------------------------------
+
+Der Reiter **Matrix** zeigt alle Binärsignale als **LEDs**: Siemens-Bitadressen nach Byte
+(Zeile) und Bit (Spalte 0 … 7), getrennt nach Eingängen, Ausgängen und Merkern; andere
+Adressen der Reihe nach.
+
+* LED grün = Eingang 1, orange = Ausgang 1, grau = 0, rot = nicht lesbar.
+* Hintergrund grün mit ✓ = geprüft, rot mit ✗ = Fehler, grau mit – = übersprungen.
+  Ein blauer Punkt bedeutet: 0→1 gesehen, aber noch nicht wieder 1→0. Ein gelber
+  Rahmen markiert einen eben erfolgten Wechsel, ein blauer Rahmen das gewählte Signal.
+* Klick wählt das Signal (auch in der Liste), Doppelklick schaltet OK ein/aus,
+  Rechtsklick öffnet die Statusauswahl; der Tooltip zeigt Symbol, Kommentar, BMK und
+  Status.
+
+**Bereiche scannen …** liest zusammenhängende Bits auch ohne IO-Liste, z. B. Startadresse
+``E0.0`` und 256 Bits (= E0.0 … E31.7) oder ``A0.0`` und 64 Bits – praktisch, wenn
+es noch keine Liste gibt. Adressen in der Schreibweise des Treibers der gewählten
+Steuerung; Signale, die in der IO-Liste stehen, behalten deren Symbol und Status. Für
+``s7`` werden benachbarte Adressen mit einer Anfrage je Bereich gelesen.
+
+Speichern und Ergebnis
+----------------------------------------------------------------------
+
+**Speichern** legt den Prüfstand als ``*.iocheck.json`` ab (Signale, Status,
+Bemerkungen, Messpunkte, Scan-Bereiche, Optionen). Nach dem ersten Speichern wird jede
+Änderung sofort gesichert – man kann jederzeit aufhören und am nächsten Tag mit
+**Öffnen …** weitermachen. **Ergebnis exportieren …** schreibt die Liste mit Status,
+Prüfzeit, Prüfer, Bemerkung und Messpunkten als Excel- oder CSV-Datei.
+
 .. _sprache:
 
 Sprache umschalten und übersetzen
@@ -3996,7 +4137,7 @@ Fenster passt – auch in Dialogen. Maßgeblich ist das Feld mit dem Eingabefoku
 * Dialoge: Verbindungseinstellungen (Abschnitt des Treibers), Variablen aus der
   Steuerung wählen, Blöcke, berechnete Variablen, Trigger, PID-Regler,
   Datenbank-Lesemodus, Ereignisprotokoll, Notizen, Benutzer des Webservers,
-  XY-Diagramm, Frequenzanalyse.
+  XY-Diagramm, Frequenzanalyse, IO-Check.
 * Logger: Bedienelemente, Diagramme, Wertetabelle; Startbild: Abschnitt
   „Startbild“.
 

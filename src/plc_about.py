@@ -97,6 +97,8 @@ def open_manual(parent=None):
 # die so beginnt. Die Themen sind immer die deutschen Überschriften; für die englische Anleitung (gleiche Gliederung,
 # Abschnitt für Abschnitt) wird der Abschnitt an derselben Position verwendet.
 HELP_TOPICS = {
+    "IoCheckWindow": "IO-Check (Inbetriebnahme)",
+    "ScanDialog": "Matrix und Bereiche scannen",
     "StartWindow": "Startbild",
     "ConfigWindow": "Konfigurationsprogramm (plc_config.py)",
     "AssignTree": "Aufbau: Diagramme, Y-Achsen und Variablen",
