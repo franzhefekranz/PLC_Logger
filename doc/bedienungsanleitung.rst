@@ -3452,6 +3452,54 @@ Bemerkungen, Messpunkte, Scan-Bereiche, Optionen). Nach dem ersten Speichern wir
 **Öffnen …** weitermachen. **Ergebnis exportieren …** schreibt die Liste mit Status,
 Prüfzeit, Prüfer, Bemerkung und Messpunkten als Excel- oder CSV-Datei.
 
+.. _io-mobil:
+
+Auf Smartphone oder Tablet prüfen
+----------------------------------------------------------------------
+
+Der Monteur an der Maschine sieht live, was ankommt, und hakt direkt dort ab; mehrere
+Geräte können gleichzeitig prüfen. **📱 Mobil …** in der Werkzeugleiste zeigt die Adresse
+(z. B. ``https://192.168.0.20:8080/io``) und kopiert sie in die Zwischenablage. Läuft im
+Logger bereits der Webserver, wird dieser verwendet (Link *IO-Check* oben auf der
+Diagrammseite); sonst startet der IO-Check einen eigenen mit den Einstellungen der
+Konfiguration (Reiter *Webserver & headless*: Port, HTTPS, Benutzer, Zugriffscode; ist der
+Port belegt, der nächste freie).
+
+* Reiter **Liste** (Suche, Filter nach Gruppe und Status), **Matrix** (LEDs wie am PC) und
+  **Bewegt** (letzte Wechsel). Ein Antippen wählt ein Signal; unten erscheinen Wert,
+  **✓ OK**, **✗ Fehler** (mit Bemerkung), **Übersprungen**, **Zurück**, das Bemerkungsfeld
+  und bei Analogsignalen die Prüfpunkte (automatische Übernahme wie am PC, solange das
+  Signal auf dem Gerät gewählt ist).
+* Das gewählte Signal gilt auf diesem Gerät als *erwartet*: Wechselt ein anderer
+  Digitaleingang, erscheint die Warnung „Vertauschung?“ und das Gerät vibriert.
+* **Prüfer** ist der **Anmeldename** im Webserver (Benutzer im Konfigurationsprogramm
+  anlegen, siehe `HTTPS und Anmeldung <https-anmeldung_>`__); er steht in Liste, Ergebnis
+  und Protokoll. Ohne Anmeldung wird „Web (Zugriffscode)“ bzw. „Web (IP-Adresse)“
+  eingetragen – dann kann jeder im Netz den Status ändern, daher Benutzer anlegen.
+* **PDF** oben rechts öffnet das Abnahmeprotokoll auf dem Gerät.
+* Die Änderungen übernimmt das IO-Check-Fenster am PC und speichert sie; es muss dafür
+  geöffnet bleiben.
+
+.. _io-protokoll:
+
+Abnahmeprotokoll (PDF)
+----------------------------------------------------------------------
+
+**Protokoll (PDF) …** erzeugt das Abnahmeprotokoll und öffnet es:
+
+* Kopf: Projekt, Prüfstand, Steuerungen, Prüfzeitraum und Ergebnis (geprüft in %, OK,
+  Fehler, übersprungen, offen).
+* **Zusammenfassung** je Signalart und je Gruppe, **Prüfer** mit Anzahl der geprüften
+  Signale (PC-Benutzer bzw. Anmeldename im Webserver).
+* **Fehler und offene Signale** – die Restpunkte.
+* **Alle Signale** je Gruppe mit Adresse, Symbol, Kommentar, BMK, Typ, Status, Prüfzeit,
+  Prüfer und Bemerkung bzw. Messpunkten der Analogwerte.
+* **Bestätigung:** Unterschriftsfelder für Prüfer und Abnahme (Auftraggeber).
+
+Aus Scan-Bereichen erscheinen nur bearbeitete Signale. Das Protokoll entsteht ohne
+Zusatzprogramm (wie die PDF-Berichte); Zeichen außerhalb des westeuropäischen
+Zeichensatzes erscheinen als „?“.
+
 .. _sprache:
 
 Sprache umschalten und übersetzen

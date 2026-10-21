@@ -39,7 +39,7 @@ S7_RAW_MAX = 27648                        # Nennbereich der S7-Analogbaugruppen 
 SEEN_RISE, SEEN_FALL = 1, 2
 
 
-@dataclass
+@dataclass(eq=False)                      # Vergleich über die Identität (Signale stehen in Mengen)
 class IoSignal:
     """Ein Signal der IO-Liste mit Prüfstatus. Laufzeitwerte (value, raw, changed) werden nicht gespeichert."""
     address: str
@@ -449,6 +449,7 @@ class Change:
     new: float
     expected: IoSignal = None             # gesetzt: Vertauschung? (erwartet war dieses Signal)
     note: str = ""
+    seq: int = 0                          # laufende Nummer (für die Webseite: neue Wechsel erkennen)
 
 
 class IoTracker:
@@ -471,8 +472,12 @@ class IoTracker:
         self.expected = None
         self.history = []                 # neueste zuerst
         self.status_changed = []          # Signale, deren Status sich automatisch geändert hat (seit dem Abholen)
+        self.watched = set()              # zusätzlich beobachtete Signale (auf Smartphones gewählt): Analog-Prüfpunkte
+        self.seq = 0
 
     def _log(self, ch: Change):
+        self.seq += 1
+        ch.seq = self.seq
         self.history.insert(0, ch)
         del self.history[self.HISTORY:]
 
@@ -514,7 +519,7 @@ class IoTracker:
         return ch
 
     def _analog_points(self, sig: IoSignal, value: float, ts: float):
-        if not self.auto_points or sig is not self.expected:
+        if not self.auto_points or (sig is not self.expected and sig not in self.watched):
             return
         eng = scale(sig, value)
         hit = next((p for p in POINTS if point_ok(sig, p, eng, self.tolerance)), None)
@@ -530,12 +535,16 @@ class IoTracker:
                 set_status(sig, "ok", remark=sig.remark or tr("Prüfpunkte 0/50/100 % in Toleranz"))
                 self.status_changed.append(sig)
 
-    def take_point(self, sig: IoSignal, pct: int):
-        """Prüfpunkt von Hand übernehmen (aktueller Wert). Rückgabe: in Toleranz?"""
+    def take_point(self, sig: IoSignal, pct: int, checker=None):
+        """Prüfpunkt von Hand übernehmen (aktueller Wert); sind alle Punkte in Toleranz, wird ein offenes Signal OK.
+        Rückgabe: dieser Punkt in Toleranz?"""
         eng = scale(sig, sig.value)
         if math.isnan(eng):
             return False
         sig.points[str(pct)] = round(eng, 6)
+        if sig.status == "offen" and all(str(p) in sig.points and point_ok(sig, p, sig.points[str(p)], self.tolerance)
+                                         for p in POINTS):
+            set_status(sig, "ok", remark=sig.remark or tr("Prüfpunkte 0/50/100 % in Toleranz"), checker=checker)
         return point_ok(sig, pct, eng, self.tolerance)
 
     def pop_status_changes(self):
@@ -731,3 +740,222 @@ def assign_plcs(signals, plcs):
             continue
         out.setdefault(idx, []).append(s)
     return out, sorted(unknown)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Webseite (Smartphone/Tablet): Verbindung zwischen IO-Check-Fenster und Webserver
+# ---------------------------------------------------------------------------------------------------------------------
+STATUS_KEYS = tuple(STATUS)
+
+
+class IoWebBridge:
+    """Stellt den IO-Check dem Webserver (andere Threads) zur Verfügung.
+
+    Das Fenster veröffentlicht Signale und Matrix (publish) und arbeitet die Befehle der Webseite im eigenen Thread ab
+    (commands: ("status" | "point", Signal, Wert, Benutzer)). Die Webseite liest mit snapshot(); der Prüfer ist der
+    Anmeldename im Webserver."""
+
+    WATCH_S = 15.0
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.version = 0
+        self.signals, self.matrix, self.groups = [], [], []
+        self.tracker = None
+        self.title = ""
+        self.source = ""                      # Datei des Prüfstands (für das Protokoll)
+        self.plcs = []
+        self.plc_state = []
+        self.commands = queue.Queue()
+        self.watch = {}                       # Signal-Index -> Zeitpunkt der letzten Auswahl auf einer Webseite
+
+    def publish(self, signals, tracker, title, matrix):
+        index = {id(s): i for i, s in enumerate(signals)}
+        with self.lock:
+            self.version += 1
+            self.signals, self.tracker, self.title = list(signals), tracker, title
+            self.groups = sorted({s.group for s in signals if s.group})
+            self.matrix = [[sec, label, [index.get(id(c), -1) if c is not None else -1 for c in cells]]
+                           for sec, label, cells in matrix]
+            self.watch = {}
+
+    def set_title(self, title):
+        self.title = title
+
+    def set_plc_state(self, states):
+        self.plc_state = [list(x) for x in states]
+
+    def watched(self):
+        now = time.time()
+        with self.lock:
+            return {self.signals[i] for i, t in self.watch.items() if now - t < self.WATCH_S and i < len(self.signals)}
+
+    def snapshot(self, client_version=None, selected=None, user=""):
+        now = time.time()
+        with self.lock:
+            sigs, tracker, version = self.signals, self.tracker, self.version
+            if selected is not None and 0 <= selected < len(sigs):
+                self.watch[selected] = now
+            static = None
+            if client_version != version:
+                static = {"sig": [[s.address, s.symbol, s.comment, s.bmk, s.group, s.kind, s.unit, s.eng_min,
+                                   s.eng_max, s.raw_min, s.raw_max, s.plc] for s in sigs],
+                          "groups": self.groups, "matrix": self.matrix}
+        index = {id(s): i for i, s in enumerate(sigs)}
+        dyn = []
+        for s in sigs:
+            v = None if math.isnan(s.value) else round(s.value, 4)
+            dyn.append([s.status, v, s.error, round(now - s.changed, 1) if s.changed else -1, s.seen,
+                        s.checked_at, s.checker, s.remark, s.points])
+        changes = []
+        if tracker is not None:
+            for ch in tracker.history[:40]:
+                i = index.get(id(ch.sig))
+                if i is not None:
+                    changes.append([ch.seq, round(now - ch.ts, 1), i, ch.old, ch.new])
+        out = {"active": True, "ver": version, "title": self.title, "user": user, "progress": progress(sigs),
+               "tol": tracker.tolerance if tracker else 1.0, "plcs": self.plc_state, "dyn": dyn, "changes": changes}
+        if static is not None:
+            out["static"] = static
+        return out
+
+    def command(self, version, cmd, idx, value, user):
+        """Befehl der Webseite prüfen und an das Fenster weitergeben. Rückgabe: Fehlertext oder ""."""
+        with self.lock:
+            if version != self.version:
+                return "version"
+            if not (0 <= idx < len(self.signals)):
+                return "index"
+            sig = self.signals[idx]
+        if cmd == "status":
+            status = value.get("status")
+            if status not in STATUS_KEYS:
+                return "status"
+            remark = value.get("remark")
+            self.commands.put(("status", sig, (status, None if remark is None else str(remark)[:500]), user))
+        elif cmd == "point":
+            pct = value.get("pct")
+            if pct not in POINTS or sig.binary:
+                return "point"
+            self.commands.put(("point", sig, pct, user))
+        elif cmd == "remark":
+            self.commands.put(("remark", sig, str(value.get("remark", ""))[:500], user))
+        else:
+            return "cmd"
+        return ""
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Abnahmeprotokoll (PDF)
+# ---------------------------------------------------------------------------------------------------------------------
+def protocol_signals(signals):
+    """Signale für das Protokoll: die IO-Liste und aus Scan-Bereichen nur die bearbeiteten."""
+    return [s for s in signals if not s.scanned or s.status != "offen" or s.remark]
+
+
+def _short_time(text):
+    """'2026-10-21 08:55:01' -> '21.10.26 08:55'."""
+    try:
+        return datetime.strptime(text[:16], "%Y-%m-%d %H:%M").strftime("%d.%m.%y %H:%M")
+    except ValueError:
+        return text[:16]
+
+
+def write_protocol(path, signals, project="", source="", plcs=()):
+    """Abnahmeprotokoll als PDF: Zusammenfassung, Prüfer, Fehler/offene Signale, alle Signale je Gruppe,
+    Unterschriftsfelder. Prüfer = Benutzer am PC bzw. Anmeldename im Webserver."""
+    from plc_report import MARGIN, PdfWriter, _Doc, _table
+    sigs = protocol_signals(signals)
+    txt, mute, head = "#1b2430", "#5b6878", "#0d47a1"
+    colors = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#b26a00"}
+    doc = _Doc(tr("IO-Check – Abnahmeprotokoll"), project or os.path.basename(source))
+    p = doc.pdf
+    pr = progress(sigs)
+    done = pr["ok"] + pr["fehler"] + pr["uebersprungen"]
+    times = sorted(s.checked_at for s in sigs if s.checked_at)
+    lines = [(tr("Projekt:"), project or "—"), (tr("Prüfstand:"), os.path.basename(source) or "—"),
+             (tr("Steuerungen:"), ", ".join(f"{pl.name} ({pl.summary()})" for pl in plcs) or "—"),
+             (tr("Prüfzeitraum:"), f"{times[0][:16]} – {times[-1][:16]}" if times else "—"),
+             (tr("Ergebnis:"), tr("{0} von {1} Signalen geprüft ({2:.0f} %): {3} OK, {4} Fehler, {5} übersprungen, "
+                                  "{6} offen").format(done, pr["gesamt"], 100.0 * done / max(1, pr["gesamt"]),
+                                                      pr["ok"], pr["fehler"], pr["uebersprungen"], pr["offen"]))]
+    for k, v in lines:
+        p.text(MARGIN, doc.y, k, 9, bold=True, color=txt)
+        p.text(MARGIN + 80, doc.y, v, 9, color=txt)
+        doc.y -= 13
+    doc.y -= 4
+
+    # Zusammenfassung je Signalart und je Gruppe
+    doc.heading(tr("Zusammenfassung"))
+
+    def count_rows(keyfn, labels):
+        rows = []
+        for key in labels:
+            part = [s for s in sigs if keyfn(s) == key]
+            if not part:
+                continue
+            c = progress(part)
+            rows.append([key or "—", str(c["gesamt"]), (str(c["ok"]), colors["ok"]), (str(c["fehler"]), colors["fehler"]),
+                         str(c["uebersprungen"]), (str(c["offen"]), colors["offen"] if c["offen"] else txt)])
+        return rows
+    heads = [tr("Signalart"), tr("Gesamt"), tr("OK"), tr("Fehler"), tr("übersprungen"), tr("offen")]
+    w6 = [175, 68, 68, 68, 68, 68]
+    _table(doc, heads, [[f"{k} – {tr(KIND_TEXT[k])}" if k else r[0]] + r[1:]
+                        for k, r in zip([k for k in KINDS if any(s.kind == k for s in sigs)],
+                                        count_rows(lambda s: s.kind, KINDS))], w6, ["left"] + ["right"] * 5)
+    groups = sorted({s.group for s in sigs})
+    if len(groups) > 1 or (groups and groups[0]):
+        _table(doc, [tr("Gruppe")] + heads[1:], count_rows(lambda s: s.group, groups), w6, ["left"] + ["right"] * 5)
+
+    # Prüfer
+    by = {}
+    for s in sigs:
+        if s.status != "offen":
+            by[s.checker or "—"] = by.get(s.checker or "—", 0) + 1
+    if by:
+        doc.heading(tr("Prüfer"))
+        _table(doc, [tr("Prüfer"), tr("Signale")], [[k, str(v)] for k, v in sorted(by.items(), key=lambda kv: -kv[1])],
+               [200, 68], ["left", "right"])
+
+    cols = [tr("Adresse"), tr("Symbol"), tr("Kommentar"), tr("BMK"), tr("Typ"), tr("Status"), tr("Geprüft am"),
+            tr("Prüfer"), tr("Bemerkung")]
+    widths = [46, 62, 98, 44, 20, 46, 56, 52, 91]
+
+    def row(s):
+        note = s.remark
+        pts = " ".join(f"{q}%={s.points[str(q)]:.4g}" for q in POINTS if str(q) in s.points)
+        if pts:
+            note = f"{note}; {pts}" if note else pts
+        return [s.address, s.symbol, s.comment, s.bmk, s.kind, (tr(STATUS[s.status]), colors[s.status]),
+                _short_time(s.checked_at), s.checker, note]
+
+    bad = [s for s in sigs if s.status in ("fehler", "offen")]
+    doc.heading(tr("Fehler und offene Signale"))
+    if bad:
+        _table(doc, cols, [row(s) for s in sorted(bad, key=lambda s: (s.status != "fehler", s.group, s.address))],
+               widths, ["left"] * 9, size=7.2)
+    else:
+        p.text(MARGIN, doc.y, tr("Keine – alle Signale geprüft und in Ordnung bzw. übersprungen."), 8.5, color=mute)
+        doc.y -= 14
+
+    doc.heading(tr("Alle Signale"))
+    for g in groups:
+        part = [s for s in sigs if s.group == g]
+        if g:
+            doc.need(40)
+            p.text(MARGIN, doc.y, g, 9, bold=True, color=head)
+            doc.y -= 12
+        _table(doc, cols, [row(s) for s in part], widths, ["left"] * 9, size=7.2)
+
+    # Unterschriften
+    doc.need(120)
+    doc.heading(tr("Bestätigung"))
+    x2 = MARGIN + (PdfWriter.W - 2 * MARGIN) / 2 + 10
+    for x, label in ((MARGIN, tr("Prüfer")), (x2, tr("Abnahme (Auftraggeber)"))):
+        y = doc.y - 50
+        p.line(x, y, x + 220, y, color=txt, width=0.6)
+        p.text(x, y - 11, tr("{0}: Name, Datum, Unterschrift").format(label), 8, color=mute)
+    doc.y -= 80
+    os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
+    p.save(path, tr("IO-Check – Abnahmeprotokoll"))
+    return path

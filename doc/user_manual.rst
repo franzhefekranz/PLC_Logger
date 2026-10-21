@@ -3367,6 +3367,55 @@ you can stop at any time and continue the next day with **Open …**. **Export r
 writes the list with status, check time, checker, remark and test points as Excel or CSV
 file.
 
+.. _io-mobil:
+
+Checking on a smartphone or tablet
+----------------------------------------------------------------------
+
+The technician at the machine sees live what arrives and checks off right there; several
+devices can test at the same time. **📱 Mobile …** in the toolbar shows the address (e.g.
+``https://192.168.0.20:8080/io``) and copies it to the clipboard. If the web server is
+already running in the logger, it is used (link *IO-Check* at the top of the chart page);
+otherwise the IO check starts its own one with the settings of the configuration (tab
+*Web server & headless*: port, HTTPS, users, access code; if the port is in use, the next
+free one).
+
+* Tabs **List** (search, filter by group and status), **Matrix** (LEDs as on the PC) and
+  **Moved** (latest changes). Tapping selects a signal; at the bottom the value,
+  **✓ OK**, **✗ Fault** (with remark), **Skipped**, **Back**, the remark field and for
+  analog signals the test points appear (automatic take-over as on the PC while the
+  signal is selected on the device).
+* The selected signal is *expected* on this device: if another digital input changes,
+  the warning “Swapped?” appears and the device vibrates.
+* The **checker** is the **login name** in the web server (create users in the
+  configuration program, see `HTTPS and login <https-anmeldung_>`__); it appears in the
+  list, the result and the protocol. Without login “Web (Zugriffscode)” or “Web (IP
+  address)” is entered – then anybody in the network can change the status, so create
+  users.
+* **PDF** at the top right opens the acceptance protocol on the device.
+* The IO check window on the PC takes over and saves the changes; it must stay open for
+  this.
+
+.. _io-protokoll:
+
+Acceptance protocol (PDF)
+----------------------------------------------------------------------
+
+**Protocol (PDF) …** creates the acceptance protocol and opens it:
+
+* Header: project, test progress file, controllers, test period and result (checked in
+  %, OK, faults, skipped, open).
+* **Summary** per signal type and per group, **checkers** with the number of checked
+  signals (PC user or login name in the web server).
+* **Faults and open signals** – the remaining items.
+* **All signals** per group with address, symbol, comment, device tag, type, status,
+  check time, checker and remark or test points of the analog values.
+* **Confirmation:** signature fields for the checker and the acceptance (customer).
+
+From scan ranges only edited signals appear. The protocol is created without additional
+programs (like the PDF reports); characters outside the Western European character set
+appear as “?”. The texts in the protocol follow the language of the program.
+
 .. _sprache:
 
 Switching and translating the language

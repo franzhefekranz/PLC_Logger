@@ -478,9 +478,6 @@ class AnalogPanel(QGroupBox):
     def _take(self, pct):
         if self.sig is not None and not math.isnan(self.sig.value):
             self.tracker.take_point(self.sig, pct)
-            if all(str(p) in self.sig.points for p in io.POINTS) and self.sig.status == "offen" and all(
-                    io.point_ok(self.sig, p, self.sig.points[str(p)], self.tracker.tolerance) for p in io.POINTS):
-                io.set_status(self.sig, "ok", remark=self.sig.remark or tr("Prüfpunkte 0/50/100 % in Toleranz"))
             self.refresh()
             self.changed.emit(self.sig)
 
@@ -530,6 +527,13 @@ class IoCheckWindow(QMainWindow):
         self.dirty = False
         self._hist_seen = None
         self._swap_until, self._swap_text = 0.0, ""
+        self.bridge = io.IoWebBridge()            # Webseite /io (Smartphone/Tablet)
+        self.web = None                           # eigener Webserver (wenn keiner läuft)
+        try:
+            import plc_web
+            plc_web.set_io_bridge(self.bridge)
+        except Exception:                         # ohne Flask: keine Webseite
+            pass
 
         self._build_toolbar(demo)
         self._build_central()
@@ -564,6 +568,10 @@ class IoCheckWindow(QMainWindow):
         act(tr("Speichern"), lambda: self.save_project(), tr("Prüfstand speichern (*.iocheck.json)"), "Ctrl+S")
         act(tr("Speichern unter …"), lambda: self.save_project(as_new=True))
         act(tr("Ergebnis exportieren …"), self.export_result, tr("Prüfergebnis als CSV oder Excel speichern"))
+        act(tr("Protokoll (PDF) …"), self.make_protocol,
+            tr("Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern"))
+        act(tr("📱 Mobil …"), self.show_mobile,
+            tr("IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)"))
         tb.addSeparator()
         self.act_run = act(tr("▶ Lesen starten"), self.toggle_reading, tr("Signale zyklisch aus den Steuerungen lesen"),
                            "F5")
@@ -762,7 +770,10 @@ class IoCheckWindow(QMainWindow):
             self.cb_group.addItem(g, g)
         self.cb_group.setCurrentIndex(max(0, self.cb_group.findData(cur)))
         self.cb_group.blockSignals(False)
-        self.matrix.set_rows(io.matrix_rows(sigs))
+        rows = io.matrix_rows(sigs)
+        self.matrix.set_rows(rows)
+        self.bridge.publish(sigs, self.tracker, self._project_title(), rows)
+        self.bridge.source, self.bridge.plcs = self.project.path, list(self.plcs)
         self._update_progress()
         self._update_title()
         if was_running:
@@ -889,6 +900,8 @@ class IoCheckWindow(QMainWindow):
             return False
         self.dirty = False
         self._update_title()
+        self.bridge.source = path
+        self.bridge.set_title(self._project_title())
         self.statusBar().showMessage(tr("Gespeichert: {0}").format(path), 5000)
         return True
 
@@ -932,7 +945,90 @@ class IoCheckWindow(QMainWindow):
             ev.ignore()
             return
         self.stop_reading()
+        try:
+            import plc_web
+            if plc_web.io_bridge() is self.bridge:
+                plc_web.set_io_bridge(None)
+        except Exception:
+            pass
+        if self.web is not None:
+            self.web.stop()
+            self.web = None
         ev.accept()
+
+    # ------------------------------------------------------------------ Protokoll und Webseite
+    def _conn(self):
+        from plc_common import default_connection, load_config
+        try:
+            return load_config(self.project.config)[0] if self.project.config else default_connection()
+        except Exception:
+            return default_connection()
+
+    def _project_title(self):
+        name = self._conn().get("projekt", "") if self.project.config else ""
+        return name or (os.path.basename(self.project.path).replace(io.EXTENSION, "") if self.project.path else "")
+
+    def make_protocol(self):
+        if not self.all_signals:
+            QMessageBox.information(self, tr("IO-Check"), tr("Zuerst eine IO-Liste importieren oder Bereiche scannen."))
+            return
+        base = os.path.splitext(self.project.path.replace(io.EXTENSION, ""))[0] if self.project.path else "io-check"
+        path, _f = QFileDialog.getSaveFileName(self, tr("Protokoll (PDF)"), base + "_protokoll.pdf", tr("PDF (*.pdf)"))
+        if not path:
+            return
+        try:
+            io.write_protocol(path, self.all_signals, self._project_title(), self.project.path, self.plcs)
+        except Exception as e:
+            QMessageBox.warning(self, tr("Protokoll (PDF)"), str(e))
+            return
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def show_mobile(self):
+        try:
+            import plc_web
+        except Exception as e:
+            QMessageBox.warning(self, tr("Mobil"), tr("Webserver nicht verfügbar: {0}").format(e))
+            return
+        srv = plc_web.RUNNING[0] if plc_web.RUNNING else None
+        conn = self._conn()
+        if srv is None:
+            srv = plc_web.WebServer.from_conn(lambda: None, conn)
+            port, err = srv.port, None
+            for p in range(port, port + 6):             # Port belegt (z. B. Logger in einem anderen Programm)?
+                srv.port = p
+                try:
+                    srv.start()
+                    err = None
+                    break
+                except OSError as e:
+                    err = e
+                except Exception as e:                  # HTTPS: Zertifikat/Bibliothek
+                    err = e
+                    break
+            if err is not None:
+                QMessageBox.warning(self, tr("Mobil"), tr("Der Webserver konnte nicht gestartet werden: {0}").format(err))
+                return
+            self.web = srv
+        url = srv.url() + "io"
+        if srv.token and not srv.users:
+            url += "?token=" + srv.token
+        QApplication.clipboard().setText(url)
+        lines = [tr("Im Browser des Smartphones oder Tablets öffnen (gleiches Netz):"), f"<p style='font-size:15pt'>"
+                 f"<b>{url}</b></p>", tr("Die Adresse wurde in die Zwischenablage kopiert.")]
+        if srv.users:
+            lines.append(tr("Anmeldung mit den Benutzern des Webservers; der Anmeldename wird als Prüfer eingetragen."))
+        else:
+            lines.append("<span style='color:#c62828'>" + tr(
+                "Ohne Benutzer kann jeder im Netz den Prüfstatus ändern. Benutzer im Konfigurationsprogramm (Reiter "
+                "Webserver) anlegen – der Anmeldename wird dann als Prüfer eingetragen.") + "</span>")
+        if srv.https:
+            lines.append(tr("HTTPS-Fingerabdruck (SHA-256): {0}").format(srv.fingerprint()))
+        box = QMessageBox(QMessageBox.Icon.Information, tr("IO-Check auf Smartphone/Tablet"), "<br>".join(lines),
+                          parent=self)
+        box.setTextFormat(Qt.TextFormat.RichText)
+        box.exec()
 
     # ------------------------------------------------------------------ Status
     def selected_signals(self):
@@ -1044,6 +1140,7 @@ class IoCheckWindow(QMainWindow):
         self.chk_demo.setEnabled(True)
         self.plc_state = {}
         self.lbl_plc.setText("")
+        self.bridge.set_plc_state([])
 
     def _tick(self):
         got = False
@@ -1060,7 +1157,8 @@ class IoCheckWindow(QMainWindow):
                 for k, (sig, v) in enumerate(zip(self.reader_signals.get(idx, []), values)):
                     self.tracker.feed(sig, v, ts, errors.get(k, ""))
                 got = True
-        changed = self.tracker.pop_status_changes()
+        changed = self.tracker.pop_status_changes() + self._web_commands()
+        self.tracker.watched = self.bridge.watched()
         if changed:
             self.model.refresh_rows(changed)
             self._mark_dirty()
@@ -1069,6 +1167,29 @@ class IoCheckWindow(QMainWindow):
             self.matrix.update()
             self.analog.refresh()
             self._refresh_changes()
+
+    def _web_commands(self):
+        """Befehle der Webseite (Smartphone/Tablet) übernehmen; Prüfer = Anmeldename. Rückgabe: geänderte Signale."""
+        out = []
+        while True:
+            try:
+                cmd, sig, value, user = self.bridge.commands.get_nowait()
+            except queue.Empty:
+                break
+            if cmd == "status":
+                status, remark = value
+                io.set_status(sig, status, remark=remark, checker=user)
+            elif cmd == "point":
+                self.tracker.take_point(sig, value, checker=user)
+            elif cmd == "remark":
+                sig.remark = value
+            out.append(sig)
+            self.statusBar().showMessage(tr("{0}: {1} – {2}").format(user, sig.label, tr(io.STATUS[sig.status])), 5000)
+        if out:
+            self.matrix.update()
+            if self.analog.sig in out:
+                self.analog.refresh()
+        return out
 
     def _show_plc_state(self):
         colors = {"ok": "#2e7d32", "verbinde": "#b8860b", "fehler": "#c62828", "aus": "#7d8590"}
@@ -1080,6 +1201,8 @@ class IoCheckWindow(QMainWindow):
             if state == "fehler":
                 self.statusBar().showMessage(f"{name}: {text}", 6000)
         self.lbl_plc.setText(" &nbsp; ".join(parts))
+        self.bridge.set_plc_state([(plcs[i].name if i < len(plcs) else "?", st, t)
+                                   for i, (st, t) in sorted(self.plc_state.items())])
         self.lbl_plc.setToolTip("\n".join(f"{plcs[i].name if i < len(plcs) else '?'}: {t}"
                                           for i, (_s, t) in sorted(self.plc_state.items())))
 

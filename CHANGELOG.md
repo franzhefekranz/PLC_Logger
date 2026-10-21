@@ -25,6 +25,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   * Analogwerte: Skalierung, Fehlerwerte (Drahtbruch, Über-/Unterlauf), Prüfpunkte 0/50/100 % mit Toleranz.
   * Matrix: Binärsignale als LEDs (Byte × Bit), geprüfte abgehakt und farbig; Bereiche ohne IO-Liste scannen.
   * Prüfstand speichern (`*.iocheck.json`, danach automatisch), Ergebnis als Excel/CSV.
+  * **Auf Smartphone/Tablet** über den Webserver (Seite `/io`): Liste, Matrix, letzte Wechsel, Status setzen,
+    Bemerkungen, Analog-Prüfpunkte; mehrere Geräte gleichzeitig. **Prüfer = Anmeldename** im Webserver. Läuft kein
+    Webserver, startet der IO-Check einen eigenen (*📱 Mobil …*).
+  * **Abnahmeprotokoll (PDF)**: Zusammenfassung je Signalart und Gruppe, Prüfer, Fehler und offene Signale, alle
+    Signale mit Status, Prüfzeit, Prüfer und Bemerkung/Messpunkten, Unterschriftsfelder; auch vom Smartphone abrufbar.
 
 ### Build
 

@@ -174,6 +174,21 @@ def _secret_key():
     return k
 
 
+# IO-Check (Inbetriebnahme): das geöffnete IO-Check-Fenster meldet sich hier an (plc_iocheck.IoWebBridge); alle
+# Webserver dieses Programms zeigen es dann unter /io. RUNNING: laufende Webserver (für die Adresse im IO-Check).
+_io_bridge = None
+RUNNING = []
+
+
+def set_io_bridge(bridge):
+    global _io_bridge
+    _io_bridge = bridge
+
+
+def io_bridge():
+    return _io_bridge
+
+
 def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
     """Flask-Anwendung. ``get_rec`` liefert bei jedem Aufruf den aktuellen Recorder (oder None).
 
@@ -264,10 +279,22 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         session.clear()
         return redirect("login" if users else "./")
 
+    def current_user():
+        """Prüfer für den IO-Check: Anmeldename, sonst Kennzeichnung des Zugangs."""
+        if users and logged_in():
+            return session.get("user")
+        if token_ok():
+            return "Web (Zugriffscode)"
+        return f"Web ({request.remote_addr or '?'})"
+
     @app.route("/")
     def index():
+        if get_rec() is None and _io_bridge is not None:
+            return redirect("io" + (("?token=" + request.args["token"]) if request.args.get("token") else ""))
         user = session.get("user") if users else ""
         out = '<a id="logout" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>" if user else ""
+        if _io_bridge is not None:
+            out = '<a id="logout" href="io" title="IO-Check (Inbetriebnahme)">IO-Check</a> ' + out
         return Response(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out), mimetype="text/html")
 
     @app.route("/static/<path:name>")
@@ -329,6 +356,58 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
             return reply({"version": None})
         return reply({"version": id(rec), "plcs": _plcs(rec), "rows": rec.count(), "running": rec.running,
                       "events": _events(rec)})
+
+    # ---- IO-Check (Smartphone/Tablet) ---------------------------------------------------------------------------
+    @app.route("/io")
+    def io_page():
+        from plc_iocheck_web import IO_HTML
+        user = session.get("user") if users else ""
+        out = '<a class="lnk" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>" if user else ""
+        if get_rec() is not None:
+            out = '<a class="lnk" href="./">Diagramme</a> ' + out
+        return Response(IO_HTML.replace("__LOGOUT__", out), mimetype="text/html", headers={"Cache-Control": "no-store"})
+
+    @app.route("/api/io")
+    def api_io():
+        b = _io_bridge
+        if b is None:
+            return reply({"active": False})
+        try:
+            ver = int(request.args.get("ver", -1))
+            sel = request.args.get("sel", "")
+            sel = int(sel) if sel not in ("", "-1") else None
+        except ValueError:
+            abort(400)
+        return reply(b.snapshot(ver, sel, current_user()))
+
+    @app.route("/api/io/cmd", methods=["POST"])
+    def api_io_cmd():
+        b = _io_bridge
+        if b is None:
+            return reply({"error": "inactive"}, 409)
+        if not request.is_json:                  # nur JSON: Formulare fremder Seiten (CSRF) werden abgewiesen
+            abort(415)
+        d = request.get_json(silent=True) or {}
+        try:
+            err = b.command(int(d.get("ver", -1)), str(d.get("cmd", "")), int(d.get("i", -1)), d, current_user())
+        except (TypeError, ValueError):
+            abort(400)
+        return reply({"error": err} if err else {"ok": True}, 409 if err == "version" else 400 if err else 200)
+
+    @app.route("/api/io/protokoll.pdf")
+    def api_io_protocol():
+        b = _io_bridge
+        if b is None or not b.signals:
+            abort(404)
+        import tempfile
+        from plc_iocheck import write_protocol
+        path = os.path.join(tempfile.gettempdir(), f"io-protokoll-{os.getpid()}.pdf")
+        write_protocol(path, b.signals, b.title, b.source, b.plcs)
+        with open(path, "rb") as f:
+            data = f.read()
+        return Response(data, mimetype="application/pdf",
+                        headers={"Content-Disposition": 'inline; filename="IO-Check-Protokoll.pdf"',
+                                 "Cache-Control": "no-store"})
 
     ev_cache = {}
 
@@ -405,8 +484,11 @@ class WebServer:
         self.srv = make_server(self.host, self.port, self.app, threaded=True, ssl_context=ctx)
         self.thread = threading.Thread(target=self.srv.serve_forever, name="webserver", daemon=True)
         self.thread.start()
+        RUNNING.append(self)
 
     def stop(self):
+        if self in RUNNING:
+            RUNNING.remove(self)
         if self.srv:
             self.srv.shutdown()
             self.srv = None

@@ -2375,6 +2375,54 @@
 @ Demo-Modus (simulierte Werte)
 > 
 
+@ IO-Check – Abnahmeprotokoll
+> 
+
+@ Prüfstand:
+> 
+
+@ Steuerungen:
+> 
+
+@ Prüfzeitraum:
+> 
+
+@ Ergebnis:
+> 
+
+@ {0} von {1} Signalen geprüft ({2:.0f} %): {3} OK, {4} Fehler, {5} übersprungen, {6} offen
+> 
+
+@ Zusammenfassung
+> 
+
+@ Signalart
+> 
+
+@ Gesamt
+> 
+
+@ Signale
+> 
+
+@ Fehler und offene Signale
+> 
+
+@ Keine – alle Signale geprüft und in Ordnung bzw. übersprungen.
+> 
+
+@ Alle Signale
+> 
+
+@ Bestätigung
+> 
+
+@ Abnahme (Auftraggeber)
+> 
+
+@ {0}: Name, Datum, Unterschrift
+> 
+
 # ---------------- plc_iocheck_dialog.py
 
 @ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
@@ -2462,6 +2510,18 @@
 > 
 
 @ Prüfergebnis als CSV oder Excel speichern
+> 
+
+@ Protokoll (PDF) …
+> 
+
+@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern
+> 
+
+@ 📱 Mobil …
+> 
+
+@ IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)
 > 
 
 @ ▶ Lesen starten
@@ -2602,13 +2662,46 @@
 @ Der Prüfstand ist nicht gespeichert. Jetzt speichern?
 > 
 
+@ Zuerst eine IO-Liste importieren oder Bereiche scannen.
+> 
+
+@ Protokoll (PDF)
+> 
+
+@ PDF (*.pdf)
+> 
+
+@ Mobil
+> 
+
+@ Webserver nicht verfügbar: {0}
+> 
+
+@ Der Webserver konnte nicht gestartet werden: {0}
+> 
+
+@ Im Browser des Smartphones oder Tablets öffnen (gleiches Netz):
+> 
+
+@ Die Adresse wurde in die Zwischenablage kopiert.
+> 
+
+@ Anmeldung mit den Benutzern des Webservers; der Anmeldename wird als Prüfer eingetragen.
+> 
+
+@ Ohne Benutzer kann jeder im Netz den Prüfstatus ändern. Benutzer im Konfigurationsprogramm (Reiter Webserver) anlegen – der Anmeldename wird dann als Prüfer eingetragen.
+> 
+
+@ HTTPS-Fingerabdruck (SHA-256): {0}
+> 
+
+@ IO-Check auf Smartphone/Tablet
+> 
+
 @ Bemerkung (z. B. Verdrahtung, Sensor defekt):
 > 
 
 @ Erwartet: {0}
-> 
-
-@ Zuerst eine IO-Liste importieren oder Bereiche scannen.
 > 
 
 @ In der Konfiguration ist keine Steuerung angelegt.
@@ -2618,6 +2711,9 @@
 > 
 
 @ ■ Lesen stoppen
+> 
+
+@ {0}: {1} – {2}
 > 
 
 # ---------------- plc_logger.py

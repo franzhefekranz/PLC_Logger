@@ -2375,6 +2375,54 @@
 @ Demo-Modus (simulierte Werte)
 > Demo mode (simulated values)
 
+@ IO-Check – Abnahmeprotokoll
+> IO check – acceptance protocol
+
+@ Prüfstand:
+> Test file:
+
+@ Steuerungen:
+> Controllers:
+
+@ Prüfzeitraum:
+> Test period:
+
+@ Ergebnis:
+> Result:
+
+@ {0} von {1} Signalen geprüft ({2:.0f} %): {3} OK, {4} Fehler, {5} übersprungen, {6} offen
+> {0} of {1} signals checked ({2:.0f} %): {3} OK, {4} faults, {5} skipped, {6} open
+
+@ Zusammenfassung
+> Summary
+
+@ Signalart
+> Signal type
+
+@ Gesamt
+> Total
+
+@ Signale
+> Signals
+
+@ Fehler und offene Signale
+> Faults and open signals
+
+@ Keine – alle Signale geprüft und in Ordnung bzw. übersprungen.
+> None – all signals checked and OK or skipped.
+
+@ Alle Signale
+> All signals
+
+@ Bestätigung
+> Confirmation
+
+@ Abnahme (Auftraggeber)
+> Acceptance (customer)
+
+@ {0}: Name, Datum, Unterschrift
+> {0}: name, date, signature
+
 # ---------------- plc_iocheck_dialog.py
 
 @ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
@@ -2463,6 +2511,18 @@
 
 @ Prüfergebnis als CSV oder Excel speichern
 > Save the test result as CSV or Excel
+
+@ Protokoll (PDF) …
+> Protocol (PDF) …
+
+@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern
+> Acceptance protocol with summary, fault list, all signals and signature fields
+
+@ 📱 Mobil …
+> 📱 Mobile …
+
+@ IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)
+> IO check on smartphone/tablet: show the address of the web page (starts the web server if needed)
 
 @ ▶ Lesen starten
 > ▶ Start reading
@@ -2602,14 +2662,47 @@
 @ Der Prüfstand ist nicht gespeichert. Jetzt speichern?
 > The test progress has not been saved. Save now?
 
+@ Zuerst eine IO-Liste importieren oder Bereiche scannen.
+> First import an IO list or scan ranges.
+
+@ Protokoll (PDF)
+> Protocol (PDF)
+
+@ PDF (*.pdf)
+> PDF (*.pdf)
+
+@ Mobil
+> Mobile
+
+@ Webserver nicht verfügbar: {0}
+> Web server not available: {0}
+
+@ Der Webserver konnte nicht gestartet werden: {0}
+> The web server could not be started: {0}
+
+@ Im Browser des Smartphones oder Tablets öffnen (gleiches Netz):
+> Open in the browser of the smartphone or tablet (same network):
+
+@ Die Adresse wurde in die Zwischenablage kopiert.
+> The address has been copied to the clipboard.
+
+@ Anmeldung mit den Benutzern des Webservers; der Anmeldename wird als Prüfer eingetragen.
+> Login with the users of the web server; the login name is entered as checker.
+
+@ Ohne Benutzer kann jeder im Netz den Prüfstatus ändern. Benutzer im Konfigurationsprogramm (Reiter Webserver) anlegen – der Anmeldename wird dann als Prüfer eingetragen.
+> Without users anybody in the network can change the test status. Create users in the configuration program (web server tab) – the login name is then entered as checker.
+
+@ HTTPS-Fingerabdruck (SHA-256): {0}
+> HTTPS fingerprint (SHA-256): {0}
+
+@ IO-Check auf Smartphone/Tablet
+> IO check on smartphone/tablet
+
 @ Bemerkung (z. B. Verdrahtung, Sensor defekt):
 > Remark (e.g. wiring, sensor defective):
 
 @ Erwartet: {0}
 > Expected: {0}
-
-@ Zuerst eine IO-Liste importieren oder Bereiche scannen.
-> First import an IO list or scan ranges.
 
 @ In der Konfiguration ist keine Steuerung angelegt.
 > No controller is defined in the configuration.
@@ -2619,6 +2712,9 @@
 
 @ ■ Lesen stoppen
 > ■ Stop reading
+
+@ {0}: {1} – {2}
+> {0}: {1} – {2}
 
 # ---------------- plc_logger.py
 
