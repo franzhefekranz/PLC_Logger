@@ -154,7 +154,7 @@ for %%F in (LICENSE COPYING THIRD_PARTY_LICENSES.md) do if exist "%%F" copy /y "
 
 rem  Bedienungsanleitung (deutsch) und User Manual (englisch) als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
 for %%D in (bedienungsanleitung user_manual) do (
-  "%VPY%" -c "import docutils.core as d; d.publish_file(source_path='doc/%%D.rst', destination_path='doc/%%D.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >nul 2>nul
+  "%VPY%" -c "import docutils.core as d; d.publish_file(source_path='doc/%%D.rst', destination_path='doc/%%D.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8','syntax_highlight':'none'})" >nul 2>nul
   if errorlevel 1 echo [HINWEIS] doc\%%D.html konnte nicht erzeugt werden ^(der Installer enthaelt dann die .rst^).
 )
 

@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* HTML-Anleitungen (`bedienungsanleitung.html`, `user_manual.html`): Fehlermeldungen „Cannot analyze code. Pygments
+  package not found.“ in den Codeblöcken – die Codeblöcke werden jetzt ohne Syntaxfärbung erzeugt (kein Pygments
+  nötig).
+
 ### Build
 
 * `build.bat`: Meldungen beim Erzeugen der PDF-Anleitungen landen in `build\doc\pdf_de.log` bzw. `pdf_en.log`; schlägt

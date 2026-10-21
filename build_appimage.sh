@@ -170,7 +170,7 @@ cp doc/bedienungsanleitung.rst doc/user_manual.rst "$AD/usr/share/doc/$APP/" 2>/
 # (falls mit tools/build_doc.py erzeugt) beilegen; Menü Hilfe › Bedienungsanleitung bzw. F1 öffnen sie
 # (deutsch: bedienungsanleitung, englisch: user_manual)
 for DOCN in bedienungsanleitung user_manual; do
-  "$VPY" -c "import docutils.core as d; d.publish_file(source_path='doc/$DOCN.rst', destination_path='doc/$DOCN.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8'})" >/dev/null 2>&1 \
+  "$VPY" -c "import docutils.core as d; d.publish_file(source_path='doc/$DOCN.rst', destination_path='doc/$DOCN.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8','syntax_highlight':'none'})" >/dev/null 2>&1 \
       || echo "[HINWEIS] doc/$DOCN.html konnte nicht erzeugt werden (F1 öffnet dann die Anleitung am Anfang)."
   cp "doc/$DOCN.html" "$AD/usr/share/doc/$APP/" 2>/dev/null || true
 done
