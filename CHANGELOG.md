@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.1.2] – 2026-10-21
+
+### Behoben
+
+* IO-Check ließ sich nicht öffnen (`AttributeError: 'IoCheckWindow' object has no attribute '_apply_filter'`); die
+  Filter der Signalliste (Suche, Gruppe, Typ, Status) funktionieren jetzt.
+
 ### Geändert
 
 * Bedienungsanleitung: 20 neue Abbildungen zu den neuen Funktionen (Trigger-Aufzeichnung und -Marken, Variablenfilter,
@@ -124,7 +131,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.1.1...HEAD
+[Unveröffentlicht]: ../../compare/v3.1.2...HEAD
+[3.1.2]: ../../releases/tag/v3.1.2
 [3.1.1]: ../../releases/tag/v3.1.1
 [3.1.0]: ../../releases/tag/v3.1.0
 [3.0.0]: ../../releases/tag/v3.0.0

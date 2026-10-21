@@ -788,6 +788,7 @@ class IoCheckWindow(QMainWindow):
             self.cb_group.addItem(g, g)
         self.cb_group.setCurrentIndex(max(0, self.cb_group.findData(cur)))
         self.cb_group.blockSignals(False)
+        self._apply_filter()
         rows = io.matrix_rows(sigs)
         self.matrix.set_rows(rows)
         self.bridge.publish(sigs, self.tracker, self._project_title(), rows)
@@ -796,6 +797,11 @@ class IoCheckWindow(QMainWindow):
         self._update_title()
         if was_running:
             self.start_reading()
+
+    def _apply_filter(self, *_):
+        """Suchfeld und Auswahl (Gruppe, Typ, Status) auf die Signalliste anwenden."""
+        self.proxy.set_filter(self.ed_filter.text(), self.cb_group.currentData() or "",
+                              self.cb_kind.currentData() or "", self.cb_status.currentData() or "")
 
     def _plc_for(self, name):
         if not self.plcs:
