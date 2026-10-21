@@ -1,0 +1,43 @@
+# Bedienungsanleitung (deutsch) und User Manual (englisch) als PDF bauen und an ein vorhandenes Release hängen.
+# Start von Hand: Actions › Anleitung (PDF) › Run workflow, Tag angeben (z. B. v3.1.0). Gebaut wird der Stand dieses
+# Tags; die PDFs heißen PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf bzw. PLC_Datenlogger_User_Manual_<Version>.pdf.
+# (Bei einem neuen Tag hängt der Windows-Workflow die PDFs ohnehin an.)
+name: Anleitung (PDF)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag des Release, z. B. v3.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PDFs bauen
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          pip install -q -r doc/requirements.txt
+          python tools/build_doc.py
+          python tools/build_doc.py --lang en
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anleitung-pdf
+          path: dist/*.pdf
+      - name: An das Release hängen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag }}
+          files: dist/*.pdf
