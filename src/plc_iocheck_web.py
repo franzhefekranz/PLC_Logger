@@ -77,8 +77,8 @@ main{padding:8px}
  padding:10px 12px calc(10px + env(safe-area-inset-bottom));max-height:70vh;overflow:auto;box-shadow:0 -6px 20px rgba(0,0,0,.35)}
 #sheet .x{float:right;background:none;border:0;color:var(--mute);font-size:22px;line-height:1;padding:0 4px}
 .sv{font-size:28px;font-weight:700;margin:4px 0}
-.btns{display:grid;grid-template-columns:1fr 1fr 1.25fr 1fr;gap:6px;margin:8px 0}
-.btns button{font-size:14px!important;padding:10px 2px!important}
+.btns{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr;gap:6px;margin:8px 0}
+.btns button{font-size:13.5px!important;padding:10px 2px!important;white-space:nowrap}
 .btns button,.pt button,.rm button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);
  background:var(--bg);color:var(--fg);padding:12px 4px;min-height:46px}
 .btns .ok{background:#2e7d32;color:#fff;border-color:#2e7d32}.btns .fehler{background:#c62828;color:#fff;border-color:#c62828}
@@ -87,6 +87,8 @@ main{padding:8px}
 .pt{display:grid;grid-template-columns:44px 1.3fr 1fr 22px auto;gap:6px;align-items:center;margin-top:6px;font-size:14px}
 .pt button{padding:8px 4px;min-height:38px}
 .fault{color:var(--nan);font-weight:700}
+.wb{margin:8px 0 2px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;line-height:1.7}
+.okm{color:#2e9d4b;font-weight:700}
 .muted{color:var(--mute);font-size:12.5px}
 </style>
 </head>
@@ -186,6 +188,8 @@ function sheet(){var sh=document.getElementById('sheet');if(SEL<0||!S||!S.sig[SE
  var s=S.sig[SEL],d=D[SEL]||[],h='<div><b>'+esc(s[0])+'</b> '+esc(s[1])+' <span class="muted">'+esc(s[5])+(s[3]?' · '+esc(s[3]):'')+'</span></div>'+
   '<div class="muted">'+esc(s[2])+'</div><div class="sv"><span class="'+ledcls(SEL)+'" style="display:inline-block;vertical-align:-2px"></span> '+esc(vtext(SEL))+'</div>';
  if(!bin(SEL)){var f=fault(SEL,d[1]);h+='<div class="muted">Rohwert '+(d[1]==null?'–':d[1])+(f?' · <span class="fault">'+esc(f)+'</span>':'')+'</div>';
+  if(isIn(SEL)){var sn=d[4]||0;h+='<div class="wb"><b>Drahtbruchprüfung</b><div>'+(sn&4?'<span class="okm">✓</span>':'○')+' 1. Verdrahtung öffnen → Fehlerwert erkannt</div><div>'+
+   (sn&8?'<span class="okm">✓</span>':'○')+' 2. Wieder schließen → Wert gültig</div></div><div class="muted" style="margin-top:8px"><b>Prüfpunkte</b> (optional, z. B. mit Kalibrator)</div>';}
   var eng=scale(SEL,d[1]),u=s[6]?' '+s[6]:'',pts=d[8]||{};
   [0,50,100].forEach(function(p){var got=pts[p];h+='<div class="pt"><b>'+p+' %</b><span>Soll '+fmt(target(SEL,p))+u+'</span><span>'+
    (got==null?(inTol(SEL,p,eng)?'<i class="muted">in Toleranz …</i>':''):fmt(got)+u)+'</span><span>'+(got==null?'':(inTol(SEL,p,got)?'✓':'✗'))+

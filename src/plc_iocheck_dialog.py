@@ -413,6 +413,13 @@ class AnalogPanel(QGroupBox):
         grid.addWidget(self.lbl_value, 0, 0, 1, 2)
         grid.addWidget(self.lbl_raw, 1, 0, 1, 2)
         grid.addWidget(self.lbl_fault, 2, 0, 1, 2)
+        self.lbl_break = QLabel()
+        self.lbl_break.setWordWrap(True)
+        self.lbl_break.setToolTip(tr("Drahtbruchprüfung: Verdrahtung öffnen (Klemme lösen) – die Baugruppe meldet "
+                                     "einen Fehlerwert – und wieder schließen. Bei 0 … 10 V und 0 … 20 mA ist eine "
+                                     "Unterbrechung nicht erkennbar: dann die Prüfpunkte verwenden oder von Hand "
+                                     "abhaken."))
+        grid.addWidget(self.lbl_break, 3, 0, 1, 2)
         form = QFormLayout()
         self.ed = {}
         for key, text in (("raw_min", "Rohwert bei 0 %"), ("raw_max", "Rohwert bei 100 %"),
@@ -429,6 +436,8 @@ class AnalogPanel(QGroupBox):
         form.addRow(tr("Einheit"), self.ed_unit)
         grid.addLayout(form, 0, 2, 4, 1)
         pts = QGridLayout()
+        self.lbl_pts_title = QLabel(f"<b>{tr('Prüfpunkte (optional, z. B. mit Kalibrator)')}</b>")
+        grid.addWidget(self.lbl_pts_title, 0, 3)
         pts.addWidget(QLabel(f"<b>{tr('Prüfpunkt')}</b>"), 0, 0)
         pts.addWidget(QLabel(f"<b>{tr('Soll')}</b>"), 0, 1)
         pts.addWidget(QLabel(f"<b>{tr('Gemessen')}</b>"), 0, 2)
@@ -451,7 +460,7 @@ class AnalogPanel(QGroupBox):
         self.lbl_auto.setWordWrap(True)
         self.lbl_auto.setObjectName("muted")
         pts.addWidget(self.lbl_auto, len(io.POINTS) + 2, 0, 1, 5)
-        grid.addLayout(pts, 0, 3, 4, 1)
+        grid.addLayout(pts, 1, 3, 3, 1)
         grid.setColumnStretch(3, 1)
 
     def set_signal(self, sig):
@@ -496,6 +505,14 @@ class AnalogPanel(QGroupBox):
         self.lbl_value.setText("–" if math.isnan(eng) else f"{eng:.4g}{unit}")
         self.lbl_raw.setText(tr("Rohwert: {0}").format("–" if math.isnan(s.value) else f"{s.value:g}"))
         self.lbl_fault.setText(io.analog_fault(s, s.value) or s.error)
+        if s.is_input:
+            ok1, ok2 = bool(s.seen & io.SEEN_BREAK), bool(s.seen & io.SEEN_BACK)
+            mark = lambda done: f"<span style='color:{STATUS_FG['ok']};font-weight:bold'>✓</span>" if done else "○"  # noqa: E731
+            self.lbl_break.setText(f"<b>{tr('Drahtbruchprüfung')}</b><br>{mark(ok1)} "
+                                   f"{tr('1. Verdrahtung öffnen → Fehlerwert erkannt')}<br>{mark(ok2)} "
+                                   f"{tr('2. Wieder schließen → Wert gültig')}")
+        else:
+            self.lbl_break.setText("")
         for pct, (lbl_t, lbl_m, lbl_s) in self.pt_widgets.items():
             lbl_t.setText(f"{io.point_target(s, pct):.4g}{unit}")
             got = s.points.get(str(pct))
@@ -580,10 +597,11 @@ class IoCheckWindow(QMainWindow):
         self.chk_demo.setChecked(bool(demo))
         tb.addWidget(self.chk_demo)
         tb.addSeparator()
-        self.chk_auto = QCheckBox(tr("Digitale Signale automatisch abhaken"))
-        self.chk_auto.setToolTip(tr("Optional: Ein Signal mit Status „offen“ wird OK, sobald es 0→1→0 gewechselt hat "
-                                    "(z. B. Sensor betätigt und losgelassen). Geprüft werden nur Signale aus der Liste "
-                                    "bzw. den Scan-Bereichen."))
+        self.chk_auto = QCheckBox(tr("Signale automatisch abhaken"))
+        self.chk_auto.setToolTip(tr("Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 "
+                                    "gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen "
+                                    "Drahtbruch gemeldet hat und wieder gültig ist (Verdrahtung geöffnet und "
+                                    "geschlossen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen."))
         self.chk_auto.toggled.connect(self._options_changed)
         tb.addWidget(self.chk_auto)
         tb.addWidget(QLabel("  " + tr("Toleranz Analog:")))

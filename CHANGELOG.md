@@ -20,9 +20,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   * IO-Liste aus CSV/Excel importieren (EPLAN, TIA-Portal-Variablentabelle, eigene Liste); Spalten werden an der
     Überschrift erkannt, Signalart und Datentyp aus der Adresse abgeleitet.
   * Signalliste mit Live-Werten, Prüfstatus (OK / Fehler / übersprungen) mit Zeit, Prüfer und Bemerkung, Filter
-    und Fortschritt; optional digitale Signale nach 0→1→0 automatisch abhaken.
+    und Fortschritt; optional automatisch abhaken (digital nach 0→1→0, analog nach bestandener Drahtbruchprüfung).
   * „Was hat sich bewegt?“: letzte Wechsel, Warnung bei Vertauschung (anderes Signal als das gewählte).
-  * Analogwerte: Skalierung, Fehlerwerte (Drahtbruch, Über-/Unterlauf), Prüfpunkte 0/50/100 % mit Toleranz.
+  * Analogeingänge: **Drahtbruchprüfung** (Verdrahtung öffnen → Fehlerwert erkannt, schließen → wieder gültig;
+    Vertauschungswarnung, wenn ein anderer Eingang unterbrochen wird), Skalierung, Fehlerwerte; optional Prüfpunkte
+    0/50/100 % mit Toleranz (Kalibrator).
   * Matrix: Binärsignale als LEDs (Byte × Bit), geprüfte abgehakt und farbig; Bereiche ohne IO-Liste scannen.
   * Prüfstand speichern (`*.iocheck.json`, danach automatisch), Ergebnis als Excel/CSV.
   * **Auf Smartphone/Tablet** über den Webserver (Seite `/io`): Liste, Matrix, letzte Wechsel, Status setzen,

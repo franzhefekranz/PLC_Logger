@@ -3303,9 +3303,9 @@ search field, filters for group, type and status and the progress (“312 of 480
   (Ctrl+3), **Reset** (Ctrl+0) – for the selected rows. Time and checker (Windows or
   Linux user) are entered.
 * The **remark** can be edited directly in the table by double-click.
-* **Check off digital signals automatically** (optional, off): a signal with status
-  *open* becomes OK as soon as it has changed 0→1→0 – e.g. sensor actuated and
-  released. Only signals in the IO list or a scan range are checked off; the list
+* **Check off signals automatically** (optional, off): a signal with status *open*
+  becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and
+  released) or an analog input has passed the wire break test (see below). Only signals in the IO list or a scan range are checked off; the list
   therefore determines which signals are to be tested.
 
 What has moved? (swapped signals)
@@ -3327,7 +3327,16 @@ If an analog signal is selected, the **Analog value** box shows the scaled value
 raw value and fault values. The measuring range (raw value at 0 and 100 %, engineering
 range, unit) can be adjusted there.
 
-* **Test points 0/50/100 %:** if the value stays within the **tolerance** (toolbar,
+* **Wire break test** (analog inputs, the usual way): open the wiring of the signal
+  (loosen the terminal) – the module reports a fault value, step 1 is checked – and close
+  it again – the value is valid again, step 2 is checked. Then confirm the signal with
+  **✓ OK** or automatically with *Check off signals automatically*. If a different
+  analog input than the selected one is interrupted, the swap warning appears. An
+  interruption is a fault value (Siemens: above 32511, e.g. 32767; below −4864 with
+  4 … 20 mA, e.g. at 0 mA; −32768) or, with other raw ranges, a value more than 17.6 %
+  outside. With 0 … 10 V and 0 … 20 mA an interruption cannot be distinguished from the
+  value 0 – then check off by hand or use the test points.
+* **Test points 0/50/100 %** (optional, e.g. with a calibrator): if the value stays within the **tolerance** (toolbar,
   default 1 % of the measuring range) of a test point for 1 s, it is taken over – e.g.
   feed 4, 12 and 20 mA with a calibrator. **Take over** takes the current value by hand.
   When all three points are within tolerance, the signal becomes OK.
@@ -3383,7 +3392,7 @@ free one).
 * Tabs **List** (search, filter by group and status), **Matrix** (LEDs as on the PC) and
   **Moved** (latest changes). Tapping selects a signal; at the bottom the value,
   **✓ OK**, **✗ Fault** (with remark), **Skipped**, **Back**, the remark field and for
-  analog signals the test points appear (automatic take-over as on the PC while the
+  analog inputs the wire break test and the test points appear (automatic take-over as on the PC while the
   signal is selected on the device).
 * The selected signal is *expected* on this device: if another digital input changes,
   the warning “Swapped?” appears and the device vibrates.

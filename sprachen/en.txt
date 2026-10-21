@@ -2318,6 +2318,9 @@
 @ Außerhalb des Messbereichs
 > Outside the measuring range
 
+@ automatisch (Drahtbruch erkannt, wieder gültig)
+> automatic (wire break detected, valid again)
+
 @ automatisch (0→1→0 erkannt)
 > automatic (0→1→0 detected)
 
@@ -2455,8 +2458,14 @@
 @ Analogwert
 > Analog value
 
+@ Drahtbruchprüfung: Verdrahtung öffnen (Klemme lösen) – die Baugruppe meldet einen Fehlerwert – und wieder schließen. Bei 0 … 10 V und 0 … 20 mA ist eine Unterbrechung nicht erkennbar: dann die Prüfpunkte verwenden oder von Hand abhaken.
+> Wire break test: open the wiring (loosen the terminal) – the module reports a fault value – and close it again. With 0 … 10 V and 0 … 20 mA an interruption cannot be detected: then use the test points or check off by hand.
+
 @ Einheit
 > Unit
+
+@ Prüfpunkte (optional, z. B. mit Kalibrator)
+> Test points (optional, e.g. with a calibrator)
 
 @ Prüfpunkt
 > Test point
@@ -2484,6 +2493,15 @@
 
 @ Rohwert: {0}
 > Raw value: {0}
+
+@ Drahtbruchprüfung
+> Wire break test
+
+@ 1. Verdrahtung öffnen → Fehlerwert erkannt
+> 1. Open the wiring → fault value detected
+
+@ 2. Wieder schließen → Wert gültig
+> 2. Close it again → value valid
 
 @ (jetzt in Toleranz)
 > (within tolerance now)
@@ -2533,11 +2551,11 @@
 @ Simulierte Werte statt Verbindung zur Steuerung
 > Simulated values instead of a connection to the controller
 
-@ Digitale Signale automatisch abhaken
-> Check off digital signals automatically
+@ Signale automatisch abhaken
+> Check off signals automatically
 
-@ Optional: Ein Signal mit Status „offen“ wird OK, sobald es 0→1→0 gewechselt hat (z. B. Sensor betätigt und losgelassen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.
-> Optional: a signal with status “open” becomes OK as soon as it has changed 0→1→0 (e.g. sensor actuated and released). Only signals from the list or the scan ranges are checked.
+@ Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen Drahtbruch gemeldet hat und wieder gültig ist (Verdrahtung geöffnet und geschlossen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.
+> Optional: a signal with status “open” becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and released) or an analog input has reported a wire break and is valid again (wiring opened and closed). Only signals from the list or the scan ranges are checked.
 
 @ Toleranz Analog:
 > Analog tolerance:

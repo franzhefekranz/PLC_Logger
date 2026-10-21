@@ -3388,9 +3388,9 @@ geprüft – 305 OK, 4 Fehler, 3 übersprungen“).
   **– Übersprungen** (Strg+3), **Zurücksetzen** (Strg+0) – für die markierten Zeilen.
   Zeit und Prüfer (Windows- bzw. Linux-Benutzer) werden eingetragen.
 * Die **Bemerkung** lässt sich per Doppelklick direkt in der Tabelle bearbeiten.
-* **Digitale Signale automatisch abhaken** (optional, aus): Ein Signal mit Status
-  *offen* wird OK, sobald es 0→1→0 gewechselt hat – z. B. Sensor betätigt und
-  losgelassen. Abgehakt werden nur Signale, die in der IO-Liste bzw. einem Scan-Bereich
+* **Signale automatisch abhaken** (optional, aus): Ein Signal mit Status *offen* wird
+  OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen)
+  bzw. ein Analogeingang die Drahtbruchprüfung bestanden hat (siehe unten). Abgehakt werden nur Signale, die in der IO-Liste bzw. einem Scan-Bereich
   stehen; welche Signale zu prüfen sind, bestimmt also die Liste.
 
 Was hat sich bewegt? (Vertauschungen)
@@ -3412,7 +3412,17 @@ Ist ein Analogsignal gewählt, zeigt das Feld **Analogwert** den skalierten Wert
 Rohwert und Fehlerwerte. Messbereich (Rohwert bei 0 und 100 %, technischer Bereich,
 Einheit) lässt sich dort anpassen.
 
-* **Prüfpunkte 0/50/100 %:** Liegt der Wert 1 s lang innerhalb der **Toleranz** (in der
+* **Drahtbruchprüfung** (Analogeingänge, üblicher Weg): Verdrahtung des Signals öffnen
+  (Klemme lösen) – die Baugruppe meldet einen Fehlerwert, Schritt 1 wird abgehakt – und
+  wieder schließen – der Wert ist wieder gültig, Schritt 2 wird abgehakt. Danach das
+  Signal mit **✓ OK** bestätigen bzw. bei *Signale automatisch abhaken* automatisch.
+  Wird dabei ein anderer Analogeingang unterbrochen als der gewählte, erscheint die
+  Vertauschungswarnung. Als Unterbrechung gilt ein Fehlerwert (Siemens: über 32511,
+  z. B. 32767; unter −4864 bei 4 … 20 mA, z. B. bei 0 mA; −32768) bzw. bei anderen
+  Rohwertbereichen ein Wert mehr als 17,6 % außerhalb. Bei 0 … 10 V und 0 … 20 mA ist eine
+  Unterbrechung nicht vom Wert 0 zu unterscheiden – dann von Hand abhaken oder die
+  Prüfpunkte verwenden.
+* **Prüfpunkte 0/50/100 %** (optional, z. B. mit Kalibrator): Liegt der Wert 1 s lang innerhalb der **Toleranz** (in der
   Werkzeugleiste, Vorgabe 1 % des Messbereichs) um einen Prüfpunkt, wird er übernommen –
   z. B. 4, 12 und 20 mA mit einem Kalibrator einspeisen. **Übernehmen** übernimmt den
   aktuellen Wert von Hand. Sind alle drei Punkte in Toleranz, wird das Signal OK.
@@ -3468,7 +3478,7 @@ Port belegt, der nächste freie).
 * Reiter **Liste** (Suche, Filter nach Gruppe und Status), **Matrix** (LEDs wie am PC) und
   **Bewegt** (letzte Wechsel). Ein Antippen wählt ein Signal; unten erscheinen Wert,
   **✓ OK**, **✗ Fehler** (mit Bemerkung), **Übersprungen**, **Zurück**, das Bemerkungsfeld
-  und bei Analogsignalen die Prüfpunkte (automatische Übernahme wie am PC, solange das
+  und bei Analogeingängen die Drahtbruchprüfung und die Prüfpunkte (automatische Übernahme wie am PC, solange das
   Signal auf dem Gerät gewählt ist).
 * Das gewählte Signal gilt auf diesem Gerät als *erwartet*: Wechselt ein anderer
   Digitaleingang, erscheint die Warnung „Vertauschung?“ und das Gerät vibriert.

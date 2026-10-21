@@ -2318,6 +2318,9 @@
 @ Außerhalb des Messbereichs
 > 
 
+@ automatisch (Drahtbruch erkannt, wieder gültig)
+> 
+
 @ automatisch (0→1→0 erkannt)
 > 
 
@@ -2455,7 +2458,13 @@
 @ Analogwert
 > 
 
+@ Drahtbruchprüfung: Verdrahtung öffnen (Klemme lösen) – die Baugruppe meldet einen Fehlerwert – und wieder schließen. Bei 0 … 10 V und 0 … 20 mA ist eine Unterbrechung nicht erkennbar: dann die Prüfpunkte verwenden oder von Hand abhaken.
+> 
+
 @ Einheit
+> 
+
+@ Prüfpunkte (optional, z. B. mit Kalibrator)
 > 
 
 @ Prüfpunkt
@@ -2483,6 +2492,15 @@
 > 
 
 @ Rohwert: {0}
+> 
+
+@ Drahtbruchprüfung
+> 
+
+@ 1. Verdrahtung öffnen → Fehlerwert erkannt
+> 
+
+@ 2. Wieder schließen → Wert gültig
 > 
 
 @ (jetzt in Toleranz)
@@ -2533,10 +2551,10 @@
 @ Simulierte Werte statt Verbindung zur Steuerung
 > 
 
-@ Digitale Signale automatisch abhaken
+@ Signale automatisch abhaken
 > 
 
-@ Optional: Ein Signal mit Status „offen“ wird OK, sobald es 0→1→0 gewechselt hat (z. B. Sensor betätigt und losgelassen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.
+@ Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen Drahtbruch gemeldet hat und wieder gültig ist (Verdrahtung geöffnet und geschlossen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.
 > 
 
 @ Toleranz Analog:

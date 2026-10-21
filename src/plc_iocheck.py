@@ -37,6 +37,8 @@ S7_RAW_MAX = 27648                        # Nennbereich der S7-Analogbaugruppen 
 
 # Gesehene Flanken digitaler Signale (Bitmaske in IoSignal.seen)
 SEEN_RISE, SEEN_FALL = 1, 2
+# Analogeingänge: Drahtbruchprüfung (Verdrahtung öffnen -> Fehlerwert, schließen -> wieder gültig)
+SEEN_BREAK, SEEN_BACK = 4, 8
 
 
 @dataclass(eq=False)                      # Vergleich über die Identität (Signale stehen in Mengen)
@@ -413,6 +415,19 @@ def point_ok(sig: IoSignal, pct: float, eng: float, tol_pct: float) -> bool:
     return not math.isnan(eng) and abs(eng - point_target(sig, pct)) <= span * tol_pct / 100.0
 
 
+def analog_broken(sig: IoSignal, raw: float) -> bool:
+    """Unterbrechung erkannt: Fehlerwert der Baugruppe (Drahtbruch, Über-/Unterlauf) oder Wert deutlich unter dem
+    Messbereichsanfang (4 … 20 mA ohne Strom). Bei 0 … 10 V / 0 … 20 mA ist eine Unterbrechung nicht erkennbar."""
+    if math.isnan(raw):
+        return False
+    if sig.raw_max == S7_RAW_MAX and sig.raw_min in (0, -S7_RAW_MAX):
+        # Siemens: Überlauf (> 32511, 32767 = Drahtbruch mit Diagnose), Unterlauf (< -4864 bzw. -32768); der Über-/
+        # Untersteuerungsbereich (bis ±17,6 %) gilt noch als gültiger Wert
+        return raw > 32511 or raw < (-4864 if sig.raw_min == 0 else -32512)
+    span = abs(sig.raw_max - sig.raw_min) or 1.0
+    return raw > max(sig.raw_min, sig.raw_max) + 0.176 * span or raw < min(sig.raw_min, sig.raw_max) - 0.176 * span
+
+
 def analog_fault(sig: IoSignal, raw: float) -> str:
     """Fehlerwert bzw. Bereichsverletzung eines Analogeingangs, sonst ""."""
     if math.isnan(raw):
@@ -491,6 +506,17 @@ class IoTracker:
         if sig.binary:
             value = 1.0 if value >= 0.5 else 0.0
         sig.value = value
+        broke = False
+        if not sig.binary and sig.is_input:
+            if analog_broken(sig, value):
+                broke = not sig.seen & SEEN_BREAK or bool(sig.seen & SEEN_BACK)
+                sig.seen = (sig.seen | SEEN_BREAK) & ~SEEN_BACK if broke else sig.seen
+            elif sig.seen & SEEN_BREAK and not sig.seen & SEEN_BACK:
+                sig.seen |= SEEN_BACK
+                if self.auto_ok and sig.status == "offen":
+                    set_status(sig, "ok", remark=sig.remark or tr("automatisch (Drahtbruch erkannt, wieder gültig)"))
+                    sig.seen = SEEN_BREAK | SEEN_BACK
+                    self.status_changed.append(sig)
         if math.isnan(old):
             sig.logged = value
             return None
@@ -505,12 +531,16 @@ class IoTracker:
         else:
             self._analog_points(sig, value, ts)
             span = abs(sig.raw_max - sig.raw_min) or 1.0
-            if not math.isnan(sig.logged) and abs(value - sig.logged) < 0.02 * span:
+            if not broke and not math.isnan(sig.logged) and abs(value - sig.logged) < 0.02 * span:
                 return None                   # Rauschen: erst ab 2 % des Messbereichs melden
             old, sig.logged = sig.logged, value
         ch = Change(ts, sig, old, value)
         exp = self.expected
-        if exp is not None and exp is not sig and sig.is_input and sig.binary and exp.binary \
+        # Vertauschung: anderes Eingangssignal hat gewechselt (digital) bzw. Drahtbruch gemeldet (analog), das gewählte
+        # nicht
+        same_kind = (sig.binary and exp is not None and exp.binary) or \
+                    (broke and exp is not None and not exp.binary and exp.is_input)
+        if exp is not None and exp is not sig and sig.is_input and same_kind \
                 and ts - exp.changed > self.SWAP_QUIET_S:
             ch.expected = exp
             ch.note = tr("Vertauschung? Erwartet {0}, gekommen {1}").format(exp.label, sig.label)
@@ -711,6 +741,7 @@ class IoReader(threading.Thread):
         self._status("ok", tr("Demo-Modus (simulierte Werte)"))
         rnd = random.Random(1)
         state = [0.0] * len(self.signals)
+        breaks = {}
         t0 = time.time()
         while not self.stop_evt.is_set():
             ts = time.time()
@@ -718,7 +749,11 @@ class IoReader(threading.Thread):
                 if s.binary:
                     if rnd.random() < (0.004 if s.is_input else 0.001):
                         state[k] = 1.0 - state[k]
+                elif breaks.get(k, 0) > ts:
+                    state[k] = 32767.0                # simulierter Drahtbruch (Klemme geöffnet)
                 else:
+                    if s.is_input and rnd.random() < 0.002:
+                        breaks[k] = ts + 3.0
                     pct = 50 + 50 * math.sin((ts - t0) / (20 + k % 7))
                     state[k] = s.raw_min + (s.raw_max - s.raw_min) * pct / 100.0 + rnd.uniform(-20, 20)
             self.out.put(("values", self.idx, ts, list(state), {}))
