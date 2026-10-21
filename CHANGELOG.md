@@ -27,6 +27,7 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * `build.bat`: Meldungen beim Erzeugen der PDF-Anleitungen landen in `build\doc\pdf_de.log` bzw. `pdf_en.log`; schlägt
   ein PDF fehl, werden die letzten Zeilen angezeigt. Die PDFs liegen zusätzlich mit Versionsnummer in `dist\` und
   werden an das GitHub-Release angehängt.
+* Neuer Workflow *Anleitung (PDF)*: baut die PDFs für einen vorhandenen Tag und hängt sie an dessen Release.
 
 ## [3.1.0] – 2026-10-21
 
