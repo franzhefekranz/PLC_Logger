@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.1.1] – 2026-10-21
+
 ### Behoben
 
 * HTML-Anleitungen (`bedienungsanleitung.html`, `user_manual.html`): Fehlermeldungen „Cannot analyze code. Pygments
@@ -114,7 +116,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.1.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.1.1...HEAD
+[3.1.1]: ../../releases/tag/v3.1.1
 [3.1.0]: ../../releases/tag/v3.1.0
 [3.0.0]: ../../releases/tag/v3.0.0
 [2.1.0]: ../../commit/1a833dc
