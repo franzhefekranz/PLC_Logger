@@ -165,11 +165,23 @@ set "DOCPDF_EN=build\doc\User_Manual.pdf"
 if exist "%DOCPDF%" del "%DOCPDF%"
 if exist "%DOCPDF_EN%" del "%DOCPDF_EN%"
 echo [5/6] Bedienungsanleitung als PDF ...
-"%VPY%" -m pip install -r doc\requirements.txt >nul
-"%VPY%" tools\build_doc.py --copy-to "%DOCPDF%" >nul 2>nul
-if not exist "%DOCPDF%" echo [HINWEIS] Das PDF der Anleitung konnte nicht erzeugt werden (Test: "%VPY%" tools\build_doc.py).
-"%VPY%" tools\build_doc.py --lang en --copy-to "%DOCPDF_EN%" >nul 2>nul
-if not exist "%DOCPDF_EN%" echo [HINWEIS] Das englische PDF konnte nicht erzeugt werden (Test: "%VPY%" tools\build_doc.py --lang en).
+if not exist "build\doc" mkdir "build\doc"
+"%VPY%" -m pip install -q -r doc\requirements.txt
+rem  Meldungen in build\doc\pdf_de.log bzw. pdf_en.log; bei einem Fehler werden die letzten Zeilen angezeigt.
+"%VPY%" tools\build_doc.py --copy-to "%DOCPDF%" > "build\doc\pdf_de.log" 2>&1
+if not exist "%DOCPDF%" (
+    echo [HINWEIS] Das PDF der Anleitung konnte nicht erzeugt werden. Letzte Meldungen ^(vollstaendig: build\doc\pdf_de.log^):
+    powershell -NoProfile -Command "Get-Content -Encoding UTF8 'build\doc\pdf_de.log' -Tail 12"
+)
+"%VPY%" tools\build_doc.py --lang en --copy-to "%DOCPDF_EN%" > "build\doc\pdf_en.log" 2>&1
+if not exist "%DOCPDF_EN%" (
+    echo [HINWEIS] Das englische PDF konnte nicht erzeugt werden. Letzte Meldungen ^(vollstaendig: build\doc\pdf_en.log^):
+    powershell -NoProfile -Command "Get-Content -Encoding UTF8 'build\doc\pdf_en.log' -Tail 12"
+)
+rem  Kopien mit Versionsnummer in dist\ (zum Weitergeben, Anhang des GitHub-Release)
+if not exist "dist" mkdir "dist"
+if exist "%DOCPDF%" copy /y "%DOCPDF%" "dist\PLC_Datenlogger_Bedienungsanleitung_%VERSION%.pdf" >nul
+if exist "%DOCPDF_EN%" copy /y "%DOCPDF_EN%" "dist\PLC_Datenlogger_User_Manual_%VERSION%.pdf" >nul
 
 echo.
 echo [OK] Programme erzeugt: dist\PLCDatenlogger\PLCLogger.exe und PLCKonfiguration.exe

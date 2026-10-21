@@ -58,6 +58,13 @@ jobs:
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
+          name: anleitung-pdf
+          path: |
+            dist/*.pdf
+            build/doc/*.log
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        with:
           name: windows-setup
           path: installer/*_Setup_*.exe
           if-no-files-found: warn
@@ -70,3 +77,4 @@ jobs:
           files: |
             dist/*_portable_*.zip
             installer/*_Setup_*.exe
+            dist/*.pdf

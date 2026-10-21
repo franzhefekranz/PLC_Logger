@@ -28,7 +28,8 @@ ROOT_DOC = "user_manual" if LANG.startswith("en") else "bedienungsanleitung"
 def sphinx(builder, target):
     # -E: Umgebung neu lesen (Änderungen an conf.py/Stylesheet wirken sicher), -q: nur Warnungen und Fehler;
     # -d: eigener Zwischenspeicher je Sprache. Die Sprache liest doc/conf.py aus PLC_DOC_LANG.
-    env = dict(os.environ, PLC_DOC_LANG=LANG)
+    # PYTHONUTF8: Meldungen mit Sonderzeichen (z. B. fehlende Glyphen ⏸ ✓) auch bei umgeleiteter Ausgabe unter Windows
+    env = dict(os.environ, PLC_DOC_LANG=LANG, PYTHONUTF8="1", PYTHONIOENCODING="utf-8")
     return subprocess.call([sys.executable, "-m", "sphinx", "-b", builder, "-E", "-q",
                             "-d", os.path.join(OUT, "doctrees_" + LANG), DOC, target], env=env)
 
@@ -40,6 +41,12 @@ def main():
     except ImportError as e:
         print(f"FEHLER: {e.name} fehlt. Bitte installieren:  pip install -r doc/requirements.txt")
         return 1
+    try:
+        from importlib.metadata import version
+        print(f"Python {sys.version.split()[0]}, Sphinx {version('sphinx')}, rinohtype {version('rinohtype')}, "
+              f"docutils {version('docutils')}", flush=True)
+    except Exception:
+        pass
     pdf_dir = os.path.join(OUT, "pdf_" + LANG)
     if sphinx("rinoh", pdf_dir) != 0:
         print("FEHLER: PDF konnte nicht erzeugt werden (siehe Meldungen oben).")

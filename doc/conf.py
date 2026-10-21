@@ -58,6 +58,7 @@ html_logo = os.path.join(ROOT, "logo.png")
 # Emoji, für die keine PDF-Schrift ein Zeichen hat: im PDF durch Text ersetzen (HTML/Wiki zeigen sie unverändert)
 PDF_EMOJI = ({"🔔": "bell", "📝": "note symbol"} if language == "en"
              else {"🔔": "Glocke", "📝": "Notiz-Symbol"})
+PDF_EMOJI.update({"📱 ": "", "📱": "", "⏸ ": "", "⏺ ": ""})
 
 
 def _prepare_pdf(app, doctree):
