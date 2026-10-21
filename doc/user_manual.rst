@@ -319,7 +319,7 @@ Start screen
 
 When the logger and the configuration program start, the **start screen** appears:
 
-.. figure:: images/startbild.png
+.. figure:: images/en/startbild.png
    :alt: Start screen
    :width: 80%
    :align: center
@@ -367,7 +367,7 @@ Quick start
 Configuration program (``plc_config.py``)
 ======================================================================
 
-.. figure:: images/config_gesamt.png
+.. figure:: images/en/config_gesamt.png
    :alt: Configuration program
    :width: 90%
    :align: center
@@ -382,7 +382,7 @@ The upper part of the window is divided into several tabs.
 
 **Tab “Project & controllers”**
 
-.. figure:: images/config_projekt_steuerungen.png
+.. figure:: images/en/config_projekt_steuerungen.png
    :alt: Tab Project and controllers
    :width: 80%
    :align: center
@@ -441,7 +441,7 @@ CSV file (one column per variable).
 
 **Tab “Recording”**
 
-.. figure:: images/config_aufzeichnung.png
+.. figure:: images/en/config_aufzeichnung.png
    :alt: Tab Recording
    :width: 80%
    :align: center
@@ -486,7 +486,7 @@ CSV file (one column per variable).
 
 **Tab “Display”**
 
-.. figure:: images/config_anzeige.png
+.. figure:: images/en/config_anzeige.png
    :alt: Tab Display
    :width: 80%
    :align: center
@@ -520,7 +520,7 @@ CSV file (one column per variable).
 
 **Tab “Database”**
 
-.. figure:: images/config_datenbank.png
+.. figure:: images/en/config_datenbank.png
    :alt: Tab Database
    :width: 80%
    :align: center
@@ -534,7 +534,7 @@ VictoriaMetrics), with the button **Test database**. Details in the chapter
 
 **Tab “Triggers & events”**
 
-.. figure:: images/config_trigger_ereignis.png
+.. figure:: images/en/config_trigger_ereignis.png
    :alt: Tab Triggers and events
    :width: 80%
    :align: center
@@ -570,7 +570,7 @@ Details in the chapter `PDF reports <pdf-berichte_>`__.
 
 **Tab “Web server & headless”**
 
-.. figure:: images/config_web_headless.png
+.. figure:: images/en/config_web_headless.png
    :alt: Tab Web server and headless
    :width: 80%
    :align: center
@@ -645,7 +645,7 @@ The tree on the left shows this structure. Below it are the buttons:
 Properties of chart and Y axis
 ----------------------------------------------------------------------
 
-.. figure:: images/config_eigenschaften.png
+.. figure:: images/en/config_eigenschaften.png
    :alt: Properties of chart and Y axis
    :width: 90%
    :align: center
@@ -679,7 +679,7 @@ Select a chart or a Y axis in the tree. In the *Properties* area below you can c
 Creating variables
 ----------------------------------------------------------------------
 
-.. figure:: images/config_variablen.png
+.. figure:: images/en/config_variablen.png
    :alt: Variable table
    :width: 90%
    :align: center
@@ -728,6 +728,13 @@ Each row of the variable table describes one value of a controller:
 Searching and filtering variables
 ----------------------------------------------------------------------
 
+.. figure:: images/en/config_variablen_filter.png
+   :alt: Search field and filters above the variable table
+   :width: 90%
+   :align: center
+
+   Search field and filters above the variable table.
+
 Above the variable table there are a **search field** and two choice lists
 (``Ctrl+F`` jumps to the search field):
 
@@ -760,7 +767,7 @@ The choice list *Chart › Y axis* in the table and the tree are always in sync.
 Calculated variables (formulas)
 ----------------------------------------------------------------------
 
-.. figure:: images/formeleditor.png
+.. figure:: images/en/formeleditor.png
    :alt: Formula editor
    :width: 90%
    :align: center
@@ -838,7 +845,7 @@ Notes:
 Block read mode
 ----------------------------------------------------------------------
 
-.. figure:: images/blockeditor.png
+.. figure:: images/en/blockeditor.png
    :alt: Block editor
    :width: 90%
    :align: center
@@ -959,7 +966,7 @@ Notes:
 Selecting variables from the controller
 ----------------------------------------------------------------------
 
-.. figure:: images/symbolbaum.png
+.. figure:: images/en/symbolbaum.png
    :alt: Selection dialog
    :width: 90%
    :align: center
@@ -1752,6 +1759,13 @@ variable is the path of display names.
 All nodes of a controller are read in each cycle with as few read requests as possible.
 An invalid node (e.g. *BadNodeIdUnknown*) affects only its own variable.
 
+.. figure:: images/en/opcua_subscription.png
+   :alt: Connection settings of the opcua driver with mode Subscription
+   :width: 75%
+   :align: center
+
+   Connection settings of the opcua driver with mode Subscription.
+
 **Subscription:** Instead of reading all nodes in every cycle, the driver sets up a
 subscription when connecting; the server then reports only changed values. The logger
 still records at the interval of the controller (with the last reported value). With
@@ -1799,6 +1813,13 @@ controller the driver reconnects and resolves the names again.
 
 **Blocks:** array name without index (``MAIN.aWerte``) + first index + count – the
 section is read in one piece.
+
+.. figure:: images/en/ads_auswahl.png
+   :alt: Symbol table of a TwinCAT controller in the selection dialog
+   :width: 90%
+   :align: center
+
+   Symbol table of a TwinCAT controller in the selection dialog.
 
 **Selection dialog “Choose from TwinCAT…”:** reads the symbol table of the controller
 and shows it as a tree (``MAIN`` › ``Pumpe`` › ``fDruck``) with type and comment;
@@ -2089,7 +2110,7 @@ Logger (``plc_logger.py``)
 Controls
 ----------------------------------------------------------------------
 
-.. figure:: images/logger_hauptfenster.png
+.. figure:: images/en/logger_hauptfenster.png
    :alt: Main window of the logger
    :width: 90%
    :align: center
@@ -2173,7 +2194,7 @@ configuration file.
 Status LEDs of the connections
 ----------------------------------------------------------------------
 
-.. figure:: images/status_leds.png
+.. figure:: images/en/status_leds.png
    :alt: Status LEDs
    :width: 70%
    :align: center
@@ -2204,7 +2225,7 @@ time of the last read request. The web server shows the same LEDs.
 Online mode
 ----------------------------------------------------------------------
 
-.. figure:: images/logger_online.png
+.. figure:: images/en/logger_online.png
    :alt: Online mode
    :width: 90%
    :align: center
@@ -2231,7 +2252,7 @@ following the newest values.
 Offline mode
 ----------------------------------------------------------------------
 
-.. figure:: images/logger_offline.png
+.. figure:: images/en/logger_offline.png
    :alt: Offline mode
    :width: 90%
    :align: center
@@ -2257,7 +2278,7 @@ then removed from the display. The CSV file always contains all data.
 Rulers (offline)
 ----------------------------------------------------------------------
 
-.. figure:: images/logger_lineale.png
+.. figure:: images/en/logger_lineale.png
    :alt: Rulers in offline mode
    :width: 90%
    :align: center
@@ -2292,6 +2313,13 @@ shown. The nearest measurement in time is used (no interpolation).
 Trigger marks on the time axis
 ----------------------------------------------------------------------
 
+.. figure:: images/en/trigger_marken.png
+   :alt: Trigger marks
+   :width: 90%
+   :align: center
+
+   Trigger marks: alarm (red), warning (orange), recording by trigger (green), note (grey).
+
 Events from the event log appear in all charts as a **vertical dashed line** with a
 short text at the bottom of the time axis (▲ name of the trigger): red = *Alarm*,
 orange = *Warning*, blue = *Info*, green = start of a
@@ -2306,7 +2334,7 @@ switch off: **View › Trigger marks on the time axis**.
 Pages, charts and layout
 ----------------------------------------------------------------------
 
-.. figure:: images/anordnung_raster.png
+.. figure:: images/en/anordnung_raster.png
    :alt: Charts in a grid
    :width: 90%
    :align: center
@@ -2367,7 +2395,7 @@ All charts share the same time axis.
 Legend with live values
 ----------------------------------------------------------------------
 
-.. figure:: images/legende.png
+.. figure:: images/en/legende.png
    :alt: Legend
    :width: 90%
    :align: center
@@ -2393,7 +2421,7 @@ in sync. The choice is kept when the layout changes.
 Screenshots of charts
 ----------------------------------------------------------------------
 
-.. figure:: images/screenshot_menue.png
+.. figure:: images/en/screenshot_menue.png
    :alt: Screenshot menu
    :width: 70%
    :align: center
@@ -2422,7 +2450,7 @@ stays unchanged. The setting applies to the current program session.
 Value table (value display)
 ----------------------------------------------------------------------
 
-.. figure:: images/wertetabelle.png
+.. figure:: images/en/wertetabelle.png
    :alt: Value table
    :width: 90%
    :align: center
@@ -2463,7 +2491,7 @@ ruler 1. Move the mouse over the bars to see names and values as tooltip.
 BOOL variables
 ----------------------------------------------------------------------
 
-.. figure:: images/bool_signale.png
+.. figure:: images/en/bool_signale.png
    :alt: BOOL signals
    :width: 90%
    :align: center
@@ -2511,7 +2539,7 @@ as ``demo_YYYYMMDD_HHMMSS.csv``.
 Web server (charts in the browser)
 ======================================================================
 
-.. figure:: images/web_tablet.png
+.. figure:: images/en/web_tablet.png
    :alt: Web page on a tablet
    :width: 90%
    :align: center
@@ -2554,6 +2582,13 @@ maximum per section are kept), and compresses it.
 HTTPS and login
 ----------------------------------------------------------------------
 
+.. figure:: images/en/web_anmeldung.png
+   :alt: Login page of the web server (smartphone)
+   :width: 45%
+   :align: center
+
+   Login page of the web server (smartphone).
+
 **HTTPS** (tab *Web server & headless*, *HTTPS (encrypted)*): the page is then
 reachable at ``https://<IP>:<port>/``. Without a certificate of your own, the logger
 creates a **self-signed** one at the first start (RSA 2048, valid for ten years, for
@@ -2563,6 +2598,13 @@ fingerprint and confirm the exception. The **SHA-256 fingerprint** is shown unde
 Web server address …** (in headless operation it is in the log file). With a certificate
 of the company CA (enter PEM files for certificate and key) there is no warning. Requires
 the package ``cryptography`` (included in the installation).
+
+.. figure:: images/en/web_benutzer.png
+   :alt: Creating web server users (configuration program, tab Web server & headless)
+   :width: 60%
+   :align: center
+
+   Creating web server users (configuration program, tab Web server & headless).
 
 **Login:** Create users with **Users …** (name and password, at least 8 characters);
 only a hash of the password (PBKDF2-SHA256) is stored, not the password itself. If at
@@ -2764,7 +2806,7 @@ screenshots and PID tuning as with a loaded CSV file. It reads from the database
 loaded configuration; the database is only read, a running recording (also of another
 logger) can continue writing meanwhile.
 
-.. figure:: images/datenbank.png
+.. figure:: images/en/datenbank.png
    :alt: Dialog Load from database
    :width: 85%
    :align: center
@@ -2837,7 +2879,7 @@ Creating triggers
 
 Configuration program, tab **Triggers & events** → **Edit triggers …**.
 
-.. figure:: images/trigger_editor.png
+.. figure:: images/en/trigger_editor.png
    :alt: Trigger editor
    :width: 90%
    :align: center
@@ -2905,7 +2947,7 @@ languages.
 Display in the status bar
 ----------------------------------------------------------------------
 
-.. figure:: images/ereignis_statusleiste.png
+.. figure:: images/en/ereignis_statusleiste.png
    :alt: Event counter in the status bar
    :align: center
 
@@ -2922,7 +2964,7 @@ viewer.
 Event viewer and acknowledgement
 ----------------------------------------------------------------------
 
-.. figure:: images/ereignis_viewer.png
+.. figure:: images/en/ereignis_viewer.png
    :alt: Event viewer
    :width: 90%
    :align: center
@@ -2963,7 +3005,7 @@ changed.
   of **ruler 1** is preset – so a point in the trend can be commented afterwards.
 * In the event viewer: **Add note …**.
 
-.. figure:: images/notiz.png
+.. figure:: images/en/notiz.png
    :alt: Entering a note
    :align: center
 
@@ -2983,6 +3025,13 @@ the viewer with a green background and 📝 and need no acknowledgement. The fil
 
 Recording by trigger (pre- and post-trigger)
 ======================================================================
+
+.. figure:: images/en/config_aufzeichnung_trigger.png
+   :alt: Tab Recording
+   :width: 90%
+   :align: center
+
+   Tab Recording: recording by trigger with start condition, pre- and post-trigger time.
 
 Instead of recording continuously, the logger can write to the CSV file and database
 only when something happens – with the values **before** the event (pre-trigger) and
@@ -3035,7 +3084,7 @@ Switching on (configuration program)
 Select the chart in the assignment tree and tick **PID controller tuning** under
 *Properties of the selection*. In the window **Settings …** you define:
 
-.. figure:: images/pid_einstellen.png
+.. figure:: images/en/pid_einstellen.png
    :alt: PID tuning settings
    :align: center
 
@@ -3081,7 +3130,7 @@ Calculating (logger)
 Menu **Analysis → PID tuning: <chart> …** or right-click into the chart → **Tune PID
 controller …**.
 
-.. figure:: images/pid_optimierung.png
+.. figure:: images/en/pid_optimierung.png
    :alt: PID controller tuning window
    :width: 95%
    :align: center
@@ -3166,6 +3215,13 @@ displayed values.
 XY chart
 ----------------------------------------------------------------------
 
+.. figure:: images/en/xy_diagramm.png
+   :alt: XY chart with regression line
+   :width: 90%
+   :align: center
+
+   XY chart with regression line.
+
 One or more variables (Y) against another variable (X) – e.g. pressure over stroke,
 force over distance or a characteristic curve. Choose the **X axis**, tick the **Y axis**
 variables in the list (colours as in the configuration). Display as *Points*, *Line (in
@@ -3174,6 +3230,13 @@ Y variable and gives the correlation coefficient *r* and the line equation.
 
 Frequency analysis (FFT)
 ----------------------------------------------------------------------
+
+.. figure:: images/en/fft.png
+   :alt: Amplitude spectrum with the strongest frequencies
+   :width: 90%
+   :align: center
+
+   Amplitude spectrum with the strongest frequencies.
 
 The **amplitude spectrum** of a variable, e.g. to find oscillations, hunting of a
 control loop or periodic disturbances. The measurements are first resampled to equal
@@ -3201,6 +3264,13 @@ with period and amplitude (yellow triangles in the chart) are given. A sine of a
 PDF reports
 ======================================================================
 
+.. figure:: images/en/pdf_bericht.png
+   :alt: First page of a PDF report
+   :width: 70%
+   :align: center
+
+   First page of a PDF report.
+
 A report summarizes a period on a few pages:
 
 * **Header:** project, period, data basis (number of measurement rows, first and last
@@ -3212,6 +3282,13 @@ A report summarizes a period on a few pages:
   traces below the chart (height = share of time with value 1). Peaks are preserved
   (minimum and maximum per time section).
 * **Events and notes** of the period from the event log.
+
+.. figure:: images/en/config_berichte.png
+   :alt: Tab Reports (PDF) in the configuration program
+   :width: 90%
+   :align: center
+
+   Tab Reports (PDF) in the configuration program.
 
 **Automatic** (configuration program, tab *Reports (PDF)*): at the end of every **shift**,
 **day**, **week** or **month** the logger writes the report to the folder ``berichte``
@@ -3232,6 +3309,13 @@ graphics). The texts in the report follow the language of the program.
 
 IO check (commissioning)
 ======================================================================
+
+.. figure:: images/en/iocheck_fenster.png
+   :alt: The IO check window
+   :width: 95%
+   :align: center
+
+   The IO check window: signal list with live values and status, on the right “What has moved?”.
 
 The IO check helps to test all inputs and outputs of a plant during commissioning:
 every signal of the IO list is shown live and checked off; what has just moved is shown
@@ -3323,6 +3407,13 @@ Expected B12, got B13” appears with a beep; the entry is marked red.
 Checking analog values
 ----------------------------------------------------------------------
 
+.. figure:: images/en/iocheck_analog.png
+   :alt: Analog value with wire break test and optional test points
+   :width: 90%
+   :align: center
+
+   Analog value with wire break test and optional test points.
+
 If an analog signal is selected, the **Analog value** box shows the scaled value, the
 raw value and fault values. The measuring range (raw value at 0 and 100 %, engineering
 range, unit) can be adjusted there.
@@ -3349,6 +3440,13 @@ range, unit) can be adjusted there.
 Matrix and scanning ranges
 ----------------------------------------------------------------------
 
+.. figure:: images/en/iocheck_matrix.png
+   :alt: Matrix
+   :width: 90%
+   :align: center
+
+   Matrix: inputs/outputs as LEDs, checked ones green with tick.
+
 The **Matrix** tab shows all binary signals as **LEDs**: Siemens bit addresses by byte
 (row) and bit (column 0 … 7), separated into inputs, outputs and memory; other addresses
 in sequence.
@@ -3360,6 +3458,13 @@ in sequence.
 * Click selects the signal (also in the list), double-click switches OK on/off,
   right-click opens the status selection; the tooltip shows symbol, comment, device tag
   and status.
+
+.. figure:: images/en/iocheck_scan.png
+   :alt: Scanning ranges without an IO list
+   :width: 60%
+   :align: center
+
+   Scanning ranges without an IO list.
 
 **Scan ranges …** reads contiguous bits also without an IO list, e.g. start address
 ``E0.0`` (I0.0) and 256 bits (= E0.0 … E31.7) or ``A0.0`` (Q0.0) and 64 bits – useful
@@ -3381,6 +3486,13 @@ file.
 Checking on a smartphone or tablet
 ----------------------------------------------------------------------
 
+.. figure:: images/en/iocheck_mobil.png
+   :alt: IO check on a smartphone
+   :width: 45%
+   :align: center
+
+   IO check on a smartphone: signal selected, status buttons at the bottom.
+
 The technician at the machine sees live what arrives and checks off right there; several
 devices can test at the same time. **📱 Mobile …** in the toolbar shows the address (e.g.
 ``https://192.168.0.20:8080/io``) and copies it to the clipboard. If the web server is
@@ -3394,6 +3506,14 @@ free one).
   **✓ OK**, **✗ Fault** (with remark), **Skipped**, **Back**, the remark field and for
   analog inputs the wire break test and the test points appear (automatic take-over as on the PC while the
   signal is selected on the device).
+
+.. figure:: images/en/iocheck_mobil_matrix.png
+   :alt: Matrix and swap warning on the smartphone
+   :width: 45%
+   :align: center
+
+   Matrix and swap warning on the smartphone.
+
 * The selected signal is *expected* on this device: if another digital input changes,
   the warning “Swapped?” appears and the device vibrates.
 * The **checker** is the **login name** in the web server (create users in the
@@ -3409,6 +3529,13 @@ free one).
 
 Acceptance protocol (PDF)
 ----------------------------------------------------------------------
+
+.. figure:: images/en/iocheck_protokoll.png
+   :alt: First page of an acceptance protocol
+   :width: 70%
+   :align: center
+
+   First page of an acceptance protocol.
 
 **Protocol (PDF) …** creates the acceptance protocol and opens it:
 
@@ -3435,6 +3562,13 @@ The user interface is written in German and can be translated into other languag
 
 Switching
 ----------------------------------------------------------------------
+
+.. figure:: images/en/sprache_menue.png
+   :alt: Menu Language
+   :width: 50%
+   :align: center
+
+   Menu Language.
 
 Menu **Language** (in the logger and in the configuration program): choose the language
 and confirm the restart question. The choice applies to both programs and the event
@@ -3607,6 +3741,13 @@ without saving.
 
 Exporting values (CSV/Excel)
 ----------------------------------------------------------------------
+
+.. figure:: images/en/export_dialog.png
+   :alt: Dialog “Export values”
+   :width: 55%
+   :align: center
+
+   Dialog “Export values”.
 
 **File › Export values (CSV/Excel) …** (``Ctrl+Shift+E``) saves measurements as CSV or
 Excel file (``.xlsx``). The basis is the whole recording in memory or the loaded CSV

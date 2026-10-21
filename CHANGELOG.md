@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* Bedienungsanleitung: 20 neue Abbildungen zu den neuen Funktionen (Trigger-Aufzeichnung und -Marken, Variablenfilter,
+  Export, XY/FFT, PDF-Berichte, HTTPS/Anmeldung, OPC-UA-Subscription, ADS-Auswahl, IO-Check am PC und auf dem
+  Smartphone, Abnahmeprotokoll, Sprachmenü). Das User Manual verwendet eigene englische Bilder aus `doc/images/en/`
+  (vorerst Kopien der deutschen bzw. Platzhalter „Screenshot to follow“).
+
 ## [3.1.1] – 2026-10-21
 
 ### Behoben

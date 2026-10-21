@@ -742,6 +742,13 @@ Jede Zeile der Variablentabelle beschreibt einen Wert einer Steuerung:
 Variablen suchen und filtern
 ----------------------------------------------------------------------
 
+.. figure:: images/config_variablen_filter.png
+   :alt: Suchfeld und Filter über der Variablentabelle
+   :width: 90%
+   :align: center
+
+   Suchfeld und Filter über der Variablentabelle.
+
 Über der Variablentabelle stehen ein **Suchfeld** und zwei Auswahllisten
 (``Strg+F`` springt ins Suchfeld):
 
@@ -1794,6 +1801,13 @@ Alle Knoten einer Steuerung werden je Zyklus mit möglichst wenigen Read-Anfrage
 gelesen. Ein ungültiger Knoten (z. B. *BadNodeIdUnknown*) betrifft nur seine
 eigene Variable.
 
+.. figure:: images/opcua_subscription.png
+   :alt: Verbindungseinstellungen des Treibers opcua mit Betriebsart Subscription
+   :width: 75%
+   :align: center
+
+   Verbindungseinstellungen des Treibers opcua mit Betriebsart Subscription.
+
 **Subscription:** Statt in jedem Zyklus alle Knoten zu lesen, richtet der Treiber
 beim Verbinden ein Abonnement ein; der Server meldet nur noch geänderte Werte. Der
 Logger zeichnet weiterhin im Intervall der Steuerung auf (mit dem zuletzt gemeldeten
@@ -1842,6 +1856,13 @@ Steuerung verbindet der Treiber neu und löst die Namen erneut auf.
 
 **Blöcke:** Array-Name ohne Index (``MAIN.aWerte``) + erster Index + Anzahl – der
 Ausschnitt wird am Stück gelesen.
+
+.. figure:: images/ads_auswahl.png
+   :alt: Symboltabelle einer TwinCAT-Steuerung im Auswahldialog
+   :width: 90%
+   :align: center
+
+   Symboltabelle einer TwinCAT-Steuerung im Auswahldialog.
 
 **Auswahldialog „Aus TwinCAT wählen…“:** liest die Symboltabelle der Steuerung und zeigt
 sie als Baum (``MAIN`` › ``Pumpe`` › ``fDruck``) mit Typ und Kommentar; Filterfeld,
@@ -2346,6 +2367,13 @@ Messwert (ohne Interpolation).
 Trigger-Marken an der Zeitachse
 ----------------------------------------------------------------------
 
+.. figure:: images/trigger_marken.png
+   :alt: Trigger-Marken
+   :width: 90%
+   :align: center
+
+   Trigger-Marken: Alarm (rot), Warnung (orange), Aufnahme per Trigger (grün), Notiz (grau).
+
 Ereignisse aus dem Ereignisprotokoll erscheinen in allen Diagrammen als **senkrechte
 gestrichelte Linie** mit einem Kurztext unten an der Zeitachse (▲ Name des Triggers):
 rot = *Alarm*, orange = *Warnung*, blau = *Info*, grün = Beginn einer
@@ -2632,6 +2660,13 @@ Der Server überträgt nur die sichtbaren Daten, auf die Bildschirmbreite reduzi
 HTTPS und Anmeldung
 ----------------------------------------------------------------------
 
+.. figure:: images/web_anmeldung.png
+   :alt: Anmeldeseite des Webservers (Smartphone)
+   :width: 45%
+   :align: center
+
+   Anmeldeseite des Webservers (Smartphone).
+
 **HTTPS** (Reiter *Webserver & Headless*, *HTTPS (verschlüsselt)*): Die Seite ist dann
 unter ``https://<IP>:<Port>/`` erreichbar. Ohne eigenes Zertifikat erzeugt der Logger
 beim ersten Start ein **selbstsigniertes** (RSA 2048, zehn Jahre gültig, für
@@ -2641,6 +2676,13 @@ vergleichen und die Ausnahme bestätigen. Den **SHA-256-Fingerabdruck** zeigt
 **Datei › Webserver-Adresse …** (im Headless-Betrieb steht er in der Logdatei). Mit
 einem Zertifikat der Firmen-CA (PEM-Dateien für Zertifikat und Schlüssel eintragen)
 entfällt die Warnung. Benötigt das Paket ``cryptography`` (in der Installation enthalten).
+
+.. figure:: images/web_benutzer.png
+   :alt: Benutzer des Webservers anlegen (Konfigurationsprogramm, Reiter Webserver & headless)
+   :width: 60%
+   :align: center
+
+   Benutzer des Webservers anlegen (Konfigurationsprogramm, Reiter Webserver & headless).
 
 **Anmeldung:** Mit **Benutzer …** Benutzer anlegen (Name und Passwort, mindestens
 8 Zeichen); gespeichert wird nur ein Hash des Passworts (PBKDF2-SHA256), nicht das
@@ -3073,6 +3115,13 @@ erscheinen im Viewer grün hinterlegt mit 📝 und müssen nicht quittiert werde
 Aufzeichnung per Trigger (Vor- und Nachlauf)
 ======================================================================
 
+.. figure:: images/config_aufzeichnung_trigger.png
+   :alt: Reiter Aufzeichnung
+   :width: 90%
+   :align: center
+
+   Reiter Aufzeichnung: Aufzeichnung per Trigger mit Startbedingung, Vor- und Nachlauf.
+
 Statt dauernd aufzuzeichnen, kann der Logger nur dann in CSV-Datei und Datenbank
 schreiben, wenn etwas passiert – mit den Werten **vor** dem Ereignis (Vorlauf) und
 **danach** (Nachlauf). Typische Anwendungen: Störungsanalyse, Prüfzyklen, Chargen.
@@ -3250,6 +3299,13 @@ legt das Diagramm als PNG ab, **Werte speichern (CSV) …** die dargestellten We
 XY-Diagramm
 ----------------------------------------------------------------------
 
+.. figure:: images/xy_diagramm.png
+   :alt: XY-Diagramm mit Regressionsgerade
+   :width: 90%
+   :align: center
+
+   XY-Diagramm mit Regressionsgerade.
+
 Eine oder mehrere Variablen (Y) über einer anderen Variable (X) – z. B. Druck über
 Hub, Kraft über Weg oder eine Kennlinie. **X-Achse** wählen, **Y-Achse** in der Liste
 anhaken (Farben wie in der Konfiguration). Darstellung als *Punkte*, *Linie (zeitliche
@@ -3259,6 +3315,13 @@ Geradengleichung.
 
 Frequenzanalyse (FFT)
 ----------------------------------------------------------------------
+
+.. figure:: images/fft.png
+   :alt: Amplitudenspektrum mit den stärksten Frequenzen
+   :width: 90%
+   :align: center
+
+   Amplitudenspektrum mit den stärksten Frequenzen.
 
 Das **Amplitudenspektrum** einer Variable, z. B. um Schwingungen, Pendeln eines
 Regelkreises oder periodische Störungen zu finden. Die Messwerte werden zuerst auf
@@ -3287,6 +3350,13 @@ erscheint etwa mit der Höhe *A*.
 PDF-Berichte
 ======================================================================
 
+.. figure:: images/pdf_bericht.png
+   :alt: Erste Seite eines PDF-Berichts
+   :width: 70%
+   :align: center
+
+   Erste Seite eines PDF-Berichts.
+
 Ein Bericht fasst einen Zeitraum auf wenigen Seiten zusammen:
 
 * **Kopf:** Projekt, Zeitraum, Datenbasis (Anzahl der Messzeilen, erste und letzte Messung).
@@ -3297,6 +3367,13 @@ Ein Bericht fasst einen Zeitraum auf wenigen Seiten zusammen:
   Spuren unter dem Diagramm (Höhe = Anteil der Zeit mit Wert 1). Spitzen bleiben erhalten
   (Minimum und Maximum je Zeitabschnitt).
 * **Ereignisse und Notizen** des Zeitraums aus dem Ereignisprotokoll.
+
+.. figure:: images/config_berichte.png
+   :alt: Reiter Berichte (PDF) im Konfigurationsprogramm
+   :width: 90%
+   :align: center
+
+   Reiter Berichte (PDF) im Konfigurationsprogramm.
 
 **Automatisch** (Konfigurationsprogramm, Reiter *Berichte (PDF)*): Am Ende jeder
 **Schicht**, jedes **Tages**, jeder **Woche** oder jedes **Monats** schreibt der Logger den
@@ -3317,6 +3394,13 @@ Die PDF-Dateien entstehen ohne Zusatzprogramm (Standardschrift Helvetica, Vektor
 
 IO-Check (Inbetriebnahme)
 ======================================================================
+
+.. figure:: images/iocheck_fenster.png
+   :alt: Das IO-Check-Fenster
+   :width: 95%
+   :align: center
+
+   Das IO-Check-Fenster: Signalliste mit Live-Werten und Status, rechts „Was hat sich bewegt?“.
 
 Der IO-Check hilft bei der Inbetriebnahme, alle Ein- und Ausgänge einer Anlage zu
 prüfen: Jedes Signal der IO-Liste wird live angezeigt und abgehakt; was sich gerade
@@ -3408,6 +3492,13 @@ markiert.
 Analogwerte prüfen
 ----------------------------------------------------------------------
 
+.. figure:: images/iocheck_analog.png
+   :alt: Analogwert mit Drahtbruchprüfung und optionalen Prüfpunkten
+   :width: 90%
+   :align: center
+
+   Analogwert mit Drahtbruchprüfung und optionalen Prüfpunkten.
+
 Ist ein Analogsignal gewählt, zeigt das Feld **Analogwert** den skalierten Wert, den
 Rohwert und Fehlerwerte. Messbereich (Rohwert bei 0 und 100 %, technischer Bereich,
 Einheit) lässt sich dort anpassen.
@@ -3435,6 +3526,13 @@ Einheit) lässt sich dort anpassen.
 Matrix und Bereiche scannen
 ----------------------------------------------------------------------
 
+.. figure:: images/iocheck_matrix.png
+   :alt: Matrix
+   :width: 90%
+   :align: center
+
+   Matrix: Ein-/Ausgänge als LEDs, geprüfte grün mit Haken.
+
 Der Reiter **Matrix** zeigt alle Binärsignale als **LEDs**: Siemens-Bitadressen nach Byte
 (Zeile) und Bit (Spalte 0 … 7), getrennt nach Eingängen, Ausgängen und Merkern; andere
 Adressen der Reihe nach.
@@ -3446,6 +3544,13 @@ Adressen der Reihe nach.
 * Klick wählt das Signal (auch in der Liste), Doppelklick schaltet OK ein/aus,
   Rechtsklick öffnet die Statusauswahl; der Tooltip zeigt Symbol, Kommentar, BMK und
   Status.
+
+.. figure:: images/iocheck_scan.png
+   :alt: Bereiche ohne IO-Liste scannen
+   :width: 60%
+   :align: center
+
+   Bereiche ohne IO-Liste scannen.
 
 **Bereiche scannen …** liest zusammenhängende Bits auch ohne IO-Liste, z. B. Startadresse
 ``E0.0`` und 256 Bits (= E0.0 … E31.7) oder ``A0.0`` und 64 Bits – praktisch, wenn
@@ -3467,6 +3572,13 @@ Prüfzeit, Prüfer, Bemerkung und Messpunkten als Excel- oder CSV-Datei.
 Auf Smartphone oder Tablet prüfen
 ----------------------------------------------------------------------
 
+.. figure:: images/iocheck_mobil.png
+   :alt: IO-Check auf dem Smartphone
+   :width: 45%
+   :align: center
+
+   IO-Check auf dem Smartphone: Signal gewählt, unten die Statusknöpfe.
+
 Der Monteur an der Maschine sieht live, was ankommt, und hakt direkt dort ab; mehrere
 Geräte können gleichzeitig prüfen. **📱 Mobil …** in der Werkzeugleiste zeigt die Adresse
 (z. B. ``https://192.168.0.20:8080/io``) und kopiert sie in die Zwischenablage. Läuft im
@@ -3480,6 +3592,14 @@ Port belegt, der nächste freie).
   **✓ OK**, **✗ Fehler** (mit Bemerkung), **Übersprungen**, **Zurück**, das Bemerkungsfeld
   und bei Analogeingängen die Drahtbruchprüfung und die Prüfpunkte (automatische Übernahme wie am PC, solange das
   Signal auf dem Gerät gewählt ist).
+
+.. figure:: images/iocheck_mobil_matrix.png
+   :alt: Matrix und Vertauschungswarnung auf dem Smartphone
+   :width: 45%
+   :align: center
+
+   Matrix und Vertauschungswarnung auf dem Smartphone.
+
 * Das gewählte Signal gilt auf diesem Gerät als *erwartet*: Wechselt ein anderer
   Digitaleingang, erscheint die Warnung „Vertauschung?“ und das Gerät vibriert.
 * **Prüfer** ist der **Anmeldename** im Webserver (Benutzer im Konfigurationsprogramm
@@ -3494,6 +3614,13 @@ Port belegt, der nächste freie).
 
 Abnahmeprotokoll (PDF)
 ----------------------------------------------------------------------
+
+.. figure:: images/iocheck_protokoll.png
+   :alt: Erste Seite eines Abnahmeprotokolls
+   :width: 70%
+   :align: center
+
+   Erste Seite eines Abnahmeprotokolls.
 
 **Protokoll (PDF) …** erzeugt das Abnahmeprotokoll und öffnet es:
 
@@ -3520,6 +3647,13 @@ andere Sprachen übersetzen. Mitgeliefert werden **Deutsch** und **Englisch**.
 
 Umschalten
 ----------------------------------------------------------------------
+
+.. figure:: images/sprache_menue.png
+   :alt: Menü Sprache
+   :width: 50%
+   :align: center
+
+   Menü Sprache.
 
 Menü **Sprache** (im Logger und im Konfigurationsprogramm): Sprache wählen und die Frage
 nach dem Neustart bestätigen. Die Wahl gilt für beide Programme und den Ereignis-Viewer
@@ -3696,6 +3830,13 @@ Speichern.
 
 Werte exportieren (CSV/Excel)
 ----------------------------------------------------------------------
+
+.. figure:: images/export_dialog.png
+   :alt: Dialog „Werte exportieren“
+   :width: 55%
+   :align: center
+
+   Dialog „Werte exportieren“.
 
 **Datei › Werte exportieren (CSV/Excel) …** (``Strg+Umschalt+E``) speichert
 Messwerte als CSV- oder Excel-Datei (``.xlsx``). Grundlage ist die gesamte
