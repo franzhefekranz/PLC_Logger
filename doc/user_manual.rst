@@ -1815,11 +1815,11 @@ controller the driver reconnects and resolves the names again.
 section is read in one piece.
 
 .. figure:: images/en/ads_auswahl.png
-   :alt: Symbol table of a TwinCAT controller in the selection dialog
+   :alt: Connection settings of the ads driver (AMS Net ID, ports, advanced)
    :width: 90%
    :align: center
 
-   Symbol table of a TwinCAT controller in the selection dialog.
+   Connection settings of the ads driver (AMS Net ID, ports, advanced).
 
 **Selection dialog “Choose from TwinCAT…”:** reads the symbol table of the controller
 and shows it as a tree (``MAIN`` › ``Pumpe`` › ``fDruck``) with type and comment;

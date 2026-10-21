@@ -1858,11 +1858,11 @@ Steuerung verbindet der Treiber neu und löst die Namen erneut auf.
 Ausschnitt wird am Stück gelesen.
 
 .. figure:: images/ads_auswahl.png
-   :alt: Symboltabelle einer TwinCAT-Steuerung im Auswahldialog
+   :alt: Verbindungseinstellungen des Treibers ads (AMS-Net-ID, Ports, Erweitert)
    :width: 90%
    :align: center
 
-   Symboltabelle einer TwinCAT-Steuerung im Auswahldialog.
+   Verbindungseinstellungen des Treibers ads (AMS-Net-ID, Ports, Erweitert).
 
 **Auswahldialog „Aus TwinCAT wählen…“:** liest die Symboltabelle der Steuerung und zeigt
 sie als Baum (``MAIN`` › ``Pumpe`` › ``fDruck``) mit Typ und Kommentar; Filterfeld,
