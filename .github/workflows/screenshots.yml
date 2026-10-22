@@ -1,10 +1,16 @@
 # Bilder der Bedienungsanleitung erzeugen (tools/make_screenshots.py) – unter Windows, damit die Fenster wie im
 # echten Programm aussehen. Start von Hand; die Bilder (deutsch und englisch) landen im Zweig "bilder" und als
-# Artifact. Übernehmen: git fetch origin bilder && git checkout origin/bilder -- doc/images
+# Artifact. Übernehmen: git fetch origin +bilder:refs/remotes/origin/bilder && git checkout origin/bilder -- doc/images
+# Webseiten fotografiert Playwright (Chromium), PDF-Seiten werden mit PyMuPDF zu Bildern.
 name: Screenshots
 
 on:
   workflow_dispatch:
+    inputs:
+      nur:
+        description: "Nur diese Bildfunktionen (z. B. logger_online,startbild); leer = alle"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -20,11 +26,14 @@ jobs:
         with:
           python-version: "3.12"
       - name: Abhängigkeiten
-        run: python -m pip install PySide6-Essentials pyqtgraph numpy Flask cryptography openpyxl asyncua python-snap7
-      - name: Bilder erzeugen
         run: |
-          python tools/make_screenshots.py --lang de
-          python tools/make_screenshots.py --lang en
+          python -m pip install PySide6-Essentials pyqtgraph numpy Flask cryptography openpyxl asyncua python-snap7 pymupdf playwright
+          python -m playwright install chromium
+      - name: Bilder erzeugen
+        shell: bash
+        run: |
+          python tools/make_screenshots.py --lang de --only "${{ inputs.nur }}"
+          python tools/make_screenshots.py --lang en --only "${{ inputs.nur }}"
       - uses: actions/upload-artifact@v4
         with:
           name: bilder
