@@ -316,6 +316,17 @@ def test_manual_html_builds_without_messages(tmp_path):
         assert 'class="system-message"' not in html, f"Fehlermeldung in {name}.html"
 
 
+def test_program_command_iocheck():
+    """Befehlszeilen für Logger, Konfiguration und IO-Check (Start aus dem Quelltext)."""
+    from plc_common import program_command
+    assert program_command("iocheck", "a.json")[1:] == [os.path.join(ROOT, "src", "plc_logger.py"), "--iocheck",
+                                                         "a.json"]
+    assert program_command("config")[1].endswith("plc_config.py")
+    assert program_command("logger", "a.json")[2:] == ["a.json"]
+    import plc_iocheck_start                                             # Startprogramm PLCIOCheck.exe
+    assert callable(plc_iocheck_start.main)
+
+
 def test_version_consistent():
     """CHANGELOG.md hat einen Abschnitt für die aktuelle APP_VERSION."""
     out = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "bump_version.py")], capture_output=True,

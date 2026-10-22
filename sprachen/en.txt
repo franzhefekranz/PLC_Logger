@@ -773,6 +773,9 @@
 @ Logger mit dieser Konfiguration &starten
 > &Start logger with this configuration
 
+@ &IO-Check mit dieser Konfiguration starten
+> Start &IO check with this configuration
+
 @ &Beenden
 > E&xit
 
@@ -1246,6 +1249,15 @@
 
 @ Logger gestartet.
 > Logger started.
+
+@ IO-Check
+> IO check
+
+@ Der IO-Check konnte nicht gestartet werden:\n{0}
+> The IO check could not be started:\n{0}
+
+@ IO-Check gestartet.
+> IO check started.
 
 @ Fehler: keine Verbindung
 > Error: no connection
@@ -2515,9 +2527,6 @@
 @ Messpunkte
 > Test points
 
-@ IO-Check
-> IO check
-
 @ Treiber {0}: {1}
 > Driver {0}: {1}
 
@@ -3548,6 +3557,12 @@
 @ Aufzeichnung & Analyse
 > Recording & analysis
 
+@ IO-Check (Inbetriebnahme)
+> IO check (commissioning)
+
+@ Prüfstand oder Konfiguration wählen
+> Choose test file or configuration
+
 @ Konfiguration wählen
 > Choose configuration
 
@@ -3569,8 +3584,17 @@
 @ Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
 > Do not show at startup (open the last used file)
 
+@ Prüfstand
+> Test file
+
+@ Konfiguration, neuer Prüfstand
+> Configuration, new test file
+
 @ Noch keine Konfiguration benutzt – „Neue Konfiguration …“ oder „Durchsuchen …“.
 > No configuration used yet – “New configuration …” or “Browse …”.
+
+@ IO-Check oder Konfiguration (*.iocheck.json *.json);;Alle Dateien (*)
+> IO check or configuration (*.iocheck.json *.json);;All files (*)
 
 @ Neue Konfiguration anlegen
 > Create new configuration

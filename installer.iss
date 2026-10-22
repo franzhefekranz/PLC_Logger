@@ -1,8 +1,8 @@
 ﻿; ===========================================================================================
 ;  Inno-Setup-Skript fuer PLC Datenlogger (Inno Setup 7 oder 6)
 ;
-;  Packt den von build.bat erzeugten Ordner dist\PLCDatenlogger (PLCLogger.exe und
-;  PLCKonfiguration.exe samt Bibliotheken) in eine Setup-Datei. Aufruf normalerweise ueber
+;  Packt den von build.bat erzeugten Ordner dist\PLCDatenlogger (PLCLogger.exe,
+;  PLCKonfiguration.exe und PLCIOCheck.exe samt Bibliotheken) in eine Setup-Datei. Aufruf normalerweise ueber
 ;  build.bat (übergibt APP_VERSION aus src\plc_common.py); manuell:  ISCC.exe /DAppVersion=3.0.0 installer.iss
 ;  Das Ergebnis liegt in installer\PLCDatenlogger_Setup_<Version>.exe
 ; ===========================================================================================
@@ -14,6 +14,7 @@
 #define AppFolder  "PLCDatenlogger"
 #define AppExe     "PLCLogger.exe"
 #define ConfigExe  "PLCKonfiguration.exe"
+#define IoCheckExe "PLCIOCheck.exe"
 
 ; Anleitung: HTML, falls von build.bat erzeugt, sonst die .rst-Datei
 #if FileExists("doc\bedienungsanleitung.html")
@@ -67,6 +68,7 @@ Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "desktopicon_cfg"; Description: "Desktop-Symbol fuer die Konfiguration"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "desktopicon_io"; Description: "Desktop-Symbol fuer den IO-Check"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
 ; Beide Programme mit allen Bibliotheken (Ergebnis von build.bat)
@@ -88,7 +90,7 @@ Name: "{group}\PLC Datenlogger"; Filename: "{app}\{#AppExe}"
 Name: "{group}\PLC Konfiguration"; Filename: "{app}\{#ConfigExe}"
 Name: "{group}\PLC Datenlogger (Headless, nur Aufzeichnung)"; Filename: "{app}\{#AppExe}"; Parameters: "--headless"
 Name: "{group}\PLC Ereignisprotokoll"; Filename: "{app}\{#AppExe}"; Parameters: "--ereignisse"
-Name: "{group}\PLC IO-Check"; Filename: "{app}\{#AppExe}"; Parameters: "--iocheck"
+Name: "{group}\PLC IO-Check"; Filename: "{app}\{#IoCheckExe}"
 Name: "{group}\Bedienungsanleitung"; Filename: "{app}\Doku\{#DocFile}"
 #ifdef DocPdf
 Name: "{group}\Bedienungsanleitung (PDF)"; Filename: "{app}\Doku\{#DocPdf}"
@@ -100,6 +102,7 @@ Name: "{group}\User Manual (English, PDF)"; Filename: "{app}\Doku\{#DocPdfEn}"
 Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\PLC Datenlogger"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 Name: "{autodesktop}\PLC Konfiguration"; Filename: "{app}\{#ConfigExe}"; Tasks: desktopicon_cfg
+Name: "{autodesktop}\PLC IO-Check"; Filename: "{app}\{#IoCheckExe}"; Tasks: desktopicon_io
 
 [Run]
 ; Nach der Installation optional die Konfiguration oder den Logger starten

@@ -2,7 +2,7 @@
 rem ====================================================================================
 rem  PLC Datenlogger - Build-Skript
 rem
-rem  Erzeugt mit PyInstaller die beiden Programme (PLCLogger.exe, PLCKonfiguration.exe)
+rem  Erzeugt mit PyInstaller die drei Programme (PLCLogger.exe, PLCKonfiguration.exe, PLCIOCheck.exe)
 rem  in EINEM gemeinsamen Ordner und baut daraus mit Inno Setup die Setup-Datei.
 rem  PLCLogger.exe laeuft mit Oberflaeche oder (Option "Headless" bzw. Parameter --headless) ohne.
 rem  Fuer den Webserver wird Chart.js einmalig nach web_static\chart.umd.js geladen und mit eingepackt.
@@ -139,6 +139,17 @@ echo [5/6] PyInstaller: PLCKonfiguration ...
     --hidden-import plc_webauth --hidden-import plc_web_dialog --hidden-import plc_report ^
     src\plc_config.py || goto :fail
 
+echo [5/6] PyInstaller: PLCIOCheck ...
+"%VPY%" -m PyInstaller --noconfirm --clean --windowed --onedir --name PLCIOCheck --icon app.ico ^
+    --distpath build\p3 --workpath build\w3 --paths src ^
+    --collect-submodules plc_treiber --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 ^
+    --hidden-import plc_i18n --hidden-import plc_splash --hidden-import plc_about --hidden-import plc_export --collect-all openpyxl --add-data "sprachen;sprachen" --add-data "app.ico;." --add-data "logo.png;." %ADDDLL% ^
+    --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog --hidden-import plc_iocheck_web --hidden-import plc_qr --hidden-import plc_report ^
+    --hidden-import plc_web --hidden-import plc_webauth --hidden-import plc_util ^
+    --hidden-import cryptography.x509 --hidden-import cryptography.hazmat.primitives.asymmetric.rsa ^
+    --collect-all flask --collect-all werkzeug ^
+    src\plc_iocheck_start.py || goto :fail
+
 rem  Beide Programme in einen Ordner zusammenfuehren: erst der Logger komplett, dann nur die
 rem  Dateien der Konfiguration, die dort noch fehlen (/XC /XN /XO = vorhandene nicht ueberschreiben).
 rem  robocopy meldet mit Rueckgabewerten 0-7 Erfolg.
@@ -147,8 +158,11 @@ robocopy "build\p1\PLCLogger" "dist\PLCDatenlogger" /E /NFL /NDL /NJH /NJS /NP >
 if errorlevel 8 goto :fail
 robocopy "build\p2\PLCKonfiguration" "dist\PLCDatenlogger" /E /XC /XN /XO /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 goto :fail
+robocopy "build\p3\PLCIOCheck" "dist\PLCDatenlogger" /E /XC /XN /XO /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 goto :fail
 if not exist "dist\PLCDatenlogger\PLCLogger.exe" goto :fail
 if not exist "dist\PLCDatenlogger\PLCKonfiguration.exe" goto :fail
+if not exist "dist\PLCDatenlogger\PLCIOCheck.exe" goto :fail
 rem  Lizenz (LGPL-3.0-or-later) und Lizenztexte in den Programmordner (gelangen so in Installer und portables ZIP)
 for %%F in (LICENSE COPYING THIRD_PARTY_LICENSES.md) do if exist "%%F" copy /y "%%F" "dist\PLCDatenlogger\" >nul
 
@@ -184,7 +198,7 @@ if exist "%DOCPDF%" copy /y "%DOCPDF%" "dist\PLC_Datenlogger_Bedienungsanleitung
 if exist "%DOCPDF_EN%" copy /y "%DOCPDF_EN%" "dist\PLC_Datenlogger_User_Manual_%VERSION%.pdf" >nul
 
 echo.
-echo [OK] Programme erzeugt: dist\PLCDatenlogger\PLCLogger.exe und PLCKonfiguration.exe
+echo [OK] Programme erzeugt: dist\PLCDatenlogger\PLCLogger.exe, PLCKonfiguration.exe und PLCIOCheck.exe
 if /I "%STEP%"=="exe" goto :done
 
 rem ------------------------------------------------------------------ 3b. Portables ZIP

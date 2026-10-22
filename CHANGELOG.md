@@ -51,6 +51,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   (Reiter Aufzeichnung › *Löschen nach* / *Höchstens belegen*) und Datenbank (Reiter Datenbank; Zeitraum für SQLite,
   MariaDB, PostgreSQL/TimescaleDB und QuestDB, Speicherplatz für SQLite). Geprüft wird beim Start und danach stündlich;
   die laufende CSV-Datei bleibt immer erhalten.
+* **IO-Check als eigenes Programm** (Windows: `PLCIOCheck.exe`, im Startmenü und optional auf dem Desktop): Startbild
+  mit den zuletzt benutzten Prüfständen und Konfigurationen (eine Konfiguration beginnt einen neuen Prüfstand), Demo.
+  Aus dem Konfigurationsprogramm: *Datei › IO-Check mit dieser Konfiguration starten*.
 * **Balkenbreite einstellbar** (Konfiguration › Ansicht › *Balkenbreite*, 4 … 40 Pixel, Vorgabe 14).
 * „Über PLC Datenlogger“ und das versteckte Info-Fenster zeigen das feste Herstellerlogo, dazu Links auf
   taxis-instruments.de und den Quelltext auf GitHub. Strg + Umschalt + Doppelklick auf das Logo im Dialog „Über …“
@@ -68,6 +71,7 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Build
 
+* `build.bat` erzeugt zusätzlich `PLCIOCheck.exe` (im selben Programmordner, Installer und portables ZIP).
 * Workflow *Screenshots* (`tools/make_screenshots.py`): erzeugt die Bilder der neuen Dialoge unter Windows im
   Demo-Modus (deutsch und englisch) und legt sie im Zweig `bilder` ab.
 * Automatische Tests (`tests/`, pytest): Logik, Webserver, Sprachdateien, Anleitung und die Oberfläche mit echtem

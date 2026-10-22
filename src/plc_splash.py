@@ -246,8 +246,8 @@ class _Banner(QWidget):
 class StartWindow(QWidget):
     """Startbild: Auswahl der Konfiguration, danach Lade-Anzeige.
 
-    kind: "logger" oder "config". ``chosen`` wird nach der Auswahl gesendet; Ergebnis in ``result``:
-    {"path": Datei oder "", "new": bool, "demo": bool}."""
+    kind: "logger", "config" oder "iocheck" (Auswahl aus Prüfständen *.iocheck.json und Konfigurationen). ``chosen``
+    wird nach der Auswahl gesendet; Ergebnis in ``result``: {"path": Datei oder "", "new": bool, "demo": bool}."""
 
     chosen = Signal()
 
@@ -274,7 +274,8 @@ class StartWindow(QWidget):
                 logo = load_config(current_path)[0].get("logo", "")
         except Exception:
             logo = ""
-        subtitle = tr("Aufzeichnung & Analyse") if kind == "logger" else tr("Konfiguration")
+        subtitle = {"logger": tr("Aufzeichnung & Analyse"), "iocheck": tr("IO-Check (Inbetriebnahme)")}.get(
+            kind, tr("Konfiguration"))
         outer = QHBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
@@ -284,7 +285,8 @@ class StartWindow(QWidget):
         rl = QVBoxLayout(right)
         rl.setContentsMargins(26, 18, 22, 18)
         top = QHBoxLayout()
-        self.lbl_head = QLabel(tr("Konfiguration wählen"))
+        self.lbl_head = QLabel(tr("Prüfstand oder Konfiguration wählen") if kind == "iocheck"
+                               else tr("Konfiguration wählen"))
         self.lbl_head.setStyleSheet("font-size: 14pt; font-weight: 600;")
         top.addWidget(self.lbl_head, 1)
         btn_x = QPushButton("✕")
@@ -312,8 +314,9 @@ class StartWindow(QWidget):
         btn_new.clicked.connect(self.new_file)
         row.addWidget(self.btn_open)
         row.addWidget(btn_browse)
-        row.addWidget(btn_new)
-        if kind == "logger":
+        if kind != "iocheck":                        # IO-Check: neuer Prüfstand = Konfiguration öffnen
+            row.addWidget(btn_new)
+        if kind in ("logger", "iocheck"):
             btn_demo = QPushButton(tr("Demo"))
             btn_demo.setToolTip(tr("Mit simulierten Werten starten (ohne Steuerung)"))
             btn_demo.clicked.connect(self.demo)
@@ -347,12 +350,19 @@ class StartWindow(QWidget):
         files = recent_configs()
         if self.current and os.path.exists(self.current) and self.current not in files:
             files.insert(0, self.current)
+        if self.kind == "iocheck":                    # Prüfstände zuerst, dann Konfigurationen (neuer Prüfstand)
+            from plc_common import recent_iochecks
+            files = recent_iochecks() + [p for p in files if p not in recent_iochecks()]
         for p in files:
             try:
                 when = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(p)))
             except OSError:
                 when = ""
-            it = QListWidgetItem(f"{os.path.basename(p)}\n{os.path.dirname(p)}   ·   {when}")
+            kind = ""
+            if self.kind == "iocheck":
+                kind = tr("Prüfstand") if p.lower().endswith(".iocheck.json") else tr("Konfiguration, neuer Prüfstand")
+                kind += "   ·   "
+            it = QListWidgetItem(f"{os.path.basename(p)}\n{kind}{os.path.dirname(p)}   ·   {when}")
             it.setData(Qt.ItemDataRole.UserRole, p)
             it.setToolTip(p)
             self.list.addItem(it)
@@ -397,7 +407,9 @@ class StartWindow(QWidget):
     def browse(self):
         """Konfigurationsdatei über den Dateidialog wählen."""
         start = os.path.dirname(self.current) if self.current else BASE_DIR
-        p, _flt = QFileDialog.getOpenFileName(self, tr("Konfiguration öffnen"), start, FILE_FILTER)
+        flt = (tr("IO-Check oder Konfiguration (*.iocheck.json *.json);;Alle Dateien (*)") if self.kind == "iocheck"
+               else FILE_FILTER)
+        p, _flt = QFileDialog.getOpenFileName(self, tr("Konfiguration öffnen"), start, flt)
         if p:
             self._finish(os.path.abspath(p))
 

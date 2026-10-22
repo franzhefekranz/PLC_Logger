@@ -1104,6 +1104,16 @@ class IoCheckWindow(QMainWindow):
         self.sp_tol.setValue(float(proj.options.get("tolerance", 1.0)))
         self.dirty = False
         self._rebuild()
+        self._remember(path)
+
+    @staticmethod
+    def _remember(path):
+        """Prüfstand für das Startbild des IO-Checks merken (Fehler sind unkritisch)."""
+        try:
+            from plc_common import remember_iocheck
+            remember_iocheck(path)
+        except Exception:
+            pass
 
     def save_project(self, as_new=False):
         """Prüfstand speichern (``as_new`` oder ohne Dateiname: Dateidialog) -> True bei Erfolg."""
@@ -1126,6 +1136,7 @@ class IoCheckWindow(QMainWindow):
         self.bridge.source = path
         self.bridge.set_title(self._project_title())
         self.statusBar().showMessage(tr("Gespeichert: {0}").format(path), 5000)
+        self._remember(path)
         return True
 
     def export_result(self):
@@ -1561,16 +1572,26 @@ def qr_dialog(parent, title, url, html):
 
 
 def run_iocheck(arg=None, demo=False):
-    """Eigenständiger Aufruf (plc_logger.py --iocheck [Konfiguration | *.iocheck.json])."""
+    """Eigenständiger Aufruf (PLCIOCheck.exe bzw. plc_logger.py --iocheck [Konfiguration | *.iocheck.json]).
+
+    Ohne Datei erscheint das Startbild mit den zuletzt benutzten Prüfständen und Konfigurationen (eine Konfiguration
+    beginnt einen neuen Prüfstand mit deren Steuerungen)."""
     import sys
     from plc_about import install_help
     from plc_branding import app_icon, set_windows_app_id
     from plc_common import last_config_path
     from plc_i18n import install_qt
-    set_windows_app_id()
+    set_windows_app_id("PLCDatenlogger.IOCheck")
     app = QApplication.instance() or QApplication(sys.argv[:1])
     install_qt(app)
     app.setWindowIcon(app_icon())
+    if not arg:
+        from plc_splash import choose
+        start, res = choose("iocheck", last_config_path())
+        start.close()
+        if res is None:
+            return 0
+        arg, demo = res["path"], demo or res["demo"]
     project = arg if arg and arg.endswith(".json") and _is_project(arg) else ""
     config = arg if arg and not project else last_config_path()
     win = IoCheckWindow(config_path=config, demo=demo, project_path=project)

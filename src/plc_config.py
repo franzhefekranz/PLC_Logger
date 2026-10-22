@@ -538,6 +538,7 @@ class ConfigWindow(QMainWindow):
                    None,
                    (N_("INI-Datei &umwandeln …"), QKeySequence(), self.convert_ini),
                    (N_("Logger mit dieser Konfiguration &starten"), QKeySequence("Ctrl+R"), self.start_logger),
+                   (N_("&IO-Check mit dieser Konfiguration starten"), QKeySequence(), self.start_iocheck),
                    None,
                    (N_("&Beenden"), QKeySequence("Ctrl+Q"), self.close)]
         for e in entries:
@@ -2380,6 +2381,17 @@ class ConfigWindow(QMainWindow):
             QMessageBox.critical(self, tr("Logger starten"), tr("Der Logger konnte nicht gestartet werden:\n{0}").format(e))
             return
         self.statusBar().showMessage(tr("Logger gestartet."), 5000)
+
+    def start_iocheck(self):
+        """IO-Check (eigenes Programm) mit den Steuerungen dieser Konfiguration starten (vorher speichern)."""
+        if not self.save():
+            return
+        try:
+            subprocess.Popen(program_command("iocheck", self.path))
+        except OSError as e:
+            QMessageBox.critical(self, tr("IO-Check"), tr("Der IO-Check konnte nicht gestartet werden:\n{0}").format(e))
+            return
+        self.statusBar().showMessage(tr("IO-Check gestartet."), 5000)
 
     # Verbindung zu jeder Steuerung aufbauen und deren Variablen einmal lesen; das Ergebnis (oder die Fehlermeldung)
     # steht in der Spalte 'Testwert'.

@@ -192,7 +192,7 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     assert plc_web.io_bridge() is None and not plc_web.RUNNING
 
 
-def test_about_help_and_dialogs(qt_log, demo_config):
+def test_about_help_and_dialogs(qt_log, demo_config, tmp_path, monkeypatch):
     """Info-Fenster, Anleitung öffnen, Ereignisanzeige und kleinere Dialoge ohne Absturz."""
     import plc_about
     from plc_events import EventLog
@@ -210,6 +210,19 @@ def test_about_help_and_dialogs(qt_log, demo_config):
     wait(50)
     ev.close()
     WebUsersDialog(None, {}).show()
+    # Startbild des IO-Checks: Prüfstände und Konfigurationen, Demo-Knopf, kein „Neue Konfiguration“
+    import plc_common
+    from plc_splash import StartWindow
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    proj = tmp_path / "anlage.iocheck.json"
+    __import__("plc_iocheck").IoProject(config=demo_config).save(str(proj))
+    plc_common.remember_iocheck(str(proj))
+    sw = StartWindow("iocheck", demo_config)
+    texts = [sw.list.item(i).text() for i in range(sw.list.count())]
+    assert texts[0].startswith("anlage.iocheck.json") and any("test.json" in t for t in texts), texts
+    sw.open_selected()
+    assert sw.result["path"] == str(proj)
+    sw.close()
 
 
 def test_language_english(qt_log, demo_config):

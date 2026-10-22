@@ -62,7 +62,7 @@ CONFIG_FILE = os.path.join(BASE_DIR, "plc_config.json")
 APP_NAME = "PLC Datenlogger"
 APP_VERSION = "3.1.2"
 # Programmdateien der installierten Windows-Version.
-LOGGER_EXE, CONFIG_EXE = "PLCLogger.exe", "PLCKonfiguration.exe"
+LOGGER_EXE, CONFIG_EXE, IOCHECK_EXE = "PLCLogger.exe", "PLCKonfiguration.exe", "PLCIOCheck.exe"
 # Persönliche Einstellungen (Sprache, Startbild, zuletzt benutzte Konfigurationen) – JSON im Datenordner.
 SETTINGS_FILE = os.path.join(BASE_DIR, "plc_einstellungen.json")
 
@@ -105,21 +105,39 @@ def recent_configs(limit: int = 10) -> list:
 
 
 def program_command(kind: str, *args) -> list:
-    """Befehlszeile, um den Logger (kind="logger") oder das Konfigurationsprogramm (kind="config") zu starten.
+    """Befehlszeile, um den Logger (kind="logger"), das Konfigurationsprogramm (kind="config") oder den IO-Check
+    (kind="iocheck") zu starten.
 
     Windows-Installation: die .exe-Dateien liegen nebeneinander. Linux (AppImage bzw. PyInstaller-Ordner): eine
-    einzige Programmdatei, das Konfigurationsprogramm startet mit ``--konfig``. Python-Skripte: dieselbe
-    Python-Installation."""
+    einzige Programmdatei, Konfigurationsprogramm und IO-Check starten mit ``--konfig`` bzw. ``--iocheck``.
+    Python-Skripte: dieselbe Python-Installation."""
     args = [str(a) for a in args if a]
+    switch = {"config": ["--konfig"], "iocheck": ["--iocheck"]}.get(kind, [])
     if getattr(sys, "frozen", False):
         if sys.platform == "win32":
-            exe = LOGGER_EXE if kind == "logger" else CONFIG_EXE
+            exe = {"config": CONFIG_EXE, "iocheck": IOCHECK_EXE}.get(kind, LOGGER_EXE)
             return [os.path.join(os.path.dirname(sys.executable), exe)] + args
         prog = os.environ.get("APPIMAGE") or sys.executable
-        return [prog] + (["--konfig"] if kind == "config" else []) + args
+        return [prog] + switch + args
     here = os.path.dirname(os.path.abspath(__file__))
-    script = "plc_logger.py" if kind == "logger" else "plc_config.py"
-    return [sys.executable, os.path.join(here, script)] + args
+    if kind == "config":
+        return [sys.executable, os.path.join(here, "plc_config.py")] + args
+    return [sys.executable, os.path.join(here, "plc_logger.py")] + (switch if kind == "iocheck" else []) + args
+
+
+def recent_iochecks(limit: int = 10) -> list:
+    """Zuletzt benutzte IO-Check-Prüfstände (*.iocheck.json, neueste zuerst, nur vorhandene)."""
+    out = []
+    for p in load_settings().get("iocheck_zuletzt", []):
+        if isinstance(p, str) and os.path.exists(p) and p not in out:
+            out.append(p)
+    return out[:limit]
+
+
+def remember_iocheck(path: str):
+    """Prüfstand für das Startbild des IO-Checks merken."""
+    p = os.path.abspath(path)
+    save_settings(iocheck_zuletzt=([p] + [x for x in load_settings().get("iocheck_zuletzt", []) if x != p])[:15])
 
 # Alle Datentypen, die der Logger kennt (Größe in Bytes). Welche davon eine Steuerung liefern kann, legt ihr Treiber
 # fest (Driver.types).
