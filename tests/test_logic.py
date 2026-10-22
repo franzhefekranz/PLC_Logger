@@ -229,3 +229,86 @@ def test_qr_code():
             if v:
                 img[(y + 4) * 6:(y + 5) * 6, (x + 4) * 6:(x + 5) * 6] = 0
     assert cv2.QRCodeDetector().detectAndDecode(img)[0] == url
+
+
+# ---- Benachrichtigungen -----------------------------------------------------------------------------------------
+def _local_servers():
+    """HTTP-Server (sammelt POSTs) und minimaler SMTP-Server auf zufälligen Ports -> (http_port, smtp_port, Liste)."""
+    import socketserver
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    got = []
+
+    class H(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            got.append(("http", self.path, dict(self.headers), body))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    class S(socketserver.StreamRequestHandler):
+        def handle(self):
+            w = lambda t: self.wfile.write((t + "\r\n").encode())       # noqa: E731
+            w("220 test")
+            data = False
+            lines = []
+            for raw in self.rfile:
+                line = raw.decode("utf-8", "replace").rstrip("\r\n")
+                if data:
+                    if line == ".":
+                        data = False
+                        got.append(("smtp", "\n".join(lines)))
+                        w("250 ok")
+                    else:
+                        lines.append(line)
+                    continue
+                cmd = line[:4].upper()
+                if cmd in ("EHLO", "HELO"):
+                    w("250 test")
+                elif cmd == "DATA":
+                    data = True
+                    w("354 go")
+                elif cmd == "QUIT":
+                    w("221 bye")
+                    return
+                else:
+                    w("250 ok")
+    http = HTTPServer(("127.0.0.1", 0), H)
+    smtp = socketserver.ThreadingTCPServer(("127.0.0.1", 0), S)
+    for srv in (http, smtp):
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return http, smtp, got
+
+
+def test_notify_channels_and_engine(tmp_path):
+    import plc_notify as nf
+    from plc_events import EventLog, Trigger, TriggerEngine
+    http, smtp, got = _local_servers()
+    try:
+        hp, sp = http.server_address[1], smtp.server_address[1]
+        s = nf.settings({"aktiv": True, "gehen": True, "sperre_s": 60,
+                         "email": {"aktiv": True, "server": "127.0.0.1", "port": sp, "modus": "keine",
+                                   "an": "a@test.de"},
+                         "webhook": {"aktiv": True, "art": "teams", "url": f"http://127.0.0.1:{hp}/teams"},
+                         "ntfy": {"aktiv": True, "url": f"http://127.0.0.1:{hp}/thema"}})
+        res = nf.send_all(s, nf.test_message("Anlage"))
+        assert all(not err for _c, err in res), res
+        kinds = sorted(g[0] + (g[1] if g[0] == "http" else "") for g in got)
+        assert kinds == ["http/teams", "http/thema", "smtp"]
+        teams = next(g for g in got if g[0] == "http" and g[1] == "/teams")
+        assert b"AdaptiveCard" in teams[3]
+        # Trigger -> Notifier mit Sperrzeit; Gehen nur nach gemeldetem Kommen
+        sent = []
+        nt = nf.Notifier({"benachrichtigung": s}, "Anlage", sender=lambda _s, m: sent.append((m.kind, m.ts)) or [])
+        eng = TriggerEngine([Trigger("A", "{T} > 80", "", "Alarm"), Trigger("I", "{T} > 0", "", "Info")],
+                            EventLog(str(tmp_path / "ev.csv")), notify=nt.event)
+        for ts, v in ((1, 70), (2, 85), (3, 70), (4, 90), (5, 70), (100, 95)):
+            eng.evaluate(ts, {"T": v})
+        nt.stop()
+        assert sent == [("KOMMT", 2), ("GEHT", 3), ("KOMMT", 100)]
+    finally:
+        http.shutdown()
+        smtp.shutdown()

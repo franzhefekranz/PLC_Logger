@@ -292,11 +292,11 @@ class EventLog:
 # Auswertung (im Sammler-Thread des Recorders)
 # ---------------------------------------------------------------------------------------
 class _State:
-    __slots__ = ("trigger", "formula", "since", "on", "eid")
+    __slots__ = ("trigger", "formula", "since", "on", "eid", "text")
 
     def __init__(self, trigger, formula):
         self.trigger, self.formula = trigger, formula
-        self.since, self.on, self.eid = None, False, None
+        self.since, self.on, self.eid, self.text = None, False, None, ""
 
 
 def _fmt(v):
@@ -311,9 +311,11 @@ def _fmt(v):
 class TriggerEngine:
     """Wertet die aktiven Trigger je Messzeile aus und schreibt Ereignisse ins Protokoll."""
 
-    def __init__(self, triggers, log: EventLog, emit=None, names=None):
-        """names: bekannte Variablennamen; Trigger mit unbekannten Variablen werden dann übersprungen (errors)."""
+    def __init__(self, triggers, log: EventLog, emit=None, names=None, notify=None):
+        """names: bekannte Variablennamen; Trigger mit unbekannten Variablen werden dann übersprungen (errors).
+        notify(Art, Trigger, Priorität, Text, Zeit): Benachrichtigung (plc_notify.Notifier.event), Art KOMMT/GEHT."""
         self.log = log
+        self.notify = notify
         self.emit = emit or (lambda _t: None)
         self.states, self.errors = [], []
         for t in triggers:
@@ -350,13 +352,18 @@ class TriggerEngine:
                     text = _REF.sub(lambda m: _fmt(values.get(m.group(1))), t.text) if t.text else t.bedingung
                     st.eid = self.log.come(t, text, ts)
                     st.on = True
+                    st.text = text
                     self.emit(f"⚠ {t.prio}: {t.name} – {text}")
+                    if self.notify is not None:
+                        self.notify("KOMMT", t.name, t.prio, text, ts)
             else:
                 st.since = None
                 if st.on:
                     st.on = False
                     if t.gehen:
                         self.log.go(st.eid, t, ts)
+                    if self.notify is not None:
+                        self.notify("GEHT", t.name, t.prio, getattr(st, "text", ""), ts)
 
 
 # ---------------------------------------------------------------------------------------

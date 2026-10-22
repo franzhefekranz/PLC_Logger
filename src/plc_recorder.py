@@ -389,6 +389,7 @@ class Recorder:
             self.triggers = demo_triggers()
         self.events = EventLog(event_log_path(conn))
         self.trigger_engine = None               # TriggerEngine, solange die Aufzeichnung läuft
+        self.notifier = None                     # Benachrichtigungen (plc_notify), solange die Aufzeichnung läuft
         # Aufzeichnung per Trigger (Vor-/Nachlauf): CaptureGate, solange die Aufzeichnung läuft (sonst dauernd).
         self.capture_mode = (conn.get("aufz_modus") == "trigger")
         self.gate = None
@@ -478,7 +479,11 @@ class Recorder:
         if self.db_conf["typ"]:
             self.db = DbWriter(self.conn, self.names, self.emit)
             self.db.start()
-        self.trigger_engine = TriggerEngine(self.triggers, self.events, self.emit, self.names) if self.triggers else None
+        from plc_notify import Notifier
+        self.notifier = Notifier(self.conn, self.conn.get("projekt", ""), self.emit)
+        self.trigger_engine = TriggerEngine(self.triggers, self.events, self.emit, self.names,
+                                            notify=self.notifier.event if self.notifier else None) \
+            if self.triggers else None
         if self.trigger_engine is not None:
             for err in self.trigger_engine.errors:
                 self.emit("⚠ " + err)
@@ -532,6 +537,9 @@ class Recorder:
             self.db.stop()
             if self.db.buf:
                 self.emit(tr("⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden").format(len(self.db.buf)))
+        if self.notifier is not None:            # ausstehende Benachrichtigungen noch senden
+            self.notifier.stop()
+            self.notifier = None
         self.running = False
         if self.csv_fh:
             try:

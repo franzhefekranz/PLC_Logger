@@ -804,6 +804,15 @@
 @ Ereignisdatei:
 > Event file:
 
+@ Benachrichtigungen …
+> Notifications …
+
+@ Bei Ereignissen E-Mail, Teams-/Slack-Nachricht oder Push aufs Handy (ntfy, Telegram)
+> On events send e-mail, a Teams/Slack message or a push to the phone (ntfy, Telegram)
+
+@ Melden:
+> Notify:
+
 @ Ein Trigger schreibt einen Eintrag mit Zeitstempel ins Ereignisprotokoll, sobald seine Bedingung erfüllt ist (z. B. <code>{Temperatur} &gt; 80</code>). Offene Ereignisse zeigt der Logger in der Statusleiste an; quittiert wird im Ereignis-Viewer.
 > A trigger writes a time-stamped entry to the event log as soon as its condition is met (e.g. <code>{Temperatur} &gt; 80</code>). The logger shows open events in the status bar; they are acknowledged in the event viewer.
 
@@ -956,6 +965,12 @@
 
 @ {0} Benutzer: {1}
 > {0} users: {1}
+
+@ aus
+> off
+
+@ ab {0} über {1}
+> from {0} via {1}
 
 @ Tipp: HTTPS einschalten, sonst werden Passwörter unverschlüsselt übertragen.
 > Tip: switch on HTTPS, otherwise passwords are transmitted unencrypted.
@@ -2766,6 +2781,175 @@
 @ Lade Oberfläche (Diagramme) …
 > Loading user interface (charts) …
 
+# ---------------- plc_notify.py
+
+@ E-Mail
+> E-mail
+
+@ Teams / Slack / Webhook
+> Teams / Slack / Webhook
+
+@ ntfy (Push)
+> ntfy (push)
+
+@ Telegram
+> Telegram
+
+@ Microsoft Teams (Workflows)
+> Microsoft Teams (Workflows)
+
+@ Slack
+> Slack
+
+@ Allgemein (JSON)
+> Generic (JSON)
+
+@ unverschlüsselt
+> unencrypted
+
+@ gegangen
+> gone
+
+@ Zeit: {0}
+> Time: {0}
+
+@ Trigger: {0}
+> Trigger: {0}
+
+@ Priorität: {0}
+> Priority: {0}
+
+@ Das Ereignis ist gegangen (Bedingung nicht mehr erfüllt).
+> The event has gone (condition no longer met).
+
+@ Projekt: {0}
+> Project: {0}
+
+@ Rechner: {0}
+> Computer: {0}
+
+@ – PLC Datenlogger
+> – PLC Data Logger
+
+@ SMTP-Server und Empfänger angeben
+> Enter SMTP server and recipient
+
+@ Webhook-Adresse angeben
+> Enter webhook address
+
+@ ntfy-Adresse mit Thema angeben, z. B. https://ntfy.sh/mein-thema
+> Enter ntfy address with topic, e.g. https://ntfy.sh/my-topic
+
+@ Bot-Token und Chat-ID angeben
+> Enter bot token and chat ID
+
+@ Testnachricht
+> Test message
+
+@ Testnachricht des PLC Datenloggers – die Benachrichtigung funktioniert.
+> Test message from the PLC Data Logger – notifications are working.
+
+@ ({0} weitere Meldungen in der Sperrzeit unterdrückt)
+> ({0} further messages suppressed during the lock time)
+
+@ Benachrichtigung über {0} fehlgeschlagen: {1}
+> Notification via {0} failed: {1}
+
+# ---------------- plc_notify_dialog.py
+
+@ Benachrichtigungen
+> Notifications
+
+@ Bei Ereignissen benachrichtigen
+> Notify on events
+
+@ Wann
+> When
+
+@ ab {0}
+> from {0}
+
+@ Priorität:
+> Priority:
+
+@ leer = alle Trigger; sonst Namen, durch Komma getrennt
+> empty = all triggers; otherwise names separated by commas
+
+@ Nur Trigger:
+> Only triggers:
+
+@ Auch melden, wenn ein Ereignis geht
+> Also notify when an event goes
+
+@ Kommt derselbe Trigger innerhalb dieser Zeit erneut, wird nicht noch einmal gemeldet (die nächste Meldung nennt die Zahl der unterdrückten).
+> If the same trigger comes again within this time, no further message is sent (the next message states how many were suppressed).
+
+@ Sperrzeit je Trigger:
+> Lock time per trigger:
+
+@ SMTP-Server
+> SMTP server
+
+@ Port
+> Port
+
+@ Verschlüsselung
+> Encryption
+
+@ Benutzer
+> User
+
+@ Passwort
+> Password
+
+@ Absender
+> Sender
+
+@ Empfänger
+> Recipients
+
+@ Art
+> Type
+
+@ Webhook-Adresse
+> Webhook address
+
+@ Teams: im Kanal einen Workflow „Bei Empfang einer Webhookanforderung posten“ anlegen und dessen Adresse eintragen. Slack: Incoming Webhook. Allgemein: JSON an beliebige Adresse.
+> Teams: create a workflow “Post to a channel when a webhook request is received” in the channel and enter its address. Slack: incoming webhook. Generic: JSON to any address.
+
+@ Adresse mit Thema
+> Address with topic
+
+@ Zugriffstoken
+> Access token
+
+@ App „ntfy“ auf dem Handy installieren und dasselbe Thema abonnieren. Bei ntfy.sh ist das Thema öffentlich: einen schwer zu erratenden Namen wählen oder einen eigenen Server verwenden.
+> Install the “ntfy” app on the phone and subscribe to the same topic. On ntfy.sh the topic is public: choose a name that is hard to guess or use your own server.
+
+@ Bot-Token
+> Bot token
+
+@ Chat-ID
+> Chat ID
+
+@ Bot bei @BotFather anlegen, dem Bot eine Nachricht schreiben und die Chat-ID eintragen.
+> Create a bot with @BotFather, send the bot a message and enter the chat ID.
+
+@ Passwörter und Token stehen im Klartext in der Konfigurationsdatei.
+> Passwords and tokens are stored in plain text in the configuration file.
+
+@ Testnachricht senden
+> Send test message
+
+@ Über alle eingeschalteten Kanäle eine Testnachricht senden
+> Send a test message via all enabled channels
+
+@ {0} verwenden
+> Use {0}
+
+@ Bitte mindestens einen Kanal einschalten.
+> Please enable at least one channel.
+
 # ---------------- plc_pid.py
 
 @ SIMC (Skogestad)
@@ -3233,9 +3417,6 @@
 @ Mindestens {0} Zeichen.
 > At least {0} characters.
 
-@ Passwort
-> Password
-
 @ Das Passwort ist zu kurz (mindestens {0} Zeichen).
 > The password is too short (at least {0} characters).
 
@@ -3259,9 +3440,6 @@
 
 @ Benutzername:
 > User name:
-
-@ Benutzer
-> User
 
 @ Den Benutzer gibt es schon.
 > This user already exists.
@@ -3733,9 +3911,6 @@
 
 @ CJ, CS, CP, NJ/NX über Ethernet; FINS/TCP oder FINS/UDP, Port 9600
 > CJ, CS, CP, NJ/NX via Ethernet; FINS/TCP or FINS/UDP, port 9600
-
-@ Port
-> Port
 
 @ Protokoll
 > Protocol

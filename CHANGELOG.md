@@ -21,6 +21,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **Vom Ereignis zur Stelle im Diagramm:** Im Ereignis-Viewer *Im Diagramm zeigen* (Knopf oder Rechtsklick) zeigt den
   Zeitraum um das Ereignis im Logger (offline), Lineal 1 auf dem Beginn, Lineal 2 auf dem Ende. Liegen die Werte nicht
   mehr im Speicher, wird die passende CSV-Datei bzw. das Archiv geladen.
+* **Benachrichtigungen bei Ereignissen** (Konfiguration › Trigger & Ereignisse › *Benachrichtigungen …*): E-Mail
+  (SMTP, STARTTLS/SSL), Microsoft Teams (Workflow-Webhook), Slack, allgemeiner JSON-Webhook, ntfy (Push aufs Handy) und
+  Telegram. Filter nach Mindestpriorität und Triggernamen, wahlweise auch beim Gehen, Sperrzeit je Trigger gegen
+  Meldungsfluten, Testnachricht. Gesendet wird im Hintergrund, auch im Betrieb ohne Oberfläche.
 
 ### Build
 

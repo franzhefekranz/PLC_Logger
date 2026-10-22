@@ -345,7 +345,7 @@ _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "st
              "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl"}
 _FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude", "aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s"}
-_JSON_KEYS = {"treiberdaten", "web_benutzer"}                    # Text mit JSON-Inhalt -> verschachteltes Objekt
+_JSON_KEYS = {"treiberdaten", "web_benutzer", "benachrichtigung"}                    # Text mit JSON-Inhalt -> verschachteltes Objekt
 
 
 class ConfigFormatError(ValueError):
@@ -550,6 +550,8 @@ def default_connection() -> dict:
             # PDF-Berichte je Schicht/Tag/Woche/Monat (siehe *_report.py).
             "bericht_aktiv": 0, "bericht_zeitraum": "tag", "bericht_schichten": "06:00,14:00,22:00",
             "bericht_beginn": "00:00", "bericht_ordner": "berichte",
+            # Benachrichtigungen bei Ereignissen (JSON, siehe *_notify.py): E-Mail, Teams/Slack, ntfy, Telegram.
+            "benachrichtigung": "",
             # Treibereigene Werte (JSON {Treiber: {Schlüssel: Wert}}), z. B. die importierten DB-Quellen des S7-Treibers.
             "treiberdaten": ""}
 
@@ -563,7 +565,7 @@ CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "icon", "csv_name",
                  "db_typ", "db_host", "db_name", "db_user", "db_passwort", "db_tabelle", "db_datei",
                  "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung",
                  "web_zertifikat", "web_schluessel", "web_benutzer",
-                 "bericht_zeitraum", "bericht_schichten", "bericht_beginn", "bericht_ordner")
+                 "bericht_zeitraum", "bericht_schichten", "bericht_beginn", "bericht_ordner", "benachrichtigung")
 CONN_FLOAT_KEYS = ("aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s")
 RECORD_MODES = {"dauernd": N_("Dauernd"), "trigger": N_("Per Trigger mit Vor- und Nachlauf")}
 

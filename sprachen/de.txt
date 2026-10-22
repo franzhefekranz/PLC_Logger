@@ -804,6 +804,15 @@
 @ Ereignisdatei:
 > 
 
+@ Benachrichtigungen …
+> 
+
+@ Bei Ereignissen E-Mail, Teams-/Slack-Nachricht oder Push aufs Handy (ntfy, Telegram)
+> 
+
+@ Melden:
+> 
+
 @ Ein Trigger schreibt einen Eintrag mit Zeitstempel ins Ereignisprotokoll, sobald seine Bedingung erfüllt ist (z. B. <code>{Temperatur} &gt; 80</code>). Offene Ereignisse zeigt der Logger in der Statusleiste an; quittiert wird im Ereignis-Viewer.
 > 
 
@@ -955,6 +964,12 @@
 > 
 
 @ {0} Benutzer: {1}
+> 
+
+@ aus
+> 
+
+@ ab {0} über {1}
 > 
 
 @ Tipp: HTTPS einschalten, sonst werden Passwörter unverschlüsselt übertragen.
@@ -2766,6 +2781,175 @@
 @ Lade Oberfläche (Diagramme) …
 > 
 
+# ---------------- plc_notify.py
+
+@ E-Mail
+> 
+
+@ Teams / Slack / Webhook
+> 
+
+@ ntfy (Push)
+> 
+
+@ Telegram
+> 
+
+@ Microsoft Teams (Workflows)
+> 
+
+@ Slack
+> 
+
+@ Allgemein (JSON)
+> 
+
+@ unverschlüsselt
+> 
+
+@ gegangen
+> 
+
+@ Zeit: {0}
+> 
+
+@ Trigger: {0}
+> 
+
+@ Priorität: {0}
+> 
+
+@ Das Ereignis ist gegangen (Bedingung nicht mehr erfüllt).
+> 
+
+@ Projekt: {0}
+> 
+
+@ Rechner: {0}
+> 
+
+@ – PLC Datenlogger
+> 
+
+@ SMTP-Server und Empfänger angeben
+> 
+
+@ Webhook-Adresse angeben
+> 
+
+@ ntfy-Adresse mit Thema angeben, z. B. https://ntfy.sh/mein-thema
+> 
+
+@ Bot-Token und Chat-ID angeben
+> 
+
+@ Testnachricht
+> 
+
+@ Testnachricht des PLC Datenloggers – die Benachrichtigung funktioniert.
+> 
+
+@ ({0} weitere Meldungen in der Sperrzeit unterdrückt)
+> 
+
+@ Benachrichtigung über {0} fehlgeschlagen: {1}
+> 
+
+# ---------------- plc_notify_dialog.py
+
+@ Benachrichtigungen
+> 
+
+@ Bei Ereignissen benachrichtigen
+> 
+
+@ Wann
+> 
+
+@ ab {0}
+> 
+
+@ Priorität:
+> 
+
+@ leer = alle Trigger; sonst Namen, durch Komma getrennt
+> 
+
+@ Nur Trigger:
+> 
+
+@ Auch melden, wenn ein Ereignis geht
+> 
+
+@ Kommt derselbe Trigger innerhalb dieser Zeit erneut, wird nicht noch einmal gemeldet (die nächste Meldung nennt die Zahl der unterdrückten).
+> 
+
+@ Sperrzeit je Trigger:
+> 
+
+@ SMTP-Server
+> 
+
+@ Port
+> 
+
+@ Verschlüsselung
+> 
+
+@ Benutzer
+> 
+
+@ Passwort
+> 
+
+@ Absender
+> 
+
+@ Empfänger
+> 
+
+@ Art
+> 
+
+@ Webhook-Adresse
+> 
+
+@ Teams: im Kanal einen Workflow „Bei Empfang einer Webhookanforderung posten“ anlegen und dessen Adresse eintragen. Slack: Incoming Webhook. Allgemein: JSON an beliebige Adresse.
+> 
+
+@ Adresse mit Thema
+> 
+
+@ Zugriffstoken
+> 
+
+@ App „ntfy“ auf dem Handy installieren und dasselbe Thema abonnieren. Bei ntfy.sh ist das Thema öffentlich: einen schwer zu erratenden Namen wählen oder einen eigenen Server verwenden.
+> 
+
+@ Bot-Token
+> 
+
+@ Chat-ID
+> 
+
+@ Bot bei @BotFather anlegen, dem Bot eine Nachricht schreiben und die Chat-ID eintragen.
+> 
+
+@ Passwörter und Token stehen im Klartext in der Konfigurationsdatei.
+> 
+
+@ Testnachricht senden
+> 
+
+@ Über alle eingeschalteten Kanäle eine Testnachricht senden
+> 
+
+@ {0} verwenden
+> 
+
+@ Bitte mindestens einen Kanal einschalten.
+> 
+
 # ---------------- plc_pid.py
 
 @ SIMC (Skogestad)
@@ -3233,9 +3417,6 @@
 @ Mindestens {0} Zeichen.
 > 
 
-@ Passwort
-> 
-
 @ Das Passwort ist zu kurz (mindestens {0} Zeichen).
 > 
 
@@ -3258,9 +3439,6 @@
 > 
 
 @ Benutzername:
-> 
-
-@ Benutzer
 > 
 
 @ Den Benutzer gibt es schon.
@@ -3732,9 +3910,6 @@
 > 
 
 @ CJ, CS, CP, NJ/NX über Ethernet; FINS/TCP oder FINS/UDP, Port 9600
-> 
-
-@ Port
 > 
 
 @ Protokoll

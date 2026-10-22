@@ -772,6 +772,15 @@ class ConfigWindow(QMainWindow):
         row.addStretch(1)
         form.addRow("", row)
         form.addRow(tr("Ereignisdatei:"), file_row)
+        self.notify_settings = {}
+        btn_notify = QPushButton(tr("Benachrichtigungen …"))
+        btn_notify.setToolTip(tr("Bei Ereignissen E-Mail, Teams-/Slack-Nachricht oder Push aufs Handy (ntfy, Telegram)"))
+        btn_notify.clicked.connect(self.edit_notify)
+        self.lbl_notify = QLabel("")
+        notify_row = QHBoxLayout()
+        notify_row.addWidget(btn_notify)
+        notify_row.addWidget(self.lbl_notify, 1)
+        form.addRow(tr("Melden:"), notify_row)
         info = QLabel(tr("Ein Trigger schreibt einen Eintrag mit Zeitstempel ins Ereignisprotokoll, sobald seine Bedingung "
                       "erfüllt ist (z. B. <code>{Temperatur} &gt; 80</code>). Offene Ereignisse zeigt der Logger in der "
                       "Statusleiste an; quittiert wird im Ereignis-Viewer."))
@@ -1565,6 +1574,21 @@ class ConfigWindow(QMainWindow):
         self.lbl_web_users.setText(tr("keine (ohne Anmeldung)") if not n else
                                    tr("{0} Benutzer: {1}").format(n, ", ".join(sorted(self.web_users))[:60]))
 
+    def _update_notify(self):
+        import plc_notify as nf
+        s = nf.settings(self.notify_settings)
+        ch = [tr(nf.CHANNELS[c]) for c in nf.active_channels(s)]
+        self.lbl_notify.setText(tr("aus") if not s["aktiv"] or not ch else
+                                tr("ab {0} über {1}").format(tr(s["prio_min"]), ", ".join(ch)))
+
+    def edit_notify(self):
+        from plc_notify_dialog import NotifyDialog
+        dlg = NotifyDialog(self, self.notify_settings, self.ed_project.text().strip()
+                           if hasattr(self, "ed_project") else "")
+        if dlg.exec():
+            self.notify_settings = dlg.settings
+            self._update_notify()
+
     def edit_web_users(self):
         from plc_web_dialog import WebUsersDialog
         dlg = WebUsersDialog(self, self.web_users)
@@ -1660,6 +1684,9 @@ class ConfigWindow(QMainWindow):
         self.ed_web_key.setEnabled(self.chk_https.isChecked())
         self.web_users = parse_users(conn.get("web_benutzer", ""))
         self._update_web_users()
+        import plc_notify as nf
+        self.notify_settings = nf.settings(conn.get("benachrichtigung", ""))
+        self._update_notify()
         self.charts = charts
         self.prop_key = None
         self.table.setRowCount(0)
@@ -1713,6 +1740,10 @@ class ConfigWindow(QMainWindow):
                 "web_zertifikat": self.ed_web_cert.text().strip(),
                 "web_schluessel": self.ed_web_key.text().strip(),
                 "web_benutzer": json.dumps(self.web_users, ensure_ascii=False) if self.web_users else "",
+                "benachrichtigung": json.dumps(self.notify_settings, ensure_ascii=False)
+                if self.notify_settings and self.notify_settings.get("aktiv") or any(
+                    (self.notify_settings or {}).get(k, {}).get("aktiv") for k in ("email", "webhook", "ntfy",
+                                                                                     "telegram")) else "",
                 "ereignis_datei": self.ed_event_file.text().strip(),
                 "bericht_aktiv": 1 if self.chk_report.isChecked() else 0,
                 "bericht_zeitraum": self.cb_report_period.currentData() or "tag",

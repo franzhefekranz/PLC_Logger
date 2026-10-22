@@ -82,6 +82,11 @@ def test_config_window(qt_log, demo_config):
                  "add_computed", "edit_pid"):
         getattr(w, name)()
     w.edit_plc_params(0)
+    w.edit_notify()
+    from plc_notify_dialog import NotifyDialog
+    nd = NotifyDialog(w, {"aktiv": True, "email": {"aktiv": True}}, "Testanlage")
+    assert nd.collect()["email"]["aktiv"] and nd.collect()["aktiv"]
+    nd.send_test()                                           # Fehlermeldung (kein Server) statt Absturz
     assert w._write(demo_config), qt_log.messages
     doc = json.load(open(demo_config, encoding="utf-8"))
     assert doc["einstellungen"]["projekt"] == "Testanlage"
