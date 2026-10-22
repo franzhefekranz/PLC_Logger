@@ -25,10 +25,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Bildschirmauflösung 1920 x 1200 (Fenster sonst auf 1024 x 768 begrenzt)
-        shell: pwsh
-        continue-on-error: true
-        run: Set-DisplayResolution -Width 1920 -Height 1200 -Force
       - name: Abhängigkeiten
         run: |
           python -m pip install PySide6-Essentials pyqtgraph numpy Flask cryptography openpyxl asyncua python-snap7 pymupdf playwright
