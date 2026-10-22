@@ -1935,6 +1935,12 @@
 @ Webserver-Adresse …
 > 
 
+@ Prozessbild im Browser
+> 
+
+@ Prozessbild (Kacheln mit Werten, Zeigern, Lampen) des Webservers im Browser öffnen
+> 
+
 @ Beenden
 > 
 
@@ -2175,7 +2181,13 @@
 @ Hinweis: unverschlüsselte Verbindung (HTTP).
 > 
 
+@ Prozessbild: {0}
+> 
+
 @ (Adresse in die Zwischenablage kopiert)
+> 
+
+@ Prozessbild
 > 
 
 @ Aktuell

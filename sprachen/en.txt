@@ -1935,6 +1935,12 @@
 @ Webserver-Adresse …
 > Web server address …
 
+@ Prozessbild im Browser
+> Process view in the browser
+
+@ Prozessbild (Kacheln mit Werten, Zeigern, Lampen) des Webservers im Browser öffnen
+> Open the web server's process view (tiles with values, gauges, lamps) in the browser
+
 @ Beenden
 > Exit
 
@@ -2175,8 +2181,14 @@
 @ Hinweis: unverschlüsselte Verbindung (HTTP).
 > Note: unencrypted connection (HTTP).
 
+@ Prozessbild: {0}
+> Process view: {0}
+
 @ (Adresse in die Zwischenablage kopiert)
 > (address copied to the clipboard)
+
+@ Prozessbild
+> Process view
 
 @ Aktuell
 > Current

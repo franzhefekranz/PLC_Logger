@@ -1170,6 +1170,9 @@ class MainWindow(QMainWindow):
         act_cfg_reload.triggered.connect(lambda: self.set_config(self.config_path))
         act_web = QAction(tr("Webserver-Adresse …"), self)
         act_web.triggered.connect(self.show_web_url)
+        act_proc = QAction(tr("Prozessbild im Browser"), self)
+        act_proc.setToolTip(tr("Prozessbild (Kacheln mit Werten, Zeigern, Lampen) des Webservers im Browser öffnen"))
+        act_proc.triggered.connect(self.open_process_view)
         act_quit = QAction(tr("Beenden"), self)
         act_quit.triggered.connect(self.close)
         # Die Werteanzeige schaltet das Dock der Wertetabelle (dessen eigene Anzeigen-Aktion wird wiederverwendet).
@@ -1274,6 +1277,7 @@ class MainWindow(QMainWindow):
         act_export.triggered.connect(self.export_values)
         m_file.addAction(act_export)
         m_file.addAction(act_web)
+        m_file.addAction(act_proc)
         act_events = QAction(tr("Ereignisprotokoll …"), self)
         act_events.setShortcut("Ctrl+E")
         act_events.setToolTip(tr("Ereignisse der Trigger anzeigen und quittieren"))
@@ -1981,12 +1985,27 @@ class MainWindow(QMainWindow):
                                   "\n{0}").format(fp)
         elif not self.web.https:
             text += "\n\n" + tr("Hinweis: unverschlüsselte Verbindung (HTTP).")
+        text += "\n\n" + tr("Prozessbild: {0}").format(url + "prozess")
         text += "\n\n" + tr("(Adresse in die Zwischenablage kopiert)")
         from html import escape
         from plc_iocheck_dialog import qr_dialog
         qr_url = token_url if token_url and not self.web.users else url
         self._web_dialog = qr_dialog(self, tr("Webserver"), qr_url, escape(text).replace("\n", "<br>"))
         self._web_dialog.exec()
+
+    def open_process_view(self):
+        """Prozessbild des eigenen Webservers im Standardbrowser öffnen (auf diesem Rechner)."""
+        if self.web is None:
+            QMessageBox.information(self, tr("Prozessbild"), tr("Der Webserver ist nicht aktiviert.\n"
+                                    "Aktivierung: Konfigurationsprogramm → Webserver."))
+            return
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        host = "127.0.0.1" if self.web.host in ("0.0.0.0", "") else self.web.host
+        url = f"{'https' if self.web.https else 'http'}://{host}:{self.web.port}/prozess"
+        if self.web.token and not self.web.users:
+            url += "?token=" + self.web.token
+        QDesktopServices.openUrl(QUrl(url))
 
     def set_layout(self, mode):
         """Anordnung wechseln: baut die Seiten neu auf (Gruppierung/Ausrichtung hängen vom Modus ab)."""

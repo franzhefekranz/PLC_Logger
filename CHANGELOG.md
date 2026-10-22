@@ -29,6 +29,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   berechneten Variablen, die Trigger-Zustände und den Verbindungsstatus je Steuerung lesend bereit – für Leitsystem,
   MES oder SCADA. Sicherheit ohne/Signieren/Verschlüsseln (selbstsigniertes Zertifikat), anonym und/oder Anmeldung mit
   den Benutzern des Webservers. Läuft während der Aufzeichnung, auch headless.
+* **Prozessbild im Browser** (Webserver, Adresse `/prozess`; Logger: *Datei › Prozessbild im Browser*): Kacheln mit
+  Zahlenwert, Zeigerinstrument, Balken, Zustandslampe, Kurzverlauf und Text, frei auf einem Raster angeordnet, mehrere
+  Seiten, Warn- und Alarmgrenzen färben die Kachel. Bearbeitet wird direkt in der Webseite (verschieben, Größe,
+  Eigenschaften; angemeldete Benutzer); das Layout steht in `<Konfiguration>.prozessbild.json`. Auf dem Smartphone
+  untereinander.
 
 ### Build
 

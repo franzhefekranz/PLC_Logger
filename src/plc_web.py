@@ -15,6 +15,8 @@ Adressen
 ``/api/config``   Struktur: Projekt, Seiten, Diagramme, Y-Achsen, Variablen
 ``/api/data``     Messdaten eines Zeitfensters (Parameter: window = Sekunden, end = Endzeit, max = Punkte je Kurve)
 ``/api/status``   Zustand der Steuerungen und letzte Werte
+``/prozess``      Prozessbild: Kacheln (Wert, Zeiger, Balken, Lampe, Kurzverlauf), im Browser bearbeitbar
+``/api/prozess``  Layout des Prozessbilds lesen (GET) bzw. speichern (POST, JSON; siehe *_web_prozess.py)
 
 Zugriffsschutz
 --------------
@@ -295,7 +297,52 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         out = '<a id="logout" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>" if user else ""
         if _io_bridge is not None:
             out = '<a id="logout" href="io" title="IO-Check (Inbetriebnahme)">IO-Check</a> ' + out
+        out = '<a id="logout" href="prozess' + _tok() + '" title="Prozessbild">Prozessbild</a> ' + out
         return Response(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out), mimetype="text/html")
+
+    def _tok():
+        return ("?token=" + html.escape(request.args["token"])) if request.args.get("token") else ""
+
+    def may_edit():
+        """Prozessbild bearbeiten: angemeldete Benutzer; ohne eingerichtete Anmeldung jeder mit Zugang."""
+        return logged_in() if users else True
+
+    # ---- Prozessbild --------------------------------------------------------------------------------------------
+    @app.route("/prozess")
+    def prozess_page():
+        from plc_web_prozess import PROZESS_HTML
+        user = session.get("user") if users else ""
+        out = '<a class="lnk" href="./' + _tok() + '">Diagramme</a>'
+        if user:
+            out += ' <a class="lnk" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>"
+        return Response(PROZESS_HTML.replace("__LINKS__", out), mimetype="text/html",
+                        headers={"Cache-Control": "no-store"})
+
+    @app.route("/api/prozess", methods=["GET", "POST"])
+    def api_prozess():
+        import plc_web_prozess as wp
+        rec = get_rec()
+        if rec is None:
+            return reply({"version": None})
+        cfg_path = getattr(rec, "config_path", "") or ""
+        if request.method == "POST":
+            if not may_edit():
+                return reply({"error": "Nur angemeldete Benutzer dürfen das Prozessbild ändern."}, 403)
+            if not request.is_json:              # nur JSON: Formulare fremder Seiten (CSRF) werden abgewiesen
+                abort(415)
+            try:
+                doc = wp.save_layout(cfg_path, request.get_json(silent=True))
+            except (ValueError, TypeError):
+                return reply({"error": "Layout ungültig"}, 400)
+            except OSError as e:
+                return reply({"error": f"Speichern fehlgeschlagen: {e}"}, 500)
+            return reply({"ok": True, "layout": doc})
+        layout = None if request.args.get("vorschlag") else wp.load_layout(cfg_path)
+        return reply({"version": id(rec), "project": rec.conn.get("projekt", ""), "refresh_ms": refresh_ms,
+                      "edit": may_edit(), "saved": layout is not None,
+                      "layout": layout or wp.default_layout(rec.vars),
+                      "vars": [{"i": i, "name": v.name, "dtype": v.dtype, "color": v.color, "calc": bool(v.formula)}
+                               for i, v in enumerate(rec.vars)]})
 
     @app.route("/static/<path:name>")
     def static_file(name):
@@ -330,6 +377,8 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
             maxpts = min(max(int(request.args.get("max", 400)), 50), 3000)
             end = request.args.get("end", "")
             end = float(end) if end else None
+            only = request.args.get("only", "")      # nur diese Kurven (Prozessbild: Kurzverläufe); "-" = keine
+            only = None if not only else {int(x) for x in only.split(",") if x not in ("", "-")}
         except ValueError:
             abort(400)
         last_t, _ = rec.last_row()
@@ -340,6 +389,8 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         t, y = rec.slice_time(t0, t1)
         series = {}
         for vi in range(len(rec.vars)):
+            if only is not None and vi not in only:
+                continue
             xs, ys = decimate_minmax(t, y[vi], maxpts // 2) if len(t) else (t, t)
             # Zeit relativ zu t0 (kleinere Zahlen = weniger Daten), auf 10 ms gerundet.
             series[vi] = {"x": _clean(xs - t0, 2), "y": _clean(ys)}

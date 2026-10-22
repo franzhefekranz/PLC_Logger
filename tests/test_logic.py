@@ -376,3 +376,39 @@ def test_opcua_server_with_recorder(tmp_path):
     finally:
         rec.stop()
     assert rec.opcua is None
+
+
+# ---- Prozessbild im Browser -------------------------------------------------------------------------------------
+def test_process_view_api(tmp_path):
+    import types
+
+    import plc_web
+    import plc_web_prozess as wp
+    from plc_recorder import demo_config
+    from plc_webauth import hash_password
+    _charts, variables = demo_config()
+    cfg = str(tmp_path / "anlage.json")
+    rec = types.SimpleNamespace(config_path=cfg, conn={"projekt": "X"}, vars=variables, charts=[],
+                                last_row=lambda: (None, None), status_list=lambda: [], count=lambda: 0,
+                                running=True)
+    app = plc_web.create_app(lambda: rec, token="abc", users={"chef": hash_password("pw", 1000)})
+    c = app.test_client()
+    j = c.get("/api/prozess?token=abc").get_json()
+    assert not j["saved"] and not j["edit"]                           # nur Zugriffscode: ansehen
+    assert {t["var"] for t in j["layout"]["seiten"][0]["kacheln"]} >= {"Pumpe", "Mittel"}
+    assert next(t for t in j["layout"]["seiten"][0]["kacheln"] if t["var"] == "Pumpe")["typ"] == "status"
+    lay = {"seiten": [{"name": "A", "kacheln": [
+        {"typ": "zeiger", "var": "Druck", "x": 11, "y": 0, "w": 5, "h": 2, "min": "0", "max": 10, "og_alarm": "x",
+         "farbe": "red", "titel": "<b>" * 50, "boese": 1}]}]}
+    assert c.post("/api/prozess?token=abc", json=lay).status_code == 403
+    c.post("/login", data={"benutzer": "chef", "passwort": "pw"})
+    assert c.post("/api/prozess", data="x").status_code == 415
+    r = c.post("/api/prozess", json=lay).get_json()
+    t = r["layout"]["seiten"][0]["kacheln"][0]
+    assert t["w"] == 1 and t["min"] == 0.0 and "og_alarm" not in t and "farbe" not in t and "boese" not in t
+    assert len(t["titel"]) == 80
+    assert wp.load_layout(cfg) == r["layout"]
+    assert c.get("/api/prozess").get_json()["saved"]
+    assert c.post("/api/prozess", json={"seiten": "x"}).status_code == 400
+    page = c.get("/prozess").get_data(as_text=True)
+    assert "Prozessbild" in page and "Diagramme" in page

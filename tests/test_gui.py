@@ -34,6 +34,7 @@ def test_logger_demo_recording(qt_log, demo_config, tmp_path):
     assert os.path.exists(qt_log.file), qt_log.messages
     w.show_events()
     w.show_web_url()
+    w.open_process_view()
     w.open_iocheck()
     wait(200)
     w._iocheck.close()
