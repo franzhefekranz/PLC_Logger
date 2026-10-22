@@ -1915,7 +1915,12 @@ class MainWindow(QMainWindow):
                                   "\n{0}").format(fp)
         elif not self.web.https:
             text += "\n\n" + tr("Hinweis: unverschlüsselte Verbindung (HTTP).")
-        QMessageBox.information(self, tr("Webserver"), text + "\n\n" + tr("(Adresse in die Zwischenablage kopiert)"))
+        text += "\n\n" + tr("(Adresse in die Zwischenablage kopiert)")
+        from html import escape
+        from plc_iocheck_dialog import qr_dialog
+        qr_url = token_url if token_url and not self.web.users else url
+        self._web_dialog = qr_dialog(self, tr("Webserver"), qr_url, escape(text).replace("\n", "<br>"))
+        self._web_dialog.exec()
 
     def set_layout(self, mode):
         """Anordnung wechseln: baut die Seiten neu auf (Gruppierung/Ausrichtung hängen vom Modus ab)."""

@@ -94,6 +94,9 @@ def demo_config(tmp_path):
     from plc_common import Plc, default_connection, save_config
     from plc_recorder import demo_config as demo
     charts, variables = demo()
+    for k, v in enumerate(variables):                        # Adressen, damit die Konfiguration gültig ist
+        if not v.formula:
+            v.address = f"DB1.DBX100.{k % 8}" if v.dtype == "BOOL" else f"DB1.DBD{4 * k}"
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]

@@ -1049,10 +1049,9 @@ class IoCheckWindow(QMainWindow):
                 "Webserver) anlegen – der Anmeldename wird dann als Prüfer eingetragen.") + "</span>")
         if srv.https:
             lines.append(tr("HTTPS-Fingerabdruck (SHA-256): {0}").format(srv.fingerprint()))
-        box = QMessageBox(QMessageBox.Icon.Information, tr("IO-Check auf Smartphone/Tablet"), "<br>".join(lines),
-                          parent=self)
-        box.setTextFormat(Qt.TextFormat.RichText)
-        box.exec()
+        lines.insert(1, tr("Oder den QR-Code mit der Kamera des Smartphones scannen."))
+        self.mobile_dialog = qr_dialog(self, tr("IO-Check auf Smartphone/Tablet"), url, "<br>".join(lines))
+        self.mobile_dialog.exec()
 
     # ------------------------------------------------------------------ Status
     def selected_signals(self):
@@ -1276,6 +1275,54 @@ class IoCheckWindow(QMainWindow):
             return f"{int(ch.old)} → {int(ch.new)}"
         unit = f" {s.unit}" if s.unit else ""
         return f"{io.scale(s, ch.old):.4g} → {io.scale(s, ch.new):.4g}{unit}"
+
+
+def qr_pixmap(text, size=260):
+    """QR-Code als Bild (QPixmap), dunkle Module schwarz auf weiß mit Ruhezone."""
+    from PySide6.QtGui import QImage, QPixmap
+    import plc_qr
+    m = plc_qr.encode(text)
+    n, border = len(m), 4
+    scale = max(2, size // (n + 2 * border))
+    img = QImage((n + 2 * border) * scale, (n + 2 * border) * scale, QImage.Format.Format_RGB32)
+    img.fill(QColor("#ffffff"))
+    p = QPainter(img)
+    p.setPen(Qt.PenStyle.NoPen)
+    p.setBrush(QColor("#000000"))
+    for y, row in enumerate(m):
+        for x, dark in enumerate(row):
+            if dark:
+                p.drawRect((x + border) * scale, (y + border) * scale, scale, scale)
+    p.end()
+    return QPixmap.fromImage(img)
+
+
+def qr_dialog(parent, title, url, html):
+    """Dialog mit QR-Code, Adresse (zum Kopieren) und Hinweisen."""
+    dlg = QDialog(parent)
+    dlg.setWindowTitle(title)
+    lay = QHBoxLayout(dlg)
+    qr = QLabel()
+    try:
+        qr.setPixmap(qr_pixmap(url))
+    except ValueError:
+        qr.setText(tr("(Adresse zu lang für einen QR-Code)"))
+    qr.setToolTip(url)
+    lay.addWidget(qr, 0, Qt.AlignmentFlag.AlignTop)
+    right = QVBoxLayout()
+    info = QLabel(html)
+    info.setTextFormat(Qt.TextFormat.RichText)
+    info.setWordWrap(True)
+    info.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    info.setMinimumWidth(360)
+    right.addWidget(info, 1)
+    bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+    b_copy = bb.addButton(tr("Adresse kopieren"), QDialogButtonBox.ButtonRole.ActionRole)
+    b_copy.clicked.connect(lambda: QApplication.clipboard().setText(url))
+    bb.rejected.connect(dlg.reject)
+    right.addWidget(bb)
+    lay.addLayout(right, 1)
+    return dlg
 
 
 def run_iocheck(arg=None, demo=False):

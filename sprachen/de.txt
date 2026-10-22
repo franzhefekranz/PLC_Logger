@@ -2713,6 +2713,9 @@
 @ HTTPS-Fingerabdruck (SHA-256): {0}
 > 
 
+@ Oder den QR-Code mit der Kamera des Smartphones scannen.
+> 
+
 @ IO-Check auf Smartphone/Tablet
 > 
 
@@ -2732,6 +2735,12 @@
 > 
 
 @ {0}: {1} – {2}
+> 
+
+@ (Adresse zu lang für einen QR-Code)
+> 
+
+@ Adresse kopieren
 > 
 
 # ---------------- plc_logger.py

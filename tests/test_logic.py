@@ -213,3 +213,19 @@ def test_version_consistent():
                          text=True, check=True).stdout.strip()
     changelog = open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8").read()
     assert f"## [{out}]" in changelog, f"CHANGELOG.md hat keinen Abschnitt [{out}]"
+
+
+def test_qr_code():
+    import plc_qr
+    url = "https://192.168.0.20:8080/io?token=abcdef123456"
+    m = plc_qr.encode(url)
+    n = len(m)
+    assert (n - 17) % 4 == 0 and all(len(r) == n for r in m)
+    assert all(m[0][x] for x in range(7)) and not m[1][1] and m[2][2]          # Suchmuster oben links
+    cv2 = pytest.importorskip("cv2")
+    img = np.full(((n + 8) * 6, (n + 8) * 6), 255, np.uint8)
+    for y, row in enumerate(m):
+        for x, v in enumerate(row):
+            if v:
+                img[(y + 4) * 6:(y + 5) * 6, (x + 4) * 6:(x + 5) * 6] = 0
+    assert cv2.QRCodeDetector().detectAndDecode(img)[0] == url
