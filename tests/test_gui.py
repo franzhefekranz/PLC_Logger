@@ -15,11 +15,15 @@ pytestmark = pytest.mark.gui
 
 
 def _close(win):
+    """Fenster schließen und Qt kurz Zeit zum Aufräumen geben."""
     win.close()
     wait(50)
 
 
 def test_logger_demo_recording(qt_log, demo_config, tmp_path):
+    """Logger im Demo-Modus: aufzeichnen, Analyse, Bericht, Ereignisse, Webadresse, Prozessbild, IO-Check,
+    Offline-Ansicht mit Export, Sprung zu einem Ereignis und erneutes Laden der CSV-Datei – ohne kritische Meldung.
+    """
     import plc_gui
     w = plc_gui.MainWindow(demo_config, demo=True)
     w.show()
@@ -68,6 +72,9 @@ def test_logger_demo_recording(qt_log, demo_config, tmp_path):
 
 
 def test_config_window(qt_log, demo_config):
+    """Konfigurationsprogramm: Variablentabelle und Filter, alle Unterdialoge öffnen, Dialoge für OPC-UA-Server und
+    Benachrichtigungen auswerten, Konfiguration speichern.
+    """
     import plc_config
     w = plc_config.ConfigWindow(demo_config)
     w.show()
@@ -99,6 +106,9 @@ def test_config_window(qt_log, demo_config):
 
 
 def test_iocheck_window(qt_log, demo_config, tmp_path):
+    """IO-Check: Liste importieren, Bereiche abtasten, filtern, Werte lesen (Demo), Status setzen, Matrix zeichnen,
+    Projekt speichern, Ergebnis/Protokoll exportieren, mobile Ansicht starten und beim Schließen wieder beenden.
+    """
     import plc_iocheck_dialog as d
     csv = tmp_path / "io.csv"
     csv.write_text("Adresse;Symbol;Kommentar;Schrank;Messbereich\nE0.0;B1;Endlage;+S1;\nE0.1;B2;Endlage 2;+S1;\n"
@@ -146,6 +156,7 @@ def test_iocheck_window(qt_log, demo_config, tmp_path):
 
 
 def test_about_help_and_dialogs(qt_log, demo_config):
+    """Info-Fenster, Anleitung öffnen, Ereignisanzeige und kleinere Dialoge ohne Absturz."""
     import plc_about
     from plc_events import EventLog
     from plc_event_viewer import EventViewer

@@ -16,6 +16,7 @@ os.environ["PLC_BASE_DIR"] = tempfile.mkdtemp(prefix="plc_test_")       # Dateno
 
 
 def pytest_configure(config):
+    """Marker ``gui`` bekannt machen (sonst warnt pytest)."""
     config.addinivalue_line("markers", "gui: Test mit Qt-Oberfläche (PySide6, ohne Bildschirm)")
 
 
@@ -32,6 +33,7 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture(scope="session")
 def qapp():
+    """Eine QApplication für alle GUI-Tests der Sitzung."""
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication(["test"])
     yield app
@@ -41,6 +43,9 @@ class QtLog:
     """Ersatz für modale Dialoge: Meldungen werden gesammelt, Dateidialoge geben ``file`` zurück."""
 
     def __init__(self):
+        """messages: [(Art, Titel, Text)] aller Meldungen; file/files: Antworten der Dateidialoge; text: Antwort von
+        QInputDialog.getText; opened: geöffnete Adressen.
+        """
         self.messages = []
         self.file = ""
         self.files = []
@@ -48,17 +53,24 @@ class QtLog:
         self.opened = []
 
     def last(self):
+        """Letzte Meldung oder None."""
         return self.messages[-1] if self.messages else None
 
 
 @pytest.fixture
 def qt_log(qapp, monkeypatch):
+    """Modale Dialoge für einen Test ersetzen: Meldungen sammeln, Dateidialoge mit ``log.file``/``log.files``
+    beantworten, exec() von Dialogen und Menüs sofort zurückkehren lassen, Adressen nicht wirklich öffnen. -> QtLog
+    """
     from PySide6.QtGui import QDesktopServices
     from PySide6.QtWidgets import QDialog, QFileDialog, QInputDialog, QMenu, QMessageBox
     log = QtLog()
 
     def msg(kind):
+        """Ersatz für QMessageBox.<kind>: Meldung merken; Rückfragen mit „Verwerfen“ beantworten, damit kein Test hängt.
+        """
         def f(parent, title, text, *a, **k):
+            """Die eigentliche Ersatzfunktion (Signatur wie QMessageBox.information …)."""
             log.messages.append((kind, title, text))
             return QMessageBox.StandardButton.Discard if kind == "question" else QMessageBox.StandardButton.Ok
         return staticmethod(f)
@@ -74,6 +86,7 @@ def qt_log(qapp, monkeypatch):
     monkeypatch.setattr(QInputDialog, "getText", staticmethod(lambda *a, **k: log.text))
 
     def get_item(parent, title, label, items, current=0, editable=True, *a, **k):
+        """Ersatz für QInputDialog.getItem: vorausgewählten Eintrag zurückgeben."""
         items = list(items)
         return (items[current] if items else "", bool(items))
     monkeypatch.setattr(QInputDialog, "getItem", staticmethod(get_item))

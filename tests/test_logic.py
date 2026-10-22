@@ -29,6 +29,8 @@ def test_iocheck_import_and_kinds():
 
 
 def test_iocheck_tracker_digital_and_swap():
+    """Digitalsignal: Wechsel 0-1-0 ergibt automatisch „ok“; reagiert ein anderes als das erwartete Signal
+    (vertauschte Verdrahtung), wird das erwartete Signal beim Wechsel vermerkt."""
     import plc_iocheck as io
     t = io.IoTracker()
     t.auto_ok = True
@@ -43,6 +45,7 @@ def test_iocheck_tracker_digital_and_swap():
 
 
 def test_iocheck_wire_break():
+    """Analogsignal: Wert am Anschlag gilt als Drahtbruch, die Rückkehr in den Messbereich als „ok“."""
     import plc_iocheck as io
     t = io.IoTracker()
     t.auto_ok = True
@@ -56,6 +59,9 @@ def test_iocheck_wire_break():
 
 
 def test_iocheck_project_roundtrip_and_protocol(tmp_path):
+    """Prüfprojekt speichern und wieder laden (Status, Bemerkung, Prüfer bleiben erhalten); Excel-Ergebnis und
+    PDF-Protokoll entstehen.
+    """
     import plc_iocheck as io
     sigs = [io.IoSignal(f"E0.{k}", symbol=f"B{k}", group="+S1") for k in range(8)]
     io.set_status(sigs[0], "ok", checker="tablet1")
@@ -73,6 +79,7 @@ def test_iocheck_project_roundtrip_and_protocol(tmp_path):
 
 
 def test_iocheck_scan_addresses():
+    """Adressbereich: 10 Bits ab E0.0 enden bei E1.1."""
     import plc_iocheck as io
     assert io.ScanRange("E0.0", 10).addresses("s7")[-1] == "E1.1"
 
@@ -92,6 +99,7 @@ def test_report_pdf(tmp_path):
 
 
 def test_analysis_spectrum():
+    """Frequenzanalyse: ein Sinus mit 0,5 Hz ergibt die Spitze bei 0,5 Hz."""
     import plc_analysis as an
     t = np.arange(0, 100, 0.1)
     y = 3 * np.sin(2 * np.pi * 0.5 * t)
@@ -101,6 +109,7 @@ def test_analysis_spectrum():
 
 
 def test_csv_join(tmp_path):
+    """Zwei CSV-Dateien zusammenfügen: nach Zeit sortiert, mit Lücke (NaN) dazwischen."""
     import plc_csvjoin
     for name, t0 in (("a.csv", 0), ("b.csv", 100)):
         with open(tmp_path / name, "w", encoding="utf-8") as f:
@@ -147,12 +156,16 @@ def _entries(path):
 
 
 def test_english_translation_complete_and_placeholders():
+    """Jeder Text in sprachen/en.txt ist übersetzt, und die Übersetzung hat dieselben Platzhalter ({0}, {1:.1f} …) wie
+    das Original.
+    """
     entries = _entries(os.path.join(ROOT, "sprachen", "en.txt"))
     missing = [k for k, v in entries if not v.strip()]
     assert not missing, f"{len(missing)} Texte ohne Übersetzung, z. B. {missing[:3]}"
     import string
 
     def fields(text):                                   # Namen der Platzhalter ({0}, {1:%H:%M} -> 0, 1); {{ }} zählt nicht
+        """Namen der Platzhalter eines Textes (sortiert; "?" bei ungültiger Formatangabe)."""
         try:
             return sorted({f for _l, f, _s, _c in string.Formatter().parse(text.replace("\\n", "\n")) if f is not None})
         except ValueError:
@@ -179,12 +192,16 @@ def test_all_tr_texts_in_language_file():
 
 
 def _headings(path):
+    """Überschriften-Ebenen der RST-Datei in Reihenfolge (Zeichen der Unterstreichung, z. B. "=" oder "-")."""
     lines = open(path, encoding="utf-8").read().split("\n")
     return [lines[i][0] for i in range(1, len(lines)) if re.fullmatch(r"[=\-]{5,}", lines[i])
             and lines[i - 1].strip() and not re.fullmatch(r"[=\-]{5,}", lines[i - 1])]
 
 
 def test_manuals_same_structure_and_images():
+    """Deutsche und englische Anleitung sind gleich gegliedert (Kontexthilfe F1), und alle eingebundenen Bilder
+    existieren.
+    """
     de = os.path.join(ROOT, "doc", "bedienungsanleitung.rst")
     en = os.path.join(ROOT, "doc", "user_manual.rst")
     assert _headings(de) == _headings(en), "Deutsche und englische Anleitung müssen gleich gegliedert sein (F1)"
@@ -195,6 +212,7 @@ def test_manuals_same_structure_and_images():
 
 
 def test_manual_html_builds_without_messages(tmp_path):
+    """Beide Anleitungen lassen sich mit docutils ohne Warnungen nach HTML umwandeln."""
     docutils = pytest.importorskip("docutils.core")
     for name in ("bedienungsanleitung", "user_manual"):
         out = tmp_path / f"{name}.html"
@@ -209,6 +227,7 @@ def test_manual_html_builds_without_messages(tmp_path):
 
 
 def test_version_consistent():
+    """CHANGELOG.md hat einen Abschnitt für die aktuelle APP_VERSION."""
     out = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "bump_version.py")], capture_output=True,
                          text=True, check=True).stdout.strip()
     changelog = open(os.path.join(ROOT, "CHANGELOG.md"), encoding="utf-8").read()
@@ -216,6 +235,7 @@ def test_version_consistent():
 
 
 def test_qr_code():
+    """QR-Code: quadratisch, Größe 17 + 4·Version, Suchmuster oben links; mit OpenCV (falls installiert) lesbar."""
     import plc_qr
     url = "https://192.168.0.20:8080/io?token=abcdef123456"
     m = plc_qr.encode(url)
@@ -240,17 +260,22 @@ def _local_servers():
     got = []
 
     class H(BaseHTTPRequestHandler):
+        """HTTP-Empfänger: merkt sich jeden POST (Teams, ntfy, Webhook) in ``got``."""
         def do_POST(self):
+            """Anfrage samt Kopfzeilen und Inhalt merken und mit 200 beantworten."""
             body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
             got.append(("http", self.path, dict(self.headers), body))
             self.send_response(200)
             self.end_headers()
 
         def log_message(self, *a):
+            """Keine Ausgabe auf der Konsole."""
             pass
 
     class S(socketserver.StreamRequestHandler):
+        """Minimaler SMTP-Server: beantwortet die Befehle eines Mail-Clients und merkt sich die Nachricht."""
         def handle(self):
+            """Ein SMTP-Gespräch: Befehle zeilenweise beantworten, zwischen DATA und „.“ die Nachricht sammeln."""
             w = lambda t: self.wfile.write((t + "\r\n").encode())       # noqa: E731
             w("220 test")
             data = False
@@ -284,6 +309,9 @@ def _local_servers():
 
 
 def test_notify_channels_and_engine(tmp_path):
+    """Benachrichtigungen: Teams, ntfy und E-Mail kommen bei den lokalen Testservern an; mit Triggern gelten Sperrzeit
+    und „Gehen nur nach gemeldetem Kommen“.
+    """
     import plc_notify as nf
     from plc_events import EventLog, Trigger, TriggerEngine
     http, smtp, got = _local_servers()
@@ -325,6 +353,9 @@ def _free_port():
 
 
 def test_opcua_server_with_recorder(tmp_path):
+    """OPC-UA-Server mit Demo-Aufzeichnung: Anmeldung erforderlich, Werte (auch berechnete) mit passenden Typen,
+    Ordnerstruktur, Status; beim Stopp wird der Server beendet.
+    """
     pytest.importorskip("asyncua")
     import time
 

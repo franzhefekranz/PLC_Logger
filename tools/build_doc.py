@@ -35,6 +35,9 @@ def sphinx(builder, target):
 
 
 def main():
+    """Prüfen, ob Sphinx und rinohtype installiert sind, PDF bauen und nach dist/ (oder ``--copy-to``) kopieren; mit
+    ``--html`` zusätzlich die HTML-Vorschau. Rückgabe: Exit-Code.
+    """
     try:
         import rinoh  # noqa: F401
         import sphinx as _sphinx  # noqa: F401

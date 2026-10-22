@@ -72,6 +72,13 @@ def shot(widget, path, size=None):
 
 
 def main():
+    """Sprache laden, modale Meldungen abschalten, Demo-Konfiguration anlegen und die Fenster nacheinander öffnen und
+    abfotografieren.
+
+    Der Rechnername wird durch „ipc-kesselhaus“ ersetzt, damit in den Bildern nicht der Name des Build-Rechners steht.
+    Für das Bild „Ereignis im Diagramm“ läuft zuerst 75 s eine Demo-Aufzeichnung, damit links und rechts der Lineale
+    Daten zu sehen sind.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--lang", default="de")
     ap.add_argument("--out", default="")

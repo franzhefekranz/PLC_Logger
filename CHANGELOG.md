@@ -35,8 +35,18 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   Eigenschaften; angemeldete Benutzer); das Layout steht in `<Konfiguration>.prozessbild.json`. Auf dem Smartphone
   untereinander.
 
+### Geändert
+
+* Quelltext ausführlich kommentiert: Docstrings für Module, Klassen und Funktionen (Programm, Treiber, Werkzeuge,
+  Tests) und erklärende Kommentare an schwierigen Stellen; neue Übersicht [`ARCHITEKTUR.md`](ARCHITEKTUR.md) mit
+  Modulen, Datenfluss, Threads und Treiber-Schnittstelle. Der Code selbst ist unverändert.
+* Bedienungsanleitung: Bilder der neuen Funktionen (Benachrichtigungen, OPC-UA-Server, QR-Code, Ereignis im Diagramm)
+  sowie aktualisierte Reiter *Webserver & Headless* und *Trigger & Ereignisse*, deutsch und englisch.
+
 ### Build
 
+* Workflow *Screenshots* (`tools/make_screenshots.py`): erzeugt die Bilder der neuen Dialoge unter Windows im
+  Demo-Modus (deutsch und englisch) und legt sie im Zweig `bilder` ab.
 * Automatische Tests (`tests/`, pytest): Logik, Webserver, Sprachdateien, Anleitung und die Oberfläche mit echtem
   PySide6 (ohne Bildschirm). Workflow *Tests* bei jedem Push auf Linux und Windows; Fehler erscheinen als Hinweise im
   Lauf.

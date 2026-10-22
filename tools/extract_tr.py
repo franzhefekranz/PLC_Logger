@@ -9,15 +9,22 @@ Liegen die Programmdateien in ORDNER/src, werden sie dort gesucht (PLC-Datenlogg
 import ast, glob, json, os, sys
 
 def code_dir(folder):
+    """Ordner mit den Programmdateien: ORDNER/src, falls vorhanden, sonst ORDNER selbst."""
     src = os.path.join(folder, "src")
     return src if os.path.isdir(src) else folder
 
 sys.path.insert(0, code_dir(sys.argv[2]))
 
 def escape(s):
+    """Text für die Sprachdatei: Rückstrich verdoppeln, Zeilenumbruch als \n."""
     return s.replace("\\", "\\\\").replace("\n", "\\n")
 
 def collect(pfx, folder):
+    """Alle Texte aus tr("…")/N_("…") der Programmdateien <pfx>_*.py und der Treiber in Reihenfolge des Auftretens.
+
+    Rückgabe: (Liste der Texte, Text -> Datei, in der er zuerst vorkommt). Nur Texte als feste Zeichenkette werden
+    gefunden; ``tr(variable)`` muss mit N_("…") an anderer Stelle markiert sein.
+    """
     keys, where = [], {}
     paths = sorted(glob.glob(os.path.join(folder, f"{pfx}_*.py")))
     paths += sorted(glob.glob(os.path.join(folder, f"{pfx}_treiber", "*.py")))   # Treiber (PLC-Datenlogger)
@@ -55,6 +62,9 @@ HEAD = """# {app} – Sprachdatei
 """
 
 def write(path, app, lang, keys, where, table):
+    """Sprachdatei schreiben: Kopf, dann je Datei ein Abschnitt mit „@ Original“ und „> Übersetzung“ (aus ``table``,
+    sonst leer).
+    """
     out = [HEAD.format(app=app, lang=lang)]
     cur = None
     for k in keys:
@@ -66,6 +76,7 @@ def write(path, app, lang, keys, where, table):
         f.write("".join(out))
 
 def main():
+    """de.txt (Vorlage) neu schreiben und alle anderen Sprachdateien mit den aktuellen Texten abgleichen."""
     pfx, folder = sys.argv[1], sys.argv[2]
     app = {"s7": "S7 Datenlogger", "clx": "CLX Datenlogger", "tia": "TIA Datenlogger",
            "plc": "PLC Datenlogger"}.get(pfx, pfx)

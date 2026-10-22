@@ -83,7 +83,11 @@ def write_manual(target, repo, source, prefix):
             label_to[lab] = where[s]
 
     def fix_links(text, own):
+        """Interne Verweise [Text](#marke) auf die Wiki-Seite des Kapitels umbiegen, in dem die Marke steht."""
         def repl(m):
+            """Einen Verweis ersetzen: gleiche Seite -> nur Anker, andere Seite -> Seite#Anker, unbekannt ->
+            unverändert.
+            """
             lab = m.group(2)
             page, anchor = label_to.get(lab, (None, None))
             if page is None:
@@ -111,6 +115,7 @@ def write_manual(target, repo, source, prefix):
 
 
 def main(target, repo):
+    """Wiki-Ordner leeren, beide Anleitungen als Seiten schreiben, Seitenleiste, Fußzeile und Bilder anlegen."""
     if os.path.isdir(target):
         for fn in os.listdir(target):
             if fn.endswith(".md"):

@@ -16,6 +16,9 @@ from plc_common import convert_ini  # noqa: E402
 
 
 def main():
+    """Jede angegebene INI-Datei lesen und als JSON daneben (oder unter ``-o``) speichern; vorhandene JSON-Dateien nur
+    mit ``-f`` überschreiben.
+    """
     ap = argparse.ArgumentParser(description="INI-Konfiguration in JSON umwandeln")
     ap.add_argument("ini", nargs="+", help="INI-Datei(en)")
     ap.add_argument("-o", "--output", help="Zieldatei (nur bei einer INI-Datei)")

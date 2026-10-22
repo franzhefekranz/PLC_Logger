@@ -30,16 +30,19 @@ STEPS = {"haupt": 0, "major": 0, "neben": 1, "minor": 1, "fehler": 2, "patch": 2
 
 
 def read(path):
+    """Textdatei (UTF-8) lesen."""
     with open(path, encoding="utf-8") as f:
         return f.read()
 
 
 def write(path, text):
+    """Textdatei schreiben (UTF-8, Zeilenende immer \n – auch unter Windows)."""
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
 
 
 def current_version():
+    """APP_VERSION aus src/plc_common.py als Tupel (haupt, neben, fehler); bricht ab, wenn sie fehlt."""
     m = VERSION_RE.search(read(COMMON))
     if not m:
         sys.exit(f"FEHLER: APP_VERSION in {os.path.relpath(COMMON, ROOT)} nicht gefunden.")
@@ -47,10 +50,14 @@ def current_version():
 
 
 def fmt(v):
+    """(3, 1, 0) -> "3.1.0"."""
     return ".".join(str(x) for x in v)
 
 
 def next_version(cur, arg):
+    """Neue Version: Stufe (haupt/neben/fehler bzw. major/minor/patch, dahinter Nullen) oder eine ausdrückliche Nummer,
+    die größer sein muss als die aktuelle.
+    """
     if arg.lower() in STEPS:
         i = STEPS[arg.lower()]
         return tuple(list(cur[:i]) + [cur[i] + 1] + [0] * (2 - i))
@@ -70,6 +77,11 @@ def section(text, version):
 
 
 def update_changelog(text, old, new, date):
+    """CHANGELOG.md: unter „Unveröffentlicht“ den Abschnitt ``## [neu] – Datum`` einziehen und die Vergleichslinks unten
+    anpassen.
+
+    Rückgabe: (neuer Text, ob unter „Unveröffentlicht“ Einträge standen).
+    """
     if UNRELEASED not in text:
         sys.exit(f"FEHLER: Abschnitt '{UNRELEASED}' fehlt in CHANGELOG.md.")
     if f"## [{new}]" in text:
@@ -82,10 +94,18 @@ def update_changelog(text, old, new, date):
 
 
 def git(*args):
+    """git-Befehl im Projektordner ausführen -> Ausgabe (Fehler brechen ab)."""
     return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout
 
 
 def main(argv):
+    """Befehlszeile auswerten:
+
+    * ``--notes [VERSION]``: Abschnitt der Version aus CHANGELOG.md ausgeben (Text des GitHub-Release)
+    * ``--check-tag TAG``: prüfen, ob der Tag zu APP_VERSION passt (Release-Workflows)
+    * ohne Argument: aktuelle Version zeigen
+    * sonst: Version erhöhen, CHANGELOG.md anpassen, mit ``--tag`` Commit und Tag anlegen (``--dry-run``: nur zeigen)
+    """
     if "--notes" in argv:
         i = argv.index("--notes")
         version = argv[i + 1].lstrip("v") if len(argv) > i + 1 else fmt(current_version())

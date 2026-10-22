@@ -36,11 +36,14 @@ Kapitel „Treiber entwickeln“ der Anleitung).
 | `src/` | Programmdateien (`plc_*.py`) und das Treiberpaket `plc_treiber/` |
 | `doc/` | Bedienungsanleitung (`bedienungsanleitung.rst`), englisches User Manual (`user_manual.rst`) und ihre Bilder (`images/`) |
 | `sprachen/` | Sprachdateien |
-| `tools/` | Hilfsprogramme (Sprachdateien, Wiki, Icon, INI-Umwandlung) |
+| `tools/` | Hilfsprogramme (Version, Sprachdateien, PDF-Anleitung, Wiki, Bilder der Anleitung, Icon, INI-Umwandlung) |
+| `tests/` | automatische Tests (pytest) |
 | `docker/` | Testumgebung mit TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics und Grafana |
 
 Im Projektordner liegen außerdem Icon, Logo, `plctag.dll` und die Build-Skripte. Beim Start aus dem Quelltext
 ist der Projektordner der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
+
+Aufbau des Programms (Module, Datenfluss, Threads, Treiber-Schnittstelle): [`ARCHITEKTUR.md`](ARCHITEKTUR.md).
 
 ## Start
 
