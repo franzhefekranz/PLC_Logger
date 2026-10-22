@@ -200,12 +200,13 @@ body.edit main{margin-right:300px}
 #panel .two{display:flex;gap:6px}#panel .two>div{flex:1}
 #panel .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
 .hint{font-size:12px;color:var(--mute);margin-top:10px}
+img.logo{height:30px;max-width:180px;object-fit:contain;background:#fff;border-radius:5px;padding:2px 5px;flex:none}
 .err{color:var(--err)}
 </style>
 </head>
 <body>
 <header>
- <div class="row"><h1 id="proj">Prozessbild</h1><div class="leds" id="leds"></div><span class="info" id="info"></span>
+ <div class="row">__LOGOS__<h1 id="proj">Prozessbild</h1><div class="leds" id="leds"></div><span class="info" id="info"></span>
   <span style="flex:1"></span><button id="edit" style="display:none">✎ Bearbeiten</button>__LINKS__</div>
  <nav id="tabs"></nav>
 </header>

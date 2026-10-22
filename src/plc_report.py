@@ -307,6 +307,153 @@ def _pdf_text(text):
     return raw.replace(b"\\", b"\\\\").replace(b"(", b"\\(").replace(b")", b"\\)").replace(b"\r", b"").replace(b"\n", b" ")
 
 
+# ---------------------------------------------------------------------------------------
+# Bilder (Logos) ohne Zusatzbibliothek: JPEG wird unverändert eingebettet (DCTDecode), PNG ohne Transparenz ebenfalls
+# (die komprimierten Bilddaten sind in PDF mit „PNG-Prädiktor“ lesbar). PNG mit Transparenz wird entpackt und auf
+# weißen Hintergrund gerechnet (das Papier ist weiß).
+# ---------------------------------------------------------------------------------------
+class PdfImage:
+    """Eingebettetes Bild: Breite/Höhe in Pixeln und das fertige PDF-Bildobjekt (``obj``, Bytes)."""
+
+    def __init__(self, w, h, obj):
+        self.w, self.h, self.obj = w, h, obj
+
+
+def _jpeg(data):
+    """JPEG -> PdfImage (Größe und Farbkomponenten aus dem SOF-Abschnitt)."""
+    i = 2
+    while i + 9 < len(data):
+        if data[i] != 0xFF:
+            i += 1
+            continue
+        marker = data[i + 1]
+        if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+            i += 2
+            continue
+        seg = int.from_bytes(data[i + 2:i + 4], "big")
+        if marker in (0xC0, 0xC1, 0xC2):                      # Start of Frame: Höhe, Breite, Komponenten
+            h, w, n = int.from_bytes(data[i + 5:i + 7], "big"), int.from_bytes(data[i + 7:i + 9], "big"), data[i + 9]
+            cs = {1: b"/DeviceGray", 3: b"/DeviceRGB", 4: b"/DeviceCMYK"}.get(n)
+            if cs is None:
+                return None
+            # CMYK von Photoshop (Kennung „Adobe“ mit Transformation 0 … 2) ist invertiert gespeichert
+            adobe = data.find(b"Adobe")
+            inverted = n == 4 and adobe > 0 and data[adobe - 4:adobe - 2] == b"\xff\xee"
+            extra = b" /Decode [1 0 1 0 1 0 1 0]" if inverted else b""
+            obj = (b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace %s /BitsPerComponent 8%s "
+                   b"/Filter /DCTDecode /Length %d >>\nstream\n" % (w, h, cs, extra, len(data)) + data + b"\nendstream")
+            return PdfImage(w, h, obj)
+        i += 2 + seg
+    return None
+
+
+def _unfilter(raw, w, h, bpp):
+    """PNG-Zeilenfilter rückgängig machen -> Bytes ohne Filterbyte je Zeile (``bpp`` Bytes je Pixel)."""
+    stride = w * bpp
+    out = bytearray(h * stride)
+    prev = bytearray(stride)
+    pos = 0
+    for y in range(h):
+        ft = raw[pos]
+        line = bytearray(raw[pos + 1:pos + 1 + stride])
+        pos += 1 + stride
+        if ft == 1:                                          # Sub
+            for x in range(bpp, stride):
+                line[x] = (line[x] + line[x - bpp]) & 255
+        elif ft == 2:                                        # Up
+            for x in range(stride):
+                line[x] = (line[x] + prev[x]) & 255
+        elif ft == 3:                                        # Average
+            for x in range(stride):
+                left = line[x - bpp] if x >= bpp else 0
+                line[x] = (line[x] + ((left + prev[x]) >> 1)) & 255
+        elif ft == 4:                                        # Paeth
+            for x in range(stride):
+                a = line[x - bpp] if x >= bpp else 0
+                b = prev[x]
+                c = prev[x - bpp] if x >= bpp else 0
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                line[x] = (line[x] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        out[y * stride:(y + 1) * stride] = line
+        prev = line
+    return bytes(out)
+
+
+def _png(data):
+    """PNG -> PdfImage oder None (Zeilensprungverfahren und 16-Bit-Transparenz werden nicht unterstützt)."""
+    pos, idat, plte, trns = 8, bytearray(), b"", b""
+    w = h = depth = ctype = interlace = None
+    while pos + 8 <= len(data):
+        n = int.from_bytes(data[pos:pos + 4], "big")
+        typ, body = data[pos + 4:pos + 8], data[pos + 8:pos + 8 + n]
+        pos += 12 + n
+        if typ == b"IHDR":
+            w, h = int.from_bytes(body[0:4], "big"), int.from_bytes(body[4:8], "big")
+            depth, ctype, interlace = body[8], body[9], body[12]
+        elif typ == b"PLTE":
+            plte = body
+        elif typ == b"tRNS":
+            trns = body
+        elif typ == b"IDAT":
+            idat += body
+        elif typ == b"IEND":
+            break
+    if w is None or interlace:
+        return None
+    if ctype in (0, 2, 3) and not (ctype == 3 and trns):
+        # Ohne Transparenz: komprimierte Daten direkt übernehmen (PDF entfernt die PNG-Filter selbst).
+        colors = {0: 1, 2: 3, 3: 1}[ctype]
+        if ctype == 3:
+            cs = b"[/Indexed /DeviceRGB %d <%s>]" % (len(plte) // 3 - 1, plte.hex().encode())
+        else:
+            cs = b"/DeviceGray" if ctype == 0 else b"/DeviceRGB"
+        obj = (b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace %s /BitsPerComponent %d "
+               b"/Filter /FlateDecode /DecodeParms << /Predictor 15 /Colors %d /BitsPerComponent %d /Columns %d >> "
+               b"/Length %d >>\nstream\n" % (w, h, cs, depth, colors, depth, w, len(idat)) + bytes(idat)
+               + b"\nendstream")
+        return PdfImage(w, h, obj)
+    if depth != 8:
+        return None
+    bpp = {3: 1, 4: 2, 6: 4}.get(ctype)
+    if bpp is None:
+        return None
+    px = _unfilter(zlib.decompress(bytes(idat)), w, h, bpp)
+    rgb = bytearray(w * h * 3)
+    for i in range(w * h):                                   # auf weißen Hintergrund rechnen
+        if ctype == 3:
+            k = px[i]
+            r, g, b = plte[3 * k:3 * k + 3] if 3 * k + 3 <= len(plte) else (0, 0, 0)
+            a = trns[k] if k < len(trns) else 255
+        elif ctype == 4:
+            r = g = b = px[2 * i]
+            a = px[2 * i + 1]
+        else:
+            r, g, b, a = px[4 * i:4 * i + 4]
+        inv = 255 - a
+        rgb[3 * i] = (r * a + 255 * inv) // 255
+        rgb[3 * i + 1] = (g * a + 255 * inv) // 255
+        rgb[3 * i + 2] = (b * a + 255 * inv) // 255
+    comp = zlib.compress(bytes(rgb))
+    obj = (b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB /BitsPerComponent 8 "
+           b"/Filter /FlateDecode /Length %d >>\nstream\n" % (w, h, len(comp)) + comp + b"\nendstream")
+    return PdfImage(w, h, obj)
+
+
+def load_image(path):
+    """Bilddatei (JPEG oder PNG) für das PDF laden -> PdfImage oder None (anderes Format, Lesefehler)."""
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        if data[:2] == b"\xff\xd8":
+            return _jpeg(data)
+        if data[:8] == b"\x89PNG\r\n\x1a\n":
+            return _png(data)
+    except (OSError, zlib.error, ValueError, IndexError):
+        return None
+    return None
+
+
 class PdfWriter:
     """Mehrseitiges PDF (A4 hoch, Koordinaten in Punkt, Ursprung links unten)."""
     W, H = 595.28, 841.89
@@ -315,6 +462,7 @@ class PdfWriter:
         """Leeres Dokument; ``pages`` hält je Seite die Liste der Zeichenbefehle."""
         self.pages = []
         self.cur = None
+        self.images = []                                  # eingebettete Bilder (PdfImage), Namen /Im0, /Im1 …
 
     def new_page(self):
         """Neue Seite beginnen; die folgenden Zeichenbefehle gehen auf sie."""
@@ -362,6 +510,13 @@ class PdfWriter:
         pre = f"q {clip[0]:.2f} {clip[1]:.2f} {clip[2]:.2f} {clip[3]:.2f} re W n " if clip else "q "
         self._op((pre + f"{_color(color)} RG {width:.2f} w [] 0 d 1 j " + " ".join(parts) + " S Q").encode())
 
+    def image(self, x, y, w, h, img):
+        """Bild (PdfImage) in das Rechteck (x, y, w, h) zeichnen; dasselbe Bild wird nur einmal eingebettet."""
+        if not any(i is img for i in self.images):
+            self.images.append(img)
+        k = next(n for n, i in enumerate(self.images) if i is img)
+        self._op(f"q {w:.2f} 0 0 {h:.2f} {x:.2f} {y:.2f} cm /Im{k} Do Q".encode())
+
     def save(self, path, title=""):
         """PDF-Datei schreiben: Schriften, je Seite ein komprimierter Inhaltsstrom und das Seitenobjekt, Seitenbaum,
         Info, Katalog und die Querverweistabelle (Byte-Positionen aller Objekte).
@@ -377,6 +532,9 @@ class PdfWriter:
             return len(objs)
         font1 = add(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
         font2 = add(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
+        img_ids = [add(img.obj) for img in self.images]
+        xobj = (b" /XObject << " + b" ".join(b"/Im%d %d 0 R" % (k, n) for k, n in enumerate(img_ids)) + b" >>"
+                if img_ids else b"")
         page_ids = []
         content_ids = []
         for ops in self.pages:
@@ -387,8 +545,8 @@ class PdfWriter:
         pages_id = add(b"")
         for pid, cid in zip(page_ids, content_ids):
             objs[pid - 1] = (b"<< /Type /Page /Parent %d 0 R /MediaBox [0 0 %.2f %.2f] /Contents %d 0 R "
-                             b"/Resources << /Font << /F1 %d 0 R /F2 %d 0 R >> >> >>"
-                             % (pages_id, self.W, self.H, cid, font1, font2))
+                             b"/Resources << /Font << /F1 %d 0 R /F2 %d 0 R >>%s >> >>"
+                             % (pages_id, self.W, self.H, cid, font1, font2, xobj))
         objs[pages_id - 1] = (b"<< /Type /Pages /Kids [" + b" ".join(b"%d 0 R" % p for p in page_ids)
                               + b"] /Count %d >>" % len(page_ids))
         info = add(b"<< /Title (" + _pdf_text(title) + b") /Producer (PLC Datenlogger) /CreationDate (D:"
@@ -457,10 +615,12 @@ def _fmt_dur(s):
 class _Doc:
     """Seitenaufbau mit Kopf-/Fußzeile und fortlaufender Schreibposition."""
 
-    def __init__(self, title, subtitle):
-        """Dokument mit Titel (Kopfzeile links) und Untertitel (rechts) beginnen."""
+    def __init__(self, title, subtitle, logos=()):
+        """Dokument mit Titel (Kopfzeile links) und Untertitel (rechts) beginnen; ``logos``: Bilddateien (Kundenlogo,
+        Logo), die oben auf jeder Seite stehen (links bzw. rechts; nicht lesbare Dateien entfallen)."""
         self.pdf = PdfWriter()
         self.title, self.subtitle = title, subtitle
+        self.logos = [img for img in (load_image(p) for p in logos if p) if img is not None]
         self.page_no = 0
         self.y = 0
         self.new_page()
@@ -470,12 +630,21 @@ class _Doc:
         self.pdf.new_page()
         self.page_no += 1
         p, W, H = self.pdf, PdfWriter.W, PdfWriter.H
-        p.text(MARGIN, H - 32, self.title, 11, bold=True, color=HEAD)
-        p.text(W - MARGIN, H - 32, self.subtitle, 8.5, color=MUTE, align="right")
-        p.line(MARGIN, H - 38, W - MARGIN, H - 38, color=HEAD, width=0.8)
+        top = H
+        if self.logos:                                    # Logos oben: das erste links, ein zweites rechts
+            lh = 30.0
+            for k, img in enumerate(self.logos[:2]):
+                lw = min(img.w * lh / max(img.h, 1), 160.0)
+                h = lw * img.h / max(img.w, 1)
+                right = k == 1 or len(self.logos) == 1
+                p.image(W - MARGIN - lw if right else MARGIN, H - 24 - h, lw, h, img)
+            top = H - 34
+        p.text(MARGIN, top - 32, self.title, 11, bold=True, color=HEAD)
+        p.text(W - MARGIN, top - 32, self.subtitle, 8.5, color=MUTE, align="right")
+        p.line(MARGIN, top - 38, W - MARGIN, top - 38, color=HEAD, width=0.8)
         p.text(W - MARGIN, 22, tr("Seite {0}").format(self.page_no), 8, color=MUTE, align="right")
         p.text(MARGIN, 22, tr("PLC Datenlogger – erstellt {0:%d.%m.%Y %H:%M}").format(datetime.now()), 8, color=MUTE)
-        self.y = H - 58
+        self.y = top - 58
 
     def need(self, h):
         """Neue Seite beginnen, wenn auf der aktuellen weniger als h Punkt Platz ist."""
@@ -602,14 +771,15 @@ def _chart(doc, chart, var_idx, acc, variables, height=230):
     doc.y = y - 18
 
 
-def write_report(path, acc, charts, variables, project="", events=(), partial=False, info=""):
+def write_report(path, acc, charts, variables, project="", events=(), partial=False, info="", logos=()):
     """PDF-Bericht schreiben. acc: ReportAccumulator; charts/variables: Konfiguration (Farben, Achsen);
-    events: [Event] des Zeitraums (plc_events); partial: Zeitraum noch nicht abgeschlossen."""
+    events: [Event] des Zeitraums (plc_events); partial: Zeitraum noch nicht abgeschlossen; logos: Bilddateien für
+    den Seitenkopf (siehe plc_common.logo_paths)."""
     label = acc.label or period_label(acc.kind, acc.t0, acc.t1)
     kind_txt = tr(PERIODS.get(acc.kind, "")) if acc.kind in PERIODS else tr("Zeitraum")
     title = tr("Bericht {0}: {1}").format(kind_txt, label) + (tr(" (unvollständig)") if partial else "")
     sub = project or ""
-    doc = _Doc(title, sub)
+    doc = _Doc(title, sub, logos)
     p = doc.pdf
     lines = [(tr("Projekt:"), project or "—"),
              (tr("Zeitraum:"), f"{datetime.fromtimestamp(acc.t0):%d.%m.%Y %H:%M} – {datetime.fromtimestamp(acc.t1):%d.%m.%Y %H:%M}"),
@@ -696,12 +866,12 @@ def report_path(conn, acc, base_name, partial=False):
     return path
 
 
-def write_in_background(path, acc, charts, variables, project, events, partial, notify, wait=False):
+def write_in_background(path, acc, charts, variables, project, events, partial, notify, wait=False, logos=()):
     """Bericht in einem eigenen Thread schreiben (Meldung über notify). wait=True: auf das Ende warten."""
     def run():
         """Thread-Funktion: Bericht schreiben und Erfolg oder Fehler melden."""
         try:
-            write_report(path, acc, charts, variables, project, events, partial)
+            write_report(path, acc, charts, variables, project, events, partial, logos=logos)
             notify(tr("Bericht erstellt: {0}").format(path))
         except Exception as e:
             notify(tr("⚠ Bericht konnte nicht erstellt werden: {0}").format(e))

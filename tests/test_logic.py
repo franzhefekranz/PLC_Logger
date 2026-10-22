@@ -110,6 +110,24 @@ def test_report_pdf(tmp_path):
     acc.add_many(t, y)
     path = plc_report.write_report(str(tmp_path / "b.pdf"), acc, charts, vs, project="Test")
     assert os.path.getsize(path) > 2000
+    # Logos im Seitenkopf: PNG mit Transparenz (logo.png) und JPEG; nicht lesbare Dateien entfallen still
+    import zlib
+    jpg = bytes.fromhex("ffd8ffc0000b080002000301011100ffd9")                  # nur Kopf: 3 x 2 Pixel, grau
+    (tmp_path / "k.jpg").write_bytes(jpg)
+    img = plc_report.load_image(str(tmp_path / "k.jpg"))
+    assert (img.w, img.h) == (3, 2) and b"/DCTDecode" in img.obj
+    png = plc_report.load_image(os.path.join(ROOT, "logo.png"))
+    assert png is not None and png.w > png.h
+    raw = b"".join(b"\x00" + bytes([200, 10, 10, 128] * 4) for _ in range(2))  # 4 x 2 RGBA, halb durchsichtig
+    chunk = lambda t, d: len(d).to_bytes(4, "big") + t + d + zlib.crc32(t + d).to_bytes(4, "big")  # noqa: E731
+    (tmp_path / "a.png").write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", bytes.fromhex("0000000400000002080600000"
+                                     "0")) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+    a = plc_report.load_image(str(tmp_path / "a.png"))
+    assert zlib.decompress(a.obj.split(b"stream\n", 1)[1].rsplit(b"\nendstream", 1)[0])[:3] == bytes([227, 132, 132])
+    path = plc_report.write_report(str(tmp_path / "c.pdf"), acc, charts, vs, project="Test",
+                                   logos=[str(tmp_path / "a.png"), os.path.join(ROOT, "logo.png"), "fehlt.png"])
+    data = open(path, "rb").read()
+    assert data.count(b"/Subtype /Image") == 2 and b"/XObject << /Im0" in data
 
 
 def test_analysis_spectrum():
@@ -141,9 +159,12 @@ def test_web_login_and_iocheck_api():
     import plc_iocheck as io
     import plc_web
     from plc_webauth import hash_password
-    app = plc_web.create_app(lambda: None, users={"tablet1": hash_password("geheim123")})
+    app = plc_web.create_app(lambda: None, users={"tablet1": hash_password("geheim123")},
+                             logos=[os.path.join(ROOT, "logo.png")])
     c = app.test_client()
     assert c.get("/api/io").status_code == 401
+    assert 'src="logo/0"' in c.get("/login").get_data(as_text=True)            # Logo auf der Anmeldeseite …
+    assert c.get("/logo/0").data[:4] == b"\x89PNG" and c.get("/logo/1").status_code == 404   # … frei abrufbar
     assert c.post("/login", data={"benutzer": "tablet1", "passwort": "geheim123"}).status_code == 302
     br = io.IoWebBridge()
     sigs = [io.IoSignal("E0.0"), io.IoSignal("E0.1")]

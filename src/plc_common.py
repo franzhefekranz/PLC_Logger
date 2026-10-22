@@ -557,13 +557,26 @@ def convert_ini(ini_path, json_path=None):
 # Konfiguration: Lesen und Schreiben (intern in Abschnitten, Datei als JSON – siehe oben)
 # ---------------------------------------------------------------------------------------
 # Abschnitte:  [Verbindung]  [Diagramme] [DiagrammN] [DiagrammN_AchseM]  [Variablen] [VarN]  [Bloecke] [BlockN]
+def logo_paths(conn) -> list:
+    """Kundenlogo und Logo aus der Konfiguration als Pfade (relativ = ab Datenordner); leere Angaben entfallen.
+
+    Verwendet von Webseiten und PDF-Berichten (Reihenfolge: Kundenlogo links, Logo rechts)."""
+    out = []
+    for key in ("kundenlogo", "logo"):
+        p = str(conn.get(key, "") or "").strip()
+        if p:
+            out.append(p if os.path.isabs(p) else os.path.join(BASE_DIR, p))
+    return out
+
+
 def default_connection() -> dict:
     """Vorgabewerte für die Verbindungs- und Anzeigeeinstellungen (Abschnitt [Verbindung])."""
     # ip/pfad/cpu/intervall_ms spiegeln die erste Steuerung; csv_*/archiv_* = CSV-Protokoll und Archivierung;
-    # fenster_s = Anzeigefenster online; anordnung/balken = Darstellung; logo/icon = Branding.
+    # fenster_s = Anzeigefenster online; anordnung/balken = Darstellung; logo/kundenlogo/icon = Branding (Logo und
+    # Kundenlogo erscheinen im Logger, auf den Webseiten und in den PDF-Berichten; leer = kein Logo).
     return {"csv_ordner": "logs", "fenster_s": 60,
-            "anordnung": "untereinander", "balken": 1,
-            "logo": "", "icon": "", "csv_name": "log", "max_records": 0,
+            "anordnung": "untereinander", "balken": 1, "balken_breite": 14,
+            "logo": "", "kundenlogo": "", "icon": "", "csv_name": "log", "max_records": 0,
             "archiv_ordner": "archiv",
             "projekt": "", "archiv_beenden": 1, "seite_anordnung": "", "raster_spalten": 0,
             "web_aktiv": 0, "web_host": "0.0.0.0", "web_port": 8080, "web_token": "",
@@ -591,10 +604,10 @@ def default_connection() -> dict:
 
 
 # Welche Schlüssel des Abschnitts [Verbindung] Zahlen bzw. Text sind (zum Lesen mit passendem Typ).
-CONN_INT_KEYS = ("fenster_s", "balken", "max_records", "archiv_beenden",
+CONN_INT_KEYS = ("fenster_s", "balken", "balken_breite", "max_records", "archiv_beenden",
                  "raster_spalten", "web_aktiv", "web_port", "web_intervall_ms", "headless", "web_https",
                  "csv_aktiv", "db_port", "db_nur_aenderungen", "bericht_aktiv")
-CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "icon", "csv_name",
+CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "kundenlogo", "icon", "csv_name",
                  "archiv_ordner", "projekt", "seite_anordnung", "web_host", "web_token",
                  "db_typ", "db_host", "db_name", "db_user", "db_passwort", "db_tabelle", "db_datei",
                  "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung",

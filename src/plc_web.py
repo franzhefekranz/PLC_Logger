@@ -48,7 +48,7 @@ import time
 from flask import Flask, Response, abort, redirect, request, send_from_directory, session
 from werkzeug.serving import make_server
 
-from plc_common import BASE_DIR
+from plc_common import BASE_DIR, logo_paths
 from plc_util import decimate_minmax
 from plc_webauth import check_password, hash_password, parse_users  # noqa: F401 (hash_password: Schnittstelle)
 
@@ -194,10 +194,17 @@ def io_bridge():
     return _io_bridge
 
 
-def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
+def logos_html(logos) -> str:
+    """<img>-Elemente für die Kopfzeile der Webseiten (Logo n unter ``logo/n``); ohne Logos ""."""
+    return "".join(f'<img class="logo" src="logo/{n}" alt="">' for n, p in enumerate(logos) if os.path.isfile(p))
+
+
+def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logos=None):
     """Flask-Anwendung. ``get_rec`` liefert bei jedem Aufruf den aktuellen Recorder (oder None).
 
-    users: {Name: Passwort-Hash} – nicht leer = Anmeldung erforderlich; https: Cookies nur über HTTPS senden."""
+    users: {Name: Passwort-Hash} – nicht leer = Anmeldung erforderlich; https: Cookies nur über HTTPS senden;
+    logos: Liste der Logo-Dateien für die Kopfzeilen (wird bei jedem Seitenaufruf gelesen, darf sich also ändern)."""
+    logos = logos if logos is not None else []
     app = Flask(__name__, static_folder=None)    # eigene Route für statische Dateien (siehe unten)
     app.config["JSON_AS_ASCII"] = False
     users = dict(users or {})
@@ -231,7 +238,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
     @app.before_request
     def check_access():
         """Anmeldung bzw. Zugriffscode prüfen (Chart.js-Datei und Anmeldeseite sind frei abrufbar)."""
-        if request.path.startswith("/static/") or request.path in ("/login", "/logout"):
+        if request.path.startswith(("/static/", "/logo/")) or request.path in ("/login", "/logout"):
             return None
         if not token and not users:
             return None
@@ -286,7 +293,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
                     n, _last = failures.get(ip, (0, 0.0))
                     failures[ip] = (n + 1, time.time())
                 err = "Benutzer oder Passwort falsch."
-        page = (LOGIN_HTML.replace("__ERR__", html.escape(err))
+        page = (LOGIN_HTML.replace("__ERR__", html.escape(err)).replace("__LOGOS__", logos_html(logos))
                 .replace("__WARN__", "" if https else '<p class="warn">Unverschlüsselte Verbindung (HTTP): '
                          'Passwort und Werte sind im Netz lesbar.</p>'))
         return Response(page, mimetype="text/html", headers={"Cache-Control": "no-store"})
@@ -315,7 +322,15 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         if _io_bridge is not None:
             out = '<a id="logout" href="io" title="IO-Check (Inbetriebnahme)">IO-Check</a> ' + out
         out = '<a id="logout" href="prozess' + _tok() + '" title="Prozessbild">Prozessbild</a> ' + out
-        return Response(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out), mimetype="text/html")
+        return Response(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out)
+                        .replace("__LOGOS__", logos_html(logos)), mimetype="text/html")
+
+    @app.route("/logo/<int:n>")
+    def logo(n):
+        """Logo n der Konfiguration (Kundenlogo, Logo) – frei abrufbar, damit es auch auf der Anmeldeseite erscheint."""
+        if not 0 <= n < len(logos) or not os.path.isfile(logos[n]):
+            abort(404)
+        return send_from_directory(os.path.dirname(logos[n]), os.path.basename(logos[n]), max_age=300)
 
     def _tok():
         """Zugriffscode der Anfrage für Links auf andere Seiten (``?token=…``) oder ""."""
@@ -334,7 +349,8 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         out = '<a class="lnk" href="./' + _tok() + '">Diagramme</a>'
         if user:
             out += ' <a class="lnk" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>"
-        return Response(PROZESS_HTML.replace("__LINKS__", out), mimetype="text/html",
+        return Response(PROZESS_HTML.replace("__LINKS__", out).replace("__LOGOS__", logos_html(logos)),
+                        mimetype="text/html",
                         headers={"Cache-Control": "no-store"})
 
     @app.route("/api/prozess", methods=["GET", "POST"])
@@ -496,7 +512,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         import tempfile
         from plc_iocheck import write_protocol
         path = os.path.join(tempfile.gettempdir(), f"io-protokoll-{os.getpid()}.pdf")
-        write_protocol(path, b.signals, b.title, b.source, b.plcs)
+        write_protocol(path, b.signals, b.title, b.source, b.plcs, getattr(b, "logos", ()))
         with open(path, "rb") as f:
             data = f.read()
         return Response(data, mimetype="application/pdf",
@@ -541,14 +557,16 @@ class WebServer:
     """Startet die Flask-Anwendung in einem eigenen Thread (werkzeug-Server, mehrere Anfragen gleichzeitig)."""
 
     def __init__(self, get_rec, host="0.0.0.0", port=8080, token="", refresh_ms=1000, https=False, cert="", key="",
-                 users=None):
-        """Flask-Anwendung anlegen (noch nicht gestartet); Benutzer als {Name: Hash} oder JSON-Text."""
+                 users=None, logos=None):
+        """Flask-Anwendung anlegen (noch nicht gestartet); Benutzer als {Name: Hash} oder JSON-Text; ``logos``: Pfade
+        der Logos für die Kopfzeilen (änderbar über ``set_logos``)."""
+        self.logos = list(logos or [])
         self.host, self.port = host, int(port)
         self.https = bool(https)
         self.cert, self.key = cert, key
         self.users = parse_users(users) if not isinstance(users, dict) else dict(users)
         self.token = token
-        self.app = create_app(get_rec, token, refresh_ms, self.users, self.https)
+        self.app = create_app(get_rec, token, refresh_ms, self.users, self.https, self.logos)
         self.srv = None
         self.thread = None
 
@@ -556,7 +574,11 @@ class WebServer:
     def from_conn(cls, get_rec, conn):
         """Webserver mit den Einstellungen der Konfiguration (siehe ``web_settings``)."""
         host, port, token, refresh, https, cert, key, users = web_settings(conn)
-        return cls(get_rec, host, port, token, refresh, https, cert, key, json.loads(users))
+        return cls(get_rec, host, port, token, refresh, https, cert, key, json.loads(users), logo_paths(conn))
+
+    def set_logos(self, conn):
+        """Logos nach einer Änderung der Konfiguration übernehmen (ohne Neustart des Servers)."""
+        self.logos[:] = logo_paths(conn)
 
     def _ssl_context(self):
         """TLS-Kontext: eigenes Zertifikat (Pfade relativ zum Datenordner) oder das selbstsignierte."""
@@ -653,12 +675,13 @@ body.max .card:not(.max){display:none}
 .it.off{opacity:.4}.it.dim{opacity:.55}.it.hl .nm{font-weight:700}
 .msg{padding:30px;text-align:center;color:var(--mute);grid-column:1/-1}
 .info{font-size:12px;color:var(--mute)}
+img.logo{height:30px;max-width:180px;object-fit:contain;background:#fff;border-radius:5px;padding:2px 5px;flex:none}
 #logout{color:var(--mute);text-decoration:none;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
 </style>
 </head>
 <body>
 <header>
- <div class="row"><h1 id="proj">PLC Datenlogger</h1><div class="leds" id="leds"></div>
+ <div class="row">__LOGOS__<h1 id="proj">PLC Datenlogger</h1><div class="leds" id="leds"></div>
   <span class="info" id="info"></span><span style="flex:1"></span>__LOGOUT__</div>
  <div class="ctrl" style="margin-top:6px">
   <select id="win" title="Zeitfenster"></select>
@@ -960,10 +983,13 @@ button{margin-top:18px;width:100%;padding:10px;border:0;border-radius:6px;backgr
  font:inherit;font-weight:600;cursor:pointer}
 .err{color:#ff5252;min-height:1.4em;margin:10px 0 0}
 .warn{color:#ffc107;font-size:12px;margin:12px 0 0}
+.logos{display:flex;gap:10px;align-items:center;justify-content:space-between}.logos:not(:empty){margin-bottom:14px}
+img.logo{height:40px;max-width:150px;object-fit:contain;background:#fff;border-radius:5px;padding:3px 6px}
 </style>
 </head>
 <body>
 <form method="post" action="login" autocomplete="on">
+ <div class="logos">__LOGOS__</div>
  <h1>PLC Datenlogger</h1>
  <label for="b">Benutzer</label><input id="b" name="benutzer" autocomplete="username" required autofocus>
  <label for="p">Passwort</label><input id="p" name="passwort" type="password" autocomplete="current-password" required>

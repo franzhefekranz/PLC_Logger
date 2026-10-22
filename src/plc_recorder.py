@@ -719,11 +719,13 @@ class Recorder:
 
     def _write_report(self, acc, partial):
         """Bericht eines Zeitraums im Hintergrund schreiben (Ereignisse aus dem Ereignisprotokoll)."""
+        from plc_common import logo_paths
         from plc_report import events_in, report_path, write_in_background
         try:
             path = report_path(self.conn, acc, self.csv_base, partial)
             th = write_in_background(path, acc, self.charts, self.vars, self.conn.get("projekt", ""),
-                                     events_in(self.events, acc.t0, acc.t1), partial, self.emit)
+                                     events_in(self.events, acc.t0, acc.t1), partial, self.emit,
+                                     logos=logo_paths(self.conn))
             self._report_threads = [t for t in self._report_threads if t.is_alive()] + [th]
         except Exception as e:
             self.emit(tr("⚠ Bericht konnte nicht erstellt werden: {0}").format(e))

@@ -26,6 +26,9 @@
 @ Version {0}
 > Version {0}
 
+@ Quelltext auf GitHub
+> Source code on GitHub
+
 @ Programm
 > Program
 
@@ -462,14 +465,26 @@
 @ Startbedingung:
 > Start condition:
 
-@ Bilddatei (PNG/SVG/JPG), wird im Logger rechts oben angezeigt
-> Image file (PNG/SVG/JPG), shown in the logger at the top right
+@ Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = kein Logo
+> Image file (PNG/JPG, SVG also in the logger and on the web pages): logger top right, web pages (charts, process view, login) and PDF reports; empty = no logo
+
+@ leer = kein Logo
+> empty = no logo
+
+@ Zusätzliches Logo des Kunden (PNG/JPG), erscheint neben dem Logo; leer = kein Kundenlogo
+> Additional customer logo (PNG/JPG), shown next to the logo; empty = no customer logo
+
+@ leer = kein Kundenlogo
+> empty = no customer logo
 
 @ Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon
 > Program icon (PNG/ICO/SVG); empty = logo or default icon
 
 @ Logo wählen
 > Choose logo
+
+@ Kundenlogo wählen
+> Choose customer logo
 
 @ Programm-Icon wählen
 > Choose program icon
@@ -486,6 +501,9 @@
 @ Balken für Aktualwerte anzeigen
 > Show bars for current values
 
+@ Breite eines Balkens neben dem Diagramm (Vorgabe 14 Pixel)
+> Width of a bar next to the chart (default 14 pixels)
+
 @ Anzeigefenster (online):
 > Display window (online):
 
@@ -498,11 +516,17 @@
 @ Raster-Spalten:
 > Grid columns:
 
-@ Logo (rechts oben):
-> Logo (top right):
+@ Logo:
+> Logo:
+
+@ Kundenlogo:
+> Customer logo:
 
 @ Programm-Icon:
 > Program icon:
+
+@ Balkenbreite:
+> Bar width:
 
 @ Webserver starten (Diagramme im Browser, z. B. mit Tablet/Smartphone)
 > Start web server (charts in the browser, e.g. on a tablet/smartphone)

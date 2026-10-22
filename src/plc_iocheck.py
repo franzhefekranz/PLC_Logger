@@ -908,6 +908,7 @@ class IoWebBridge:
         self.title = ""
         self.source = ""                      # Datei des Prüfstands (für das Protokoll)
         self.plcs = []
+        self.logos = []                       # Logos der Konfiguration (für das Protokoll)
         self.plc_state = []
         self.commands = queue.Queue()
         self.watch = {}                       # Signal-Index -> Zeitpunkt der letzten Auswahl auf einer Webseite
@@ -1016,14 +1017,15 @@ def _short_time(text):
         return text[:16]
 
 
-def write_protocol(path, signals, project="", source="", plcs=()):
+def write_protocol(path, signals, project="", source="", plcs=(), logos=()):
     """Abnahmeprotokoll als PDF: Zusammenfassung, Prüfer, Fehler/offene Signale, alle Signale je Gruppe,
-    Unterschriftsfelder. Prüfer = Benutzer am PC bzw. Anmeldename im Webserver."""
+    Unterschriftsfelder. Prüfer = Benutzer am PC bzw. Anmeldename im Webserver; ``logos``: Bilddateien für den
+    Seitenkopf (Kundenlogo, Logo)."""
     from plc_report import MARGIN, PdfWriter, _Doc, _table
     sigs = protocol_signals(signals)
     txt, mute, head = "#1b2430", "#5b6878", "#0d47a1"
     colors = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#b26a00"}
-    doc = _Doc(tr("IO-Check – Abnahmeprotokoll"), project or os.path.basename(source))
+    doc = _Doc(tr("IO-Check – Abnahmeprotokoll"), project or os.path.basename(source), logos)
     p = doc.pdf
     pr = progress(sigs)
     done = pr["ok"] + pr["fehler"] + pr["uebersprungen"]

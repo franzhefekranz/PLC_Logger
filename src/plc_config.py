@@ -260,10 +260,17 @@ class ConfigWindow(QMainWindow):
         # ---- Reiter 3: Anzeige ----
         # Logo und Programm-Icon: Dateiauswahl mit Durchsuchen-Knopf (siehe _file_row).
         self.ed_logo = QLineEdit()
-        self.ed_logo.setToolTip(tr("Bilddatei (PNG/SVG/JPG), wird im Logger rechts oben angezeigt"))
+        self.ed_logo.setToolTip(tr("Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, "
+                                   "Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = kein Logo"))
+        self.ed_logo.setPlaceholderText(tr("leer = kein Logo"))
+        self.ed_customer_logo = QLineEdit()
+        self.ed_customer_logo.setToolTip(tr("Zusätzliches Logo des Kunden (PNG/JPG), erscheint neben dem Logo; "
+                                            "leer = kein Kundenlogo"))
+        self.ed_customer_logo.setPlaceholderText(tr("leer = kein Kundenlogo"))
         self.ed_icon = QLineEdit()
         self.ed_icon.setToolTip(tr("Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon"))
         logo_row = self._file_row(self.ed_logo, tr("Logo wählen"))
+        customer_row = self._file_row(self.ed_customer_logo, tr("Kundenlogo wählen"))
         icon_row = self._file_row(self.ed_icon, tr("Programm-Icon wählen"))
         # Standard-Anordnung der Seiten im Logger: Anzeigetext + interner Schlüssel.
         self.cb_layout = QComboBox()
@@ -277,15 +284,19 @@ class ConfigWindow(QMainWindow):
         self.sp_cols = QSpinBox(); self.sp_cols.setRange(0, 12); self.sp_cols.setSpecialValueText(tr("automatisch"))
         self.sp_cols.setToolTip(tr("Anzahl der Spalten bei der Anordnung „Raster“ (0 = automatisch aus der Diagrammzahl)"))
         self.chk_bars = QCheckBox(tr("Balken für Aktualwerte anzeigen"))
+        self.sp_bar_w = QSpinBox(); self.sp_bar_w.setRange(4, 40); self.sp_bar_w.setSuffix(" px")
+        self.sp_bar_w.setToolTip(tr("Breite eines Balkens neben dem Diagramm (Vorgabe 14 Pixel)"))
         form_view1 = QFormLayout()
         form_view1.addRow(tr("Anzeigefenster (online):"), self.sp_win)
         form_view1.addRow(tr("Standard-Anordnung der Seiten:"), self.cb_layout)
         form_view1.addRow(tr("Diagramme auf einer Seite:"), self.cb_page)
         form_view1.addRow(tr("Raster-Spalten:"), self.sp_cols)
         form_view2 = QFormLayout()
-        form_view2.addRow(tr("Logo (rechts oben):"), logo_row)
+        form_view2.addRow(tr("Logo:"), logo_row)
+        form_view2.addRow(tr("Kundenlogo:"), customer_row)
         form_view2.addRow(tr("Programm-Icon:"), icon_row)
         form_view2.addRow("", self.chk_bars)
+        form_view2.addRow(tr("Balkenbreite:"), self.sp_bar_w)
         tab_view = QWidget()
         vl0 = QHBoxLayout(tab_view); vl0.addLayout(form_view1, 1); vl0.addSpacing(30); vl0.addLayout(form_view2, 1)
 
@@ -1743,11 +1754,13 @@ class ConfigWindow(QMainWindow):
         self._update_rec_mode()
         self._update_db_fields()
         self.ed_logo.setText(conn.get("logo", ""))
+        self.ed_customer_logo.setText(conn.get("kundenlogo", ""))
         self.ed_icon.setText(conn.get("icon", ""))
         self.cb_layout.setCurrentIndex(max(self.cb_layout.findData(conn["anordnung"]), 0))
         self.cb_page.setCurrentIndex(max(self.cb_page.findData(conn.get("seite_anordnung", "")), 0))
         self.sp_cols.setValue(int(conn.get("raster_spalten", 0)))
         self.chk_bars.setChecked(bool(conn["balken"]))
+        self.sp_bar_w.setValue(int(conn.get("balken_breite", 14) or 14))
         self.chk_web.setChecked(bool(conn.get("web_aktiv", 0)))
         self.ed_web_host.setText(conn.get("web_host", "0.0.0.0"))
         self.sp_web_port.setValue(int(conn.get("web_port", 8080)))
@@ -1794,7 +1807,7 @@ class ConfigWindow(QMainWindow):
                 "anordnung": self.cb_layout.currentData(),
                 "seite_anordnung": self.cb_page.currentData() or "",
                 "raster_spalten": self.sp_cols.value(),
-                "balken": 1 if self.chk_bars.isChecked() else 0,
+                "balken": 1 if self.chk_bars.isChecked() else 0, "balken_breite": self.sp_bar_w.value(),
                 "csv_name": self.ed_csvname.text().strip() or "log",
                 "max_records": self.sp_maxrec.value(),
                 "archiv_ordner": self.ed_arch.text().strip() or "archiv",
@@ -1809,7 +1822,7 @@ class ConfigWindow(QMainWindow):
                 "db_tabelle": self.ed_db_table.text().strip() or "messwerte",
                 "db_datei": self.ed_db_file.text().strip() or "datenlogger.db",
                 "db_nur_aenderungen": 1 if self.chk_db_changes.isChecked() else 0,
-                "logo": self.ed_logo.text().strip(),
+                "logo": self.ed_logo.text().strip(), "kundenlogo": self.ed_customer_logo.text().strip(),
                 "icon": self.ed_icon.text().strip(),
                 "web_aktiv": 1 if self.chk_web.isChecked() else 0,
                 "web_host": self.ed_web_host.text().strip() or "0.0.0.0",

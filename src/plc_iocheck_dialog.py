@@ -949,6 +949,8 @@ class IoCheckWindow(QMainWindow):
         self.matrix.set_rows(rows)
         self.bridge.publish(sigs, self.tracker, self._project_title(), rows)
         self.bridge.source, self.bridge.plcs = self.project.path, list(self.plcs)
+        from plc_common import logo_paths
+        self.bridge.logos = logo_paths(self._conn())
         self._update_progress()
         self._update_title()
         if was_running:
@@ -1205,7 +1207,9 @@ class IoCheckWindow(QMainWindow):
         if not path:
             return
         try:
-            io.write_protocol(path, self.all_signals, self._project_title(), self.project.path, self.plcs)
+            from plc_common import logo_paths
+            io.write_protocol(path, self.all_signals, self._project_title(), self.project.path, self.plcs,
+                              logo_paths(self._conn()))
         except Exception as e:
             QMessageBox.warning(self, tr("Protokoll (PDF)"), str(e))
             return

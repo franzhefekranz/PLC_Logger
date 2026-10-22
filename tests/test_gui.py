@@ -99,9 +99,12 @@ def test_config_window(qt_log, demo_config):
     nd = NotifyDialog(w, {"aktiv": True, "email": {"aktiv": True}}, "Testanlage")
     assert nd.collect()["email"]["aktiv"] and nd.collect()["aktiv"]
     nd.send_test()                                           # Fehlermeldung (kein Server) statt Absturz
+    w.sp_bar_w.setValue(8)
+    w.ed_customer_logo.setText("kunde.png")
     assert w._write(demo_config), qt_log.messages
     doc = json.load(open(demo_config, encoding="utf-8"))
     assert doc["einstellungen"]["projekt"] == "Testanlage"
+    assert int(doc["einstellungen"]["balken_breite"]) == 8 and doc["einstellungen"]["kundenlogo"] == "kunde.png"
     _close(w)
 
 

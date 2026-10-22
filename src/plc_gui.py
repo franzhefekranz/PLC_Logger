@@ -63,7 +63,7 @@ import pyqtgraph as pg  # nach PySide6 importieren
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
 
 # Eigene Module: Icon/Logo, Datenmodell, Aufzeichnungskern, Webserver, SVG-Export, Hilfsfunktionen.
-from plc_branding import app_icon, logo_pixmap, set_windows_app_id
+from plc_branding import app_icon, logos_pixmap, set_windows_app_id
 from plc_common import (BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE, Variable, load_config,
                        load_plcs, remember_config_path,
                         load_settings, program_command, save_settings)
@@ -82,13 +82,17 @@ from plc_i18n import tr
 # ------------------------------------------------------------------ Balkenanzeige
 class BarStrip(QWidget):
     """Schmale Balken (ein Balken je Variable), skaliert wie die jeweilige Y-Achse."""
-    # Breite eines Balkens und Abstand in Pixeln.
+    # Breite eines Balkens (Vorgabe, einstellbar: Konfiguration › Ansicht › Balkenbreite) und Abstand in Pixeln.
     BAR_W = 14
     GAP = 3
 
-    # colors/names: Farbe und Name je Balken. Es wird nichts in einer Liste vorgehalten außer den letzten Werten.
-    def __init__(self, colors, names):
+    # colors/names: Farbe und Name je Balken; width: Balkenbreite in Pixeln (None = Vorgabe). Es wird nichts in einer
+    # Liste vorgehalten außer den letzten Werten.
+    def __init__(self, colors, names, width=None):
         super().__init__()
+        if width:
+            self.BAR_W = max(2, int(width))
+            self.GAP = 2 if self.BAR_W < 8 else 3
         self.colors = [QColor(c) for c in colors]
         self.names = names
         # Anfangs 'kein Wert' (NaN): leere Balken.
@@ -372,8 +376,9 @@ class ChartPanel(QWidget):
     dropped = Signal(int, int)               # (verschobenes Diagramm, Ziel-Diagramm)
 
     # ci: Nummer des Diagramms; cfg: Chart (Name, Achsen); var_idx: Indizes der Variablen dieses Diagramms (in der
-    # Gesamtliste); variables: Gesamtliste; show_bars: Balken anzeigen; bool_in_plot: BOOLs auch im Diagramm zeichnen.
-    def __init__(self, ci, cfg, var_idx, variables, show_bars, bool_in_plot=False):
+    # Gesamtliste); variables: Gesamtliste; show_bars: Balken anzeigen; bool_in_plot: BOOLs auch im Diagramm zeichnen;
+    # bar_width: Breite der Balken in Pixeln (None = Vorgabe).
+    def __init__(self, ci, cfg, var_idx, variables, show_bars, bool_in_plot=False, bar_width=None):
         super().__init__()
         self.user_visible = {}            # Variablen-Index -> vom Benutzer sichtbar geschaltet
         self.highlighted = None           # Variablen-Index der hervorgehobenen Kurve
@@ -538,7 +543,7 @@ class ChartPanel(QWidget):
         # Balken neben dem Diagramm: je ein Balken pro Variable mit eingeschalteter Balkenoption.
         # --- Balken
         self.bars = BarStrip([variables[i].color for i in self.bar_idx],
-                             [variables[i].name for i in self.bar_idx])
+                             [variables[i].name for i in self.bar_idx], bar_width)
         self.bars.setVisible(show_bars and bool(self.bar_idx))
         # Ändert sich der Wertebereich einer Achse, muss die Balkenskalierung folgen.
         for vb in self.axis_vbs:
@@ -1368,9 +1373,9 @@ class MainWindow(QMainWindow):
         m_view.addAction(self.act_mousevals)
         m_view.addAction(self.act_marks)
         m_view.addAction(self.act_bars)
-        # Logo rechts oben in der Menüleiste (Eckenwidget), 28 Pixel hoch.
+        # Kundenlogo und Logo rechts oben in der Menüleiste (Eckenwidget), 28 Pixel hoch; ohne Angabe kein Logo.
         self.logo_lbl = LogoLabel()                # Strg + Umschalt + Doppelklick: verstecktes Info-Fenster
-        self.logo_lbl.setPixmap(logo_pixmap(self.conn.get("logo", ""), 28))
+        self.logo_lbl.setPixmap(logos_pixmap((self.conn.get("kundenlogo", ""), self.conn.get("logo", "")), 28))
         self.logo_lbl.setContentsMargins(8, 0, 8, 0)
         self.menuBar().setCornerWidget(self.logo_lbl, Qt.Corner.TopRightCorner)  # Logo rechts oben
         # Statusleiste: links die Meldungen, rechts die Webserver-Adresse und je Steuerung eine Status-LED.
@@ -1429,7 +1434,8 @@ class MainWindow(QMainWindow):
         for ci, ch in enumerate(self.charts):
             # Variablen dieses Diagramms: alle, deren Diagramm-Index passt (Reihenfolge wie in der Konfiguration).
             idx = [i for i, v in enumerate(self.vars) if v.chart == ci]
-            panel = ChartPanel(ci, ch, idx, self.vars, show_bars, self.act_boolplot.isChecked())
+            panel = ChartPanel(ci, ch, idx, self.vars, show_bars, self.act_boolplot.isChecked(),
+                               int(self.conn.get("balken_breite", 14) or 14))
             panel.apply_scaling(self.act_yauto.isChecked())
             self.panels.append(panel)
             # Kurven und Panel je Variable eintragen; vom Benutzer ausgeblendete Kurven (Namen in self.hidden) bleiben ausgeblendet.
@@ -1689,8 +1695,9 @@ class MainWindow(QMainWindow):
             acc = ReportAccumulator([v.name for v in self.vars], [v.dtype for v in self.vars], a, b,
                                     label=f"{fmt_time(a)[:16]} – {fmt_time(b)[:16]}")
             acc.add_many(t[i0:i1], np.asarray(y, dtype=float)[:, i0:i1])
+            from plc_common import logo_paths
             write_report(path, acc, self.charts, self.vars, self.conn.get("projekt", ""),
-                         events_in(self.event_log(), a, b))
+                         events_in(self.event_log(), a, b), logos=logo_paths(self.conn))
         except Exception as e:
             QApplication.restoreOverrideCursor()
             QMessageBox.warning(self, tr("PDF-Bericht"), tr("Der Bericht konnte nicht erstellt werden:\n{0}").format(e))
@@ -1950,7 +1957,7 @@ class MainWindow(QMainWindow):
         self.act_bars.setChecked(bool(conn["balken"]))
         self.win_spin.setValue(conn["fenster_s"])
         self.setWindowIcon(app_icon(conn.get("icon", ""), conn.get("logo", "")))
-        self.logo_lbl.setPixmap(logo_pixmap(conn.get("logo", ""), 28))
+        self.logo_lbl.setPixmap(logos_pixmap((conn.get("kundenlogo", ""), conn.get("logo", "")), 28))
         self.setWindowTitle(self._title())
         self._sync_menus()
         self._rebuild()
@@ -1980,6 +1987,8 @@ class MainWindow(QMainWindow):
             except Exception as e:                  # Port belegt, Flask fehlt, Zertifikat ungültig ...
                 self.web = None
                 self.statusBar().showMessage(tr("Webserver nicht gestartet: {0}").format(e), 20000)
+        if self.web is not None:
+            self.web.set_logos(self.conn)           # geänderte Logos ohne Neustart übernehmen
         self.lbl_web.setText(tr("Web: {0}   ").format(self.web.url()) if self.web else "")
 
     # Menü 'Webserver-Adresse': zeigt die Adresse für Tablet/Smartphone und kopiert sie in die Zwischenablage.

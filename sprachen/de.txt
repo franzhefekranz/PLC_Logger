@@ -26,6 +26,9 @@
 @ Version {0}
 > 
 
+@ Quelltext auf GitHub
+> 
+
 @ Programm
 > 
 
@@ -462,13 +465,25 @@
 @ Startbedingung:
 > 
 
-@ Bilddatei (PNG/SVG/JPG), wird im Logger rechts oben angezeigt
+@ Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = kein Logo
+> 
+
+@ leer = kein Logo
+> 
+
+@ Zusätzliches Logo des Kunden (PNG/JPG), erscheint neben dem Logo; leer = kein Kundenlogo
+> 
+
+@ leer = kein Kundenlogo
 > 
 
 @ Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon
 > 
 
 @ Logo wählen
+> 
+
+@ Kundenlogo wählen
 > 
 
 @ Programm-Icon wählen
@@ -486,6 +501,9 @@
 @ Balken für Aktualwerte anzeigen
 > 
 
+@ Breite eines Balkens neben dem Diagramm (Vorgabe 14 Pixel)
+> 
+
 @ Anzeigefenster (online):
 > 
 
@@ -498,10 +516,16 @@
 @ Raster-Spalten:
 > 
 
-@ Logo (rechts oben):
+@ Logo:
+> 
+
+@ Kundenlogo:
 > 
 
 @ Programm-Icon:
+> 
+
+@ Balkenbreite:
 > 
 
 @ Webserver starten (Diagramme im Browser, z. B. mit Tablet/Smartphone)

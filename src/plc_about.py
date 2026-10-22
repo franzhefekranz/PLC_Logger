@@ -26,11 +26,13 @@ from PySide6.QtGui import QAction, QDesktopServices, QFontDatabase, QKeySequence
 from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QMenu, QMessageBox,
                                QPushButton, QTabWidget, QTextBrowser, QVBoxLayout)
 
-from plc_branding import default_pixmap
+from plc_branding import company_pixmap
 from plc_common import APP_NAME, APP_VERSION, BASE_DIR
 from plc_i18n import current as current_language, tr
 
 COPYRIGHT = "Copyright (C) 2026 Michael Taxis"
+WEBSITE = "https://taxis-instruments.de"
+GITHUB = "https://github.com/franzhefekranz/PLC_Logger"
 LICENSE_ID = "LGPL-3.0-or-later"
 # Anleitung in bevorzugter Reihenfolge: PDF (enthält die Bilder), HTML (Bilder im Ordner images), Quelltext (.rst).
 MANUAL_FILES = ("Bedienungsanleitung.pdf", "PLC_Datenlogger_Bedienungsanleitung_*.pdf",
@@ -314,13 +316,17 @@ class AboutDialog(QDialog):
         lay = QVBoxLayout(self)
         # Kopf: Programmsymbol, Name und Version
         head = QHBoxLayout()
-        logo = QLabel()
-        logo.setPixmap(default_pixmap(64))
+        from plc_splash import LogoLabel                 # Strg + Umschalt + Doppelklick: verstecktes Info-Fenster
+        logo = LogoLabel(company_pixmap(56, max_width=200))
+        logo.setToolTip("TAXIS Instruments")
         head.addWidget(logo)
         version = tr("Version {0}").format(APP_VERSION)
         title = QLabel(f"<div style='font-size:16pt;font-weight:bold'>{APP_NAME}</div>"
-                       f"<div>{version}</div><div>{COPYRIGHT}</div>")
-        title.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+                       f"<div>{version}</div><div>{COPYRIGHT}</div>"
+                       f"<div><a href='{WEBSITE}'>taxis-instruments.de</a> · "
+                       f"<a href='{GITHUB}'>{tr('Quelltext auf GitHub')}</a></div>")
+        title.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
+        title.setOpenExternalLinks(True)
         head.addWidget(title, 1)
         lay.addLayout(head)
 

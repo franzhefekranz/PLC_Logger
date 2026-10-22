@@ -40,8 +40,18 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **IO-Check: „Was hat sich bewegt?“ ausblendbar** (Knopf in der Werkzeugleiste, wird gemerkt). Ausgeblendet erscheint
   der Hinweis auf vertauschte Signale in der Statuszeile.
 
+* **Logo und Kundenlogo** (Konfiguration › Ansicht): erscheinen im Logger rechts oben, auf den Webseiten (Diagramme,
+  Prozessbild, Anmeldung) und im Kopf der PDF-Berichte und IO-Check-Protokolle. PNG und JPG werden ohne
+  Zusatzbibliothek in das PDF eingebettet (PNG mit Transparenz auf weißem Grund).
+* **Balkenbreite einstellbar** (Konfiguration › Ansicht › *Balkenbreite*, 4 … 40 Pixel, Vorgabe 14).
+* „Über PLC Datenlogger“ und das versteckte Info-Fenster zeigen das feste Herstellerlogo, dazu Links auf
+  taxis-instruments.de und den Quelltext auf GitHub. Strg + Umschalt + Doppelklick auf das Logo im Dialog „Über …“
+  öffnet das Info-Fenster auch ohne eigenes Logo.
+
 ### Geändert
 
+* Logo-Feld leer = kein Logo (bisher erschien dann das Herstellerlogo im Logger); das Startbild zeigt weiterhin das
+  Herstellerlogo.
 * Quelltext ausführlich kommentiert: Docstrings für Module, Klassen und Funktionen (Programm, Treiber, Werkzeuge,
   Tests) und erklärende Kommentare an schwierigen Stellen; neue Übersicht [`ARCHITEKTUR.md`](ARCHITEKTUR.md) mit
   Modulen, Datenfluss, Threads und Treiber-Schnittstelle. Der Code selbst ist unverändert.

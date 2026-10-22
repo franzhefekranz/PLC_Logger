@@ -21,7 +21,7 @@ from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog, QHBoxLayout, QLabel, QListWidget,
                                QListWidgetItem, QProgressBar, QPushButton, QVBoxLayout, QWidget)
 
-from plc_branding import default_pixmap, logo_pixmap
+from plc_branding import company_pixmap, default_pixmap, logo_pixmap
 from plc_common import APP_NAME, APP_VERSION, BASE_DIR, load_settings, recent_configs, save_settings
 from plc_i18n import tr
 
@@ -148,8 +148,9 @@ class EasterEggDialog(QDialog):
         lay = QVBoxLayout(self)
         head = QHBoxLayout()
         logo = QLabel()
-        logo.setPixmap(default_pixmap(72))
-        head.addWidget(logo)
+        logo.setPixmap(company_pixmap(48, max_width=180))
+        logo.setStyleSheet("background:white; border-radius:6px; padding:6px")     # dunkles Logo auf hellem Feld
+        head.addWidget(logo, 0, Qt.AlignmentFlag.AlignTop)
         title = QLabel(tr("<div style='font-size:18pt;font-weight:bold'>{0}</div><div style='color:{1}'>Version {2} · Du hast das Geheimnis gefunden! 🎉</div>").format(APP_NAME, C_ACCENT, APP_VERSION))
         head.addWidget(title, 1)
         lay.addLayout(head)

@@ -3,15 +3,17 @@
 """Programm-Icon und Logo.
 
 * ``app_icon``      liefert das Fenster-/Taskleisten-Icon (konfigurierte Datei oder Standard-Symbol),
-* ``logo_pixmap``   liefert das Logo für die Menüleiste rechts oben,
+* ``logo_pixmap``   liefert ein Logo aus der Konfiguration (Startbild),
+* ``logos_pixmap``  setzt Kundenlogo und Logo nebeneinander (Menüleiste des Loggers rechts oben; leer = kein Logo),
+* ``company_pixmap`` liefert das feste Herstellerlogo (``logo.png``) für „Über …“ und das versteckte Info-Fenster,
 * ``default_pixmap`` zeichnet das Standard-Symbol selbst (Qt-Zeichenbefehle), sodass das Programm
   ohne mitgelieferte Bilddateien auskommt,
 * ``set_windows_app_id`` sorgt unter Windows für ein eigenes Taskleisten-Symbol.
 
 Die Bilddateien (PNG, SVG, ICO, JPG ...) werden in der Konfiguration angegeben; relative Pfade
-beziehen sich auf den Programm-/Datenordner (siehe plc_common.BASE_DIR). Ohne Angabe gelten die mitgelieferten
-Dateien ``app.ico`` (Icon) und ``logo.png`` (Logo) im Programm- bzw. Datenordner, erst danach das gezeichnete
-Standard-Symbol.
+beziehen sich auf den Programm-/Datenordner (siehe plc_common.BASE_DIR). Ohne Angabe gilt für das Icon die
+mitgelieferte Datei ``app.ico``, sonst das gezeichnete Standard-Symbol. Logo und Kundenlogo (Logger, Webseiten,
+Berichte) entfallen ohne Angabe; nur das Startbild zeigt dann das mitgelieferte Herstellerlogo ``logo.png``.
 """
 import math
 import os
@@ -101,6 +103,37 @@ def logo_pixmap(path: str, height: int = 28, max_width: int = 0) -> QPixmap:
                     pm = pm.scaledToWidth(max_width, Qt.TransformationMode.SmoothTransformation)
                 return pm
     return default_pixmap(256).scaledToHeight(height, Qt.TransformationMode.SmoothTransformation)
+
+
+def company_pixmap(height: int = 48, max_width: int = 0) -> QPixmap:
+    """Festes Herstellerlogo (mitgeliefertes ``logo.png``, unabhängig von der Konfiguration), sonst das Standard-Icon."""
+    return logo_pixmap("", height, max_width)
+
+
+def logos_pixmap(paths, height: int = 28, gap: int = 12) -> QPixmap:
+    """Mehrere Logos (z. B. Kundenlogo und Logo) nebeneinander in einem Bild; leere oder fehlende Dateien entfallen.
+
+    Ohne ein einziges Logo: leeres QPixmap (das Feld nimmt dann keinen Platz ein)."""
+    pms = []
+    for path in paths:
+        full = resolve(path)
+        if full and os.path.exists(full):
+            pm = QPixmap(full)
+            if not pm.isNull():
+                pms.append(pm.scaledToHeight(height, Qt.TransformationMode.SmoothTransformation))
+    if not pms:
+        return QPixmap()
+    if len(pms) == 1:
+        return pms[0]
+    out = QPixmap(sum(p.width() for p in pms) + gap * (len(pms) - 1), height)
+    out.fill(Qt.GlobalColor.transparent)
+    p = QPainter(out)
+    x = 0
+    for pm in pms:
+        p.drawPixmap(x, 0, pm)
+        x += pm.width() + gap
+    p.end()
+    return out
 
 
 def set_windows_app_id(app_id: str = "PLCDatenlogger"):
