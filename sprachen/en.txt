@@ -1529,6 +1529,12 @@
 @ Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben
 > Write your own time-stamped entry to the event log
 
+@ Im Diagramm zeigen
+> Show in chart
+
+@ Zeitraum um das markierte Ereignis im Logger anzeigen, Lineale auf Beginn und Ende (auch Rechtsklick auf eine Zeile)
+> Show the time range around the selected event in the logger, rulers at start and end (also right-click on a row)
+
 @ Markierte quittieren
 > Acknowledge selected
 
@@ -1568,11 +1574,11 @@
 @ {0} Ereignisse, davon {1} offen · {2} Notizen · {3} nach Filter{4}
 > {0} events, {1} of them open · {2} notes · {3} after filter{4}
 
-@ Alle quittieren ({0})
-> Acknowledge all ({0})
-
 @ Quittieren
 > Acknowledge
+
+@ Alle quittieren ({0})
+> Acknowledge all ({0})
 
 @ Keine offenen Ereignisse ausgewählt.
 > No open events selected.
@@ -2105,6 +2111,15 @@
 
 @ Notiz gespeichert.
 > Note saved.
+
+@  Für ältere Daten: Datei › Aus Datenbank laden …
+>  For older data: File › Load from database …
+
+@ Für {0} liegen keine Messwerte im Speicher und keine passende CSV-Datei vor.{1}
+> For {0} there are no measurements in memory and no matching CSV file.{1}
+
+@ Ereignis {0}: {1}
+> Event {0}: {1}
 
 @ Konfiguration geladen: {0}
 > Configuration loaded: {0}

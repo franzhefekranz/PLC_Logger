@@ -95,9 +95,10 @@ def add_note(parent, log: EventLog, when=None):
 class EventViewer(QDialog):
     """Tabelle der Ereignisse mit Filter und Quittierung (nicht modal)."""
 
-    def __init__(self, log: EventLog, parent=None, on_change=None, standalone=False):
+    def __init__(self, log: EventLog, parent=None, on_change=None, standalone=False, on_goto=None):
         super().__init__(parent)
         self.log, self.on_change, self.standalone = log, on_change, standalone
+        self.on_goto = on_goto                # Rückruf (Beginn, Ende, Text): Ereignis im Diagramm zeigen (Logger)
         self._seen = None                     # (version, mtime) der zuletzt angezeigten Daten
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
         self.resize(1000, 560)
@@ -145,6 +146,14 @@ class EventViewer(QDialog):
         btn_note.setToolTip(tr("Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben"))
         btn_note.clicked.connect(self.new_note)
         bot.addWidget(btn_note)
+        self.btn_goto = QPushButton(tr("Im Diagramm zeigen"))
+        self.btn_goto.setToolTip(tr("Zeitraum um das markierte Ereignis im Logger anzeigen, Lineale auf Beginn und Ende "
+                                    "(auch Rechtsklick auf eine Zeile)"))
+        self.btn_goto.clicked.connect(self.goto_selected)
+        self.btn_goto.setVisible(on_goto is not None)
+        bot.addWidget(self.btn_goto)
+        self.table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self._context_menu)
         self.btn_ack = QPushButton(tr("Markierte quittieren"))
         self.btn_ack.setToolTip(tr("Ausgewählte offene Ereignisse quittieren (auch Doppelklick auf eine Zeile)"))
         self.btn_ack.clicked.connect(self.ack_selected)
@@ -246,6 +255,36 @@ class EventViewer(QDialog):
         self.lbl.setText(tr("{0} Ereignisse, davon {1} offen · {2} Notizen · {3} nach Filter{4}").format(total, n_open, n_notes, len(shown), more))
         self._update_buttons()
 
+    def selected_event(self):
+        ids = self.selected_ids()
+        if len(ids) != 1:
+            return None
+        i = next(iter(ids))
+        return next((e for e in self.log.events() if e.id == i), None)
+
+    def goto_selected(self):
+        e = self.selected_event()
+        if e is None or self.on_goto is None:
+            return
+        from plc_events import parse_stamp
+        t0 = parse_stamp(e.zeit)
+        t1 = parse_stamp(e.gegangen) if e.gegangen else None
+        if t0 is not None:
+            self.on_goto(t0, t1, f"{e.trigger}: {e.text}".strip(": "))
+
+    def _context_menu(self, pos):
+        from PySide6.QtWidgets import QMenu
+        row = self.table.rowAt(pos.y())
+        if row < 0:
+            return
+        self.table.selectRow(row)
+        menu = QMenu(self)
+        if self.on_goto is not None:
+            menu.addAction(tr("Im Diagramm zeigen"), self.goto_selected)
+        a = menu.addAction(tr("Quittieren"), self.ack_selected)
+        a.setEnabled(bool(self.selected_ids() & self.log.open_ids))
+        menu.exec(self.table.viewport().mapToGlobal(pos))
+
     def selected_ids(self):
         rows = {i.row() for i in self.table.selectedItems()}
         return {self.table.item(r, 0).data(Qt.ItemDataRole.UserRole) for r in rows if self.table.item(r, 0)}
@@ -255,6 +294,7 @@ class EventViewer(QDialog):
         self.btn_all.setEnabled(n_open > 0)
         self.btn_all.setText(tr("Alle quittieren ({0})").format(n_open) if n_open else tr("Alle quittieren"))
         self.btn_ack.setEnabled(bool(self.selected_ids() & self.log.open_ids))
+        self.btn_goto.setEnabled(len(self.selected_ids()) == 1)
 
     def new_note(self):
         if add_note(self, self.log):

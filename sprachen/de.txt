@@ -1529,6 +1529,12 @@
 @ Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben
 > 
 
+@ Im Diagramm zeigen
+> 
+
+@ Zeitraum um das markierte Ereignis im Logger anzeigen, Lineale auf Beginn und Ende (auch Rechtsklick auf eine Zeile)
+> 
+
 @ Markierte quittieren
 > 
 
@@ -1568,10 +1574,10 @@
 @ {0} Ereignisse, davon {1} offen · {2} Notizen · {3} nach Filter{4}
 > 
 
-@ Alle quittieren ({0})
+@ Quittieren
 > 
 
-@ Quittieren
+@ Alle quittieren ({0})
 > 
 
 @ Keine offenen Ereignisse ausgewählt.
@@ -2104,6 +2110,15 @@
 > 
 
 @ Notiz gespeichert.
+> 
+
+@  Für ältere Daten: Datei › Aus Datenbank laden …
+> 
+
+@ Für {0} liegen keine Messwerte im Speicher und keine passende CSV-Datei vor.{1}
+> 
+
+@ Ereignis {0}: {1}
 > 
 
 @ Konfiguration geladen: {0}

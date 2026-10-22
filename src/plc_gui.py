@@ -1799,13 +1799,79 @@ class MainWindow(QMainWindow):
     def show_events(self):
         if self.event_viewer is None:
             from plc_event_viewer import EventViewer
-            self.event_viewer = EventViewer(self.event_log(), self, on_change=self.update_event_button)
+            self.event_viewer = EventViewer(self.event_log(), self, on_change=self.update_event_button,
+                                            on_goto=self.goto_time)
         else:
             self.update_event_button()
             self.event_viewer.fill(force=True)
         self.event_viewer.show()
         self.event_viewer.raise_()
         self.event_viewer.activateWindow()
+
+    # ---- Vom Ereignis zur Stelle im Diagramm ----------------------------------------------------------------------
+    def _log_files_for(self, t0, t1):
+        """CSV-/ZIP-Aufzeichnungen (CSV-Ordner und Archiv), die den Zeitraum t0..t1 enthalten können."""
+        import glob
+        stems = {re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "log").strip("_") or "log", "demo"}
+        archive = self.conn.get("archiv_ordner") or "archiv"
+        if not os.path.isabs(archive):
+            archive = os.path.join(BASE_DIR, archive)
+        found = []
+        for stem in stems:
+            pats = [os.path.join(self.csv_dir(), f"{stem}_*.csv"), os.path.join(archive, stem, "**", f"{stem}_*.zip")]
+            for pat in pats:
+                for path in glob.glob(pat, recursive=True):
+                    m = re.search(r"_(\d{8}_\d{6})\.(csv|zip)$", path)
+                    if m:
+                        found.append((datetime.strptime(m.group(1), "%Y%m%d_%H%M%S").timestamp(), path))
+        found.sort()
+        out = []
+        for k, (start, path) in enumerate(found):
+            nxt = found[k + 1][0] if k + 1 < len(found) else float("inf")
+            if start <= t1 and nxt > t0:
+                out.append(path)
+        return out
+
+    def goto_time(self, t0, t1=None, label=""):
+        """Zeitraum um ein Ereignis anzeigen (offline): aus dem Speicher, sonst aus CSV-Dateien bzw. dem Archiv.
+        Lineal 1 auf den Beginn, Lineal 2 auf das Ende (bzw. kurz danach)."""
+        t1 = t1 if t1 and t1 > t0 else None
+        dur = (t1 - t0) if t1 else 0.0
+        margin = max(30.0, dur * 0.5)
+        a, b = t0 - margin, (t1 or t0) + margin
+        have = len(self.t) and float(self.t[0]) <= t0 <= float(self.t[-1])
+        if not have:
+            paths = self._log_files_for(a, b)
+            if not paths:
+                hint = tr(" Für ältere Daten: Datei › Aus Datenbank laden …") if self.conn.get("db_typ") not in (
+                    None, "", "keine") else ""
+                QMessageBox.information(self, tr("Im Diagramm zeigen"), tr(
+                    "Für {0} liegen keine Messwerte im Speicher und keine passende CSV-Datei vor.{1}").format(
+                    fmt_time(t0)[:19], hint))
+                return
+            self._load_logs(paths, save=False)
+            if not (len(self.t) and float(self.t[0]) <= t0 <= float(self.t[-1])):
+                return
+        if self.online:
+            self.act_online.setChecked(False)                 # Offline-Modus mit Momentaufnahme
+        else:
+            self.enter_offline()
+        if self.snap_t1 <= self.snap_t0:
+            return
+        w = max(1, int(round(b - a)))
+        self._block = True
+        self.win_spin.setValue(min(w, self.win_spin.maximum()))
+        span = (self.snap_t1 - self.snap_t0) - self.win_spin.value()
+        pos = 1000 if span <= 0 else int(round(1000 * (a - self.snap_t0) / span))
+        self.scroll.setValue(max(0, min(1000, pos)))
+        self._block = False
+        self.apply_offline_view()
+        self.set_rulers(0, t0)
+        self.set_rulers(1, t1 if t1 else min(t0 + margin / 2, float(self.t[-1])))
+        self.update_offline_values()
+        self.statusBar().showMessage(tr("Ereignis {0}: {1}").format(fmt_time(t0)[:19], label), 10000)
+        self.raise_()
+        self.activateWindow()
 
     # Menü 'Diagramme auf der Seite': Anordnung ändern -> Seiten neu aufbauen und Kurven wieder füllen.
     def set_page_mode(self, mode):

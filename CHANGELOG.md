@@ -18,6 +18,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 * **QR-Code** für die Adresse der Webseite: im IO-Check (*📱 Mobil …*) und im Logger (*Datei › Webserver-Adresse …*);
   mit der Kamera des Smartphones scannen statt tippen. Eigener QR-Encoder, keine Zusatzbibliothek.
+* **Vom Ereignis zur Stelle im Diagramm:** Im Ereignis-Viewer *Im Diagramm zeigen* (Knopf oder Rechtsklick) zeigt den
+  Zeitraum um das Ereignis im Logger (offline), Lineal 1 auf dem Beginn, Lineal 2 auf dem Ende. Liegen die Werte nicht
+  mehr im Speicher, wird die passende CSV-Datei bzw. das Archiv geladen.
 
 ### Build
 

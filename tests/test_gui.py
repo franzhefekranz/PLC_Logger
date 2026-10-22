@@ -42,6 +42,12 @@ def test_logger_demo_recording(qt_log, demo_config, tmp_path):
     wait(300)
     qt_log.file = str(tmp_path / "export.csv")
     w.export_values()
+    # Vom Ereignis zur Stelle im Diagramm (Daten im Speicher)
+    t_mid = float(w.t[len(w.t) // 2])
+    w.goto_time(t_mid, t_mid + 0.5, "Test")
+    assert not w.online and abs(w.ruler_t[0] - t_mid) < 1e-6
+    w.show_events()
+    w.event_viewer.goto_selected()                           # ohne Auswahl: nichts
     w.act_run.setChecked(False)
     wait(300)
     # CSV wieder laden
@@ -52,6 +58,9 @@ def test_logger_demo_recording(qt_log, demo_config, tmp_path):
     w.load_csv()
     wait(200)
     assert w.source == "csv"
+    # Ereignis außerhalb der geladenen Daten: passende CSV-Datei wird gesucht
+    w.goto_time(float(w.t[0]) + 0.2)
+    assert abs(w.ruler_t[0] - (float(w.t[0]) + 0.2)) < 1e-6
     for kind, _title, text in qt_log.messages:
         assert kind != "critical", text
     _close(w)
