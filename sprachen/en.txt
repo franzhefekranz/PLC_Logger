@@ -734,8 +734,8 @@
 @ Import/Export
 > Import/Export
 
-@ Variablen importieren (CSV/Excel) …
-> Import variables (CSV/Excel) …
+@ Variablen importieren (CSV/Excel/ODS) …
+> Import variables (CSV/Excel/ODS) …
 
 @ Variablen exportieren (CSV/Excel) …
 > Export variables (CSV/Excel) …
@@ -1070,8 +1070,8 @@
 @ Variablen importieren
 > Import variables
 
-@ Excel oder CSV (*.xlsx *.csv);;Alle Dateien (*)
-> Excel or CSV (*.xlsx *.csv);;All files (*)
+@ Excel, ODS oder CSV (*.xlsx *.ods *.csv);;Alle Dateien (*)
+> Excel, ODS or CSV (*.xlsx *.ods *.csv);;All files (*)
 
 @ Die Datei konnte nicht gelesen werden:\n{0}
 > The file could not be read:\n{0}
@@ -2622,8 +2622,8 @@
 @ Spalten der IO-Liste
 > Columns of the IO list
 
-@ Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/CSV)? Mehrere Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen.
-> Under which column headings is the information found in the IO list (Excel/CSV)? Separate several names with commas; case and spaces do not matter. Empty = do not import the column and do not show it in the signal list.
+@ Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/ODS/CSV)? Mehrere Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen.
+> Under which column headings is the information found in the IO list (Excel/ODS/CSV)? Separate several names with commas; case and spaces do not matter. Empty = do not import the column and do not show it in the signal list.
 
 @ Feld
 > Field
@@ -2691,8 +2691,8 @@
 @ IO-Liste importieren …
 > Import IO list …
 
-@ Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
-> Import the signal list from CSV/Excel (EPLAN, TIA Portal tag table, own list)
+@ Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
+> Take over the signal list from CSV, Excel or ODS (EPLAN, TIA Portal tag table, own list)
 
 @ Spalten …
 > Columns …
@@ -2829,8 +2829,8 @@
 @ IO-Liste importieren
 > Import IO list
 
-@ Tabellen (*.xlsx *.xlsm *.csv *.txt);;Alle Dateien (*)
-> Tables (*.xlsx *.xlsm *.csv *.txt);;All files (*)
+@ Tabellen (*.xlsx *.xlsm *.ods *.csv *.txt);;Alle Dateien (*)
+> Tables (*.xlsx *.xlsm *.ods *.csv *.txt);;All files (*)
 
 @ Keine Signale gefunden.
 > No signals found.

@@ -491,7 +491,7 @@ class ConfigWindow(QMainWindow):
         # Import/Export der Variablenliste (CSV oder Excel) als Knopf mit Menü.
         b = QPushButton(tr("Import/Export"))
         m_io = QMenu(b)
-        m_io.addAction(tr("Variablen importieren (CSV/Excel) …"), self.import_variables)
+        m_io.addAction(tr("Variablen importieren (CSV/Excel/ODS) …"), self.import_variables)
         m_io.addAction(tr("Variablen exportieren (CSV/Excel) …"), self.export_variables)
         b.setMenu(m_io)
         set_help(b, "Variablen importieren und exportieren")
@@ -1951,7 +1951,7 @@ class ConfigWindow(QMainWindow):
         Fehlende Diagramme und Y-Achsen werden angelegt; unbekannte Steuerungen fallen auf die erste zurück."""
         from plc_export import read_table
         path, _ = QFileDialog.getOpenFileName(self, tr("Variablen importieren"), BASE_DIR,
-                                              tr("Excel oder CSV (*.xlsx *.csv);;Alle Dateien (*)"))
+                                              tr("Excel, ODS oder CSV (*.xlsx *.ods *.csv);;Alle Dateien (*)"))
         if not path:
             return
         try:

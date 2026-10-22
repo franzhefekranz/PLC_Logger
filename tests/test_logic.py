@@ -28,6 +28,39 @@ def test_iocheck_import_and_kinds():
     assert io.driver_address("Q4.0", "ads") == "%QX4.0"
 
 
+def test_read_ods(tmp_path):
+    """ODS-Tabelle (LibreOffice) ohne Zusatzbibliothek lesen: Zahlen, Text mit Leerzeichen, Wiederholungen."""
+    import zipfile
+    import plc_export
+    import plc_iocheck as io
+    t, o, x = ("urn:oasis:names:tc:opendocument:xmlns:table:1.0", "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
+               "urn:oasis:names:tc:opendocument:xmlns:text:1.0")
+
+    def cell(v, n=1):
+        rep = f' table:number-columns-repeated="{n}"' if n > 1 else ""
+        if not v:
+            return f"<table:table-cell{rep}/>"
+        typ = f'office:value-type="float" office:value="{v}"' if isinstance(v, float) else 'office:value-type="string"'
+        return f"<table:table-cell {typ}{rep}><text:p>{v}</text:p></table:table-cell>"
+    rows = [["Adresse", "Symbol", "Kommentar", "Messbereich"], ["E0.0", "B1", "Endlage<text:s text:c=\"2\"/>vorn", ""],
+            ["EW256", "PT1", "Druck", "0 … 10 bar"], ["AW272", "SV1", 12.0, ""]]
+    body = "".join("<table:table-row>" + "".join(cell(v) for v in r) + cell("", 1000) + "</table:table-row>"
+                   for r in rows)
+    body += '<table:table-row table:number-rows-repeated="1048570">' + cell("", 1024) + "</table:table-row>"
+    xml = (f'<?xml version="1.0" encoding="UTF-8"?><office:document-content xmlns:office="{o}" xmlns:table="{t}" '
+           f'xmlns:text="{x}"><office:body><office:spreadsheet><table:table table:name="IO">{body}</table:table>'
+           "</office:spreadsheet></office:body></office:document-content>")
+    path = tmp_path / "io.ods"
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("mimetype", "application/vnd.oasis.opendocument.spreadsheet")
+        z.writestr("content.xml", xml)
+    header, data = plc_export.read_table(str(path))
+    assert header == ["Adresse", "Symbol", "Kommentar", "Messbereich"] and len(data) == 3
+    assert data[0][2] == "Endlage  vorn" and data[2][2] == 12.0
+    sigs, _w = io.import_file(str(path), aliases={})
+    assert [s.address for s in sigs] == ["E0.0", "EW256", "AW272"] and sigs[1].unit == "bar"
+
+
 def test_iocheck_column_aliases():
     """Eigene Spaltenüberschriften ersetzen die Vorgabe; ein leeres Feld wird nicht eingelesen."""
     import plc_iocheck as io

@@ -734,7 +734,7 @@
 @ Import/Export
 > 
 
-@ Variablen importieren (CSV/Excel) …
+@ Variablen importieren (CSV/Excel/ODS) …
 > 
 
 @ Variablen exportieren (CSV/Excel) …
@@ -1070,7 +1070,7 @@
 @ Variablen importieren
 > 
 
-@ Excel oder CSV (*.xlsx *.csv);;Alle Dateien (*)
+@ Excel, ODS oder CSV (*.xlsx *.ods *.csv);;Alle Dateien (*)
 > 
 
 @ Die Datei konnte nicht gelesen werden:\n{0}
@@ -2622,7 +2622,7 @@
 @ Spalten der IO-Liste
 > 
 
-@ Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/CSV)? Mehrere Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen.
+@ Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/ODS/CSV)? Mehrere Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen.
 > 
 
 @ Feld
@@ -2691,7 +2691,7 @@
 @ IO-Liste importieren …
 > 
 
-@ Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
+@ Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
 > 
 
 @ Spalten …
@@ -2829,7 +2829,7 @@
 @ IO-Liste importieren
 > 
 
-@ Tabellen (*.xlsx *.xlsm *.csv *.txt);;Alle Dateien (*)
+@ Tabellen (*.xlsx *.xlsm *.ods *.csv *.txt);;Alle Dateien (*)
 > 
 
 @ Keine Signale gefunden.

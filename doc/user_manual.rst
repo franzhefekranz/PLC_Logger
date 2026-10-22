@@ -1096,14 +1096,15 @@ Importing and exporting variables
 
 The **Import/Export** button below the variable table exchanges the variable list with
 an **Excel** (``.xlsx``) or **CSV file** – useful for editing long lists in Excel or for
-taking over an address list of the controller.
+taking over an address list of the controller. **ODS files** (LibreOffice/OpenOffice
+Calc, ``.ods``) can be read as well.
 
 * **Export variables (CSV/Excel) …** writes all variables of the table (without block
   elements, see `Block read mode <blocklesemodus_>`__) with the columns ``Name``,
   ``Steuerung``, ``Diagramm``, ``Y-Achse``, ``Adresse``, ``Typ``, ``Farbe``,
   ``Werteanzeige``, ``Balken`` and ``Formel``. The column names are always German, so
   files can be exchanged between languages.
-* **Import variables (CSV/Excel) …** reads such a file. The first row contains the
+* **Import variables (CSV/Excel/ODS) …** reads such a file. The first row contains the
   column names; only ``Name`` is mandatory, order and case do not matter. CSV files may
   use semicolon, comma or tab as separator.
 
@@ -3580,7 +3581,7 @@ simulated (to try it out without a controller).
 Importing the IO list
 ----------------------------------------------------------------------
 
-**Import IO list …** reads a CSV or Excel table, e.g. from EPLAN, the TIA Portal tag
+**Import IO list …** reads a CSV, Excel or ODS table (LibreOffice), e.g. from EPLAN, the TIA Portal tag
 table (export to Excel) or an own list. The columns are recognized by their heading
 (case does not matter):
 

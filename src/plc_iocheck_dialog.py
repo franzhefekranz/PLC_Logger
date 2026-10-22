@@ -455,7 +455,7 @@ class ColumnsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(tr("Spalten der IO-Liste"))
         lay = QVBoxLayout(self)
-        hint = QLabel(tr("Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/CSV)? Mehrere "
+        hint = QLabel(tr("Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/ODS/CSV)? Mehrere "
                          "Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. "
                          "Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen."))
         hint.setWordWrap(True)
@@ -716,7 +716,7 @@ class IoCheckWindow(QMainWindow):
             return a
 
         act(tr("IO-Liste importieren …"), self.import_list,
-            tr("Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)"))
+            tr("Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)"))
         act(tr("Spalten …"), self.edit_columns,
             tr("Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt"))
         act(tr("Öffnen …"), lambda: self.open_project(), tr("Gespeicherten IO-Check öffnen"), "Ctrl+O")
@@ -1030,7 +1030,7 @@ class IoCheckWindow(QMainWindow):
         Adressen).
         """
         path, _f = QFileDialog.getOpenFileName(self, tr("IO-Liste importieren"), "",
-                                               tr("Tabellen (*.xlsx *.xlsm *.csv *.txt);;Alle Dateien (*)"))
+                                               tr("Tabellen (*.xlsx *.xlsm *.ods *.csv *.txt);;Alle Dateien (*)"))
         if not path:
             return
         try:

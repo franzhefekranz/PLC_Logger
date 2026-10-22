@@ -67,9 +67,86 @@ def write_table(path, header, rows, sheet="Tabelle"):
             w.writerow(["" if c is None else c for c in row])
 
 
+# OpenDocument-Tabellen (LibreOffice/OpenOffice Calc): Namensräume der Datei content.xml
+_ODS_NS = {"table": "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
+           "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
+           "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0"}
+_ODS_MAX_REPEAT = 10000            # wiederholte Zeilen/Spalten (leere Bereiche bis zum Blattende) begrenzen
+
+
+def is_ods(path):
+    """True, wenn der Dateiname auf eine OpenDocument-Tabelle (.ods) endet."""
+    return os.path.splitext(path)[1].lower() == ".ods"
+
+
+def _ods_text(el):
+    """Text einer Zelle: alle Absätze (text:p), Leerzeichen-Platzhalter (text:s), Tabulatoren und Zeilenumbrüche."""
+    t = "{%s}" % _ODS_NS["text"]
+
+    def walk(node):
+        """Text eines Elements samt Unterelementen (Formatierungen wie text:span) in Lesereihenfolge."""
+        out = [node.text or ""]
+        for ch in node:
+            if ch.tag == t + "s":
+                out.append(" " * int(ch.get(t + "c", "1")))
+            elif ch.tag == t + "tab":
+                out.append("\t")
+            elif ch.tag == t + "line-break":
+                out.append("\n")
+            else:
+                out.append(walk(ch))
+            out.append(ch.tail or "")
+        return "".join(out)
+    return "\n".join(walk(p) for p in el.findall("text:p", _ODS_NS))
+
+
+def read_ods(path):
+    """Erstes Tabellenblatt einer .ods-Datei -> Liste der Zeilen (Zahlen als float, sonst Text).
+
+    Ohne Zusatzbibliothek: Die Datei ist ein ZIP-Archiv, die Tabelle steht in ``content.xml``. Wiederholte Zeilen und
+    Spalten (``number-rows-/columns-repeated``) werden ausgeschrieben, leere Bereiche am Blattende entfallen."""
+    import xml.etree.ElementTree as ET
+    import zipfile
+    with zipfile.ZipFile(path) as z:
+        root = ET.fromstring(z.read("content.xml"))
+    tbl, off = "{%s}" % _ODS_NS["table"], "{%s}" % _ODS_NS["office"]
+    sheet = root.find(".//table:table", _ODS_NS)
+    if sheet is None:
+        return []
+    rows = []
+    for row in sheet.iter(tbl + "table-row"):
+        cells = []
+        for c in row:
+            if c.tag not in (tbl + "table-cell", tbl + "covered-table-cell"):
+                continue
+            typ = c.get(off + "value-type")
+            if typ in ("float", "percentage", "currency"):
+                v = float(c.get(off + "value"))
+            elif typ == "boolean":
+                v = c.get(off + "boolean-value") == "true"
+            elif typ == "date":
+                v = c.get(off + "date-value")
+            elif typ == "time":
+                v = c.get(off + "time-value")
+            else:
+                v = _ods_text(c) or None
+            cells += [v] * min(int(c.get(tbl + "number-columns-repeated", "1")), _ODS_MAX_REPEAT)
+        while cells and cells[-1] in (None, ""):
+            cells.pop()
+        n = min(int(row.get(tbl + "number-rows-repeated", "1")), _ODS_MAX_REPEAT)
+        rows += [list(cells) for _ in range(n)] if cells else [[] for _ in range(n)]
+    while rows and not rows[-1]:
+        rows.pop()
+    return rows
+
+
 def read_table(path):
-    """CSV- oder Excel-Datei lesen -> (Kopfzeile, Zeilen). Leere Zeilen entfallen; Zellen sind Text (Excel: Werte)."""
-    if is_excel(path):
+    """CSV-, Excel- oder ODS-Datei lesen -> (Kopfzeile, Zeilen). Leere Zeilen entfallen; Zellen sind Text (Excel/ODS:
+    Werte)."""
+    if is_ods(path):
+        data = read_ods(path)
+    elif is_excel(path):
+
         wb = _openpyxl().load_workbook(path, read_only=True, data_only=True)
         try:
             data = [list(r) for r in wb.worksheets[0].iter_rows(values_only=True)]

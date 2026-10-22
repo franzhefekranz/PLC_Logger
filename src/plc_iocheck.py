@@ -407,7 +407,7 @@ def read_list(path):
 
 
 def import_file(path, aliases=None):
-    """IO-Liste aus einer CSV- oder Excel-Datei importieren -> (Signale, Warnungen)."""
+    """IO-Liste aus einer CSV-, Excel- oder ODS-Datei importieren -> (Signale, Warnungen)."""
     header, rows = read_list(path)
     return import_rows(header, rows, aliases)
 

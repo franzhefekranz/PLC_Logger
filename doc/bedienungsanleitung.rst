@@ -1129,13 +1129,14 @@ Variablen importieren und exportieren
 Der Knopf **Import/Export** unter der Variablentabelle tauscht die Variablenliste
 mit einer **Excel-** (``.xlsx``) oder **CSV-Datei** aus – praktisch, um lange
 Listen in Excel zu bearbeiten oder aus einer Adressliste der Steuerung zu
-übernehmen.
+übernehmen. Eingelesen werden zusätzlich **ODS-Dateien** (LibreOffice/OpenOffice
+Calc, ``.ods``).
 
 * **Variablen exportieren (CSV/Excel) …** schreibt alle Variablen der Tabelle
   (ohne Block-Elemente, siehe `Blocklesemodus <blocklesemodus_>`__) mit den Spalten
   ``Name``, ``Steuerung``, ``Diagramm``, ``Y-Achse``, ``Adresse``, ``Typ``,
   ``Farbe``, ``Werteanzeige``, ``Balken`` und ``Formel``.
-* **Variablen importieren (CSV/Excel) …** liest eine solche Datei. Die erste
+* **Variablen importieren (CSV/Excel/ODS) …** liest eine solche Datei. Die erste
   Zeile enthält die Spaltennamen; Pflicht ist nur ``Name``, Reihenfolge und
   Groß-/Kleinschreibung sind egal. CSV-Dateien dürfen Semikolon, Komma oder
   Tabulator als Trennzeichen haben.
@@ -3667,7 +3668,7 @@ Signale simuliert (zum Ausprobieren ohne Steuerung).
 IO-Liste importieren
 ----------------------------------------------------------------------
 
-**IO-Liste importieren …** übernimmt eine CSV- oder Excel-Tabelle, z. B. aus EPLAN, die
+**IO-Liste importieren …** übernimmt eine CSV-, Excel- oder ODS-Tabelle (LibreOffice), z. B. aus EPLAN, die
 Variablentabelle des TIA Portals (Export nach Excel) oder eine eigene Liste. Die Spalten
 werden an ihrer Überschrift erkannt (Groß-/Kleinschreibung egal):
 
