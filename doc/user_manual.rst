@@ -2578,6 +2578,13 @@ tablet or smartphone – also in headless operation.
   (jsdelivr); in a closed network put the file ``chart.umd.js`` (Chart.js 4) into the
   folder ``web_static`` manually.
 
+.. figure:: images/en/webserver_qr.png
+   :alt: Web server address with QR code
+   :width: 70%
+   :align: center
+
+   File › Web server address …: address with QR code for scanning.
+
 The server transfers only the visible data, reduced to the screen width (minimum and
 maximum per section are kept), and compresses it.
 
@@ -2711,6 +2718,13 @@ an OPC UA network. The server is **read-only**.
 * **Access** – *Anonymous* and/or *Login with the web server users* (the same names and
   passwords as in `HTTPS and login`_). For a login an encrypted endpoint should be
   enabled, otherwise the password travels across the network in plain text.
+
+.. figure:: images/en/opcua_server.png
+   :alt: OPC UA server dialog
+   :width: 55%
+   :align: center
+
+   OPC UA server dialog: endpoint, security levels and access.
 
 **Address space** (namespace ``urn:plc-datenlogger``):
 
@@ -3100,6 +3114,13 @@ Event viewer and acknowledgement
   it loads the matching CSV file from the CSV folder or the archive.
 * **Open folder** shows the event file in the file manager.
 
+.. figure:: images/en/ereignis_diagramm.png
+   :alt: Event in the chart
+   :width: 95%
+   :align: center
+
+   After “Show in chart”: time range around the event, ruler 1 on coming, ruler 2 on going.
+
 The viewer can also be started **on its own** – e.g. next to a headless logger or on
 another computer with access to the file (network drive):
 
@@ -3122,6 +3143,13 @@ When an event comes, the logger can pass it on immediately – by **e-mail**, in
 the phone** with the app *ntfy* or via **Telegram**. Set it up in the configuration
 program, tab *Triggers & events*, **Notifications …**; next to it you see whether and
 where notifications go.
+
+.. figure:: images/en/benachrichtigungen.png
+   :alt: Notifications dialog
+   :width: 60%
+   :align: center
+
+   Notifications: at the top when to notify, below one tab per channel.
 
 **When to notify:**
 

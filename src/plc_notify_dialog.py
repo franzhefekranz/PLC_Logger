@@ -17,6 +17,12 @@ class NotifyDialog(QDialog):
     """Ergebnis bei OK in self.settings (dict, wie plc_notify.settings)."""
 
     def __init__(self, parent, settings, project=""):
+        """Dialog aufbauen: Hauptschalter, Gruppe „Wann“ (Priorität, Trigger, Gehen, Sperrzeit), je Kanal ein Reiter,
+        Testknopf.
+
+        ``settings``: gespeicherte Einstellung (dict oder JSON-Text), wird mit den Vorgabewerten ergänzt; ``project``:
+        Projektname für die Testnachricht.
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("Benachrichtigungen"))
         self.project = project
@@ -86,6 +92,13 @@ class NotifyDialog(QDialog):
         self.resize(560, 560)
 
     def _channel_tab(self, key, spec, help_text=""):
+        """Reiter für den Kanal ``key`` anlegen: Schalter „… verwenden“, ein Feld je Eintrag in ``spec`` und ein
+        Hilfetext.
+
+        ``spec``: [(Schlüssel, Beschriftung, Beispiel)]. Das Beispiel bestimmt die Feldart: dict = Auswahlliste, int =
+        Zahlenfeld, "*" = verdecktes Feld (Passwort/Token), sonst Textfeld mit Beispiel als Platzhalter. Die Widgets
+        landen in ``self.fields[key]`` und werden von ``collect`` ausgelesen.
+        """
         c = self.settings[key]
         page = QWidget()
         v = QVBoxLayout(page)
@@ -123,6 +136,7 @@ class NotifyDialog(QDialog):
         self.tabs.addTab(page, tr(nf.CHANNELS[key]))
 
     def collect(self):
+        """Alle Felder in ``self.settings`` übernehmen -> Einstellungen (dict)."""
         s = self.settings
         s.update(aktiv=self.chk_on.isChecked(), prio_min=self.cb_prio.currentData(), trigger=self.ed_trig.text().strip(),
                  gehen=self.chk_go.isChecked(), sperre_s=self.sp_block.value())
@@ -139,6 +153,11 @@ class NotifyDialog(QDialog):
         return s
 
     def send_test(self):
+        """Testnachricht über alle eingeschalteten Kanäle senden und je Kanal Erfolg oder Fehler anzeigen.
+
+        Gesendet wird direkt (nicht im Hintergrund); der Sanduhr-Cursor zeigt die Wartezeit – höchstens die
+        Zeitüberschreitung je Kanal.
+        """
         s = self.collect()
         channels = nf.active_channels(s)
         if not channels:
@@ -154,5 +173,6 @@ class NotifyDialog(QDialog):
             self, tr("Testnachricht"), "\n".join(lines))
 
     def _ok(self):
+        """OK: Felder übernehmen und schließen."""
         self.collect()
         self.accept()

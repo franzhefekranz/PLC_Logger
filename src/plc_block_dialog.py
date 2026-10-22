@@ -228,6 +228,7 @@ class BlockEditor(QDialog):
         self.update_row_driver(r)
 
     def driver_of_row(self, r):
+        """Treiber der Steuerung, die in Zeile r ausgewählt ist (bestimmt Adressformat und Datentypen)."""
         return get_driver(self.get_conn(self.table.cellWidget(r, C_PLC).currentIndex()).driver)
 
     def update_row_driver(self, r):

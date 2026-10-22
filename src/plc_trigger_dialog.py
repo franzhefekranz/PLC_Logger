@@ -45,6 +45,11 @@ class TriggerEditor(QDialog):
     """Tabelle der Trigger mit Prüfung."""
 
     def __init__(self, parent, triggers, names):
+        """Tabelle mit einer Zeile je Trigger, Knöpfe zum Anlegen/Bearbeiten/Ordnen, Hilfetext und Statuszeile.
+
+        ``triggers``: vorhandene Trigger; ``names``: Namen aller Variablen (für die Prüfung der Bedingungen und den
+        Formeleditor).
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("Trigger (Ereignisse)"))
         self.resize(1150, 520)
@@ -102,6 +107,11 @@ class TriggerEditor(QDialog):
 
     # ------------------------------------------------------------------ Zeilen
     def _add_row(self, t: Trigger, row=None):
+        """Trigger ``t`` als Tabellenzeile einfügen (am Ende oder an Position ``row``) -> Zeilennummer.
+
+        Aktiv, Gehen und Quittieren sind Kästchen, Priorität eine Auswahlliste, Verzögerung ein Zahlenfeld – alles als
+        Zellen-Widgets; Name, Bedingung und Meldetext sind normale, editierbare Zellen.
+        """
         self.table.blockSignals(True)
         r = self.table.rowCount() if row is None else row
         self.table.insertRow(r)
@@ -131,9 +141,11 @@ class TriggerEditor(QDialog):
         return r
 
     def _check(self, r, col):
+        """Zustand des Kästchens in Zeile r, Spalte col."""
         return self.table.cellWidget(r, col).findChild(QCheckBox).isChecked()
 
     def row_trigger(self, r):
+        """Zeile r der Tabelle als Trigger (Leerräume der Bedingung vereinheitlicht)."""
         return Trigger(name=self.table.item(r, T_NAME).text().strip(),
                        bedingung=" ".join(self.table.item(r, T_COND).text().split()),
                        text=self.table.item(r, T_TEXT).text().strip(),
@@ -143,13 +155,16 @@ class TriggerEditor(QDialog):
                        aktiv=self._check(r, T_ACTIVE))
 
     def triggers(self):
+        """Alle Zeilen als Liste von Trigger (in Tabellenreihenfolge)."""
         return [self.row_trigger(r) for r in range(self.table.rowCount())]
 
     def _current(self):
+        """Markierte Zeile oder None."""
         r = self.table.currentRow()
         return r if 0 <= r < self.table.rowCount() else None
 
     def _unique_name(self, base):
+        """Noch nicht vergebener Name: ``base``, sonst ``Trigger2``, ``Trigger3`` … bzw. ``Name (2)`` …"""
         taken = {t.name for t in self.triggers()}
         name, n = base, 1
         while name in taken:
@@ -158,6 +173,7 @@ class TriggerEditor(QDialog):
         return name
 
     def add(self):
+        """Neuen Trigger mit Beispielbedingung über die erste Variable anlegen und gleich im Formeleditor öffnen."""
         first = self.names[0] if self.names else "Variable"
         t = Trigger(name=self._unique_name("Trigger"), bedingung=f"{{{first}}} > 0",
                     text=f"{first} = {{{first}}}")
@@ -167,6 +183,7 @@ class TriggerEditor(QDialog):
         self.edit_condition()
 
     def duplicate(self):
+        """Markierten Trigger mit neuem Namen darunter kopieren."""
         r = self._current()
         if r is None:
             return
@@ -176,12 +193,14 @@ class TriggerEditor(QDialog):
         self.validate()
 
     def remove(self):
+        """Markierten Trigger löschen."""
         r = self._current()
         if r is not None:
             self.table.removeRow(r)
             self.validate()
 
     def move(self, d):
+        """Markierten Trigger um ``d`` Zeilen verschieben (−1 = nach oben, 1 = nach unten)."""
         r = self._current()
         if r is None or not 0 <= r + d < self.table.rowCount():
             return
@@ -192,11 +211,13 @@ class TriggerEditor(QDialog):
         self.validate()
 
     def _double_click(self, r, col):
+        """Doppelklick auf die Bedingung öffnet den Formeleditor."""
         if col == T_COND:
             self.table.selectRow(r)
             self.edit_condition()
 
     def edit_condition(self):
+        """Name und Bedingung des markierten Triggers im Formeleditor bearbeiten (mit Variablenliste und Testwerten)."""
         r = self._current()
         if r is None:
             return
@@ -222,6 +243,7 @@ class TriggerEditor(QDialog):
         return out
 
     def validate(self):
+        """Alle Trigger prüfen: fehlerhafte Zeilen rot hinterlegen (Fehler im Tooltip) und Zusammenfassung anzeigen."""
         bad = dict(self.problems())
         self.table.blockSignals(True)
         for r in range(self.table.rowCount()):
@@ -241,6 +263,7 @@ class TriggerEditor(QDialog):
         self.lbl_status.setText(txt)
 
     def accept_checked(self):
+        """OK nur, wenn alle eingeschalteten Trigger fehlerfrei sind; Ergebnis in ``result_triggers``."""
         # Fehlerhafte, aber ausgeschaltete Trigger dürfen bleiben (sie werden nicht ausgewertet).
         bad = [(r, e) for r, e in self.problems() if self._check(r, T_ACTIVE)]
         if bad:

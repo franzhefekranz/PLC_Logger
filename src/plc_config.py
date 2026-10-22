@@ -109,6 +109,7 @@ class AssignTree(QTreeWidget):
     moved = Signal(list, int, int)   # uids, Diagramm-Index, Achsen-Index
 
     def __init__(self):
+        """Baum ohne Kopfzeile; Einträge lassen sich einzeln ziehen und im selben Baum ablegen."""
         super().__init__()
         self.setHeaderHidden(True)
         # Es wird immer genau ein Eintrag gezogen.
@@ -145,6 +146,13 @@ class AssignTree(QTreeWidget):
 class ConfigWindow(QMainWindow):
     """Konfigurationsfenster: bearbeitet die Konfigurationsdatei von plc_logger.py."""
     def __init__(self, path=None):
+        """Fenster aufbauen und die Konfiguration ``path`` (sonst die zuletzt benutzte) laden.
+
+        Aufbau von oben nach unten: Reiter mit den Einstellungen (Projekt & Steuerungen, Aufzeichnung, Anzeige,
+        Webserver & Headless, Datenbank, Trigger & Ereignisse, Berichte), darunter links der Zuordnungsbaum mit den
+        Eigenschaften und rechts die Variablentabelle, dazu Menüs, Werkzeugleiste und Kontexthilfe (F1). Am Ende füllt
+        ``fill`` die Felder aus der Datei (Einstellungen, Diagramme, Variablen, Blöcke, Steuerungen, Trigger).
+        """
         super().__init__()
         self.resize(1300, 820)
         # Pfad der aktuell bearbeiteten Konfigurationsdatei: Startparameter, sonst die zuletzt benutzte Datei ('' = neu, ungespeichert).
@@ -567,6 +575,9 @@ class ConfigWindow(QMainWindow):
         box.exec()
 
     def open_driver_folder(self):
+        """Ordner für eigene Treiber (``<Datenordner>/treiber``) anlegen und öffnen; die Treibervorlage ``_vorlage.py``
+        wird hineinkopiert, falls sie dort fehlt.
+        """
         from PySide6.QtCore import QUrl
         from PySide6.QtGui import QDesktopServices
         folder = os.path.join(BASE_DIR, "treiber")
@@ -628,12 +639,17 @@ class ConfigWindow(QMainWindow):
         self._update_conn_text(r)
 
     def _plc_row_of(self, widget, col):
+        """Zeile der Steuerungen-Tabelle, in der das Widget ``widget`` in Spalte ``col`` steckt (-1 = nicht gefunden).
+
+        Nötig, weil die Auswahllisten/Zahlenfelder der Tabelle nur sich selbst melden, nicht ihre Zeile.
+        """
         for r in range(self.plc_table.rowCount()):
             if self.plc_table.cellWidget(r, col) is widget:
                 return r
         return -1
 
     def _plc_of_table_row(self, r):
+        """Zeile r der Steuerungen-Tabelle als Plc-Objekt (Parameter stehen als Datenrolle im Verbindungsfeld)."""
         t = self.plc_table
         return Plc(name=t.item(r, P_NAME).text().strip() or f"SPS {r + 1}",
                    driver=t.cellWidget(r, P_DRV).currentData(),
@@ -642,6 +658,9 @@ class ConfigWindow(QMainWindow):
                    enabled=t.item(r, P_ON).checkState() == Qt.CheckState.Checked)
 
     def _update_conn_text(self, r):
+        """Kurzbeschreibung der Verbindung (z. B. IP, Rack/Slot) in Zeile r neu anzeigen, ohne Änderungssignale
+        auszulösen.
+        """
         p = self._plc_of_table_row(r)
         item = self.plc_table.item(r, P_CONN)
         self.plc_table.blockSignals(True)
@@ -665,6 +684,9 @@ class ConfigWindow(QMainWindow):
         self.refresh_tree()
 
     def edit_plc_params(self, r):
+        """Dialog mit den Verbindungsparametern des Treibers für die Steuerung in Zeile r öffnen und das Ergebnis
+        übernehmen.
+        """
         if r < 0:
             return
         from plc_treiber.ui import PlcSettingsDialog
@@ -679,6 +701,7 @@ class ConfigWindow(QMainWindow):
         return [self._plc_of_table_row(r) for r in range(self.plc_table.rowCount())]
 
     def driver_of_plc(self, idx):
+        """Treiber der Steuerung mit dem Index ``idx`` (auf den gültigen Bereich begrenzt)."""
         plcs = self.collect_plcs()
         return get_driver(plcs[min(max(idx, 0), len(plcs) - 1)].driver) if plcs else get_driver("s7")
 
@@ -689,6 +712,7 @@ class ConfigWindow(QMainWindow):
             b.driver = plcs[min(max(b.plc, 0), len(plcs) - 1)].driver if plcs else "s7"
 
     def plc_names(self):
+        """Namen aller Steuerungen (für die Auswahllisten der Variablen)."""
         return [p.name for p in self.collect_plcs()]
 
     def plc_at(self, idx):
@@ -719,10 +743,12 @@ class ConfigWindow(QMainWindow):
             self.apply_var_filter()
 
     def on_plc_item_changed(self, item):
+        """Name einer Steuerung geändert: Auswahllisten der Variablen und Blöcke aktualisieren."""
         if item.column() == P_NAME:
             self.refresh_plc_combos()
 
     def add_plc(self):
+        """Neue Steuerung anhängen – mit dem Treiber der markierten bzw. letzten Steuerung."""
         n = self.plc_table.rowCount()
         # Neue Steuerung: Treiber wie die markierte bzw. letzte Steuerung
         r = self.plc_table.currentRow() if self.plc_table.currentRow() >= 0 else n - 1
@@ -739,6 +765,9 @@ class ConfigWindow(QMainWindow):
             return
 
         def fn(old):
+            """Neuer Index einer Steuerung nach dem Entfernen von Zeile r (die entfernte wird zu 0, dahinter rücken alle
+            auf).
+            """
             return 0 if old == r else (old - 1 if old > r else old)
         vals = [fn(self.plc_of_row(k)) for k in range(self.table.rowCount())]
         for b in self.blocks:
@@ -764,6 +793,8 @@ class ConfigWindow(QMainWindow):
         btn_file.setFixedWidth(30)
 
         def pick():
+            """Ereignisdatei wählen (Speichern-Dialog ohne Überschreib-Rückfrage: die Datei wird nur fortgeschrieben).
+            """
             start = self.ed_event_file.text() or event_log_path(self.collect_conn())
             p, _ = QFileDialog.getSaveFileName(self, tr("Ereignisdatei"), start, tr("Ereignisprotokoll (*.csv)"),
                                                options=QFileDialog.Option.DontConfirmOverwrite)
@@ -847,6 +878,7 @@ class ConfigWindow(QMainWindow):
         return w
 
     def _update_report_fields(self):
+        """Felder der PDF-Berichte passend zu „aktiv“ und Zeitraum freigeben (Schichtzeiten nur bei „Schicht“)."""
         on = self.chk_report.isChecked()
         kind = self.cb_report_period.currentData()
         self.cb_report_period.setEnabled(on)
@@ -855,6 +887,7 @@ class ConfigWindow(QMainWindow):
         self.ed_report_dir.setEnabled(on)
 
     def _update_trigger_summary(self):
+        """Zusammenfassung der Trigger neben dem Knopf (Anzahl, aktive, erste Namen)."""
         n = len(self.triggers)
         active = sum(1 for t in self.triggers if t.aktiv)
         if not n:
@@ -864,6 +897,9 @@ class ConfigWindow(QMainWindow):
             self.lbl_triggers.setText(tr("{0} Trigger, davon {1} aktiv ({2})").format(n, active, names))
 
     def edit_triggers(self):
+        """Trigger-Editor öffnen; die Trigger werden mit der Konfiguration gespeichert und gelten ab dem nächsten Start
+        der Aufzeichnung.
+        """
         from plc_trigger_dialog import TriggerEditor
         dlg = TriggerEditor(self, self.triggers, self.available_names())
         if dlg.exec():
@@ -873,6 +909,7 @@ class ConfigWindow(QMainWindow):
                                          8000)
 
     def show_events(self):
+        """Ereignis-Viewer für die Ereignisdatei der aktuellen Einstellungen öffnen."""
         from plc_event_viewer import EventViewer
         dlg = EventViewer(EventLog(event_log_path(self.collect_conn())), self)
         dlg.exec()
@@ -900,6 +937,7 @@ class ConfigWindow(QMainWindow):
         btn_file = QPushButton("…"); btn_file.setFixedWidth(30)
 
         def pick_db_file():
+            """SQLite-Datei wählen oder neu benennen."""
             path, _ = QFileDialog.getSaveFileName(self, tr("SQLite-Datenbank"), self.ed_db_file.text() or BASE_DIR,
                                                   tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
             if path:
@@ -1007,6 +1045,7 @@ class ConfigWindow(QMainWindow):
     @staticmethod
     # Text im Baum: Achsenname und Skalierung ('Auto' oder 'min … max').
     def axis_label(a: Axis):
+        """Text einer Y-Achse im Baum: Name und Skalierung (Auto bzw. min … max)."""
         return f"{a.name} – " + (tr("Auto") if a.auto else f"{a.y_min:g} … {a.y_max:g}")
 
     # Ziel (Diagramm, Achse) der Tabellenzeile r aus der Auswahlliste.
@@ -1022,6 +1061,9 @@ class ConfigWindow(QMainWindow):
         return [(bi, idx) for bi, b in enumerate(self.blocks) for idx in sorted(b.targets)]
 
     def assignments(self):
+        """Alle Zuordnungen (Diagramm, Achse) sichern: Variablen in Tabellenreihenfolge, dann Blöcke, dann abweichende
+        Ziele einzelner Blockelemente – Gegenstück zu ``set_assignments``.
+        """
         return ([self.assign_of_row(r) for r in range(self.table.rowCount())]
                 + [(b.chart, b.axis) for b in self.blocks]
                 + [self.blocks[bi].targets[idx] for bi, idx in self.target_slots()])
@@ -1199,6 +1241,7 @@ class ConfigWindow(QMainWindow):
         return self.charts[k[1]] if k and k[0] == "chart" else None
 
     def _update_pid_label(self):
+        """Knopf und Kurztext der PID-Optimierung für das gewählte Diagramm aktualisieren."""
         c = self._pid_chart()
         on = bool(c and c.pid)
         self.btn_pid.setEnabled(on)
@@ -1209,6 +1252,9 @@ class ConfigWindow(QMainWindow):
             self.lbl_pid.setText("")
 
     def on_pid_toggled(self, on):
+        """PID-Optimierung für das gewählte Diagramm ein-/ausschalten; ohne festgelegte Variablen öffnet sich zuerst der
+        Einstellungsdialog (Abbrechen schaltet wieder aus).
+        """
         c = self._pid_chart()
         if self._loading or c is None:
             return
@@ -1406,6 +1452,7 @@ class ConfigWindow(QMainWindow):
             self.table.scrollToItem(self.table.item(r, C_NAME))
 
     def _var_row_of(self, widget):
+        """Zeile der Variablentabelle, in der die Steuerungsauswahl ``widget`` steckt (-1 = nicht gefunden)."""
         for r in range(self.table.rowCount()):
             if self.table.cellWidget(r, C_PLC) is widget:
                 return r
@@ -1579,11 +1626,13 @@ class ConfigWindow(QMainWindow):
             self.refresh_tree()
 
     def _update_web_users(self):
+        """Anzeige der Web-Benutzer neben dem Knopf „Benutzer …“."""
         n = len(self.web_users)
         self.lbl_web_users.setText(tr("keine (ohne Anmeldung)") if not n else
                                    tr("{0} Benutzer: {1}").format(n, ", ".join(sorted(self.web_users))[:60]))
 
     def _update_notify(self):
+        """Kurztext der Benachrichtigungen neben dem Knopf (aus bzw. ab welcher Priorität über welche Kanäle)."""
         import plc_notify as nf
         s = nf.settings(self.notify_settings)
         ch = [tr(nf.CHANNELS[c]) for c in nf.active_channels(s)]
@@ -1591,10 +1640,12 @@ class ConfigWindow(QMainWindow):
                                 tr("ab {0} über {1}").format(tr(s["prio_min"]), ", ".join(ch)))
 
     def _update_opcua(self):
+        """Kurztext des OPC-UA-Servers neben dem Knopf (Endpunkt, Sicherheit, Zugriff)."""
         import plc_opcua_server as us
         self.lbl_opcua.setText(us.describe(self.opcua_settings))
 
     def edit_opcua_server(self):
+        """Dialog OPC-UA-Server öffnen und die Einstellungen übernehmen (gespeichert mit der Konfiguration)."""
         from plc_opcua_dialog import OpcUaServerDialog
         dlg = OpcUaServerDialog(self, self.opcua_settings, len(self.web_users))
         if dlg.exec():
@@ -1602,6 +1653,7 @@ class ConfigWindow(QMainWindow):
             self._update_opcua()
 
     def edit_notify(self):
+        """Dialog Benachrichtigungen öffnen und die Einstellungen übernehmen."""
         from plc_notify_dialog import NotifyDialog
         dlg = NotifyDialog(self, self.notify_settings, self.ed_project.text().strip()
                            if hasattr(self, "ed_project") else "")
@@ -1610,6 +1662,9 @@ class ConfigWindow(QMainWindow):
             self._update_notify()
 
     def edit_web_users(self):
+        """Benutzer des Webservers bearbeiten; ohne HTTPS ein Hinweis, dass Passwörter dann unverschlüsselt übertragen
+        werden.
+        """
         from plc_web_dialog import WebUsersDialog
         dlg = WebUsersDialog(self, self.web_users)
         if dlg.exec():
@@ -1620,6 +1675,7 @@ class ConfigWindow(QMainWindow):
                                                 "übertragen."), 10000)
 
     def _update_rec_mode(self):
+        """Felder der Aufzeichnung per Trigger nur bei diesem Modus freigeben."""
         on = self.cb_rec_mode.currentData() == "trigger"
         for w in (self.ed_rec_cond, self.sp_pre, self.sp_post, self.sp_max):
             w.setEnabled(on)
@@ -1632,11 +1688,13 @@ class ConfigWindow(QMainWindow):
             self.ed_rec_cond.setText(dlg.result_formula)
 
     def pick_arch_dir(self):
+        """Archiv-Ordner wählen."""
         d = QFileDialog.getExistingDirectory(self, tr("Archiv-Ordner wählen"), self.ed_arch.text() or BASE_DIR)
         if d:
             self.ed_arch.setText(d)
 
     def pick_dir(self):
+        """CSV-Ordner wählen."""
         d = QFileDialog.getExistingDirectory(self, tr("CSV-Ordner wählen"), self.ed_dir.text() or BASE_DIR)
         if d:
             self.ed_dir.setText(d)
@@ -1851,6 +1909,9 @@ class ConfigWindow(QMainWindow):
             return
 
         def cell(row, key):
+            """Zelle der Spalte ``key`` (Spaltenname, Groß-/Kleinschreibung egal) als Text; ganze Zahlen aus Excel ohne
+            „.0“.
+            """
             i = col.get(key.casefold())
             if i is None or i >= len(row) or row[i] is None:
                 return ""
@@ -1860,6 +1921,7 @@ class ConfigWindow(QMainWindow):
             return str(v).strip()
 
         def flag(text, default):
+            """Ja/Nein-Zelle auswerten (ja, yes, true, 1, x …); leer = Vorgabe."""
             return default if not text else text.casefold() in ("ja", "j", "yes", "y", "true", "wahr", "1", "x", "on")
 
         # Ersetzen oder anhängen, wenn schon Variablen da sind.

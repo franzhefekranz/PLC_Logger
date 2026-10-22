@@ -15,6 +15,11 @@ class OpcUaServerDialog(QDialog):
     """Ergebnis bei OK in self.settings (dict, wie plc_opcua_server.settings)."""
 
     def __init__(self, parent, settings, n_users=0):
+        """Dialog aufbauen: Schalter, Adresse/Port/Aktualisierung mit angezeigtem Endpunkt, Sicherheitsstufen mit
+        Zertifikat, Zugriff.
+
+        ``settings``: gespeicherte Einstellung; ``n_users``: Zahl der Web-Benutzer (nur für die Beschriftung).
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("OPC-UA-Server"))
         self.settings = copy.deepcopy(us.settings(settings))
@@ -83,9 +88,13 @@ class OpcUaServerDialog(QDialog):
         self._update_url()
 
     def _update_url(self):
+        """Angezeigten Endpunkt nach Änderung von Adresse oder Port neu berechnen."""
         self.lbl_url.setText(us.endpoint_url({"host": self.ed_host.text().strip(), "port": self.sp_port.value()}))
 
     def collect(self):
+        """Alle Felder in ``self.settings`` übernehmen -> Einstellungen (dict); ohne gewählte Sicherheitsstufe gilt
+        „Keine“.
+        """
         s = self.settings
         s.update(aktiv=self.chk_on.isChecked(), host=self.ed_host.text().strip() or "0.0.0.0",
                  port=self.sp_port.value(), intervall_ms=self.sp_int.value(),
@@ -95,5 +104,6 @@ class OpcUaServerDialog(QDialog):
         return s
 
     def _ok(self):
+        """OK: Felder übernehmen und schließen."""
         self.collect()
         self.accept()

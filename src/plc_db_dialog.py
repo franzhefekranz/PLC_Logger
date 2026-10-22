@@ -31,6 +31,7 @@ FMT = "%d.%m.%Y %H:%M:%S"
 
 
 def _fmt(ts):
+    """Unix-Zeit als „TT.MM.JJJJ hh:mm:ss“ („?“ bei ungültigem Wert)."""
     try:
         return datetime.fromtimestamp(ts).strftime(FMT)
     except (OverflowError, OSError, ValueError):
@@ -38,6 +39,7 @@ def _fmt(ts):
 
 
 def _span_text(s):
+    """Zeitspanne in Sekunden lesbar: s, min, h oder Tage (eine Nachkommastelle)."""
     s = abs(float(s))
     if s < 60:
         return tr("{0:g} s").format(round(s, 1))
@@ -49,11 +51,18 @@ def _span_text(s):
 
 
 def _num(n):
+    """Ganze Zahl mit Tausenderpunkten (1.234.567)."""
     return f"{int(n):,}".replace(",", ".")
 
 
 class DbLoadDialog(QDialog):
+    """Dialog „Aus Datenbank laden“ (siehe Modulbeschreibung). Ergebnis in ``result`` nach OK."""
     def __init__(self, parent, conn, config_names=(), project=""):
+        """Dialog aufbauen und sofort mit der Datenbank der Konfiguration verbinden.
+
+        ``conn``: Einstellungen (Datenbanktyp, Zugang); ``config_names``: Variablen der aktuellen Konfiguration (für
+        „Wie Konfiguration“ und die Vorauswahl); ``project``: Projektname der Konfiguration (vorgewählt).
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("Aus Datenbank laden"))
         self.conn = dict(conn)
@@ -197,6 +206,7 @@ class DbLoadDialog(QDialog):
         job = {"res": None, "err": None, "done": done, "text": text, "t0": time.time()}
 
         def work():
+            """Läuft im Hintergrund-Thread: Ergebnis bzw. Fehler im Auftrag ablegen (keine Qt-Aufrufe hier!)."""
             try:
                 job["res"] = fn()
             except BaseException as e:          # noqa: BLE001 – auch Abbruch/Speicherfehler melden
@@ -209,6 +219,11 @@ class DbLoadDialog(QDialog):
         self.timer.start()
 
     def _poll(self):
+        """Timer (100 ms) im Qt-Thread: Fortschritt anzeigen; ist der Auftrag fertig, Fehler melden oder
+        ``done(Ergebnis)`` aufrufen.
+
+        So bleiben alle Oberflächenzugriffe im Qt-Thread, während die Datenbank im Hintergrund arbeitet.
+        """
         job = self._job
         if job is None:
             self.timer.stop()
@@ -232,6 +247,7 @@ class DbLoadDialog(QDialog):
         job["done"](job["res"])
 
     def _set_busy(self, busy):
+        """Während eines Auftrags Bedienelemente sperren und „Schließen“ zu „Abbrechen“ machen."""
         for w in (self.btn_load, self.btn_count, self.cb_project, self.tree):
             w.setEnabled(not busy)
         self.btn_cancel.setText(tr("Abbrechen") if busy else tr("Schließen"))
@@ -241,6 +257,9 @@ class DbLoadDialog(QDialog):
             self.unsetCursor()
 
     def on_cancel(self):
+        """Abbrechen: laufenden Auftrag abbrechen lassen (Abbruch wird beim nächsten Datenblock geprüft), sonst Dialog
+        schließen.
+        """
         if self._job is not None:
             self._cancel = True
             self.lbl_status.setText(tr("Breche ab …"))
@@ -248,10 +267,12 @@ class DbLoadDialog(QDialog):
         self.reject()
 
     def closeEvent(self, ev):
+        """Beim Schließen einen laufenden Ladevorgang abbrechen."""
         self._cancel = True
         super().closeEvent(ev)
 
     def done(self, r):
+        """Dialog beenden: Abbruch anfordern und die Verbindung schließen, wenn kein Auftrag mehr läuft."""
         self._cancel = True
         if self.reader is not None and self._job is None:
             self.reader.close()
@@ -259,6 +280,7 @@ class DbLoadDialog(QDialog):
 
     # ------------------------------------------------------------------ Verbindung, Projekte, Variablen
     def choose_file(self):
+        """Andere SQLite-Datei wählen und verbinden."""
         start = os.path.dirname(db_settings(self.conn)["datei"]) or BASE_DIR
         path, _ = QFileDialog.getOpenFileName(self, tr("SQLite-Datei wählen"), start,
                                               tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
@@ -267,10 +289,12 @@ class DbLoadDialog(QDialog):
             self.connect_db()
 
     def use_config_db(self):
+        """Zurück zur Datenbank der Konfiguration."""
         self.sqlite_file = None
         self.connect_db()
 
     def connect_db(self):
+        """Leser für die Datenbank anlegen, im Hintergrund verbinden und die Projektliste holen."""
         if self._job is not None:
             return
         if self.reader is not None:
@@ -290,10 +314,14 @@ class DbLoadDialog(QDialog):
         self.lbl_db.setText("<b>" + tr("Datenbank:") + "</b> " + reader.describe())
 
         def fn():
+            """Hintergrund: verbinden und Projekte lesen."""
             reader.connect()
             return reader.projects()
 
         def done(projects):
+            """Qt-Thread: Projektauswahl füllen (Projekt der Konfiguration bzw. das einzige vorwählen) und Variablen
+            laden.
+            """
             self.reader = reader
             self.cb_project.blockSignals(True)
             self.cb_project.addItem(tr("(alle Projekte)"), ALL_PROJECTS)
@@ -306,10 +334,12 @@ class DbLoadDialog(QDialog):
         self._run(tr("Verbinde …"), fn, done)
 
     def current_project(self):
+        """Gewähltes Projekt oder None für „alle Projekte“."""
         p = self.cb_project.currentData()
         return None if p in (None, ALL_PROJECTS) else p
 
     def load_variables(self):
+        """Variablen des Projekts mit erstem/letztem Zeitpunkt und Anzahl der Werte lesen und in die Liste schreiben."""
         if self.reader is None:
             return
         proj = self.current_project()
@@ -337,12 +367,14 @@ class DbLoadDialog(QDialog):
         self._run(tr("Lese Variablenliste …"), lambda: self.reader.variables(proj), done)
 
     def apply_filter(self):
+        """Variablenliste nach dem Filtertext ein-/ausblenden."""
         f = self.ed_filter.text().strip().lower()
         for i in range(self.tree.topLevelItemCount()):
             it = self.tree.topLevelItem(i)
             it.setHidden(bool(f) and f not in it.text(0).lower())
 
     def check(self, how):
+        """Auswahl setzen: "all" (alle sichtbaren), "none" (keine) oder "cfg" (die Variablen der Konfiguration)."""
         self.tree.blockSignals(True)
         for i in range(self.tree.topLevelItemCount()):
             it = self.tree.topLevelItem(i)
@@ -354,6 +386,7 @@ class DbLoadDialog(QDialog):
         self.update_summary()
 
     def selected(self):
+        """Gewählte Variablen -> [(Name, erster, letzter, Anzahl)]."""
         out = []
         for i in range(self.tree.topLevelItemCount()):
             it = self.tree.topLevelItem(i)
@@ -363,6 +396,7 @@ class DbLoadDialog(QDialog):
 
     # ------------------------------------------------------------------ Zeitraum
     def _data_range(self):
+        """Zeitraum, den die gewählten (sonst alle) Variablen abdecken -> (erster, letzter)."""
         sel = self.selected() or [(n, a, b, c) for n, a, b, c in self.info]
         if not sel:
             now = time.time()
@@ -370,6 +404,7 @@ class DbLoadDialog(QDialog):
         return min(s[1] for s in sel), max(s[2] for s in sel)
 
     def _set_range(self, t0, t1):
+        """Von/Bis setzen, ohne für jedes Feld einzeln eine Neuberechnung auszulösen."""
         for w, ts in ((self.dt_from, t0), (self.dt_to, t1)):
             w.blockSignals(True)
             w.setDateTime(QDateTime.fromSecsSinceEpoch(int(ts)))
@@ -377,6 +412,7 @@ class DbLoadDialog(QDialog):
         self.update_summary()
 
     def quick_range(self, key):
+        """Schnellwahl des Zeitraums; „letzte …“ zählt vom letzten gespeicherten Wert zurück, nicht von jetzt."""
         first, last = self._data_range()
         end = int(last) + 1
         if key == "alles":
@@ -391,15 +427,20 @@ class DbLoadDialog(QDialog):
             self._set_range(max(int(first), end - span), end)
 
     def time_range(self):
+        """Gewählter Zeitraum als Unix-Zeiten; „Bis“ schließt die ganze Sekunde ein."""
         t0 = self.dt_from.dateTime().toSecsSinceEpoch()
         t1 = self.dt_to.dateTime().toSecsSinceEpoch() + 0.999
         return float(t0), float(t1)
 
     def raster(self):
+        """Raster der gewählten Auflösung in Sekunden (−1 = automatisch, 0 = Rohdaten)."""
         key = self.cb_res.currentData()
         return next(r for k, _t, r in RESOLUTIONS if k == key)
 
     def update_summary(self):
+        """Zusammenfassung: Zahl der Variablen, Zeitraum, Auflösung und geschätzte Zahl der Werte (anteilig aus der
+        Variablenliste).
+        """
         sel = self.selected()
         t0, t1 = self.time_range()
         if t1 <= t0:
@@ -417,6 +458,7 @@ class DbLoadDialog(QDialog):
 
     # ------------------------------------------------------------------ Zählen, Laden
     def count_values(self):
+        """Genaue Zahl der Werte im Zeitraum von der Datenbank zählen lassen (im Hintergrund)."""
         sel = self.selected()
         if self.reader is None or not sel:
             return
@@ -428,6 +470,11 @@ class DbLoadDialog(QDialog):
         self._run(tr("Zähle Werte …"), lambda: self.reader.count(names, t0, t1, proj), done)
 
     def start_load(self):
+        """Werte im Hintergrund laden; danach Dialog mit dem Ergebnis schließen.
+
+        Auflösung „automatisch“: Rohdaten, solange es höchstens ``AUTO_POINTS`` Werte je Variable sind, sonst rechnet
+        die Datenbank Mittelwerte in einem passenden Raster (``nice_raster``).
+        """
         sel = self.selected()
         if self.reader is None:
             return

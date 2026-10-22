@@ -17,6 +17,7 @@ class PasswordDialog(QDialog):
     """Neues Passwort (zweimal) eingeben."""
 
     def __init__(self, parent, user):
+        """Zwei verdeckte Eingabefelder für das neue Passwort von ``user``; Ergebnis in ``password``."""
         super().__init__(parent)
         self.setWindowTitle(tr("Passwort für {0}").format(user))
         self.ed1, self.ed2 = QLineEdit(), QLineEdit()
@@ -33,6 +34,7 @@ class PasswordDialog(QDialog):
         self.password = ""
 
     def check(self):
+        """OK nur bei ausreichender Länge und zwei gleichen Eingaben."""
         a, b = self.ed1.text(), self.ed2.text()
         if len(a) < MIN_LEN:
             QMessageBox.warning(self, tr("Passwort"), tr("Das Passwort ist zu kurz (mindestens {0} Zeichen).").format(MIN_LEN))
@@ -48,6 +50,7 @@ class WebUsersDialog(QDialog):
     """Liste der Benutzer: hinzufügen, Passwort setzen, entfernen. Ergebnis: ``users`` {Name: Hash}."""
 
     def __init__(self, parent, users):
+        """Liste der Benutzer mit Knöpfen Hinzufügen, Passwort ändern, Entfernen. ``users``: {Name: Passwort-Hash}."""
         super().__init__(parent)
         self.setWindowTitle(tr("Webserver – Benutzer"))
         self.resize(420, 320)
@@ -77,15 +80,18 @@ class WebUsersDialog(QDialog):
         lay.addWidget(bb)
 
     def _fill(self):
+        """Liste alphabetisch neu füllen."""
         self.lst.clear()
         for n in sorted(self.users, key=str.lower):
             self.lst.addItem(n)
 
     def _current(self):
+        """Name des markierten Benutzers oder ""."""
         it = self.lst.currentItem()
         return it.text() if it is not None else ""
 
     def _set_password(self, name):
+        """Passwort für ``name`` abfragen und als Hash speichern -> True bei OK."""
         from plc_webauth import hash_password
         dlg = PasswordDialog(self, name)
         if dlg.exec():
@@ -94,6 +100,7 @@ class WebUsersDialog(QDialog):
         return False
 
     def add(self):
+        """Neuen Benutzer anlegen (Name abfragen, dann Passwort); doppelte Namen werden abgelehnt."""
         name, ok = QInputDialog.getText(self, tr("Benutzer hinzufügen"), tr("Benutzername:"))
         name = (name or "").strip()
         if not ok or not name:
@@ -105,11 +112,13 @@ class WebUsersDialog(QDialog):
             self._fill()
 
     def change(self):
+        """Passwort des markierten Benutzers neu setzen."""
         name = self._current()
         if name:
             self._set_password(name)
 
     def remove(self):
+        """Markierten Benutzer nach Rückfrage entfernen."""
         name = self._current()
         if name and QMessageBox.question(self, tr("Benutzer entfernen"), tr("Benutzer „{0}“ entfernen?").format(name)) \
                 == QMessageBox.StandardButton.Yes:

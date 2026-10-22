@@ -19,7 +19,6 @@ im echten Programm aussehen.
 """
 import argparse
 import os
-import socket
 import sys
 import tempfile
 import time
@@ -29,28 +28,29 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 
 
 def demo_config(folder):
-    """Demo-Konfiguration mit gültigen Adressen und freiem Web-Port in ``folder`` -> Pfad der Datei."""
+    """Demo-Konfiguration mit gültigen Adressen, Webserver, OPC-UA-Server, Benachrichtigungen und Triggern -> Pfad."""
     from plc_common import Plc, default_connection, save_config
     from plc_recorder import demo_config as demo
     charts, variables = demo()
     for k, v in enumerate(variables):
         if not v.formula:
             v.address = f"DB1.DBX100.{k % 8}" if v.dtype == "BOOL" else f"DB1.DBD{4 * k}"
-    s = socket.socket()
-    s.bind(("127.0.0.1", 0))
-    port = s.getsockname()[1]
-    s.close()
     conn = default_connection()
     from plc_webauth import hash_password
-    conn.update(csv_ordner=folder, projekt="Kesselhaus Linie 1", web_port=port, web_host="127.0.0.1",
-                web_benutzer={"franz": hash_password("geheim123", 1000)},
-                benachrichtigung={"aktiv": True, "prio_min": "Warnung",
+    import json
+    conn.update(csv_ordner=folder, projekt="Kesselhaus Linie 1", web_port=8080, web_host="0.0.0.0", web_aktiv=1,
+                web_https=1, web_benutzer=json.dumps({"franz": hash_password("geheim123", 1000)}),
+                benachrichtigung=json.dumps({"aktiv": True, "prio_min": "Warnung",
                                   "email": {"aktiv": True, "server": "smtp.firma.de", "an": "schicht@firma.de"},
-                                  "ntfy": {"aktiv": True, "url": "https://ntfy.sh/kesselhaus-4711"}},
-                opcua_server={"aktiv": True, "port": 4840, "sicherheit": ["none", "Basic256Sha256,SignAndEncrypt"],
-                              "anonym": False, "benutzer": "web"})
+                                  "ntfy": {"aktiv": True, "url": "https://ntfy.sh/kesselhaus-4711"}}),
+                opcua_server=json.dumps({"aktiv": True, "port": 4840,
+                                         "sicherheit": ["none", "Basic256Sha256,SignAndEncrypt"],
+                                         "anonym": False, "benutzer": "web"}))
     path = os.path.join(folder, "anlage.json")
     save_config(conn, charts, variables, path, plcs=[Plc(name="SPS 1")])
+    from plc_events import save_triggers
+    from plc_recorder import demo_triggers
+    save_triggers(path, demo_triggers())                 # Beispiel-Trigger (Übertemperatur, Druck niedrig)
     return path
 
 

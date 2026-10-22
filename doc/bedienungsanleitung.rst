@@ -2656,6 +2656,13 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
   aus dem Internet (jsdelivr); im geschlossenen Netzwerk daher die Datei
   ``chart.umd.js`` (Chart.js 4) manuell in den Ordner ``web_static`` legen.
 
+.. figure:: images/webserver_qr.png
+   :alt: Webserver-Adresse mit QR-Code
+   :width: 70%
+   :align: center
+
+   Datei › Webserver-Adresse …: Adresse mit QR-Code zum Scannen.
+
 Der Server überträgt nur die sichtbaren Daten, auf die Bildschirmbreite reduziert
 (Minimum und Maximum je Abschnitt bleiben erhalten), und komprimiert sie.
 
@@ -2791,6 +2798,13 @@ berechneten Variablen in einem OPC-UA-Netz weiterverwenden. Der Server ist **nur
   (dieselben Namen und Passwörter wie unter `HTTPS und Anmeldung`_). Für eine Anmeldung
   sollte ein verschlüsselter Endpunkt eingeschaltet sein, sonst geht das Passwort im
   Klartext über das Netz.
+
+.. figure:: images/opcua_server.png
+   :alt: Dialog OPC-UA-Server
+   :width: 55%
+   :align: center
+
+   Dialog OPC-UA-Server: Endpunkt, Sicherheitsstufen und Zugriff.
 
 **Adressraum** (Namensraum ``urn:plc-datenlogger``):
 
@@ -3188,6 +3202,13 @@ Ereignis-Viewer und Quittieren
   Speicher, lädt er die passende CSV-Datei aus dem CSV-Ordner bzw. dem Archiv.
 * **Ordner öffnen** zeigt die Ereignisdatei im Explorer.
 
+.. figure:: images/ereignis_diagramm.png
+   :alt: Ereignis im Diagramm
+   :width: 95%
+   :align: center
+
+   Nach „Im Diagramm zeigen“: Zeitraum um das Ereignis, Lineal 1 auf Kommt, Lineal 2 auf Geht.
+
 Der Viewer lässt sich auch **allein** starten – etwa neben einem Headless-Logger oder an
 einem anderen Rechner mit Zugriff auf die Datei (Netzlaufwerk):
 
@@ -3210,6 +3231,13 @@ Kommt ein Ereignis, kann der Logger es sofort weitermelden – per **E-Mail**, i
 **Push-Nachricht aufs Handy** mit der App *ntfy* oder über **Telegram**. Einstellen im
 Konfigurationsprogramm, Reiter *Trigger & Ereignisse*, **Benachrichtigungen …**; daneben
 steht, ob und wohin gemeldet wird.
+
+.. figure:: images/benachrichtigungen.png
+   :alt: Dialog Benachrichtigungen
+   :width: 60%
+   :align: center
+
+   Benachrichtigungen: oben wann gemeldet wird, darunter je Kanal ein Reiter.
 
 **Wann gemeldet wird:**
 
