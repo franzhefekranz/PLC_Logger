@@ -15,6 +15,7 @@ Ein Startprogramm, mehrere Fenster bzw. Betriebsarten:
 | `plc_logger.py --konfig` | `plc_config` | Konfigurationsprogramm |
 | `plc_logger.py --ereignisse` | `plc_event_viewer` | Ereignis-Viewer (z. B. neben einem Headless-Logger) |
 | `plc_logger.py --iocheck` | `plc_iocheck_dialog` | IO-Check für die Inbetriebnahme |
+| `plc_iocheck_start.py` (`PLCIOCheck.exe`) | `plc_iocheck_dialog` | IO-Check als eigenes Programm mit Startbild |
 
 `plc_logger` lädt bewusst noch kein Qt: Erst nach der Entscheidung GUI/Headless werden die schweren Bibliotheken
 importiert. Alle Betriebsarten benutzen dieselbe Konfigurationsdatei (JSON).
