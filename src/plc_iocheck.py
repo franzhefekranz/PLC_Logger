@@ -230,28 +230,37 @@ def driver_address(address: str, driver_id: str, symbol: str = "", kind: str = "
 # ---------------------------------------------------------------------------------------------------------------------
 # IO-Liste importieren
 # ---------------------------------------------------------------------------------------------------------------------
-# Feld -> mögliche Spaltenüberschriften (klein geschrieben, ohne Leer-/Sonderzeichen; erster Treffer gilt)
+# Feld -> mögliche Spaltenüberschriften der IO-Liste (Vorgabe). Verglichen wird ohne Groß-/Kleinschreibung, Leer- und
+# Sonderzeichen (siehe _key); die erste passende Überschrift gilt. Im IO-Check (Spalten …) lassen sich die Namen je Feld
+# ändern; eine leere Liste schaltet das Feld ab (Spalte wird weder eingelesen noch angezeigt).
 COLUMNS = {
-    "address": ["adresse", "address", "logischeadresse", "logicaladdress", "operand", "eaadresse", "ioadresse",
-                "absoluteadresse", "absoluteaddress", "tag", "tagname", "nodeid", "gerät", "device"],
-    "symbol": ["symbol", "name", "symbolname", "variable", "signal", "signalname"],
-    "comment": ["kommentar", "comment", "beschreibung", "description", "text", "funktion", "function",
-                "bezeichnung"],
-    "bmk": ["bmk", "betriebsmittelkennzeichen", "kennzeichen", "betriebsmittel", "devicetag", "tagid", "akz"],
-    "group": ["gruppe", "schrank", "baugruppe", "ort", "ortskennzeichen", "group", "cabinet", "station", "modul",
-              "module", "anlage", "anlagenteil"],
-    "kind": ["typ", "art", "signalart", "kind", "signaltype", "iotyp", "iotype", "type"],
-    "dtype": ["datentyp", "datatype", "dtype"],
-    "plc": ["steuerung", "sps", "plc", "controller", "cpu"],
-    "raw_min": ["rohwertmin", "rohmin", "rawmin", "rohwertvon"],
-    "raw_max": ["rohwertmax", "rohmax", "rawmax", "rohwertbis"],
-    "eng_min": ["messbereichmin", "bereichvon", "min", "skalmin", "engmin", "unten", "messbereichvon"],
-    "eng_max": ["messbereichmax", "bereichbis", "max", "skalmax", "engmax", "oben", "messbereichbis"],
-    "range": ["messbereich", "bereich", "range", "measuringrange"],
-    "unit": ["einheit", "unit"],
-    "status": ["status", "prüfstatus", "ergebnis"],
-    "remark": ["bemerkung", "remark", "notiz", "note"],
+    "address": ["Adresse", "Address", "Logische Adresse", "Logical Address", "Operand", "E/A-Adresse", "IO-Adresse",
+                "Absolute Adresse", "Absolute Address", "Tag", "Tag Name", "NodeId", "Gerät", "Device"],
+    "symbol": ["Symbol", "Name", "Symbolname", "Variable", "Signal", "Signalname"],
+    "comment": ["Kommentar", "Comment", "Beschreibung", "Description", "Text", "Funktion", "Function",
+                "Bezeichnung"],
+    "bmk": ["BMK", "Betriebsmittelkennzeichen", "Kennzeichen", "Betriebsmittel", "Device Tag", "Tag ID", "AKZ"],
+    "group": ["Gruppe", "Schrank", "Baugruppe", "Ort", "Ortskennzeichen", "Group", "Cabinet", "Station", "Modul",
+              "Module", "Anlage", "Anlagenteil"],
+    "kind": ["Typ", "Art", "Signalart", "Kind", "Signal Type", "IO-Typ", "IO Type", "Type"],
+    "dtype": ["Datentyp", "Data Type", "DType"],
+    "plc": ["Steuerung", "SPS", "PLC", "Controller", "CPU"],
+    "raw_min": ["Rohwert min", "Roh min", "Raw min", "Rohwert von"],
+    "raw_max": ["Rohwert max", "Roh max", "Raw max", "Rohwert bis"],
+    "eng_min": ["Messbereich min", "Bereich von", "Min", "Skal min", "Eng min", "Unten", "Messbereich von"],
+    "eng_max": ["Messbereich max", "Bereich bis", "Max", "Skal max", "Eng max", "Oben", "Messbereich bis"],
+    "range": ["Messbereich", "Bereich", "Range", "Measuring Range"],
+    "unit": ["Einheit", "Unit"],
+    "status": ["Status", "Prüfstatus", "Ergebnis"],
+    "remark": ["Bemerkung", "Remark", "Notiz", "Note"],
 }
+
+# Anzeigenamen der Felder im Dialog „Spalten der IO-Liste“ (Reihenfolge = Reihenfolge im Dialog)
+FIELD_TEXT = {"address": N_("Adresse"), "symbol": N_("Symbol"), "comment": N_("Kommentar"), "bmk": N_("BMK"),
+              "group": N_("Gruppe"), "kind": N_("Typ (DI/DO/AI/AO)"), "dtype": N_("Datentyp"), "plc": N_("Steuerung"),
+              "range": N_("Messbereich (z. B. 0 … 10 bar)"), "eng_min": N_("Messbereich von"),
+              "eng_max": N_("Messbereich bis"), "unit": N_("Einheit"), "raw_min": N_("Rohwert von"),
+              "raw_max": N_("Rohwert bis"), "status": N_("Status"), "remark": N_("Bemerkung")}
 
 
 def _key(text) -> str:
@@ -261,14 +270,51 @@ def _key(text) -> str:
     return re.sub(r"[^0-9a-zäöüß]", "", str(text or "").lower())
 
 
-def map_columns(header) -> dict:
-    """{Feld: Spaltenindex} aus der Kopfzeile."""
+def load_aliases() -> dict:
+    """Eigene Spaltenüberschriften je Feld aus den persönlichen Einstellungen: {Feld: [Überschrift, …]}.
+
+    Nur geänderte Felder stehen darin; eine leere Liste bedeutet „Feld abgeschaltet“."""
+    try:
+        from plc_common import load_settings
+        data = load_settings().get("iocheck_spalten", {})
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {f: [str(x) for x in v] for f, v in data.items() if f in COLUMNS and isinstance(v, list)}
+
+
+def save_aliases(aliases: dict):
+    """Eigene Spaltenüberschriften speichern; Felder, die der Vorgabe entsprechen, entfallen."""
+    from plc_common import save_settings
+    save_settings(iocheck_spalten={f: list(v) for f, v in aliases.items()
+                                   if f in COLUMNS and list(v) != COLUMNS[f]})
+
+
+def column_names(fld, aliases=None) -> list:
+    """Gültige Überschriften eines Feldes: die eigenen, sonst die Vorgabe (leer = Feld abgeschaltet)."""
+    aliases = load_aliases() if aliases is None else aliases
+    return list(aliases[fld]) if fld in aliases else list(COLUMNS[fld])
+
+
+def disabled_fields(aliases=None) -> set:
+    """Felder ohne Überschrift: werden nicht eingelesen und im IO-Check nicht angezeigt (Adresse ist Pflicht)."""
+    aliases = load_aliases() if aliases is None else aliases
+    return {f for f in COLUMNS if f != "address" and not column_names(f, aliases)}
+
+
+def map_columns(header, aliases=None) -> dict:
+    """{Feld: Spaltenindex} aus der Kopfzeile (eigene Überschriften statt der Vorgabe, abgeschaltete Felder nie).
+
+    Jede Spalte wird höchstens einem Feld zugeordnet; die Felder werden in der Reihenfolge von COLUMNS vergeben."""
     keys = [_key(h) for h in header]
+    aliases = load_aliases() if aliases is None else aliases
     found = {}
-    for fld, names in COLUMNS.items():
-        for name in names:
-            if name in keys and keys.index(name) not in found.values():
-                found[fld] = keys.index(name)
+    for fld in COLUMNS:
+        for name in column_names(fld, aliases):
+            k = _key(name)
+            if k and k in keys and keys.index(k) not in found.values():
+                found[fld] = keys.index(k)
                 break
     return found
 
@@ -304,12 +350,14 @@ _STATUS_IN = {"ok": "ok", "io": "ok", "i.o.": "ok", "geprüft": "ok", "fehler": 
               "entfällt": "uebersprungen"}
 
 
-def import_rows(header, rows):
-    """Zeilen einer Tabelle -> (Signale, Warnungen). Zeilen ohne Adresse entfallen (z. B. Zwischenüberschriften)."""
-    cols = map_columns(header)
+def import_rows(header, rows, aliases=None):
+    """Zeilen einer Tabelle -> (Signale, Warnungen). Zeilen ohne Adresse entfallen (z. B. Zwischenüberschriften).
+
+    ``aliases``: eigene Spaltenüberschriften (Standard: aus den Einstellungen, siehe ``map_columns``)."""
+    cols = map_columns(header, aliases)
     if "address" not in cols:
-        raise ValueError(tr("Die Tabelle hat keine Spalte „Adresse“ (erkannt werden z. B. Adresse, Address, "
-                            "Logische Adresse, Operand, Tag-Name)."))
+        raise ValueError(tr("Die Tabelle hat keine Spalte „Adresse“ (erkannt werden: {0}). Weitere Überschriften "
+                            "lassen sich unter „Spalten …“ eintragen.").format(", ".join(column_names("address"))))
 
     def cell(row, fld):
         """Inhalt der Spalte für ``fld`` als Text (ganze Zahlen aus Excel ohne „.0“)."""
@@ -349,13 +397,19 @@ def import_rows(header, rows):
     return signals, warnings
 
 
-def import_file(path):
-    """IO-Liste aus einer CSV- oder Excel-Datei importieren -> (Signale, Warnungen)."""
+def read_list(path):
+    """Tabelle einer IO-Liste lesen -> (Kopfzeile, Zeilen); leere Datei: ValueError."""
     from plc_export import read_table
     header, rows = read_table(path)
     if not header:
         raise ValueError(tr("Die Datei enthält keine Daten."))
-    return import_rows(header, rows)
+    return header, rows
+
+
+def import_file(path, aliases=None):
+    """IO-Liste aus einer CSV- oder Excel-Datei importieren -> (Signale, Warnungen)."""
+    header, rows = read_list(path)
+    return import_rows(header, rows, aliases)
 
 
 # ---------------------------------------------------------------------------------------------------------------------

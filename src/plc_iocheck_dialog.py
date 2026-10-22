@@ -443,6 +443,68 @@ class ScanDialog(QDialog):
         self.accept()
 
 
+class ColumnsDialog(QDialog):
+    """Dialog „Spalten der IO-Liste“: je Feld die Spaltenüberschriften, unter denen es in der Excel-/CSV-Liste steht.
+
+    Mehrere Überschriften durch Komma oder Semikolon trennen; Groß-/Kleinschreibung, Leer- und Sonderzeichen zählen
+    nicht. Ein leeres Feld wird nicht eingelesen und seine Spalte in der Signalliste nicht angezeigt (die Adresse ist
+    Pflicht). Gespeichert wird in den persönlichen Einstellungen; Ergebnis nach OK in ``aliases``."""
+
+    def __init__(self, parent, aliases):
+        """Tabelle Feld | Überschriften, vorbelegt mit den gültigen Namen (eigene oder Vorgabe)."""
+        super().__init__(parent)
+        self.setWindowTitle(tr("Spalten der IO-Liste"))
+        lay = QVBoxLayout(self)
+        hint = QLabel(tr("Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/CSV)? Mehrere "
+                         "Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. "
+                         "Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen."))
+        hint.setWordWrap(True)
+        lay.addWidget(hint)
+        self.fields = list(io.FIELD_TEXT)
+        self.table = QTableWidget(len(self.fields), 2)
+        self.table.setHorizontalHeaderLabels([tr("Feld"), tr("Spaltenüberschriften in der IO-Liste")])
+        self.table.verticalHeader().setVisible(False)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+        self._fill(aliases)
+        lay.addWidget(self.table)
+        row = QHBoxLayout()
+        b_def = QPushButton(tr("Vorgabe"))
+        b_def.setToolTip(tr("Alle Felder auf die eingebauten Spaltennamen zurücksetzen"))
+        b_def.clicked.connect(lambda: self._fill({}))
+        row.addWidget(b_def)
+        row.addStretch(1)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        bb.accepted.connect(self._ok)
+        bb.rejected.connect(self.reject)
+        row.addWidget(bb)
+        lay.addLayout(row)
+        self.resize(760, 560)
+        self.aliases = dict(aliases)
+
+    def _fill(self, aliases):
+        """Tabelle mit den Namen aus ``aliases`` (fehlende Felder: Vorgabe) füllen."""
+        for r, fld in enumerate(self.fields):
+            it = QTableWidgetItem(tr(io.FIELD_TEXT[fld]))
+            it.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.table.setItem(r, 0, it)
+            self.table.setItem(r, 1, QTableWidgetItem(", ".join(io.column_names(fld, aliases))))
+        self.table.resizeColumnToContents(0)
+
+    def names(self, fld):
+        """Eingetragene Überschriften eines Feldes als Liste."""
+        it = self.table.item(self.fields.index(fld), 1)
+        text = it.text() if it else ""
+        return [x.strip() for x in text.replace(";", ",").split(",") if x.strip()]
+
+    def _ok(self):
+        """Prüfen (Adresse darf nicht leer sein) und übernehmen."""
+        if not self.names("address"):
+            QMessageBox.warning(self, self.windowTitle(), tr("Für die Adresse ist mindestens eine Überschrift nötig."))
+            return
+        self.aliases = {fld: self.names(fld) for fld in self.fields}
+        self.accept()
+
+
 # ---------------------------------------------------------------------------------------------------------------------
 # Analogwert des gewählten Signals
 # ---------------------------------------------------------------------------------------------------------------------
@@ -655,6 +717,8 @@ class IoCheckWindow(QMainWindow):
 
         act(tr("IO-Liste importieren …"), self.import_list,
             tr("Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)"))
+        act(tr("Spalten …"), self.edit_columns,
+            tr("Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt"))
         act(tr("Öffnen …"), lambda: self.open_project(), tr("Gespeicherten IO-Check öffnen"), "Ctrl+O")
         act(tr("Speichern"), lambda: self.save_project(), tr("Prüfstand speichern (*.iocheck.json)"), "Ctrl+S")
         act(tr("Speichern unter …"), lambda: self.save_project(as_new=True))
@@ -671,6 +735,17 @@ class IoCheckWindow(QMainWindow):
         self.chk_demo.setChecked(bool(demo))
         tb.addWidget(self.chk_demo)
         tb.addSeparator()
+        # Seitenleiste „Was hat sich bewegt?“ ein-/ausblenden (persönliche Einstellung, Standard: sichtbar)
+        self.act_moved = QAction(tr("Was hat sich bewegt?"), self)
+        self.act_moved.setCheckable(True)
+        self.act_moved.setToolTip(tr("Seitenleiste mit den zuletzt gewechselten Signalen ein- oder ausblenden"))
+        try:
+            from plc_common import load_settings
+            self.act_moved.setChecked(bool(load_settings().get("iocheck_bewegt", True)))
+        except Exception:
+            self.act_moved.setChecked(True)
+        self.act_moved.toggled.connect(self._toggle_moved)
+        tb.addAction(self.act_moved)
         self.chk_auto = QCheckBox(tr("Signale automatisch abhaken"))
         self.chk_auto.setToolTip(tr("Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 "
                                     "gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen "
@@ -823,6 +898,8 @@ class IoCheckWindow(QMainWindow):
         self.changes.cellDoubleClicked.connect(self._change_clicked)
         sv.addWidget(self.changes, 1)
         split.addWidget(side)
+        self.side = side
+        self.side.setVisible(self.act_moved.isChecked())
         split.setStretchFactor(0, 3)
         split.setStretchFactor(1, 1)
         split.setSizes([900, 360])
@@ -857,6 +934,7 @@ class IoCheckWindow(QMainWindow):
                 self.statusBar().showMessage(tr("Bereich {0}: {1}").format(rng.start, e), 8000)
         self.all_signals = sigs
         self.model.set_signals(sigs)
+        self._apply_columns()
         groups = sorted({s.group for s in sigs if s.group})
         cur = self.cb_group.currentData()
         self.cb_group.blockSignals(True)
@@ -875,6 +953,21 @@ class IoCheckWindow(QMainWindow):
         self._update_title()
         if was_running:
             self.start_reading()
+
+    def _toggle_moved(self, on):
+        """Seitenleiste „Was hat sich bewegt?“ zeigen/verbergen und die Wahl merken."""
+        self.side.setVisible(on)
+        try:
+            from plc_common import save_settings
+            save_settings(iocheck_bewegt=bool(on))
+        except Exception:
+            pass
+
+    def _apply_columns(self):
+        """Spalten abgeschalteter Felder (leere Überschriften, siehe „Spalten …“) in der Signalliste ausblenden."""
+        off = io.disabled_fields()
+        for key, _t in COLS:
+            self.view.setColumnHidden(COL[key], key in off)
 
     def _apply_filter(self, *_):
         """Suchfeld und Auswahl (Gruppe, Typ, Status) auf die Signalliste anwenden."""
@@ -939,10 +1032,13 @@ class IoCheckWindow(QMainWindow):
         if not path:
             return
         try:
-            sigs, warnings = io.import_file(path)
+            header, rows = io.read_list(path)
+            sigs, warnings = io.import_rows(header, rows)
         except Exception as e:
             QMessageBox.warning(self, tr("IO-Liste importieren"), str(e))
             return
+        found = io.map_columns(header)
+        cols_text = ", ".join(f"{tr(io.FIELD_TEXT[f])} = „{header[i]}“" for f, i in found.items())
         if not sigs:
             QMessageBox.information(self, tr("IO-Liste importieren"), tr("Keine Signale gefunden."))
             return
@@ -966,11 +1062,20 @@ class IoCheckWindow(QMainWindow):
         counts = {k: sum(1 for s in sigs if s.kind == k) for k in io.KINDS}
         msg = tr("{0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.").format(
             len(sigs), counts["DI"], counts["DO"], counts["AI"], counts["AO"])
+        msg += "\n\n" + tr("Erkannte Spalten: {0}").format(cols_text)
         if warnings:
             msg += "\n\n" + "\n".join(warnings[:15]) + ("\n…" if len(warnings) > 15 else "")
         self._rebuild()
         self._mark_dirty()
         QMessageBox.information(self, tr("IO-Liste importieren"), msg)
+
+    def edit_columns(self):
+        """Dialog „Spalten der IO-Liste“; nach OK speichern und die Signalliste anpassen. Wirkt auf den nächsten Import
+        (schon eingelesene Angaben bleiben erhalten, abgeschaltete Spalten werden nur ausgeblendet)."""
+        dlg = ColumnsDialog(self, io.load_aliases())
+        if dlg.exec():
+            io.save_aliases(dlg.aliases)
+            self._apply_columns()
 
     def open_project(self, path=None):
         """Prüfstand öffnen (fragt vorher nach dem Speichern); seine Konfiguration liefert die Steuerungen, falls noch
@@ -1371,6 +1476,8 @@ class IoCheckWindow(QMainWindow):
             self._swap_until = time.time() + 10.0
             self.lbl_swap.setText("⚠ " + swap.note)
             self.lbl_swap.setVisible(True)
+            if not self.side.isVisible():             # Seitenleiste ausgeblendet: Hinweis in der Statuszeile
+                self.statusBar().showMessage("⚠ " + swap.note, 10000)
             QApplication.beep()
         elif time.time() > self._swap_until:
             self.lbl_swap.setVisible(False)

@@ -2330,7 +2330,49 @@
 @ übersprungen
 > 
 
-@ Die Tabelle hat keine Spalte „Adresse“ (erkannt werden z. B. Adresse, Address, Logische Adresse, Operand, Tag-Name).
+@ Symbol
+> 
+
+@ Kommentar
+> 
+
+@ BMK
+> 
+
+@ Gruppe
+> 
+
+@ Typ (DI/DO/AI/AO)
+> 
+
+@ Datentyp
+> 
+
+@ Messbereich (z. B. 0 … 10 bar)
+> 
+
+@ Messbereich von
+> 
+
+@ Messbereich bis
+> 
+
+@ Einheit
+> 
+
+@ Rohwert von
+> 
+
+@ Rohwert bis
+> 
+
+@ Status
+> 
+
+@ Bemerkung
+> 
+
+@ Die Tabelle hat keine Spalte „Adresse“ (erkannt werden: {0}). Weitere Überschriften lassen sich unter „Spalten …“ eintragen.
 > 
 
 @ Zeile {0}: Adresse {1} doppelt – übersprungen
@@ -2384,28 +2426,10 @@
 @ {0} ist keine IO-Check-Datei.
 > 
 
-@ Symbol
-> 
-
-@ Kommentar
-> 
-
-@ BMK
-> 
-
-@ Gruppe
-> 
-
-@ Status
-> 
-
 @ Geprüft am
 > 
 
 @ Prüfer
-> 
-
-@ Bemerkung
 > 
 
 @ Messpunkte
@@ -2506,13 +2530,31 @@
 @ Hinzufügen
 > 
 
+@ Spalten der IO-Liste
+> 
+
+@ Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/CSV)? Mehrere Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen.
+> 
+
+@ Feld
+> 
+
+@ Spaltenüberschriften in der IO-Liste
+> 
+
+@ Vorgabe
+> 
+
+@ Alle Felder auf die eingebauten Spaltennamen zurücksetzen
+> 
+
+@ Für die Adresse ist mindestens eine Überschrift nötig.
+> 
+
 @ Analogwert
 > 
 
 @ Drahtbruchprüfung: Verdrahtung öffnen (Klemme lösen) – die Baugruppe meldet einen Fehlerwert – und wieder schließen. Bei 0 … 10 V und 0 … 20 mA ist eine Unterbrechung nicht erkennbar: dann die Prüfpunkte verwenden oder von Hand abhaken.
-> 
-
-@ Einheit
 > 
 
 @ Prüfpunkte (optional, z. B. mit Kalibrator)
@@ -2563,6 +2605,12 @@
 @ Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
 > 
 
+@ Spalten …
+> 
+
+@ Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt
+> 
+
 @ Öffnen …
 > 
 
@@ -2600,6 +2648,12 @@
 > 
 
 @ Simulierte Werte statt Verbindung zur Steuerung
+> 
+
+@ Was hat sich bewegt?
+> 
+
+@ Seitenleiste mit den zuletzt gewechselten Signalen ein- oder ausblenden
 > 
 
 @ Signale automatisch abhaken
@@ -2662,9 +2716,6 @@
 @ Matrix
 > 
 
-@ Was hat sich bewegt?
-> 
-
 @ Signal
 > 
 
@@ -2702,6 +2753,9 @@
 > 
 
 @ {0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.
+> 
+
+@ Erkannte Spalten: {0}
 > 
 
 @ IO-Check öffnen
@@ -3818,9 +3872,6 @@
 > 
 
 @ Filter (Tag-Name, ab 2 Zeichen)…
-> 
-
-@ Datentyp
 > 
 
 @ zwischengespeicherte Liste – mit „Tag-Liste laden“ aktualisieren

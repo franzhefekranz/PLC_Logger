@@ -34,6 +34,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   Seiten, Warn- und Alarmgrenzen färben die Kachel. Bearbeitet wird direkt in der Webseite (verschieben, Größe,
   Eigenschaften; angemeldete Benutzer); das Layout steht in `<Konfiguration>.prozessbild.json`. Auf dem Smartphone
   untereinander.
+* **IO-Check: Spalten der IO-Liste festlegen** (*Spalten …*): je Feld die Spaltenüberschriften der Excel-/CSV-Liste
+  (eigene Namen statt der eingebauten). Ein leeres Feld wird nicht eingelesen und in der Signalliste nicht angezeigt.
+  Nach dem Import nennt die Meldung die erkannten Spalten.
+* **IO-Check: „Was hat sich bewegt?“ ausblendbar** (Knopf in der Werkzeugleiste, wird gemerkt). Ausgeblendet erscheint
+  der Hinweis auf vertauschte Signale in der Statuszeile.
 
 ### Geändert
 

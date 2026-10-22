@@ -2330,8 +2330,50 @@
 @ übersprungen
 > skipped
 
-@ Die Tabelle hat keine Spalte „Adresse“ (erkannt werden z. B. Adresse, Address, Logische Adresse, Operand, Tag-Name).
-> The table has no “Address” column (recognized e.g. Address, Adresse, Logical Address, Operand, Tag name).
+@ Symbol
+> Symbol
+
+@ Kommentar
+> Comment
+
+@ BMK
+> Device tag
+
+@ Gruppe
+> Group
+
+@ Typ (DI/DO/AI/AO)
+> Type (DI/DO/AI/AO)
+
+@ Datentyp
+> Data type
+
+@ Messbereich (z. B. 0 … 10 bar)
+> Measuring range (e.g. 0 … 10 bar)
+
+@ Messbereich von
+> Measuring range from
+
+@ Messbereich bis
+> Measuring range to
+
+@ Einheit
+> Unit
+
+@ Rohwert von
+> Raw value from
+
+@ Rohwert bis
+> Raw value to
+
+@ Status
+> Status
+
+@ Bemerkung
+> Remark
+
+@ Die Tabelle hat keine Spalte „Adresse“ (erkannt werden: {0}). Weitere Überschriften lassen sich unter „Spalten …“ eintragen.
+> The table has no “Address” column (recognized: {0}). Further headings can be entered under “Columns …”.
 
 @ Zeile {0}: Adresse {1} doppelt – übersprungen
 > Row {0}: address {1} duplicated – skipped
@@ -2384,29 +2426,11 @@
 @ {0} ist keine IO-Check-Datei.
 > {0} is not an IO check file.
 
-@ Symbol
-> Symbol
-
-@ Kommentar
-> Comment
-
-@ BMK
-> Device tag
-
-@ Gruppe
-> Group
-
-@ Status
-> Status
-
 @ Geprüft am
 > Checked at
 
 @ Prüfer
 > Checked by
-
-@ Bemerkung
-> Remark
 
 @ Messpunkte
 > Test points
@@ -2506,14 +2530,32 @@
 @ Hinzufügen
 > Add
 
+@ Spalten der IO-Liste
+> Columns of the IO list
+
+@ Unter welchen Spaltenüberschriften stehen die Angaben in der IO-Liste (Excel/CSV)? Mehrere Namen durch Komma trennen; Groß-/Kleinschreibung und Leerzeichen zählen nicht. Leer = Spalte nicht einlesen und in der Signalliste nicht anzeigen.
+> Under which column headings is the information found in the IO list (Excel/CSV)? Separate several names with commas; case and spaces do not matter. Empty = do not import the column and do not show it in the signal list.
+
+@ Feld
+> Field
+
+@ Spaltenüberschriften in der IO-Liste
+> Column headings in the IO list
+
+@ Vorgabe
+> Default
+
+@ Alle Felder auf die eingebauten Spaltennamen zurücksetzen
+> Reset all fields to the built-in column names
+
+@ Für die Adresse ist mindestens eine Überschrift nötig.
+> At least one heading is required for the address.
+
 @ Analogwert
 > Analog value
 
 @ Drahtbruchprüfung: Verdrahtung öffnen (Klemme lösen) – die Baugruppe meldet einen Fehlerwert – und wieder schließen. Bei 0 … 10 V und 0 … 20 mA ist eine Unterbrechung nicht erkennbar: dann die Prüfpunkte verwenden oder von Hand abhaken.
 > Wire break test: open the wiring (loosen the terminal) – the module reports a fault value – and close it again. With 0 … 10 V and 0 … 20 mA an interruption cannot be detected: then use the test points or check off by hand.
-
-@ Einheit
-> Unit
 
 @ Prüfpunkte (optional, z. B. mit Kalibrator)
 > Test points (optional, e.g. with a calibrator)
@@ -2563,6 +2605,12 @@
 @ Signalliste aus CSV/Excel übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
 > Import the signal list from CSV/Excel (EPLAN, TIA Portal tag table, own list)
 
+@ Spalten …
+> Columns …
+
+@ Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt
+> Define the column headings of the IO list; empty fields are neither imported nor shown
+
 @ Öffnen …
 > Open …
 
@@ -2601,6 +2649,12 @@
 
 @ Simulierte Werte statt Verbindung zur Steuerung
 > Simulated values instead of a connection to the controller
+
+@ Was hat sich bewegt?
+> What has moved?
+
+@ Seitenleiste mit den zuletzt gewechselten Signalen ein- oder ausblenden
+> Show or hide the side panel with the signals that changed last
 
 @ Signale automatisch abhaken
 > Check off signals automatically
@@ -2662,9 +2716,6 @@
 @ Matrix
 > Matrix
 
-@ Was hat sich bewegt?
-> What has moved?
-
 @ Signal
 > Signal
 
@@ -2703,6 +2754,9 @@
 
 @ {0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.
 > {0} signals imported: {1} DI, {2} DO, {3} AI, {4} AO.
+
+@ Erkannte Spalten: {0}
+> Recognized columns: {0}
 
 @ IO-Check öffnen
 > Open IO check
@@ -3819,9 +3873,6 @@
 
 @ Filter (Tag-Name, ab 2 Zeichen)…
 > Filter (tag name, from 2 characters)…
-
-@ Datentyp
-> Data type
 
 @ zwischengespeicherte Liste – mit „Tag-Liste laden“ aktualisieren
 > cached list – update with “Load tag list”

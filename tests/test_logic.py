@@ -28,6 +28,20 @@ def test_iocheck_import_and_kinds():
     assert io.driver_address("Q4.0", "ads") == "%QX4.0"
 
 
+def test_iocheck_column_aliases():
+    """Eigene Spaltenüberschriften ersetzen die Vorgabe; ein leeres Feld wird nicht eingelesen."""
+    import plc_iocheck as io
+    hdr = ["E/A", "Klartext", "Kommentar", "Ort"]
+    rows = [["E0.0", "Endlage", "wird ignoriert", "+S1"]]
+    with pytest.raises(ValueError):
+        io.import_rows(hdr, rows, aliases={})                            # „E/A“ ist kein bekannter Name
+    aliases = {"address": ["E/A"], "comment": ["Klartext"], "group": []}
+    sigs, _w = io.import_rows(hdr, rows, aliases=aliases)
+    assert sigs[0].address == "E0.0" and sigs[0].comment == "Endlage" and sigs[0].group == ""
+    assert io.disabled_fields(aliases) == {"group"}
+    assert io.map_columns(["Logische Adresse"], {}) == {"address": 0}  # Vorgabe ohne eigene Namen
+
+
 def test_iocheck_tracker_digital_and_swap():
     """Digitalsignal: Wechsel 0-1-0 ergibt automatisch „ok“; reagiert ein anderes als das erwartete Signal
     (vertauschte Verdrahtung), wird das erwartete Signal beim Wechsel vermerkt."""

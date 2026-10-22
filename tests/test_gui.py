@@ -105,7 +105,7 @@ def test_config_window(qt_log, demo_config):
     _close(w)
 
 
-def test_iocheck_window(qt_log, demo_config, tmp_path):
+def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     """IO-Check: Liste importieren, Bereiche abtasten, filtern, Werte lesen (Demo), Status setzen, Matrix zeichnen,
     Projekt speichern, Ergebnis/Protokoll exportieren, mobile Ansicht starten und beim Schließen wieder beenden.
     """
@@ -136,6 +136,23 @@ def test_iocheck_window(qt_log, demo_config, tmp_path):
     w.tabs.setCurrentIndex(1)
     wait(100)
     assert not w.matrix.grab().isNull()                      # Matrix zeichnen
+    import plc_common
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    w.act_moved.setChecked(False)                                    # „Was hat sich bewegt?“ ausblenden
+    assert not w.side.isVisible() and plc_common.load_settings()["iocheck_bewegt"] is False
+    w.act_moved.setChecked(True)
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    cd = d.ColumnsDialog(w, {})
+    cd.table.item(cd.fields.index("bmk"), 1).setText("")             # BMK abschalten
+    cd._ok()
+    assert cd.aliases["bmk"] == [] and cd.aliases["address"]
+    io_mod = __import__("plc_iocheck")
+    io_mod.save_aliases(cd.aliases)
+    w._apply_columns()
+    assert w.view.isColumnHidden(d.COL["bmk"]) and not w.view.isColumnHidden(d.COL["symbol"])
+    io_mod.save_aliases({})
+    w._apply_columns()
+    assert not w.view.isColumnHidden(d.COL["bmk"])
     w.edit_scans()
     qt_log.file = str(tmp_path / "pruef")
     assert w.save_project(as_new=True)
