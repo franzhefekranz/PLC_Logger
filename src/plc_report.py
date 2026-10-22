@@ -232,13 +232,20 @@ class ReportAccumulator:
     def series(self, i):
         """Verdichteter Verlauf der Variable i -> (Zeiten, Werte) mit Minimum und Maximum je Abschnitt."""
         w = (self.t1 - self.t0) / self.nb
+        # Typischer Abstand der Messungen: Leere Abschnitte, die kürzer als drei Abstände sind, gehören zur normalen
+        # Abtastung (Messung seltener als Abschnitte) und unterbrechen die Linie nicht – nur echte Lücken.
+        dt = (self.last_ts - self.first_ts) / (self.rows - 1) if self.rows > 1 and self.first_ts else 0.0
+        gap = 3.0 * max(dt, w)
         xs, ys = [], []
+        empty = 0
         for b in range(self.nb):
             if self.bcnt[i, b] == 0:
-                if xs and ys[-1] == ys[-1]:                  # Lücke: Linie unterbrechen
-                    xs.append(self.t0 + (b + 0.5) * w)
-                    ys.append(math.nan)
+                empty += 1
                 continue
+            if xs and empty and empty * w > gap and ys[-1] == ys[-1]:   # echte Lücke: Linie unterbrechen
+                xs.append(self.t0 + (b - empty + 0.5) * w)
+                ys.append(math.nan)
+            empty = 0
             lo, hi = self.bmin[i, b], self.bmax[i, b]
             x0 = self.t0 + b * w
             if lo == hi:

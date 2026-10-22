@@ -270,6 +270,25 @@ def s_menus():
     menu_shot("sprache_menue", w, w.menu_lang, (700, 420))
 
 
+@shot("xy_diagramm")
+def s_analysis():
+    """XY-Diagramm und Frequenzanalyse (nicht modale Fenster)."""
+    w = CTX["w"]
+    for kind, name, cls in (("xy", "xy_diagramm", "XYDialog"), ("fft", "fft", "FftDialog")):
+        # XY: Temperatur (x) gegen Mittel (y) – die ersten beiden sichtbaren Kurven; FFT: Sinus
+        keep = {"Temperatur", "Mittel"} if kind == "xy" else {"Sinus"}
+        saved, w.hidden = w.hidden, {v.name for v in w.vars if v.name not in keep}
+        w.open_analysis(kind)
+        w.hidden = saved
+        wait(1500)
+        d = find_top(cls)
+        if d is not None:
+            d.resize(1000, 670)
+            wait(800)
+            save(name, d)
+            d.close()
+
+
 @shot("anordnung_raster")
 def s_layouts():
     """Seitenanordnung: Raster bzw. Tabs (Hauptfenster mit einem Diagramm)."""
@@ -340,21 +359,6 @@ def s_export():
     """Dialog „Werte exportieren“."""
     job("export_dialog")
     CTX["w"].export_values()
-
-
-@shot("xy_diagramm")
-def s_analysis():
-    """XY-Diagramm und Frequenzanalyse (nicht modale Fenster)."""
-    w = CTX["w"]
-    for kind, name, cls in (("xy", "xy_diagramm", "XYDialog"), ("fft", "fft", "FftDialog")):
-        w.open_analysis(kind)
-        wait(1500)
-        d = find_top(cls)
-        if d is not None:
-            d.resize(1000, 670)
-            wait(800)
-            save(name, d)
-            d.close()
 
 
 @shot("pid_optimierung")
@@ -481,9 +485,9 @@ def s_config_dialogs():
 
     def trig(d):
         d.table.selectRow(0)
-        job("trigger_editor", over=lambda: d, size=(940, 670))
+        job("trigger_editor", over=lambda: d, size=(860, 560))
         d.edit_condition()
-    job("", prep=trig, size=(1220, 520))
+    job("", prep=trig, size=(1220, 760))
     cw.edit_triggers()
     cw.tabs.setCurrentIndex(3)
     wait(300)
@@ -505,6 +509,7 @@ def s_plc_dialogs():
         save(name, compose(cw, d, margin=140))
         d.close()
     from plc_treiber.clx_browser import TagBrowser
+    TagBrowser.load_from_plc = lambda self, *a, **k: None   # keine Verbindung zur (nicht vorhandenen) Steuerung
     plc = Plc(name="SPS 2", driver="clx")
     plc.params.update(ip="192.168.0.20")
     tb = TagBrowser(cw, plc, {"Zaehler", "Program:Main.Temperatur"}, ["Prozess › Sinus", "Zustände › Analog"], 0)
@@ -512,7 +517,12 @@ def s_plc_dialogs():
     tb.resize(1100, 770)
     tb.show()
     wait(400)
-    tb.tree.expandAll()
+    for k in range(tb.tree.topLevelItemCount()):        # Controller- und Programm-Tags aufklappen, Arrays nicht
+        it = tb.tree.topLevelItem(k)
+        it.setExpanded(True)
+        for j in range(it.childCount()):
+            if it.child(j).text(0).startswith("Program:"):
+                it.child(j).setExpanded(True)
     wait(300)
     save("symbolbaum", tb)
     tb.close()
@@ -545,8 +555,8 @@ def s_iocheck():
     save("iocheck_fenster", w)
     ai = next((i for i, s in enumerate(sigs) if s.kind == "AI"), None)
     if ai is not None:
-        w.view.selectRow(ai)
-        wait(800)
+        w.view.selectRow(w.proxy.mapFromSource(w.model.index(ai, 0)).row())   # Tabelle ist sortierbar
+        wait(1500)
         save("iocheck_analog", w.analog)
     w.tabs.setCurrentIndex(1)
     wait(800)
@@ -708,6 +718,14 @@ def main():
     out = args.out or os.path.join(ROOT, "doc", "images", *([] if args.lang == "de" else ["en"]))
     os.makedirs(out, exist_ok=True)
     folder = tempfile.mkdtemp(prefix="plc_bilder_")
+    if sys.platform == "win32":                          # kurzer, sprechender Pfad für die Bilder (Startbild …)
+        try:
+            nice = os.path.join(os.environ.get("SystemDrive", "C:") + os.sep, "Anlagen", "Kesselhaus")
+            shutil.rmtree(nice, ignore_errors=True)
+            os.makedirs(nice)
+            folder = nice
+        except OSError:
+            pass
     import plc_common
     plc_common.SETTINGS_FILE = os.path.join(folder, "einstellungen.json")     # Einstellungen nicht im Projekt
     import plc_i18n
@@ -716,6 +734,8 @@ def main():
     app = QApplication.instance() or QApplication(["PLC Datenlogger"])
     plc_i18n.install_qt(app)
     patch_dialogs()
+    scr = app.primaryScreen().availableGeometry()
+    print(f"Bildschirm: {scr.width()} x {scr.height()}, Stil: {app.style().name()}", flush=True)
     CTX.update(out=out, folder=folder, lang=args.lang, cfg=demo_config(folder))
     only = {x.strip() for x in args.only.split(",") if x.strip()}
     for name in list(only):                       # Voraussetzungen: Logger-Aufzeichnung bzw. IO-Check

@@ -163,6 +163,8 @@ def test_report_pdf(tmp_path):
     y = np.array([np.sin(t / (100 + k)) * 10 + k for k in range(len(vs))])
     acc = plc_report.ReportAccumulator([v.name for v in vs], [v.dtype for v in vs], t[0], t[-1], kind="tag")
     acc.add_many(t, y)
+    xs, ys = acc.series(0)                         # 5-s-Abtastung, Abschnitte 2,4 s: keine Unterbrechungen
+    assert len(xs) > 500 and not np.isnan(ys).any()
     path = plc_report.write_report(str(tmp_path / "b.pdf"), acc, charts, vs, project="Test")
     assert os.path.getsize(path) > 2000
     # Logos im Seitenkopf: PNG mit Transparenz (logo.png) und JPEG; nicht lesbare Dateien entfallen still
