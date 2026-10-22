@@ -1,0 +1,105 @@
+Bildschirm: 1024 x 720, Stil: windows11
+certificate does not contain the hostname in DNSNames runnervm0xl3a. Some applications will check this.
+Bild: logger_online.png (1600 x 1000)
+Bild: trigger_marken.png (1400 x 830)
+Bild: status_leds.png (520 x 24)
+Bild: ereignis_statusleiste.png (83 x 19)
+Bild: legende.png (182 x 103)
+Bild: screenshot_menue.png (520 x 230)
+Bild: sprache_menue.png (700 x 420)
+Bild: xy_diagramm.png (1000 x 670)
+Bild: fft.png (1000 x 670)
+Bild: anordnung_raster.png (1600 x 1000)
+Bild: logger_hauptfenster.png (1600 x 1000)
+Bild: logger_offline.png (1600 x 1000)
+Bild: logger_lineale.png (1430 x 420)
+Bild: wertetabelle.png (760 x 298)
+Bild: bool_signale.png (600 x 240)
+Bild: ereignis_viewer.png (1000 x 590)
+Bild: notiz.png (1000 x 590)
+Bild: ereignis_diagramm.png (1600 x 1000)
+Bild: export_dialog.png (402 x 382)
+Bild: pid_optimierung.png (1250 x 830)
+Bild: pdf_bericht.png (PDF)
+Bild: datenbank.png (820 x 720)
+Bild: webserver_qr.png (619 x 253)
+Bild: config_gesamt.png (1600 x 900)
+Bild: config_variablen.png (1231 x 601)
+Bild: config_eigenschaften.png (552 x 601)
+Bild: config_variablen_filter.png (1600 x 900)
+Bild: config_projekt_steuerungen.png (1582 x 210)
+Bild: config_aufzeichnung.png (1582 x 210)
+Bild: config_anzeige.png (1582 x 210)
+Bild: config_web_headless.png (1582 x 210)
+Bild: config_datenbank.png (1582 x 210)
+Bild: config_trigger_ereignis.png (1582 x 210)
+Bild: config_berichte.png (1582 x 210)
+Bild: config_aufzeichnung_trigger.png (1582 x 210)
+Bild: pid_einstellen.png (920 x 700)
+Bild: blockeditor.png (1300 x 790)
+Bild: formeleditor.png (940 x 670)
+Bild: trigger_editor.png (1220 x 760)
+Bild: web_benutzer.png (880 x 700)
+Bild: ads_auswahl.png (760 x 644)
+Bild: opcua_subscription.png (760 x 762)
+Bild: symbolbaum.png (1100 x 770)
+Bild: iocheck_fenster.png (1600 x 880)
+Bild: iocheck_analog.png (1115 x 252)
+Bild: iocheck_matrix.png (700 x 420)
+Bild: iocheck_scan.png (1139 x 829)
+Bild: iocheck_protokoll.png (PDF)
+Bild: benachrichtigungen.png (560 x 600)
+Bild: opcua_server.png (520 x 568)
+Bild: startbild.png (820 x 470)
+certificate does not contain the hostname in DNSNames runnervm0xl3a. Some applications will check this.
+127.0.0.1 - - [22/Oct/2026 16:31:00] "GET /login HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:00] "GET /logo/0 HTTP/1.1" 200 -
+Bild: web_anmeldung.png
+127.0.0.1 - - [22/Oct/2026 16:31:01] "POST /login HTTP/1.1" 302 -
+127.0.0.1 - - [22/Oct/2026 16:31:01] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:01] "GET /static/chart.umd.js HTTP/1.1" 404 -
+127.0.0.1 - - [22/Oct/2026 16:31:02] "GET /io HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:02] "GET /api/io?ver=-1&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:03] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:04] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:04] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:05] "GET /api/io?ver=3&sel=7 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:06] "GET /api/io?ver=3&sel=7 HTTP/1.1" 200 -
+Bild: iocheck_mobil.png
+127.0.0.1 - - [22/Oct/2026 16:31:07] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:07] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+Bild: iocheck_mobil_matrix.png
+127.0.0.1 - - [22/Oct/2026 16:31:08] "GET /login HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:08] "GET /logo/0 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:08] "POST /login HTTP/1.1" 302 -
+127.0.0.1 - - [22/Oct/2026 16:31:08] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:08] "GET /static/chart.umd.js HTTP/1.1" 404 -
+127.0.0.1 - - [22/Oct/2026 16:31:08] "GET /api/config HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:08] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:09] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:09] "GET /api/data?window=60&max=603 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:09] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:10] "GET /api/data?window=60&max=603 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:10] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:11] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:11] "GET /api/data?window=60&max=603 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:12] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+Bild: web_tablet.png
+127.0.0.1 - - [22/Oct/2026 16:31:12] "GET /prozess HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:12] "GET /api/prozess HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:12] "GET /api/data?window=120&max=300&only=0 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:12] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:13] "GET /api/data?window=120&max=300&only=0 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:13] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:14] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:14] "GET /api/data?window=120&max=300&only=0 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:14] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:15] "GET /api/data?window=120&max=300&only=0 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:15] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+Bild: prozessbild.png
+127.0.0.1 - - [22/Oct/2026 16:31:16] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:16] "GET /api/data?window=120&max=300&only=0 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:17] "GET /api/io?ver=3&sel=-1 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 16:31:17] "GET /api/data?window=120&max=300&only=0 HTTP/1.1" 200 -
+Bild: prozessbild_bearbeiten.png
+Fertig.
