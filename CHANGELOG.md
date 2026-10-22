@@ -70,14 +70,19 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * Quelltext ausführlich kommentiert: Docstrings für Module, Klassen und Funktionen (Programm, Treiber, Werkzeuge,
   Tests) und erklärende Kommentare an schwierigen Stellen; neue Übersicht [`ARCHITEKTUR.md`](ARCHITEKTUR.md) mit
   Modulen, Datenfluss, Threads und Treiber-Schnittstelle. Der Code selbst ist unverändert.
-* Bedienungsanleitung: Bilder der neuen Funktionen (Benachrichtigungen, OPC-UA-Server, QR-Code, Ereignis im Diagramm)
-  sowie aktualisierte Reiter *Webserver & Headless* und *Trigger & Ereignisse*, deutsch und englisch.
+* Bedienungsanleitung: **alle 57 Bilder neu und automatisch erzeugt**, deutsch und englisch (das User Manual hatte
+  bisher deutsche Bilder und Platzhalter); dazu die Bilder der neuen Funktionen.
 
 ### Build
 
 * `build.bat` erzeugt zusätzlich `PLCIOCheck.exe` (im selben Programmordner, Installer und portables ZIP).
-* Workflow *Screenshots* (`tools/make_screenshots.py`): erzeugt die Bilder der neuen Dialoge unter Windows im
-  Demo-Modus (deutsch und englisch) und legt sie im Zweig `bilder` ab.
+* Workflow *Screenshots* (`tools/make_screenshots.py`): erzeugt alle Bilder der Anleitung unter Windows im
+  Demo-Modus (deutsch und englisch; Webseiten mit Playwright, PDF-Seiten mit PyMuPDF) und legt sie im Zweig `bilder`
+  ab.
+
+### Behoben
+
+* PDF-Bericht: Bei seltener Abtastung bzw. kurzem Zeitraum erschien der Verlauf als Punkte statt als Linie.
 * Automatische Tests (`tests/`, pytest): Logik, Webserver, Sprachdateien, Anleitung und die Oberfläche mit echtem
   PySide6 (ohne Bildschirm). Workflow *Tests* bei jedem Push auf Linux und Windows; Fehler erscheinen als Hinweise im
   Lauf.
