@@ -93,8 +93,11 @@ def main():
     QDialog.exec = lambda self: 0                      # modale Dialoge (Meldungen) nicht abwarten
     for kind in ("information", "warning", "critical", "question"):
         setattr(QMessageBox, kind, staticmethod(lambda *a, **k: QMessageBox.StandardButton.No))
+    # Neutraler Rechnername in den angezeigten Endpunkt-Adressen – nur für Dialoge und Konfigurationsprogramm; vor dem
+    # Logger zurückgesetzt, denn dessen OPC-UA-Server würde den erfundenen Namen sonst auflösen wollen (hängt).
     import socket
-    socket.gethostname = lambda: "ipc-kesselhaus"     # neutraler Rechnername in Endpunkt-Adressen
+    real_hostname = socket.gethostname
+    socket.gethostname = lambda: "ipc-kesselhaus"
     folder = tempfile.mkdtemp(prefix="plc_bilder_")
     cfg = demo_config(folder)
 
@@ -145,6 +148,7 @@ def main():
     cw.tabs.grab().save(os.path.join(out, "config_trigger_ereignis.png"))
     print("Bilder: Konfigurationsprogramm")
     cw.close()
+    socket.gethostname = real_hostname
 
     # Logger: Ereignis im Diagramm zeigen (Demo-Aufzeichnung, dann offline mit Linealen)
     import plc_gui
