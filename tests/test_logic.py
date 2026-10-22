@@ -312,3 +312,67 @@ def test_notify_channels_and_engine(tmp_path):
     finally:
         http.shutdown()
         smtp.shutdown()
+
+
+# ---- OPC-UA-Server ----------------------------------------------------------------------------------------------
+def _free_port():
+    import socket
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    return port
+
+
+def test_opcua_server_with_recorder(tmp_path):
+    pytest.importorskip("asyncua")
+    import time
+
+    from asyncua.sync import Client
+
+    import plc_opcua_server as us
+    from plc_common import Plc, default_connection
+    from plc_recorder import Recorder, demo_config
+    from plc_webauth import hash_password
+    charts, variables = demo_config()
+    port = _free_port()
+    conn = default_connection()
+    conn.update(csv_ordner=str(tmp_path), csv_aktiv=0, projekt="Testanlage",
+                web_benutzer={"pruefer": hash_password("geheim", 1000)},
+                opcua_server={"aktiv": True, "host": "127.0.0.1", "port": port, "intervall_ms": 100,
+                              "anonym": False, "benutzer": "web"})
+    rec = Recorder(conn, [Plc(name="SPS 1")], charts, variables, demo=True)
+    rec.start()
+    try:
+        assert rec.opcua is not None, list(rec.messages)
+        time.sleep(1.0)
+        url = f"opc.tcp://127.0.0.1:{port}/plc-datenlogger/"
+        bad = Client(url, timeout=5)                       # ohne Anmeldung: abgewiesen
+        bad.set_user("pruefer")
+        bad.set_password("falsch")
+        with pytest.raises(Exception):
+            bad.connect()
+        try:
+            bad.disconnect()
+        except Exception:
+            pass
+        c = Client(url, timeout=5)
+        c.set_user("pruefer")
+        c.set_password("geheim")
+        c.connect()
+        try:
+            ns = c.get_namespace_index(us.NS_URI)
+            t = c.get_node(f"ns={ns};s=Temperatur").read_value()
+            assert isinstance(t, float)
+            assert isinstance(c.get_node(f"ns={ns};s=Pumpe").read_value(), bool)
+            m = c.get_node(f"ns={ns};s=Mittel").read_value()           # berechnete Variable
+            assert isinstance(m, float)
+            folders = [n.read_browse_name().Name
+                       for n in c.get_node(f"ns={ns};s=PLC Datenlogger").get_children()]
+            assert folders[:2] == ["SPS 1", "Berechnet"] and "Status" in folders
+            assert c.get_node(f"ns={ns};s=Status:0").read_value() is True
+        finally:
+            c.disconnect()
+    finally:
+        rec.stop()
+    assert rec.opcua is None

@@ -390,6 +390,7 @@ class Recorder:
         self.events = EventLog(event_log_path(conn))
         self.trigger_engine = None               # TriggerEngine, solange die Aufzeichnung läuft
         self.notifier = None                     # Benachrichtigungen (plc_notify), solange die Aufzeichnung läuft
+        self.opcua = None                        # OPC-UA-Server (plc_opcua_server), solange die Aufzeichnung läuft
         # Aufzeichnung per Trigger (Vor-/Nachlauf): CaptureGate, solange die Aufzeichnung läuft (sonst dauernd).
         self.capture_mode = (conn.get("aufz_modus") == "trigger")
         self.gate = None
@@ -481,9 +482,20 @@ class Recorder:
             self.db.start()
         from plc_notify import Notifier
         self.notifier = Notifier(self.conn, self.conn.get("projekt", ""), self.emit)
+        self.opcua = None
+        if self.conn.get("opcua_server"):
+            from plc_opcua_server import OpcUaServer
+            srv = OpcUaServer(self.conn, self.vars, self.plcs, self.triggers, self.emit,
+                              lambda: list(self.status))
+            if srv and srv.start():
+                self.opcua = srv
+        hooks = [h.event for h in (self.notifier, self.opcua) if h]
+
+        def notify(*a):
+            for h in hooks:
+                h(*a)
         self.trigger_engine = TriggerEngine(self.triggers, self.events, self.emit, self.names,
-                                            notify=self.notifier.event if self.notifier else None) \
-            if self.triggers else None
+                                            notify=notify if hooks else None) if self.triggers else None
         if self.trigger_engine is not None:
             for err in self.trigger_engine.errors:
                 self.emit("⚠ " + err)
@@ -540,6 +552,9 @@ class Recorder:
         if self.notifier is not None:            # ausstehende Benachrichtigungen noch senden
             self.notifier.stop()
             self.notifier = None
+        if self.opcua is not None:
+            self.opcua.stop()
+            self.opcua = None
         self.running = False
         if self.csv_fh:
             try:
@@ -613,6 +628,8 @@ class Recorder:
                     except OSError as e:
                         self.emit(tr("⚠ Ereignisprotokoll nicht beschreibbar: {0}").format(e))
             self._append(ts, row)
+            if self.opcua is not None:
+                self.opcua.update(ts, row)
             acc = self.report_acc
             if acc is not None:
                 if ts >= acc.t1:                 # Zeitraum vorbei: Bericht schreiben, nächsten beginnen

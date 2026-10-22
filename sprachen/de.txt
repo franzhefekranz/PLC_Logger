@@ -534,6 +534,15 @@
 @ Aktualisierung im Browser:
 > 
 
+@ OPC UA …
+> 
+
+@ Variablen über einen OPC-UA-Server im Logger bereitstellen (Leitsystem, MES, SCADA)
+> 
+
+@ OPC-UA-Server:
+> 
+
 @ HTTPS (verschlüsselt)
 > 
 
@@ -2950,6 +2959,82 @@
 @ Bitte mindestens einen Kanal einschalten.
 > 
 
+# ---------------- plc_opcua_dialog.py
+
+@ OPC-UA-Server
+> 
+
+@ OPC-UA-Server starten (während der Aufzeichnung)
+> 
+
+@ So oft werden geänderte Werte im Server aktualisiert
+> 
+
+@ Aktualisierung:
+> 
+
+@ Endpunkt:
+> 
+
+@ Sicherheit (Endpunkte)
+> 
+
+@ Zertifikat (DER/PEM):
+> 
+
+@ Zugriff
+> 
+
+@ Anonym (ohne Anmeldung)
+> 
+
+@ Anmeldung mit den Benutzern des Webservers ({0} eingerichtet)
+> 
+
+@ Nur lesend. Firewall: eingehende Verbindungen auf dem Port erlauben. Das selbstsignierte Zertifikat liegt im Ordner opcua des Datenordners; Clients müssen ihm ggf. vertrauen.
+> 
+
+# ---------------- plc_opcua_server.py
+
+@ Signieren
+> 
+
+@ Signieren und verschlüsseln
+> 
+
+@ ohne Sicherheit
+> 
+
+@ anonym
+> 
+
+@ mit Anmeldung
+> 
+
+@ ⚠ OPC-UA-Server nicht gestartet: {0}
+> 
+
+@ OPC-UA-Server läuft: {0}
+> 
+
+@ weder anonymer Zugriff noch Benutzer eingerichtet
+> 
+
+@ Berechnet
+> 
+
+@ Berechnet: {0}
+> 
+
+@ Ereignisse
+> 
+
+@ Zeitstempel
+> 
+
+@ ⚠ OPC-UA-Server: {0}
+> 
+
 # ---------------- plc_pid.py
 
 @ SIMC (Skogestad)
@@ -4239,12 +4324,6 @@
 > 
 
 # ---------------- plc_treiber/opcua.py
-
-@ Signieren
-> 
-
-@ Signieren und verschlüsseln
-> 
 
 @ Zyklisch lesen (Read)
 > 

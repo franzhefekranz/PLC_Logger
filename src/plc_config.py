@@ -301,6 +301,15 @@ class ConfigWindow(QMainWindow):
         form_web2.addRow(tr("Zugriffscode:"), self.ed_web_token)
         form_web2.addRow(tr("Aktualisierung im Browser:"), self.sp_web_int)
         form_web2.addRow("", self.chk_headless)
+        # OPC-UA-Server im Logger (Einstellungen im eigenen Dialog).
+        self.opcua_settings = {}
+        btn_ua = QPushButton(tr("OPC UA …"))
+        btn_ua.setToolTip(tr("Variablen über einen OPC-UA-Server im Logger bereitstellen (Leitsystem, MES, SCADA)"))
+        btn_ua.clicked.connect(self.edit_opcua_server)
+        self.lbl_opcua = QLabel("")
+        self.lbl_opcua.setWordWrap(True)
+        ua_row = QHBoxLayout(); ua_row.addWidget(btn_ua); ua_row.addWidget(self.lbl_opcua, 1)
+        form_web2.addRow(tr("OPC-UA-Server:"), ua_row)
         # HTTPS und Anmeldung (Benutzer mit Passwort; gespeichert wird nur ein Hash).
         self.chk_https = QCheckBox(tr("HTTPS (verschlüsselt)"))
         self.chk_https.setToolTip(tr("Ohne eigenes Zertifikat wird einmalig ein selbstsigniertes erzeugt (Ordner "
@@ -1581,6 +1590,17 @@ class ConfigWindow(QMainWindow):
         self.lbl_notify.setText(tr("aus") if not s["aktiv"] or not ch else
                                 tr("ab {0} über {1}").format(tr(s["prio_min"]), ", ".join(ch)))
 
+    def _update_opcua(self):
+        import plc_opcua_server as us
+        self.lbl_opcua.setText(us.describe(self.opcua_settings))
+
+    def edit_opcua_server(self):
+        from plc_opcua_dialog import OpcUaServerDialog
+        dlg = OpcUaServerDialog(self, self.opcua_settings, len(self.web_users))
+        if dlg.exec():
+            self.opcua_settings = dlg.settings
+            self._update_opcua()
+
     def edit_notify(self):
         from plc_notify_dialog import NotifyDialog
         dlg = NotifyDialog(self, self.notify_settings, self.ed_project.text().strip()
@@ -1687,6 +1707,9 @@ class ConfigWindow(QMainWindow):
         import plc_notify as nf
         self.notify_settings = nf.settings(conn.get("benachrichtigung", ""))
         self._update_notify()
+        import plc_opcua_server as us
+        self.opcua_settings = us.settings(conn.get("opcua_server", ""))
+        self._update_opcua()
         self.charts = charts
         self.prop_key = None
         self.table.setRowCount(0)
@@ -1744,6 +1767,8 @@ class ConfigWindow(QMainWindow):
                 if self.notify_settings and self.notify_settings.get("aktiv") or any(
                     (self.notify_settings or {}).get(k, {}).get("aktiv") for k in ("email", "webhook", "ntfy",
                                                                                      "telegram")) else "",
+                "opcua_server": json.dumps(self.opcua_settings, ensure_ascii=False)
+                if self.opcua_settings and self.opcua_settings != __import__("plc_opcua_server").settings({}) else "",
                 "ereignis_datei": self.ed_event_file.text().strip(),
                 "bericht_aktiv": 1 if self.chk_report.isChecked() else 0,
                 "bericht_zeitraum": self.cb_report_period.currentData() or "tag",

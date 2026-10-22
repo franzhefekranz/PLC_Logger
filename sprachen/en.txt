@@ -534,6 +534,15 @@
 @ Aktualisierung im Browser:
 > Browser refresh:
 
+@ OPC UA …
+> OPC UA …
+
+@ Variablen über einen OPC-UA-Server im Logger bereitstellen (Leitsystem, MES, SCADA)
+> Provide the variables via an OPC UA server in the logger (control system, MES, SCADA)
+
+@ OPC-UA-Server:
+> OPC UA server:
+
 @ HTTPS (verschlüsselt)
 > HTTPS (encrypted)
 
@@ -2950,6 +2959,82 @@
 @ Bitte mindestens einen Kanal einschalten.
 > Please enable at least one channel.
 
+# ---------------- plc_opcua_dialog.py
+
+@ OPC-UA-Server
+> OPC UA server
+
+@ OPC-UA-Server starten (während der Aufzeichnung)
+> Start OPC UA server (while recording)
+
+@ So oft werden geänderte Werte im Server aktualisiert
+> How often changed values are updated in the server
+
+@ Aktualisierung:
+> Update:
+
+@ Endpunkt:
+> Endpoint:
+
+@ Sicherheit (Endpunkte)
+> Security (endpoints)
+
+@ Zertifikat (DER/PEM):
+> Certificate (DER/PEM):
+
+@ Zugriff
+> Access
+
+@ Anonym (ohne Anmeldung)
+> Anonymous (without login)
+
+@ Anmeldung mit den Benutzern des Webservers ({0} eingerichtet)
+> Login with the web server users ({0} set up)
+
+@ Nur lesend. Firewall: eingehende Verbindungen auf dem Port erlauben. Das selbstsignierte Zertifikat liegt im Ordner opcua des Datenordners; Clients müssen ihm ggf. vertrauen.
+> Read-only. Firewall: allow incoming connections on the port. The self-signed certificate is in the opcua folder of the data folder; clients may have to trust it.
+
+# ---------------- plc_opcua_server.py
+
+@ Signieren
+> Sign
+
+@ Signieren und verschlüsseln
+> Sign and encrypt
+
+@ ohne Sicherheit
+> no security
+
+@ anonym
+> anonymous
+
+@ mit Anmeldung
+> with login
+
+@ ⚠ OPC-UA-Server nicht gestartet: {0}
+> ⚠ OPC UA server not started: {0}
+
+@ OPC-UA-Server läuft: {0}
+> OPC UA server running: {0}
+
+@ weder anonymer Zugriff noch Benutzer eingerichtet
+> neither anonymous access nor users set up
+
+@ Berechnet
+> Calculated
+
+@ Berechnet: {0}
+> Calculated: {0}
+
+@ Ereignisse
+> Events
+
+@ Zeitstempel
+> Timestamp
+
+@ ⚠ OPC-UA-Server: {0}
+> ⚠ OPC UA server: {0}
+
 # ---------------- plc_pid.py
 
 @ SIMC (Skogestad)
@@ -4239,12 +4324,6 @@
 > Serial port missing
 
 # ---------------- plc_treiber/opcua.py
-
-@ Signieren
-> Sign
-
-@ Signieren und verschlüsseln
-> Sign and encrypt
 
 @ Zyklisch lesen (Read)
 > Read cyclically (Read)

@@ -25,6 +25,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   (SMTP, STARTTLS/SSL), Microsoft Teams (Workflow-Webhook), Slack, allgemeiner JSON-Webhook, ntfy (Push aufs Handy) und
   Telegram. Filter nach Mindestpriorität und Triggernamen, wahlweise auch beim Gehen, Sperrzeit je Trigger gegen
   Meldungsfluten, Testnachricht. Gesendet wird im Hintergrund, auch im Betrieb ohne Oberfläche.
+* **OPC-UA-Server im Logger** (Konfiguration › Webserver & Headless › *OPC UA …*): stellt alle gelesenen und
+  berechneten Variablen, die Trigger-Zustände und den Verbindungsstatus je Steuerung lesend bereit – für Leitsystem,
+  MES oder SCADA. Sicherheit ohne/Signieren/Verschlüsseln (selbstsigniertes Zertifikat), anonym und/oder Anmeldung mit
+  den Benutzern des Webservers. Läuft während der Aufzeichnung, auch headless.
 
 ### Build
 

@@ -83,6 +83,10 @@ def test_config_window(qt_log, demo_config):
         getattr(w, name)()
     w.edit_plc_params(0)
     w.edit_notify()
+    w.edit_opcua_server()
+    from plc_opcua_dialog import OpcUaServerDialog
+    od = OpcUaServerDialog(w, {"aktiv": True, "port": 4841}, 2)
+    assert od.collect()["port"] == 4841 and od.collect()["sicherheit"] == ["none"]
     from plc_notify_dialog import NotifyDialog
     nd = NotifyDialog(w, {"aktiv": True, "email": {"aktiv": True}}, "Testanlage")
     assert nd.collect()["email"]["aktiv"] and nd.collect()["aktiv"]
