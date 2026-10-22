@@ -6,7 +6,9 @@ python extract_tr.py PFX ORDNER [--json ausgabe.json]   -> ORDNER/sprachen/de.tx
 Vorhandene Sprachdateien (z. B. en.txt) werden ergänzt: neue Texte kommen mit leerer Übersetzung hinzu,
 vorhandene Übersetzungen bleiben erhalten, nicht mehr benutzte Texte werden entfernt.
 Liegen die Programmdateien in ORDNER/src, werden sie dort gesucht (PLC-Datenlogger: python tools/extract_tr.py plc .)."""
-import ast, glob, json, os, sys
+import ast, glob, json, os, re, sys
+
+MARK = re.compile(r"\{\{([TJ]):((?:[^{}]|\{\d+\})+?)\}\}")     # wie plc_web._MARK
 
 def code_dir(folder):
     """Ordner mit den Programmdateien: ORDNER/src, falls vorhanden, sonst ORDNER selbst."""
@@ -40,6 +42,13 @@ def collect(pfx, folder):
                 if a.value not in where:
                     where[a.value] = os.path.relpath(path, folder).replace(os.sep, "/")
                     keys.append(a.value)
+        # Texte der Webseiten: Markierungen {{T:…}} / {{J:…}} in Zeichenketten (siehe plc_web.localize)
+        for n in ast.walk(tree):
+            if isinstance(n, ast.Constant) and isinstance(n.value, str) and "{{" in n.value:
+                for m in MARK.finditer(n.value):
+                    if m.group(2) not in where:
+                        where[m.group(2)] = os.path.relpath(path, folder).replace(os.sep, "/")
+                        keys.append(m.group(2))
     # Texte aus dem Sprachmodul selbst
     i18n = os.path.join(folder, f"{pfx}_i18n.py")
     for n in ast.walk(ast.parse(open(i18n, encoding="utf-8").read())):

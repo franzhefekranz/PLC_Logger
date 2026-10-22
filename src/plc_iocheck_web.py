@@ -12,7 +12,7 @@ IO_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>IO-Check – PLC Datenlogger</title>
+<title>{{T:IO-Check}} – PLC Datenlogger</title>
 <style>
 :root{--bg:#10151b;--card:#18202a;--fg:#dfe6ee;--mute:#8b98a7;--line:#2a3544;--accent:#4aa3ff;--in:#2ecc71;--out:#f5a623;
  --off:#5d6875;--nan:#e5484d;--okbg:#1d3b24;--errbg:#47201f;--skbg:#2a2f36;--fl:#fbc02d;color-scheme:dark}
@@ -94,32 +94,32 @@ main{padding:8px}
 </head>
 <body>
 <header id="hdr">
- <div class="row"><h1>IO-Check</h1><span class="sub" id="title"></span>
-  <a class="lnk" id="pdf" href="api/io/protokoll.pdf" target="_blank" title="Abnahmeprotokoll als PDF">PDF</a>__LOGOUT__</div>
+ <div class="row"><h1>{{T:IO-Check}}</h1><span class="sub" id="title"></span>
+  <a class="lnk" id="pdf" href="api/io/protokoll.pdf" target="_blank" title="{{T:Abnahmeprotokoll als PDF}}">PDF</a>__LOGOUT__</div>
  <div class="bar"><i id="barv"></i><span id="bart"></span></div>
  <div class="plcs" id="plcs"></div>
- <nav><button data-t="list" class="on">Liste</button><button data-t="matrix">Matrix</button>
-  <button data-t="moved">Bewegt</button></nav>
+ <nav><button data-t="list" class="on">{{T:Liste}}</button><button data-t="matrix">{{T:Matrix}}</button>
+  <button data-t="moved">{{T:Bewegt}}</button></nav>
 </header>
 <div id="swap"></div>
 <main>
  <section id="list">
-  <div class="filt"><input id="q" type="search" placeholder="Suchen …" autocomplete="off">
-   <select id="fg"></select><select id="fs"><option value="">Alle Status</option><option value="offen">offen</option>
-   <option value="ok">OK</option><option value="fehler">Fehler</option><option value="uebersprungen">übersprungen</option></select></div>
-  <div id="rows"><div class="msg">Verbinde …</div></div>
+  <div class="filt"><input id="q" type="search" placeholder="{{T:Suchen …}}" autocomplete="off">
+   <select id="fg"></select><select id="fs"><option value="">{{T:Alle Status}}</option><option value="offen">{{T:offen}}</option>
+   <option value="ok">{{T:OK}}</option><option value="fehler">{{T:Fehler}}</option><option value="uebersprungen">{{T:übersprungen}}</option></select></div>
+  <div id="rows"><div class="msg">{{T:Verbinde …}}</div></div>
  </section>
  <section id="matrix" hidden><div id="mx"></div></section>
- <section id="moved" hidden><div class="muted">Zuletzt gewechselt</div><div class="big" id="last">–</div>
+ <section id="moved" hidden><div class="muted">{{T:Zuletzt gewechselt}}</div><div class="big" id="last">–</div>
   <div class="muted" id="lastc"></div><div id="chs" style="margin-top:10px"></div></section>
 </main>
-<div id="sheet"><button class="x" onclick="pick(-1)" aria-label="Schließen">×</button><div id="sh"></div></div>
+<div id="sheet"><button class="x" onclick="pick(-1)" aria-label="{{T:Schließen}}">×</button><div id="sh"></div></div>
 <script>
 var TOKEN=new URLSearchParams(location.search).get('token')||'';
 function api(u){return TOKEN?u+(u.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(TOKEN):u;}
 document.getElementById('pdf').href=api('api/io/protokoll.pdf');
 var SWAPS={},S=null,VER=-1,D=[],SEL=-1,TAB='list',lastSeq=-1,TOL=1,rowEl=[],cellEl=[],swapUntil=0,remarkDirty=false;
-var ST={offen:'offen',ok:'OK',fehler:'Fehler',uebersprungen:'übersprungen'},MK={offen:'',ok:'✓',fehler:'✗',uebersprungen:'–'};
+var ST={offen:'{{J:offen}}',ok:'{{J:OK}}',fehler:'{{J:Fehler}}',uebersprungen:'{{J:übersprungen}}'},MK={offen:'',ok:'✓',fehler:'✗',uebersprungen:'–'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function bin(i){var k=S.sig[i][5];return k=='DI'||k=='DO';}
 function isIn(i){var k=S.sig[i][5];return k=='DI'||k=='AI';}
@@ -133,23 +133,23 @@ function ledcls(i){var d=D[i];if(bin(i)){if(d[1]==null)return d[2]?'led nan':'le
 function target(i,p){var s=S.sig[i];return s[7]+(s[8]-s[7])*p/100;}
 function inTol(i,p,v){var s=S.sig[i];return v!=null&&Math.abs(v-target(i,p))<=Math.abs(s[8]-s[7]||1)*TOL/100;}
 function fault(i,raw){var s=S.sig[i];if(raw==null)return '';if(s[10]==27648&&(s[9]==0||s[9]==-27648)){
- if(raw>=32767)return 'Überlauf bzw. Drahtbruch (32767)';if(raw<=-32768)return 'Unterlauf bzw. Drahtbruch (-32768)';
- if(raw>32511)return 'Überlauf';if(raw>27648)return 'Übersteuerungsbereich (> 100 %)';
- if(s[9]==0&&raw<-4864)return 'Unterlauf (Drahtbruch bei 4 … 20 mA?)';if(s[9]==0&&raw<0)return 'Untersteuerungsbereich (< 0 %)';return '';}
- var sp=s[10]-s[9];return sp&&(raw>s[10]+.176*sp||raw<s[9]-.176*sp)?'Außerhalb des Messbereichs':'';}
+ if(raw>=32767)return '{{J:Überlauf bzw. Drahtbruch (32767)}}';if(raw<=-32768)return '{{J:Unterlauf bzw. Drahtbruch (-32768)}}';
+ if(raw>32511)return '{{J:Überlauf}}';if(raw>27648)return '{{J:Übersteuerungsbereich (> 100 %)}}';
+ if(s[9]==0&&raw<-4864)return '{{J:Unterlauf (Drahtbruch bei 4 … 20 mA?)}}';if(s[9]==0&&raw<0)return '{{J:Untersteuerungsbereich (< 0 %)}}';return '';}
+ var sp=s[10]-s[9];return sp&&(raw>s[10]+.176*sp||raw<s[9]-.176*sp)?'{{J:Außerhalb des Messbereichs}}':'';}
 
 function build(){
  var h='';S.sig.forEach(function(s,i){h+='<div class="r" id="r'+i+'" onclick="pick('+i+')"><span class="led"></span><div class="t"><b>'+esc(s[0])+
   '</b> '+esc(s[1])+'<div class="c">'+esc(s[2])+(s[3]?' · '+esc(s[3]):'')+'</div></div><div class="v"></div><div class="st"></div></div>';});
- document.getElementById('rows').innerHTML=h||'<div class="msg">Keine Signale – im Programm eine IO-Liste importieren.</div>';
+ document.getElementById('rows').innerHTML=h||'<div class="msg">{{J:Keine Signale – im Programm eine IO-Liste importieren.}}</div>';
  rowEl=S.sig.map(function(_s,i){var e=document.getElementById('r'+i);return {e:e,led:e.children[0],v:e.children[2],st:e.children[3],k:''};});
- var fg=document.getElementById('fg'),cur=fg.value;fg.innerHTML='<option value="">Alle Gruppen</option>'+S.groups.map(function(g){return '<option>'+esc(g)+'</option>';}).join('');
+ var fg=document.getElementById('fg'),cur=fg.value;fg.innerHTML='<option value="">{{J:Alle Gruppen}}</option>'+S.groups.map(function(g){return '<option>'+esc(g)+'</option>';}).join('');
  fg.value=cur;
  var m='',last=null;S.matrix.forEach(function(r){if(r[0]!==last){if(last!==null)m+='</div>';last=r[0];
    m+='<div class="sec">'+esc(r[0])+'</div><div class="grid"><span></span>';for(var b=0;b<r[2].length;b++)m+='<span class="hd">'+b+'</span>';}
   m+='<span class="lb">'+esc(r[1])+'</span>';r[2].forEach(function(i){m+=i<0?'<span></span>':'<div class="cell" id="m'+i+'" onclick="pick('+i+')"><span class="led"></span><b></b></div>';});});
  if(last!==null)m+='</div>';
- document.getElementById('mx').innerHTML=m||'<div class="msg">Keine Binärsignale.</div>';
+ document.getElementById('mx').innerHTML=m||'<div class="msg">{{J:Keine Binärsignale.}}</div>';
  cellEl=[];S.sig.forEach(function(_s,i){var e=document.getElementById('m'+i);if(e)cellEl[i]={e:e,led:e.children[0],b:e.children[1],k:''};});
  filter();}
 
@@ -170,7 +170,7 @@ function update(){
 function moved(chs){
  var box=document.getElementById('chs'),h='';chs.forEach(function(c){var i=c[2];
   h+='<div class="ch'+(SWAPS[c[0]]?' swap':'')+'" onclick="pick('+i+')"><span class="tm">-'+c[1].toFixed(1)+' s</span><span class="nm"><b>'+esc(S.sig[i][0])+'</b> '+esc(S.sig[i][1])+
-   '</span><span>'+chg(c)+'</span></div>';});box.innerHTML=h||'<div class="msg">Noch keine Wechsel.</div>';
+   '</span><span>'+chg(c)+'</span></div>';});box.innerHTML=h||'<div class="msg">{{J:Noch keine Wechsel.}}</div>';
  if(chs.length){var c=chs[0];document.getElementById('last').innerHTML=esc(lbl(c[2]))+': '+chg(c);
   document.getElementById('lastc').textContent=S.sig[c[2]][2];}}
 function chg(c){var i=c[2];if(bin(i))return (c[3]?1:0)+' → '+(c[4]?1:0);var u=S.sig[i][6];return fmt(scale(i,c[3]))+' → '+fmt(scale(i,c[4]))+(u?' '+u:'');}
@@ -179,7 +179,7 @@ function swapCheck(chs){var fresh=chs.filter(function(c){return c[0]>lastSeq;});
  if(lastSeq<0){lastSeq=chs.length?chs[0][0]:0;return;}if(chs.length)lastSeq=Math.max(lastSeq,chs[0][0]);
  if(SEL<0||!bin(SEL))return;var selAge=D[SEL]?D[SEL][3]:-1;
  fresh.forEach(function(c){if(c[2]!=SEL&&S.sig[c[2]][5]=='DI'&&(selAge<0||selAge>3)){SWAPS[c[0]]=1;
-  var b=document.getElementById('swap');b.textContent='⚠ Vertauschung? Erwartet '+lbl(SEL)+', gekommen '+lbl(c[2]);
+  var b=document.getElementById('swap');b.textContent='⚠ '+'{{J:Vertauschung? Erwartet {0}, gekommen {1}}}'.replace('{0}',lbl(SEL)).replace('{1}',lbl(c[2]));
   b.style.display='block';swapUntil=Date.now()+10000;if(navigator.vibrate)navigator.vibrate([200,100,200]);}});
  if(Date.now()>swapUntil)document.getElementById('swap').style.display='none';}
 
@@ -187,37 +187,37 @@ function sheet(){var sh=document.getElementById('sheet');if(SEL<0||!S||!S.sig[SE
   document.body.style.setProperty('--sheet','0px');return;}
  var s=S.sig[SEL],d=D[SEL]||[],h='<div><b>'+esc(s[0])+'</b> '+esc(s[1])+' <span class="muted">'+esc(s[5])+(s[3]?' · '+esc(s[3]):'')+'</span></div>'+
   '<div class="muted">'+esc(s[2])+'</div><div class="sv"><span class="'+ledcls(SEL)+'" style="display:inline-block;vertical-align:-2px"></span> '+esc(vtext(SEL))+'</div>';
- if(!bin(SEL)){var f=fault(SEL,d[1]);h+='<div class="muted">Rohwert '+(d[1]==null?'–':d[1])+(f?' · <span class="fault">'+esc(f)+'</span>':'')+'</div>';
-  if(isIn(SEL)){var sn=d[4]||0;h+='<div class="wb"><b>Drahtbruchprüfung</b><div>'+(sn&4?'<span class="okm">✓</span>':'○')+' 1. Verdrahtung öffnen → Fehlerwert erkannt</div><div>'+
-   (sn&8?'<span class="okm">✓</span>':'○')+' 2. Wieder schließen → Wert gültig</div></div><div class="muted" style="margin-top:8px"><b>Prüfpunkte</b> (optional, z. B. mit Kalibrator)</div>';}
+ if(!bin(SEL)){var f=fault(SEL,d[1]);h+='<div class="muted">{{J:Rohwert}} '+(d[1]==null?'–':d[1])+(f?' · <span class="fault">'+esc(f)+'</span>':'')+'</div>';
+  if(isIn(SEL)){var sn=d[4]||0;h+='<div class="wb"><b>{{J:Drahtbruchprüfung}}</b><div>'+(sn&4?'<span class="okm">✓</span>':'○')+' {{J:1. Verdrahtung öffnen → Fehlerwert erkannt}}</div><div>'+
+   (sn&8?'<span class="okm">✓</span>':'○')+' {{J:2. Wieder schließen → Wert gültig}}</div></div><div class="muted" style="margin-top:8px"><b>{{J:Prüfpunkte}}</b> {{J:(optional, z. B. mit Kalibrator)}}</div>';}
   var eng=scale(SEL,d[1]),u=s[6]?' '+s[6]:'',pts=d[8]||{};
-  [0,50,100].forEach(function(p){var got=pts[p];h+='<div class="pt"><b>'+p+' %</b><span>Soll '+fmt(target(SEL,p))+u+'</span><span>'+
-   (got==null?(inTol(SEL,p,eng)?'<i class="muted">in Toleranz …</i>':''):fmt(got)+u)+'</span><span>'+(got==null?'':(inTol(SEL,p,got)?'✓':'✗'))+
-   '</span><button onclick="cmd(\'point\',{pct:'+p+'})">Übernehmen</button></div>';});
-  h+='<div class="muted" style="margin-top:6px">Wert 1 s lang in Toleranz (±'+TOL+' %) → Messpunkt wird automatisch übernommen.</div>';}
- h+='<div class="btns"><button class="ok" onclick="setst(\'ok\')">✓ OK</button><button class="fehler" onclick="setst(\'fehler\')">✗ Fehler</button>'+
-  '<button onclick="setst(\'uebersprungen\')">– Übersprungen</button><button onclick="setst(\'offen\')">↺ Zurück</button></div>'+
-  '<div class="muted">Status: <b>'+ST[d[0]||'offen']+'</b>'+(d[5]?' · '+esc(d[5])+' · '+esc(d[6]):'')+'</div>'+
-  '<div class="rm" style="margin-top:6px"><input id="rmk" placeholder="Bemerkung" value="'+esc(d[7])+'" oninput="remarkDirty=true">'+
-  '<button onclick="cmd(\'remark\',{remark:document.getElementById(\'rmk\').value});remarkDirty=false">Speichern</button></div>';
+  [0,50,100].forEach(function(p){var got=pts[p];h+='<div class="pt"><b>'+p+' %</b><span>{{J:Soll}} '+fmt(target(SEL,p))+u+'</span><span>'+
+   (got==null?(inTol(SEL,p,eng)?'<i class="muted">{{J:in Toleranz …}}</i>':''):fmt(got)+u)+'</span><span>'+(got==null?'':(inTol(SEL,p,got)?'✓':'✗'))+
+   '</span><button onclick="cmd(\'point\',{pct:'+p+'})">{{J:Übernehmen}}</button></div>';});
+  h+='<div class="muted" style="margin-top:6px">'+'{{J:Wert 1 s lang in Toleranz (±{0} %) → Messpunkt wird automatisch übernommen.}}'.replace('{0}',TOL)+'</div>';}
+ h+='<div class="btns"><button class="ok" onclick="setst(\'ok\')">✓ {{J:OK}}</button><button class="fehler" onclick="setst(\'fehler\')">✗ {{J:Fehler}}</button>'+
+  '<button onclick="setst(\'uebersprungen\')">– {{J:Übersprungen}}</button><button onclick="setst(\'offen\')">↺ {{J:Zurück}}</button></div>'+
+  '<div class="muted">{{J:Status}}: <b>'+ST[d[0]||'offen']+'</b>'+(d[5]?' · '+esc(d[5])+' · '+esc(d[6]):'')+'</div>'+
+  '<div class="rm" style="margin-top:6px"><input id="rmk" placeholder="{{J:Bemerkung}}" value="'+esc(d[7])+'" oninput="remarkDirty=true">'+
+  '<button onclick="cmd(\'remark\',{remark:document.getElementById(\'rmk\').value});remarkDirty=false">{{J:Speichern}}</button></div>';
  var active=document.activeElement&&document.activeElement.id=='rmk';
  if(!active){document.getElementById('sh').innerHTML=h;}
  sh.style.display='block';document.body.style.setProperty('--sheet',sh.offsetHeight+'px');}
 
 function pick(i){SEL=i;remarkDirty=false;if(i>=0&&rowEl[i]&&TAB=='list')rowEl[i].e.scrollIntoView({block:'nearest'});
  update();sheet();}
-function setst(st){var extra={status:st};if(st=='fehler'){var r=prompt('Bemerkung (z. B. Verdrahtung, Sensor defekt):',(D[SEL]||[])[7]||'');
+function setst(st){var extra={status:st};if(st=='fehler'){var r=prompt('{{J:Bemerkung (z. B. Verdrahtung, Sensor defekt):}}',(D[SEL]||[])[7]||'');
  if(r===null)return;extra.remark=r;}cmd('status',extra);}
 function cmd(c,extra){if(SEL<0)return;var body={ver:VER,cmd:c,i:SEL};for(var k in extra)body[k]=extra[k];
  fetch(api('api/io/cmd'),{method:'POST',headers:{'Content-Type':'application/json','X-Token':TOKEN},body:JSON.stringify(body)})
  .then(function(r){if(r.status==409)VER=-1;if(r.status==401)location.href='login';});}
 
 function poll(){fetch(api('api/io?ver='+VER+'&sel='+SEL),{cache:'no-store'}).then(function(r){if(r.status==401){location.href='login';throw 0;}return r.json();})
- .then(function(j){if(!j.active){document.getElementById('rows').innerHTML='<div class="msg">Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.</div>';VER=-1;S=null;return;}
+ .then(function(j){if(!j.active){document.getElementById('rows').innerHTML='<div class="msg">{{J:Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.}}</div>';VER=-1;S=null;return;}
   if(j.static){S=j.static;VER=j.ver;D=j.dyn;build();}D=j.dyn;TOL=j.tol;
   document.getElementById('title').textContent=j.title+(j.user?' · '+j.user:'');
   var p=j.progress,done=p.ok+p.fehler+p.uebersprungen;document.getElementById('barv').style.width=(100*done/Math.max(1,p.gesamt))+'%';
-  document.getElementById('bart').textContent=done+' / '+p.gesamt+' geprüft · '+p.ok+' OK · '+p.fehler+' Fehler';
+  document.getElementById('bart').textContent='{{J:{0} / {1} geprüft · {2} OK · {3} Fehler}}'.replace('{0}',done).replace('{1}',p.gesamt).replace('{2}',p.ok).replace('{3}',p.fehler);
   document.getElementById('plcs').innerHTML=j.plcs.map(function(x){return '<span title="'+esc(x[2])+'"><span class="dot '+esc(x[1])+'"></span>'+esc(x[0])+'</span>';}).join('');
   swapCheck(j.changes);update();if(TAB=='moved')moved(j.changes);else window._chs=j.changes;sheet();})
  .catch(function(){}).then(function(){setTimeout(poll,700);});}

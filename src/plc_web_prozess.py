@@ -15,6 +15,8 @@ import json
 import os
 import re
 
+from plc_i18n import tr
+
 TYPES = ("wert", "zeiger", "balken", "status", "trend", "text")
 COLS = 12
 MAX_PAGES, MAX_TILES = 20, 300
@@ -94,7 +96,7 @@ def clean_layout(doc) -> dict:
             if n > MAX_TILES:
                 raise ValueError("zu viele Kacheln")
         pages.append({"name": str(p.get("name") or "Seite")[:40], "kacheln": tiles})
-    return {"seiten": pages or [{"name": "Übersicht", "kacheln": []}]}
+    return {"seiten": pages or [{"name": tr("Übersicht"), "kacheln": []}]}
 
 
 def load_layout(config_path):
@@ -133,7 +135,7 @@ def default_layout(variables) -> dict:
         x += w
         if len(tiles) >= 60:
             break
-    return {"seiten": [{"name": "Übersicht", "kacheln": tiles}]}
+    return {"seiten": [{"name": tr("Übersicht"), "kacheln": tiles}]}
 
 
 PROZESS_HTML = r"""<!doctype html>
@@ -141,7 +143,7 @@ PROZESS_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Prozessbild – PLC Datenlogger</title>
+<title>{{T:Prozessbild}} – PLC Datenlogger</title>
 <style>
 :root{--bg:#10151b;--card:#18202a;--fg:#dfe6ee;--mute:#8b98a7;--line:#2a3544;--accent:#4aa3ff;
  --ok:#2ecc71;--err:#ff5252;--warn:#ffb300;--off:#6b7785;color-scheme:dark}
@@ -206,21 +208,21 @@ img.logo{height:30px;max-width:180px;object-fit:contain;background:#fff;border-r
 </head>
 <body>
 <header>
- <div class="row">__LOGOS__<h1 id="proj">Prozessbild</h1><div class="leds" id="leds"></div><span class="info" id="info"></span>
-  <span style="flex:1"></span><button id="edit" style="display:none">✎ Bearbeiten</button>__LINKS__</div>
+ <div class="row">__LOGOS__<h1 id="proj">{{T:Prozessbild}}</h1><div class="leds" id="leds"></div><span class="info" id="info"></span>
+  <span style="flex:1"></span><button id="edit" style="display:none">✎ {{T:Bearbeiten}}</button>__LINKS__</div>
  <nav id="tabs"></nav>
 </header>
-<main><div id="grid"><div class="msg">Lade …</div></div></main>
+<main><div id="grid"><div class="msg">{{T:Lade …}}</div></div></main>
 <div id="panel">
- <h3>Prozessbild bearbeiten</h3>
- <div class="btns"><button id="add">+ Kachel</button><button id="dup">Kopie</button><button id="del">Löschen</button></div>
+ <h3>{{T:Prozessbild bearbeiten}}</h3>
+ <div class="btns"><button id="add">+ {{T:Kachel}}</button><button id="dup">{{T:Kopie}}</button><button id="del">{{T:Löschen}}</button></div>
  <div id="props"></div>
- <label>Seite</label>
- <div class="two"><div><input id="pname"></div><div style="flex:0 0 auto"><button id="padd" title="Neue Seite">+</button>
-  <button id="pdel" title="Seite löschen">−</button></div></div>
- <div class="btns"><button id="save" class="on">Speichern</button><button id="cancel">Abbrechen</button>
-  <button id="auto" title="Je Variable eine Kachel (ersetzt die Seite)">Vorschlag</button></div>
- <div class="hint">Kachel ziehen = verschieben, Ecke unten rechts = Größe. Raster 12 Spalten.</div>
+ <label>{{T:Seite}}</label>
+ <div class="two"><div><input id="pname"></div><div style="flex:0 0 auto"><button id="padd" title="{{T:Neue Seite}}">+</button>
+  <button id="pdel" title="{{T:Seite löschen}}">−</button></div></div>
+ <div class="btns"><button id="save" class="on">{{T:Speichern}}</button><button id="cancel">{{T:Abbrechen}}</button>
+  <button id="auto" title="{{T:Je Variable eine Kachel (ersetzt die Seite)}}">{{T:Vorschlag}}</button></div>
+ <div class="hint">{{T:Kachel ziehen = verschieben, Ecke unten rechts = Größe. Raster 12 Spalten.}}</div>
  <div id="perr" class="err"></div>
 </div>
 <script>
@@ -238,15 +240,15 @@ var SVGNS='http://www.w3.org/2000/svg';
 function sv(tag,attrs){var e=document.createElementNS(SVGNS,tag);for(var k in attrs)e.setAttribute(k,attrs[k]);return e;}
 function store(k,v){try{if(v===undefined)return localStorage.getItem('plcp_'+k);localStorage.setItem('plcp_'+k,v);}catch(e){return null;}}
 
-var TYPES=[['wert','Zahlenwert'],['zeiger','Zeigerinstrument'],['balken','Balken'],['status','Zustand (Lampe)'],
- ['trend','Kurzverlauf'],['text','Text / Überschrift']];
+var TYPES=[['wert','{{J:Zahlenwert}}'],['zeiger','{{J:Zeigerinstrument}}'],['balken','{{J:Balken}}'],
+ ['status','{{J:Zustand (Lampe)}}'],['trend','{{J:Kurzverlauf}}'],['text','{{J:Text / Überschrift}}']];
 var vars=[], byName={}, layout=null, canEdit=false, page=parseInt(store('page')||'0',10)||0;
 var editing=false, backup=null, sel=-1, tiles=[], timer=null, busy=false, lastData=null, refreshMs=1000;
 
 function fetchJson(u,opt){return fetch(api(u),Object.assign({cache:'no-store'},opt||{})).then(function(r){
- if(r.status===401){if(r.headers.get('X-Login')){location.href='login';throw new Error('Anmeldung erforderlich');}
-  throw new Error('Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)');}
- return r.json().then(function(j){if(!r.ok)throw new Error(j.error||('Serverfehler '+r.status));return j;});});}
+ if(r.status===401){if(r.headers.get('X-Login')){location.href='login';throw new Error('{{J:Anmeldung erforderlich}}');}
+  throw new Error('{{J:Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)}}');}
+ return r.json().then(function(j){if(!r.ok)throw new Error(j.error||('{{J:Serverfehler}} '+r.status));return j;});});}
 function msg(t){var g=$('grid');g.innerHTML='';g.appendChild(el('div','msg',t));}
 
 /* ---------- Werte, Grenzen, Format ---------- */
@@ -279,14 +281,14 @@ function build(){
  var g=$('grid');g.innerHTML='';tiles=[];
  var list=curTiles().map(function(t,i){return [t,i];});
  if(matchMedia('(max-width:700px)').matches)list.sort(function(a,b){return a[0].y-b[0].y||a[0].x-b[0].x;});
- if(!list.length)g.appendChild(el('div','msg',editing?'Leere Seite – „+ Kachel“ fügt eine hinzu.':'Keine Kacheln auf dieser Seite.'));
+ if(!list.length)g.appendChild(el('div','msg',editing?'{{J:Leere Seite – „+ Kachel“ fügt eine hinzu.}}':'{{J:Keine Kacheln auf dieser Seite.}}'));
  list.forEach(function(p){var t=p[0],i=p[1];
   var n=el('div','tile');n.dataset.i=i;
   var hd=el('div','t',title(t));var body=el('div','body');
   if(t.typ!=='text'||t.titel)n.appendChild(hd);
   n.appendChild(body);
   var o={t:t,n:n,body:body,i:i};
-  if(t.typ==='text'){n.removeChild(hd);var x=el('div','txt',t.titel||'Text');body.appendChild(x);o.txt=x;
+  if(t.typ==='text'){n.removeChild(hd);var x=el('div','txt',t.titel||'{{J:Text}}');body.appendChild(x);o.txt=x;
    body.style.justifyContent='flex-start';if(t.farbe)x.style.color=t.farbe;}
   else if(t.typ==='wert'){var v=el('div','val');o.val=v;body.appendChild(v);}
   else if(t.typ==='status'){body.style.justifyContent='flex-start';o.lamp=el('div','lamp');o.stxt=el('div','stxt');
@@ -348,7 +350,7 @@ function render(){
   var u=t.einheit||'';
   o.n.classList.toggle('stale',v===null);
   if(!info){o.n.className='tile'+(o.n.classList.contains('sel')?' sel':'');if(o.val)o.val.textContent='?';
-   if(o.stxt)o.stxt.textContent='Variable fehlt';return;}
+   if(o.stxt)o.stxt.textContent='{{J:Variable fehlt}}';return;}
   var lv=t.typ==='status'?'':level(v,t);
   o.n.classList.toggle('warn',lv==='warn');o.n.classList.toggle('alarm',lv==='alarm');
   if(t.typ==='wert'||t.typ==='balken'||t.typ==='trend'){o.val.textContent=fmt(v,t,info);
@@ -359,7 +361,7 @@ function render(){
   if(t.typ==='status'){var on=isOn(v,t);
    o.lamp.style.background=v===null?'var(--off)':on?(t.farbe_ein||'#2ecc71'):(t.farbe_aus||'var(--off)');
    o.lamp.style.boxShadow=on&&v!==null?'0 0 12px '+(t.farbe_ein||'#2ecc71'):'none';
-   o.stxt.textContent=v===null?'—':on?(t.text_ein||'EIN'):(t.text_aus||'AUS');}
+   o.stxt.textContent=v===null?'—':on?(t.text_ein||'{{J:EIN}}'):(t.text_aus||'{{J:AUS}}');}
   if(t.typ==='zeiger'){var f2=num(v)?frac(v,t):0;var a=ang(f2);
    o.needle.setAttribute('x2',(50+32*Math.cos(a)).toFixed(2));o.needle.setAttribute('y2',(50+32*Math.sin(a)).toFixed(2));
    o.arc.setAttribute('d',f2>0.002?arc(50,50,38,A0,a):'');
@@ -375,7 +377,7 @@ function render(){
      pts+=(started?'L':'M')+px.toFixed(2)+' '+py.toFixed(2);started=true;}}
    o.path.setAttribute('d',pts);}
  });
- $('info').textContent=d.empty?'noch keine Daten':((d.running?'Live ':'gestoppt · ')+new Date(d.last*1000).toLocaleTimeString());
+ $('info').textContent=d.empty?'{{J:noch keine Daten}}':((d.running?'{{J:Live}} ':'{{J:gestoppt}} · ')+new Date(d.last*1000).toLocaleTimeString());
  var L=$('leds');L.innerHTML='';(d.plcs||[]).forEach(function(p){var s=el('span','',p.name);var led=el('span','led '+p.state);
   led.title=p.text;s.insertBefore(led,s.firstChild);L.appendChild(s);});
 }
@@ -387,7 +389,7 @@ function tick(){
  var ts=trendSet();
  var u='/api/data?window='+(ts.w||1)+'&max='+(ts.w?300:50)+'&only='+(ts.ids.join(',')||'-');
  fetchJson(u).then(function(d){busy=false;
-  if(d.version===null){lastData=null;msg('Keine Aufzeichnung aktiv');return;}
+  if(d.version===null){lastData=null;msg('{{J:Keine Aufzeichnung aktiv}}');return;}
   lastData=d;render();}).catch(function(e){busy=false;$('info').textContent=e.message;});
 }
 
@@ -421,21 +423,21 @@ function field(box,label,key,kind,opts){
   if(key==='typ')props();build();};
  box.appendChild(inp);return inp;}
 function props(){var box=$('props');box.innerHTML='';if(!editing)return;
- var t=curTiles()[sel];if(!t){box.appendChild(el('div','hint','Kachel anklicken, um sie zu bearbeiten.'));return;}
- field(box,'Art','typ','select',TYPES);
- if(t.typ!=='text')field(box,'Variable','var','select',[['','—']].concat(vars.map(function(v){return [v.name,v.name];})));
- field(box,t.typ==='text'?'Text':'Titel (leer = Name der Variable)','titel','text');
- if(t.typ==='text'){field(box,'Farbe','farbe','color');return;}
- if(t.typ==='status'){field(box,'Text bei EIN','text_ein','text');field(box,'Text bei AUS','text_aus','text');
-  field(box,'Farbe EIN','farbe_ein','color');field(box,'Farbe AUS','farbe_aus','color');
-  field(box,'Umkehren (0 = EIN)','invert','select',[['','nein'],['1','ja']]);return;}
- field(box,'Einheit','einheit','text');
- field(box,'Nachkommastellen (leer = automatisch)','nk','num');
- if(t.typ!=='wert'){field(box,'Minimum','min','num');field(box,'Maximum','max','num');}
- if(t.typ==='trend')field(box,'Zeitraum (s)','fenster_s','num');
- field(box,'Obere Alarmgrenze','og_alarm','num');field(box,'Obere Warngrenze','og_warn','num');
- field(box,'Untere Warngrenze','ug_warn','num');field(box,'Untere Alarmgrenze','ug_alarm','num');
- if(t.typ!=='wert')field(box,'Farbe','farbe','color');
+ var t=curTiles()[sel];if(!t){box.appendChild(el('div','hint','{{J:Kachel anklicken, um sie zu bearbeiten.}}'));return;}
+ field(box,'{{J:Art}}','typ','select',TYPES);
+ if(t.typ!=='text')field(box,'{{J:Variable}}','var','select',[['','—']].concat(vars.map(function(v){return [v.name,v.name];})));
+ field(box,t.typ==='text'?'{{J:Text}}':'{{J:Titel (leer = Name der Variable)}}','titel','text');
+ if(t.typ==='text'){field(box,'{{J:Farbe}}','farbe','color');return;}
+ if(t.typ==='status'){field(box,'{{J:Text bei EIN}}','text_ein','text');field(box,'{{J:Text bei AUS}}','text_aus','text');
+  field(box,'{{J:Farbe EIN}}','farbe_ein','color');field(box,'{{J:Farbe AUS}}','farbe_aus','color');
+  field(box,'{{J:Umkehren (0 = EIN)}}','invert','select',[['','{{J:nein}}'],['1','{{J:ja}}']]);return;}
+ field(box,'{{J:Einheit}}','einheit','text');
+ field(box,'{{J:Nachkommastellen (leer = automatisch)}}','nk','num');
+ if(t.typ!=='wert'){field(box,'{{J:Minimum}}','min','num');field(box,'{{J:Maximum}}','max','num');}
+ if(t.typ==='trend')field(box,'{{J:Zeitraum (s)}}','fenster_s','num');
+ field(box,'{{J:Obere Alarmgrenze}}','og_alarm','num');field(box,'{{J:Obere Warngrenze}}','og_warn','num');
+ field(box,'{{J:Untere Warngrenze}}','ug_warn','num');field(box,'{{J:Untere Alarmgrenze}}','ug_alarm','num');
+ if(t.typ!=='wert')field(box,'{{J:Farbe}}','farbe','color');
 }
 function setEdit(on){
  editing=on;document.body.classList.toggle('edit',on);$('edit').classList.toggle('on',on);$('perr').textContent='';
@@ -448,15 +450,15 @@ function wire(){
  $('dup').onclick=function(){var t=curTiles()[sel];if(!t)return;var c=JSON.parse(JSON.stringify(t));c.y=freeY();
   curTiles().push(c);sel=curTiles().length-1;build();props();};
  $('del').onclick=function(){if(sel<0)return;curTiles().splice(sel,1);sel=-1;build();props();};
- $('pname').onchange=function(){layout.seiten[page].name=$('pname').value||'Seite';build();};
- $('padd').onclick=function(){layout.seiten.push({name:'Seite '+(layout.seiten.length+1),kacheln:[]});page=layout.seiten.length-1;sel=-1;build();props();};
+ $('pname').onchange=function(){layout.seiten[page].name=$('pname').value||'{{J:Seite}}';build();};
+ $('padd').onclick=function(){layout.seiten.push({name:'{{J:Seite}} '+(layout.seiten.length+1),kacheln:[]});page=layout.seiten.length-1;sel=-1;build();props();};
  $('pdel').onclick=function(){if(layout.seiten.length<2)return;layout.seiten.splice(page,1);page=0;sel=-1;build();props();};
  $('auto').onclick=function(){fetchJson('/api/prozess?vorschlag=1').then(function(r){
   layout.seiten[page].kacheln=r.layout.seiten[0].kacheln;sel=-1;build();props();});};
  $('cancel').onclick=function(){layout=JSON.parse(backup);if(page>=layout.seiten.length)page=0;setEdit(false);};
  $('save').onclick=function(){$('perr').textContent='';
   fetchJson('/api/prozess',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(layout)})
-   .then(function(r){layout=r.layout;setEdit(false);$('info').textContent='Gespeichert';})
+   .then(function(r){layout=r.layout;setEdit(false);$('info').textContent='{{J:Gespeichert}}';})
    .catch(function(e){$('perr').textContent=e.message;});};
  document.addEventListener('keydown',function(e){if(!editing||sel<0||/INPUT|SELECT/.test(e.target.tagName))return;
   var t=curTiles()[sel];var d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
@@ -469,14 +471,14 @@ function wire(){
  var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(layout)build();},150);});
  document.addEventListener('visibilitychange',function(){if(!document.hidden)tick();});
 }
-function confirmLeave(){return backup===JSON.stringify(layout)||confirm('Änderungen verwerfen?')&&(layout=JSON.parse(backup),true);}
+function confirmLeave(){return backup===JSON.stringify(layout)||confirm('{{J:Änderungen verwerfen?}}')&&(layout=JSON.parse(backup),true);}
 function load(){
  fetchJson('/api/prozess').then(function(r){
-  if(r.version===null){msg('Keine Aufzeichnung aktiv');setTimeout(load,3000);return;}
+  if(r.version===null){msg('{{J:Keine Aufzeichnung aktiv}}');setTimeout(load,3000);return;}
   vars=r.vars;byName={};vars.forEach(function(v){byName[v.name]=v;});
   layout=r.layout;canEdit=r.edit;refreshMs=r.refresh_ms||1000;
   if(page>=layout.seiten.length)page=0;
-  $('proj').textContent='Prozessbild'+(r.project?' – '+r.project:'');document.title=$('proj').textContent;
+  $('proj').textContent='{{J:Prozessbild}}'+(r.project?' – '+r.project:'');document.title=$('proj').textContent;
   $('edit').style.display=canEdit&&!matchMedia('(max-width:700px)').matches?'':'none';
   build();tick();clearInterval(timer);timer=setInterval(tick,Math.max(refreshMs,200));
  }).catch(function(e){msg(e.message);});

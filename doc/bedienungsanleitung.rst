@@ -2663,6 +2663,8 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
   `Prozessbild`_.
 * **Logos:** Kundenlogo und Logo der Konfiguration (Reiter *Anzeige*) stehen in der
   Kopfzeile der Seiten (Diagramme, Prozessbild, Anmeldung); leere Felder = kein Logo.
+* **Sprache:** Die Seiten (Diagramme, Anmeldung, Prozessbild, IO-Check) erscheinen in der
+  Sprache, die im Programm eingestellt ist (Menü *Sprache*), z. B. Englisch.
 * **Darstellung:** Die Seite zeigt je Seite (Tab) die Diagramme mit Chart.js, mit
   mehreren Y-Achsen, BOOL-Signalen als Treppenlinie und Status-LEDs der
   Steuerungen. Die Anzeige passt sich der Bildschirmgröße an.

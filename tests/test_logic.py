@@ -222,6 +222,14 @@ def test_web_login_and_iocheck_api():
     assert c.get("/api/io").status_code == 401
     assert 'src="logo/0"' in c.get("/login").get_data(as_text=True)            # Logo auf der Anmeldeseite …
     assert c.get("/logo/0").data[:4] == b"\x89PNG" and c.get("/logo/1").status_code == 404   # … frei abrufbar
+    import plc_i18n
+    plc_i18n.load("en")                                                        # Webseiten in der Programmsprache
+    try:
+        page = c.get("/login").get_data(as_text=True)
+        assert '<html lang="en">' in page and ">Log in</button>" in page and "{{" not in page
+    finally:
+        plc_i18n.load("de")
+    assert ">Anmelden</button>" in c.get("/login").get_data(as_text=True)
     assert c.post("/login", data={"benutzer": "tablet1", "passwort": "geheim123"}).status_code == 302
     br = io.IoWebBridge()
     sigs = [io.IoSignal("E0.0"), io.IoSignal("E0.1")]

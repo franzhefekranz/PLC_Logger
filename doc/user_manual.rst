@@ -2585,6 +2585,8 @@ tablet or smartphone – also in headless operation.
   `Process view`_.
 * **Logos:** customer logo and logo of the configuration (tab *Display*) appear in the
   header of the pages (charts, process view, login); empty fields = no logo.
+* **Language:** the pages (charts, login, process view, IO check) appear in the language
+  set in the program (menu *Language*), e.g. English.
 * **Display:** The page shows the charts per page (tab) with Chart.js, with several Y
   axes, BOOL signals as step lines and status LEDs of the controllers. The display adapts
   to the screen size.

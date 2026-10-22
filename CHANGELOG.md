@@ -54,6 +54,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **IO-Check als eigenes Programm** (Windows: `PLCIOCheck.exe`, im Startmenü und optional auf dem Desktop): Startbild
   mit den zuletzt benutzten Prüfständen und Konfigurationen (eine Konfiguration beginnt einen neuen Prüfstand), Demo.
   Aus dem Konfigurationsprogramm: *Datei › IO-Check mit dieser Konfiguration starten*.
+* **Webseiten übersetzbar:** Diagramme, Anmeldung, Prozessbild und IO-Check im Browser erscheinen in der eingestellten
+  Programmsprache (bisher nur deutsch). Die Texte stehen mit in den Sprachdateien.
 * **Balkenbreite einstellbar** (Konfiguration › Ansicht › *Balkenbreite*, 4 … 40 Pixel, Vorgabe 14).
 * „Über PLC Datenlogger“ und das versteckte Info-Fenster zeigen das feste Herstellerlogo, dazu Links auf
   taxis-instruments.de und den Quelltext auf GitHub. Strg + Umschalt + Doppelklick auf das Logo im Dialog „Über …“

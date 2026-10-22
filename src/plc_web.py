@@ -38,6 +38,7 @@ import html
 import ipaddress
 import json
 import os
+import re
 import secrets
 import socket
 import ssl
@@ -49,6 +50,7 @@ from flask import Flask, Response, abort, redirect, request, send_from_directory
 from werkzeug.serving import make_server
 
 from plc_common import BASE_DIR, logo_paths
+from plc_i18n import tr
 from plc_util import decimate_minmax
 from plc_webauth import check_password, hash_password, parse_users  # noqa: F401 (hash_password: Schnittstelle)
 
@@ -194,6 +196,26 @@ def io_bridge():
     return _io_bridge
 
 
+# Übersetzbare Texte der Webseiten: {{T:Text}} in HTML (Übersetzung HTML-maskiert), {{J:Text}} innerhalb von
+# JavaScript-Zeichenketten (Anführungszeichen und Zeilenumbrüche maskiert). Übersetzt wird beim Ausliefern in die
+# eingestellte Programmsprache (plc_i18n); tools/extract_tr.py sammelt die Texte für die Sprachdateien.
+_MARK = re.compile(r"\{\{([TJ]):((?:[^{}]|\{\d+\})+?)\}\}")   # Text darf {0}, {1} … enthalten
+
+
+def localize(page: str) -> str:
+    """Markierte Texte einer Seite übersetzen und das lang-Attribut setzen."""
+    from plc_i18n import current, tr
+
+    def rep(m):
+        """Einen markierten Text ersetzen (HTML- bzw. JavaScript-gerecht maskiert)."""
+        t = tr(m.group(2))
+        if m.group(1) == "T":
+            return html.escape(t, quote=True)
+        return t.replace("\\", "\\\\").replace("'", "\\x27").replace('"', "\\x22").replace("\n", "\\n")
+    lang = current() or "de"
+    return _MARK.sub(rep, page).replace('<html lang="de">', f'<html lang="{lang}">', 1)
+
+
 def logos_html(logos) -> str:
     """<img>-Elemente für die Kopfzeile der Webseiten (Logo n unter ``logo/n``); ohne Logos ""."""
     return "".join(f'<img class="logo" src="logo/{n}" alt="">' for n, p in enumerate(logos) if os.path.isfile(p))
@@ -277,7 +299,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
             with fail_lock:
                 n, last = failures.get(ip, (0, 0.0))
                 if n >= 5 and time.time() - last < 60:
-                    err = "Zu viele Fehlversuche – bitte eine Minute warten."
+                    err = "{{T:Zu viele Fehlversuche – bitte eine Minute warten.}}"
             if not err:
                 name = (request.form.get("benutzer") or "").strip()
                 pw = request.form.get("passwort") or ""
@@ -292,10 +314,11 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
                 with fail_lock:
                     n, _last = failures.get(ip, (0, 0.0))
                     failures[ip] = (n + 1, time.time())
-                err = "Benutzer oder Passwort falsch."
-        page = (LOGIN_HTML.replace("__ERR__", html.escape(err)).replace("__LOGOS__", logos_html(logos))
-                .replace("__WARN__", "" if https else '<p class="warn">Unverschlüsselte Verbindung (HTTP): '
-                         'Passwort und Werte sind im Netz lesbar.</p>'))
+                err = "{{T:Benutzer oder Passwort falsch.}}"
+        page = (LOGIN_HTML.replace("__ERR__", err).replace("__LOGOS__", logos_html(logos))
+                .replace("__WARN__", "" if https else '<p class="warn">{{T:Unverschlüsselte Verbindung (HTTP): '
+                         'Passwort und Werte sind im Netz lesbar.}}</p>'))
+        page = localize(page)
         return Response(page, mimetype="text/html", headers={"Cache-Control": "no-store"})
 
     @app.route("/logout")
@@ -309,7 +332,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         if users and logged_in():
             return session.get("user")
         if token_ok():
-            return "Web (Zugriffscode)"
+            return "Web (" + tr("Zugriffscode") + ")"
         return f"Web ({request.remote_addr or '?'})"
 
     @app.route("/")
@@ -318,12 +341,12 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         if get_rec() is None and _io_bridge is not None:
             return redirect("io" + (("?token=" + request.args["token"]) if request.args.get("token") else ""))
         user = session.get("user") if users else ""
-        out = '<a id="logout" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>" if user else ""
+        out = ('<a id="logout" href="logout" title="{{T:Abmelden}}">⎋ ' + html.escape(user) + "</a>") if user else ""
         if _io_bridge is not None:
-            out = '<a id="logout" href="io" title="IO-Check (Inbetriebnahme)">IO-Check</a> ' + out
-        out = '<a id="logout" href="prozess' + _tok() + '" title="Prozessbild">Prozessbild</a> ' + out
-        return Response(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out)
-                        .replace("__LOGOS__", logos_html(logos)), mimetype="text/html")
+            out = '<a id="logout" href="io" title="{{T:IO-Check (Inbetriebnahme)}}">{{T:IO-Check}}</a> ' + out
+        out = '<a id="logout" href="prozess' + _tok() + '" title="{{T:Prozessbild}}">{{T:Prozessbild}}</a> ' + out
+        return Response(localize(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out)
+                                 .replace("__LOGOS__", logos_html(logos))), mimetype="text/html")
 
     @app.route("/logo/<int:n>")
     def logo(n):
@@ -346,10 +369,10 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         """Seite des Prozessbilds (HTML aus plc_web_prozess) mit Links zu Diagrammen und Abmelden."""
         from plc_web_prozess import PROZESS_HTML
         user = session.get("user") if users else ""
-        out = '<a class="lnk" href="./' + _tok() + '">Diagramme</a>'
+        out = '<a class="lnk" href="./' + _tok() + '">{{T:Diagramme}}</a>'
         if user:
-            out += ' <a class="lnk" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>"
-        return Response(PROZESS_HTML.replace("__LINKS__", out).replace("__LOGOS__", logos_html(logos)),
+            out += ' <a class="lnk" href="logout" title="{{T:Abmelden}}">⎋ ' + html.escape(user) + "</a>"
+        return Response(localize(PROZESS_HTML.replace("__LINKS__", out).replace("__LOGOS__", logos_html(logos))),
                         mimetype="text/html",
                         headers={"Cache-Control": "no-store"})
 
@@ -368,15 +391,15 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         cfg_path = getattr(rec, "config_path", "") or ""
         if request.method == "POST":
             if not may_edit():
-                return reply({"error": "Nur angemeldete Benutzer dürfen das Prozessbild ändern."}, 403)
+                return reply({"error": tr("Nur angemeldete Benutzer dürfen das Prozessbild ändern.")}, 403)
             if not request.is_json:              # nur JSON: Formulare fremder Seiten (CSRF) werden abgewiesen
                 abort(415)
             try:
                 doc = wp.save_layout(cfg_path, request.get_json(silent=True))
             except (ValueError, TypeError):
-                return reply({"error": "Layout ungültig"}, 400)
+                return reply({"error": tr("Layout ungültig")}, 400)
             except OSError as e:
-                return reply({"error": f"Speichern fehlgeschlagen: {e}"}, 500)
+                return reply({"error": tr("Speichern fehlgeschlagen: {0}").format(e)}, 500)
             return reply({"ok": True, "layout": doc})
         layout = None if request.args.get("vorschlag") else wp.load_layout(cfg_path)
         return reply({"version": id(rec), "project": rec.conn.get("projekt", ""), "refresh_ms": refresh_ms,
@@ -400,7 +423,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         """
         rec = get_rec()
         if rec is None:
-            return reply({"version": None, "message": "Keine Aufzeichnung aktiv", "refresh_ms": refresh_ms})
+            return reply({"version": None, "message": tr("Keine Aufzeichnung aktiv"), "refresh_ms": refresh_ms})
         charts_out = []
         for ci, ch in enumerate(rec.charts):
             vars_out = [{"i": vi, "name": v.name, "dtype": v.dtype, "color": v.color, "axis": v.axis}
@@ -466,10 +489,11 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
     def io_page():
         from plc_iocheck_web import IO_HTML
         user = session.get("user") if users else ""
-        out = '<a class="lnk" href="logout" title="Abmelden">⎋ ' + html.escape(user) + "</a>" if user else ""
+        out = ('<a class="lnk" href="logout" title="{{T:Abmelden}}">⎋ ' + html.escape(user) + "</a>") if user else ""
         if get_rec() is not None:
-            out = '<a class="lnk" href="./">Diagramme</a> ' + out
-        return Response(IO_HTML.replace("__LOGOUT__", out), mimetype="text/html", headers={"Cache-Control": "no-store"})
+            out = '<a class="lnk" href="./">{{T:Diagramme}}</a> ' + out
+        return Response(localize(IO_HTML.replace("__LOGOUT__", out)), mimetype="text/html",
+                        headers={"Cache-Control": "no-store"})
 
     @app.route("/api/io")
     def api_io():
@@ -531,7 +555,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
                 log.reload()
             key = (id(log), log.version)
             if ev_cache.get("key") != key:
-                lst = [{"zeit": e.zeit[:19], "prio": e.prio, "trigger": e.trigger, "text": e.text}
+                lst = [{"zeit": e.zeit[:19], "prio": tr(e.prio), "trigger": e.trigger, "text": e.text}
                        for e in log.events() if e.offen][:20]
                 ev_cache.update(key=key, value={"open": log.open_count(), "list": lst})
             return ev_cache["value"]
@@ -684,16 +708,16 @@ img.logo{height:30px;max-width:180px;object-fit:contain;background:#fff;border-r
  <div class="row">__LOGOS__<h1 id="proj">PLC Datenlogger</h1><div class="leds" id="leds"></div>
   <span class="info" id="info"></span><span style="flex:1"></span>__LOGOUT__</div>
  <div class="ctrl" style="margin-top:6px">
-  <select id="win" title="Zeitfenster"></select>
-  <button id="back" title="Zurück in der Zeit">◀</button>
-  <button id="fwd" title="Vorwärts">▶</button>
-  <button id="live" class="on">Live</button>
-  <button id="pause" title="Anzeige anhalten">⏸</button>
-  <label class="chk"><input type="checkbox" id="boolplot"> Bool im Diagramm</label>
+  <select id="win" title="{{T:Zeitfenster}}"></select>
+  <button id="back" title="{{T:Zurück in der Zeit}}">◀</button>
+  <button id="fwd" title="{{T:Vorwärts}}">▶</button>
+  <button id="live" class="on">{{T:Live}}</button>
+  <button id="pause" title="{{T:Anzeige anhalten}}">⏸</button>
+  <label class="chk"><input type="checkbox" id="boolplot"> {{T:Bool im Diagramm}}</label>
  </div>
  <nav id="tabs"></nav>
 </header>
-<main id="main"><div class="msg">Lade …</div></main>
+<main id="main"><div class="msg">{{T:Lade …}}</div></main>
 <script>
 (function(){
 'use strict';
@@ -723,8 +747,7 @@ function loadChartJs(cb){
  var s=document.createElement('script');s.src='static/chart.umd.js';
  s.onload=cb;
  s.onerror=function(){var c=document.createElement('script');c.src='__CDN__';c.onload=cb;
-  c.onerror=function(){msg('Chart.js konnte nicht geladen werden. Datei <code>web_static/chart.umd.js</code> '+
-   'neben das Programm legen (siehe Bedienungsanleitung).');};document.head.appendChild(c);};
+  c.onerror=function(){msg('{{J:Chart.js konnte nicht geladen werden. Datei <code>web_static/chart.umd.js</code> neben das Programm legen (siehe Bedienungsanleitung).}}');};document.head.appendChild(c);};
  document.head.appendChild(s);
 }
 
@@ -762,7 +785,7 @@ function build(){
 var ICON_MAX='<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 var ICON_MIN='<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
 function fsIcon(co){var on=maxCo===co;co.btn.innerHTML=on?ICON_MIN:ICON_MAX;
- co.btn.title=on?'Normale Darstellung (Esc)':'Vollbild';co.btn.className='fs'+(on?' on':'');}
+ co.btn.title=on?'{{J:Normale Darstellung (Esc)}}':'{{J:Vollbild}}';co.btn.className='fs'+(on?' on':'');}
 function headerHeight(){document.documentElement.style.setProperty('--hh',
  document.querySelector('header').offsetHeight+'px');}
 function resizeAll(){requestAnimationFrame(function(){cos.forEach(function(c){if(c.chart)c.chart.resize();});});}
@@ -879,18 +902,18 @@ var boolLanes={id:'boolLanes',afterDatasetsDraw:function(chart){
 /* ---------- Daten ---------- */
 function leds(plcs,ev){
  var h='';(plcs||[]).forEach(function(p){
-  h+='<span title="'+(p.text+(p.read_ms?(' – Zyklus '+p.read_ms+' ms'):'')).replace(/"/g,'&quot;')+
+  h+='<span title="'+(p.text+(p.read_ms?(' – '+'{{J:Zyklus {0} ms}}'.replace('{0}',p.read_ms)):'')).replace(/"/g,'&quot;')+
    '"><i class="led '+p.state+'"></i>'+p.name.replace(/</g,'&lt;')+'</span>';});
  if(ev&&ev.open){
   var tip=ev.list.map(function(e){return e.zeit+'  '+e.prio+'  '+e.trigger+(e.text?(': '+e.text):'');}).join('\n');
-  h+='<span class="evbadge" title="'+(tip+'\n(Quittieren im Ereignis-Viewer des Loggers)').replace(/"/g,'&quot;')
-   .replace(/</g,'&lt;')+'">🔔 '+ev.open+' offen</span>';}
+  h+='<span class="evbadge" title="'+(tip+'\n{{J:(Quittieren im Ereignis-Viewer des Loggers)}}').replace(/"/g,'&quot;')
+   .replace(/</g,'&lt;')+'">'+'{{J:🔔 {0} offen}}'.replace('{0}',ev.open)+'</span>';}
  $('leds').innerHTML=h;
 }
 function apply(res){
  lastRes=res;leds(res.plcs,res.events);
- if(res.empty){$('info').textContent='noch keine Daten';return;}
- $('info').textContent=(res.live?'Live ':'Verlauf ')+fmtD(res.t1*1000)+(res.running?'':' · gestoppt');
+ if(res.empty){$('info').textContent='{{J:noch keine Daten}}';return;}
+ $('info').textContent=(res.live?'{{J:Live}} ':'{{J:Verlauf}} ')+fmtD(res.t1*1000)+(res.running?'':' · {{J:gestoppt}}');
  cos.forEach(function(co){
   var sc=co.chart.options.scales;sc.x.min=res.t0*1000;sc.x.max=res.t1*1000;
   co.chart.data.datasets.forEach(function(d){
@@ -899,16 +922,16 @@ function apply(res){
    d.data=a;});
   style(co);
   Object.keys(co.items).forEach(function(k){var it=co.items[k],v=it.v;
-   it.nm.textContent=v.name+': '+fmtVal(res.values[k],v.dtype)+(co.hidden[k]?' (aus)':'');});
+   it.nm.textContent=v.name+': '+fmtVal(res.values[k],v.dtype)+(co.hidden[k]?' ({{J:aus}})':'');});
  });
 }
 function fetchJson(u){return fetch(api(u),{cache:'no-store'}).then(function(r){
- if(r.status===401){if(r.headers.get('X-Login')){location.href='login';throw new Error('Anmeldung erforderlich');}
-  throw new Error('Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)');}
- if(!r.ok)throw new Error('Serverfehler '+r.status);return r.json();});}
+ if(r.status===401){if(r.headers.get('X-Login')){location.href='login';throw new Error('{{J:Anmeldung erforderlich}}');}
+  throw new Error('{{J:Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)}}');}
+ if(!r.ok)throw new Error('{{J:Serverfehler}} '+r.status);return r.json();});}
 function loadConfig(){
  return fetchJson('/api/config').then(function(c){
-  if(c.version===null){cfg=null;ver=null;destroyAll();msg(c.message||'Keine Aufzeichnung aktiv');leds([]);return;}
+  if(c.version===null){cfg=null;ver=null;destroyAll();msg(c.message||'{{J:Keine Aufzeichnung aktiv}}');leds([]);return;}
   cfg=c;ver=c.version;build();
   clearInterval(timer);timer=setInterval(tick,Math.max(c.refresh_ms||1000,200));});
 }
@@ -966,7 +989,7 @@ LOGIN_HTML = r"""<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Anmelden – PLC Datenlogger</title>
+<title>{{T:Anmelden}} – PLC Datenlogger</title>
 <style>
 :root{--bg:#10151b;--card:#18202a;--fg:#dfe6ee;--mute:#8b98a7;--line:#2a3544;--accent:#4aa3ff;color-scheme:dark}
 @media (prefers-color-scheme:light){:root{--bg:#f2f4f7;--card:#fff;--fg:#1b2430;--mute:#5b6878;--line:#d5dbe3;
@@ -991,9 +1014,9 @@ img.logo{height:40px;max-width:150px;object-fit:contain;background:#fff;border-r
 <form method="post" action="login" autocomplete="on">
  <div class="logos">__LOGOS__</div>
  <h1>PLC Datenlogger</h1>
- <label for="b">Benutzer</label><input id="b" name="benutzer" autocomplete="username" required autofocus>
- <label for="p">Passwort</label><input id="p" name="passwort" type="password" autocomplete="current-password" required>
- <button type="submit">Anmelden</button>
+ <label for="b">{{T:Benutzer}}</label><input id="b" name="benutzer" autocomplete="username" required autofocus>
+ <label for="p">{{T:Passwort}}</label><input id="p" name="passwort" type="password" autocomplete="current-password" required>
+ <button type="submit">{{T:Anmelden}}</button>
  <p class="err">__ERR__</p>
  __WARN__
 </form>

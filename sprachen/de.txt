@@ -2937,6 +2937,62 @@
 @ Adresse kopieren
 > 
 
+# ---------------- plc_iocheck_web.py
+
+@ Abnahmeprotokoll als PDF
+> 
+
+@ Liste
+> 
+
+@ Bewegt
+> 
+
+@ Suchen …
+> 
+
+@ Zuletzt gewechselt
+> 
+
+@ Unterlauf bzw. Drahtbruch (-32768)
+> 
+
+@ Keine Signale – im Programm eine IO-Liste importieren.
+> 
+
+@ Keine Binärsignale.
+> 
+
+@ Noch keine Wechsel.
+> 
+
+@ Rohwert
+> 
+
+@ Prüfpunkte
+> 
+
+@ (optional, z. B. mit Kalibrator)
+> 
+
+@ in Toleranz …
+> 
+
+@ Wert 1 s lang in Toleranz (±{0} %) → Messpunkt wird automatisch übernommen.
+> 
+
+@ Übersprungen
+> 
+
+@ Zurück
+> 
+
+@ Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.
+> 
+
+@ {0} / {1} geprüft · {2} OK · {3} Fehler
+> 
+
 # ---------------- plc_logger.py
 
 @ Neue Konfiguration
@@ -3658,6 +3714,80 @@
 @ {0} Trigger, davon {1} aktiv.
 > 
 
+# ---------------- plc_web.py
+
+@ Zugriffscode
+> 
+
+@ Nur angemeldete Benutzer dürfen das Prozessbild ändern.
+> 
+
+@ Layout ungültig
+> 
+
+@ Keine Aufzeichnung aktiv
+> 
+
+@ Zeitfenster
+> 
+
+@ Zurück in der Zeit
+> 
+
+@ Vorwärts
+> 
+
+@ Live
+> 
+
+@ Anzeige anhalten
+> 
+
+@ Lade …
+> 
+
+@ Chart.js konnte nicht geladen werden. Datei <code>web_static/chart.umd.js</code> neben das Programm legen (siehe Bedienungsanleitung).
+> 
+
+@ Normale Darstellung (Esc)
+> 
+
+@ Vollbild
+> 
+
+@ Zyklus {0} ms
+> 
+
+@ (Quittieren im Ereignis-Viewer des Loggers)
+> 
+
+@ noch keine Daten
+> 
+
+@ Anmeldung erforderlich
+> 
+
+@ Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)
+> 
+
+@ Serverfehler
+> 
+
+@ Anmelden
+> 
+
+@ Benutzer oder Passwort falsch.
+> 
+
+@ Unverschlüsselte Verbindung (HTTP): Passwort und Werte sind im Netz lesbar.
+> 
+
+@ Zu viele Fehlversuche – bitte eine Minute warten.
+> 
+
+@ Abmelden
+> 
+
 # ---------------- plc_web_dialog.py
 
 @ Passwort für {0}
@@ -3703,6 +3833,125 @@
 > 
 
 @ Benutzer „{0}“ entfernen?
+> 
+
+# ---------------- plc_web_prozess.py
+
+@ Übersicht
+> 
+
+@ Bearbeiten
+> 
+
+@ Prozessbild bearbeiten
+> 
+
+@ Kachel
+> 
+
+@ Kopie
+> 
+
+@ Löschen
+> 
+
+@ Seite
+> 
+
+@ Neue Seite
+> 
+
+@ Seite löschen
+> 
+
+@ Je Variable eine Kachel (ersetzt die Seite)
+> 
+
+@ Vorschlag
+> 
+
+@ Kachel ziehen = verschieben, Ecke unten rechts = Größe. Raster 12 Spalten.
+> 
+
+@ Zahlenwert
+> 
+
+@ Zeigerinstrument
+> 
+
+@ Zustand (Lampe)
+> 
+
+@ Kurzverlauf
+> 
+
+@ Text / Überschrift
+> 
+
+@ Leere Seite – „+ Kachel“ fügt eine hinzu.
+> 
+
+@ Keine Kacheln auf dieser Seite.
+> 
+
+@ Variable fehlt
+> 
+
+@ EIN
+> 
+
+@ AUS
+> 
+
+@ Kachel anklicken, um sie zu bearbeiten.
+> 
+
+@ Titel (leer = Name der Variable)
+> 
+
+@ Text bei EIN
+> 
+
+@ Text bei AUS
+> 
+
+@ Farbe EIN
+> 
+
+@ Farbe AUS
+> 
+
+@ Umkehren (0 = EIN)
+> 
+
+@ nein
+> 
+
+@ ja
+> 
+
+@ Nachkommastellen (leer = automatisch)
+> 
+
+@ Zeitraum (s)
+> 
+
+@ Obere Alarmgrenze
+> 
+
+@ Obere Warngrenze
+> 
+
+@ Untere Warngrenze
+> 
+
+@ Untere Alarmgrenze
+> 
+
+@ Gespeichert
+> 
+
+@ Änderungen verwerfen?
 > 
 
 # ---------------- plc_treiber/__init__.py

@@ -2937,6 +2937,62 @@
 @ Adresse kopieren
 > Copy address
 
+# ---------------- plc_iocheck_web.py
+
+@ Abnahmeprotokoll als PDF
+> Acceptance protocol as PDF
+
+@ Liste
+> List
+
+@ Bewegt
+> Moved
+
+@ Suchen …
+> Search …
+
+@ Zuletzt gewechselt
+> Changed last
+
+@ Unterlauf bzw. Drahtbruch (-32768)
+> Underflow or wire break (-32768)
+
+@ Keine Signale – im Programm eine IO-Liste importieren.
+> No signals – import an IO list in the program.
+
+@ Keine Binärsignale.
+> No binary signals.
+
+@ Noch keine Wechsel.
+> No changes yet.
+
+@ Rohwert
+> Raw value
+
+@ Prüfpunkte
+> Test points
+
+@ (optional, z. B. mit Kalibrator)
+> (optional, e.g. with a calibrator)
+
+@ in Toleranz …
+> in tolerance …
+
+@ Wert 1 s lang in Toleranz (±{0} %) → Messpunkt wird automatisch übernommen.
+> Value in tolerance (±{0} %) for 1 s → the measuring point is taken over automatically.
+
+@ Übersprungen
+> Skipped
+
+@ Zurück
+> Back
+
+@ Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.
+> No IO check open – open <b>Analysis › IO check</b> on the PC.
+
+@ {0} / {1} geprüft · {2} OK · {3} Fehler
+> {0} / {1} checked · {2} OK · {3} faults
+
 # ---------------- plc_logger.py
 
 @ Neue Konfiguration
@@ -3658,6 +3714,80 @@
 @ {0} Trigger, davon {1} aktiv.
 > {0} triggers, {1} of them active.
 
+# ---------------- plc_web.py
+
+@ Zugriffscode
+> access code
+
+@ Nur angemeldete Benutzer dürfen das Prozessbild ändern.
+> Only logged-in users may change the process view.
+
+@ Layout ungültig
+> Invalid layout
+
+@ Keine Aufzeichnung aktiv
+> No recording active
+
+@ Zeitfenster
+> Time window
+
+@ Zurück in der Zeit
+> Back in time
+
+@ Vorwärts
+> Forward
+
+@ Live
+> Live
+
+@ Anzeige anhalten
+> Pause display
+
+@ Lade …
+> Loading …
+
+@ Chart.js konnte nicht geladen werden. Datei <code>web_static/chart.umd.js</code> neben das Programm legen (siehe Bedienungsanleitung).
+> Chart.js could not be loaded. Place the file <code>web_static/chart.umd.js</code> next to the program (see user manual).
+
+@ Normale Darstellung (Esc)
+> Normal view (Esc)
+
+@ Vollbild
+> Full screen
+
+@ Zyklus {0} ms
+> cycle {0} ms
+
+@ (Quittieren im Ereignis-Viewer des Loggers)
+> (acknowledge in the event viewer of the logger)
+
+@ noch keine Daten
+> no data yet
+
+@ Anmeldung erforderlich
+> Login required
+
+@ Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)
+> Access denied – access code missing in the address (?token=…)
+
+@ Serverfehler
+> Server error
+
+@ Anmelden
+> Log in
+
+@ Benutzer oder Passwort falsch.
+> Wrong user or password.
+
+@ Unverschlüsselte Verbindung (HTTP): Passwort und Werte sind im Netz lesbar.
+> Unencrypted connection (HTTP): password and values can be read on the network.
+
+@ Zu viele Fehlversuche – bitte eine Minute warten.
+> Too many failed attempts – please wait a minute.
+
+@ Abmelden
+> Log out
+
 # ---------------- plc_web_dialog.py
 
 @ Passwort für {0}
@@ -3704,6 +3834,125 @@
 
 @ Benutzer „{0}“ entfernen?
 > Remove user “{0}”?
+
+# ---------------- plc_web_prozess.py
+
+@ Übersicht
+> Overview
+
+@ Bearbeiten
+> Edit
+
+@ Prozessbild bearbeiten
+> Edit process view
+
+@ Kachel
+> Tile
+
+@ Kopie
+> Copy
+
+@ Löschen
+> Delete
+
+@ Seite
+> Page
+
+@ Neue Seite
+> New page
+
+@ Seite löschen
+> Delete page
+
+@ Je Variable eine Kachel (ersetzt die Seite)
+> One tile per variable (replaces the page)
+
+@ Vorschlag
+> Suggestion
+
+@ Kachel ziehen = verschieben, Ecke unten rechts = Größe. Raster 12 Spalten.
+> Drag a tile = move, bottom right corner = size. Grid of 12 columns.
+
+@ Zahlenwert
+> Numeric value
+
+@ Zeigerinstrument
+> Gauge
+
+@ Zustand (Lampe)
+> State (lamp)
+
+@ Kurzverlauf
+> Short trend
+
+@ Text / Überschrift
+> Text / heading
+
+@ Leere Seite – „+ Kachel“ fügt eine hinzu.
+> Empty page – “+ Tile” adds one.
+
+@ Keine Kacheln auf dieser Seite.
+> No tiles on this page.
+
+@ Variable fehlt
+> Variable missing
+
+@ EIN
+> ON
+
+@ AUS
+> OFF
+
+@ Kachel anklicken, um sie zu bearbeiten.
+> Click a tile to edit it.
+
+@ Titel (leer = Name der Variable)
+> Title (empty = name of the variable)
+
+@ Text bei EIN
+> Text when ON
+
+@ Text bei AUS
+> Text when OFF
+
+@ Farbe EIN
+> Colour ON
+
+@ Farbe AUS
+> Colour OFF
+
+@ Umkehren (0 = EIN)
+> Invert (0 = ON)
+
+@ nein
+> no
+
+@ ja
+> yes
+
+@ Nachkommastellen (leer = automatisch)
+> Decimal places (empty = automatic)
+
+@ Zeitraum (s)
+> Time range (s)
+
+@ Obere Alarmgrenze
+> Upper alarm limit
+
+@ Obere Warngrenze
+> Upper warning limit
+
+@ Untere Warngrenze
+> Lower warning limit
+
+@ Untere Alarmgrenze
+> Lower alarm limit
+
+@ Gespeichert
+> Saved
+
+@ Änderungen verwerfen?
+> Discard changes?
 
 # ---------------- plc_treiber/__init__.py
 
