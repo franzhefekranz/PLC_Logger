@@ -587,6 +587,8 @@ def default_connection() -> dict:
             "csv_aktiv": 1, "db_typ": "", "db_host": "localhost", "db_port": 0, "db_name": "datenlogger",
             "db_user": "", "db_passwort": "", "db_tabelle": "messwerte", "db_datei": "datenlogger.db",
             "db_nur_aenderungen": 0,
+            # Aufräumen alter Aufzeichnungen (siehe *_cleanup.py): Tage bzw. MB, 0 = aus.
+            "aufr_csv_tage": 0, "aufr_csv_mb": 0, "aufr_db_tage": 0, "aufr_db_mb": 0,
             # Ereignisprotokoll der Trigger (leer = <CSV-Ordner>/<CSV-Name>_ereignisse.csv, siehe *_events.py).
             "ereignis_datei": "",
             # Aufzeichnung: dauernd oder nur per Trigger (Startbedingung) mit Vor- und Nachlauf (siehe *_recorder.py).
@@ -606,7 +608,8 @@ def default_connection() -> dict:
 # Welche Schlüssel des Abschnitts [Verbindung] Zahlen bzw. Text sind (zum Lesen mit passendem Typ).
 CONN_INT_KEYS = ("fenster_s", "balken", "balken_breite", "max_records", "archiv_beenden",
                  "raster_spalten", "web_aktiv", "web_port", "web_intervall_ms", "headless", "web_https",
-                 "csv_aktiv", "db_port", "db_nur_aenderungen", "bericht_aktiv")
+                 "csv_aktiv", "db_port", "db_nur_aenderungen", "bericht_aktiv",
+                 "aufr_csv_tage", "aufr_csv_mb", "aufr_db_tage", "aufr_db_mb")
 CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "kundenlogo", "icon", "csv_name",
                  "archiv_ordner", "projekt", "seite_anordnung", "web_host", "web_token",
                  "db_typ", "db_host", "db_name", "db_user", "db_passwort", "db_tabelle", "db_datei",

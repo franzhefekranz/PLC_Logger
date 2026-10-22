@@ -211,6 +211,11 @@ class ConfigWindow(QMainWindow):
         btn_arch.clicked.connect(self.pick_arch_dir)
         arch_row = QHBoxLayout(); arch_row.addWidget(self.ed_arch); arch_row.addWidget(btn_arch)
         self.chk_arch_end = QCheckBox(tr("Beim Beenden des Loggers die aktuelle CSV-Datei archivieren"))
+        # Aufräumen: CSV-Dateien und Archiv dieses Loggers nach Alter bzw. Gesamtgröße löschen (0 = aus).
+        self.sp_clean_days = self._days_spin(tr("CSV-Dateien und Archiv-ZIPs dieses Loggers löschen, deren letzte "
+                                                "Änderung länger zurückliegt (0 = nie)"))
+        self.sp_clean_mb = self._mb_spin(tr("Belegen CSV-Dateien und Archiv dieses Loggers mehr Platz, werden die "
+                                            "ältesten gelöscht (0 = unbegrenzt)"))
         form_rec1 = QFormLayout()
         # CSV-Datei abschaltbar (z. B. wenn nur in eine Datenbank aufgezeichnet werden soll).
         self.chk_csv = QCheckBox(tr("CSV-Datei schreiben"))
@@ -222,6 +227,8 @@ class ConfigWindow(QMainWindow):
         form_rec2 = QFormLayout()
         form_rec2.addRow(tr("Archiv-Ordner:"), arch_row)
         form_rec2.addRow("", self.chk_arch_end)
+        form_rec2.addRow(tr("Löschen nach:"), self.sp_clean_days)
+        form_rec2.addRow(tr("Höchstens belegen:"), self.sp_clean_mb)
         # Aufzeichnung dauernd oder per Trigger: Startbedingung, Vorlauf (Ringspeicher), Nachlauf, Höchstdauer.
         self.cb_rec_mode = QComboBox()
         for key, text in RECORD_MODES.items():
@@ -958,6 +965,12 @@ class ConfigWindow(QMainWindow):
         fr.addWidget(self.ed_db_file); fr.addWidget(btn_file)
         self.chk_db_changes = QCheckBox(tr("Nur Änderungen schreiben (spätestens jede Minute)"))
         self.chk_db_changes.setToolTip(tr("Spart Platz: ein Wert wird nur geschrieben, wenn er sich geändert hat"))
+        self.sp_db_clean_days = self._days_spin(tr("Werte löschen, die älter sind (0 = nie). TimescaleDB: ganze "
+                                                   "Zeitabschnitte, QuestDB: ganze Tage. InfluxDB 3 und VictoriaMetrics: "
+                                                   "Aufbewahrungsdauer am Server einstellen"))
+        self.sp_db_clean_mb = self._mb_spin(tr("Nur SQLite: belegen die Werte mehr Platz, werden die ältesten Tage "
+                                               "gelöscht (0 = unbegrenzt). Die Datei schrumpft nicht, wächst aber "
+                                               "nicht weiter"))
         btn_test = QPushButton(tr("Datenbank testen"))
         btn_test.setToolTip(tr("Verbindung prüfen und die Tabelle anlegen"))
         btn_test.clicked.connect(self.test_database)
@@ -970,13 +983,36 @@ class ConfigWindow(QMainWindow):
         f2.addRow(tr("Benutzer / Passwort:"), self._hbox(self.ed_db_user, self.ed_db_pw))
         f2.addRow(tr("Tabelle:"), self.ed_db_table)
         f2.addRow("", self.chk_db_changes)
+        f2.addRow(tr("Löschen nach:"), self.sp_db_clean_days)
+        f2.addRow(tr("Höchstens belegen:"), self.sp_db_clean_mb)
         f2.addRow("", btn_test)
         w = QWidget()
         lay = QHBoxLayout(w); lay.addLayout(f1, 1); lay.addSpacing(30); lay.addLayout(f2, 1)
         self._db_server_widgets = [self.ed_db_host, self.sp_db_port, self.ed_db_name, self.ed_db_user, self.ed_db_pw]
         self._db_widgets = self._db_server_widgets + [self.ed_db_table, self.ed_db_file, btn_file,
-                                                      self.chk_db_changes, btn_test]
+                                                      self.chk_db_changes, self.sp_db_clean_days, btn_test]
         return w
+
+    @staticmethod
+    def _days_spin(tip):
+        """Eingabe „Löschen nach … Tagen“ (0 = nie)."""
+        sp = QSpinBox()
+        sp.setRange(0, 36500)
+        sp.setSuffix(tr(" Tagen"))
+        sp.setSpecialValueText(tr("nie"))
+        sp.setToolTip(tip)
+        return sp
+
+    @staticmethod
+    def _mb_spin(tip):
+        """Eingabe „Höchstens … MB“ (0 = unbegrenzt)."""
+        sp = QSpinBox()
+        sp.setRange(0, 100_000_000)
+        sp.setSingleStep(100)
+        sp.setSuffix(" MB")
+        sp.setSpecialValueText(tr("unbegrenzt"))
+        sp.setToolTip(tip)
+        return sp
 
     def _update_db_fields(self):
         """Felder je nach Datenbanktyp freigeben (Server-Felder für MariaDB/TimescaleDB/QuestDB, Datei für SQLite)."""
@@ -995,6 +1031,8 @@ class ConfigWindow(QMainWindow):
                                     if typ == "victoriametrics"
                                     else tr("Tabellenname (Buchstaben, Ziffern, _); wird bei Bedarf angelegt"))
         self.ed_db_file.setEnabled(typ == "sqlite")
+        self.sp_db_clean_mb.setEnabled(typ == "sqlite")
+        self.sp_db_clean_days.setEnabled(typ not in ("", "influxdb3", "victoriametrics"))
         self.sp_db_port.setSpecialValueText(tr("Standard ({0})").format(DEFAULT_PORTS[typ]) if typ in DEFAULT_PORTS else tr("Standard"))
 
     def test_database(self):
@@ -1739,6 +1777,10 @@ class ConfigWindow(QMainWindow):
         self.ed_db_table.setText(conn.get("db_tabelle", "messwerte"))
         self.ed_db_file.setText(conn.get("db_datei", "datenlogger.db"))
         self.chk_db_changes.setChecked(bool(int(conn.get("db_nur_aenderungen", 0))))
+        self.sp_clean_days.setValue(int(conn.get("aufr_csv_tage", 0) or 0))
+        self.sp_clean_mb.setValue(int(conn.get("aufr_csv_mb", 0) or 0))
+        self.sp_db_clean_days.setValue(int(conn.get("aufr_db_tage", 0) or 0))
+        self.sp_db_clean_mb.setValue(int(conn.get("aufr_db_mb", 0) or 0))
         self.ed_event_file.setText(conn.get("ereignis_datei", ""))
         self.chk_report.setChecked(bool(int(conn.get("bericht_aktiv", 0) or 0)))
         self.cb_report_period.setCurrentIndex(max(self.cb_report_period.findData(conn.get("bericht_zeitraum", "tag")), 0))
@@ -1822,6 +1864,8 @@ class ConfigWindow(QMainWindow):
                 "db_tabelle": self.ed_db_table.text().strip() or "messwerte",
                 "db_datei": self.ed_db_file.text().strip() or "datenlogger.db",
                 "db_nur_aenderungen": 1 if self.chk_db_changes.isChecked() else 0,
+                "aufr_csv_tage": self.sp_clean_days.value(), "aufr_csv_mb": self.sp_clean_mb.value(),
+                "aufr_db_tage": self.sp_db_clean_days.value(), "aufr_db_mb": self.sp_db_clean_mb.value(),
                 "logo": self.ed_logo.text().strip(), "kundenlogo": self.ed_customer_logo.text().strip(),
                 "icon": self.ed_icon.text().strip(),
                 "web_aktiv": 1 if self.chk_web.isChecked() else 0,

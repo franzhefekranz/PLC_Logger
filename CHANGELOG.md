@@ -46,6 +46,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **S7: Arrays aus der DB-Quelle als Block** (Variablen aus SPS-Symbolen › *Array als Block …* oder Doppelklick auf
   das Array): erster Index und Anzahl wählen, die Startadresse wird aus der Quelle berechnet; gelesen wird im
   Blocklesemodus mit einer Anfrage.
+* **Aufräumen alter Aufzeichnungen** nach Zeitraum oder Speicherplatz: CSV-Dateien und Archiv dieses Loggers
+  (Reiter Aufzeichnung › *Löschen nach* / *Höchstens belegen*) und Datenbank (Reiter Datenbank; Zeitraum für SQLite,
+  MariaDB, PostgreSQL/TimescaleDB und QuestDB, Speicherplatz für SQLite). Geprüft wird beim Start und danach stündlich;
+  die laufende CSV-Datei bleibt immer erhalten.
 * **Balkenbreite einstellbar** (Konfiguration › Ansicht › *Balkenbreite*, 4 … 40 Pixel, Vorgabe 14).
 * „Über PLC Datenlogger“ und das versteckte Info-Fenster zeigen das feste Herstellerlogo, dazu Links auf
   taxis-instruments.de und den Quelltext auf GitHub. Strg + Umschalt + Doppelklick auf das Logo im Dialog „Über …“

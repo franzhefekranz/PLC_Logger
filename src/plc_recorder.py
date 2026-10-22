@@ -431,6 +431,7 @@ class Recorder:
         self.trigger_engine = None               # TriggerEngine, solange die Aufzeichnung läuft
         self.notifier = None                     # Benachrichtigungen (plc_notify), solange die Aufzeichnung läuft
         self.opcua = None                        # OPC-UA-Server (plc_opcua_server), solange die Aufzeichnung läuft
+        self.cleanup = None                      # Aufräumen alter CSV-/Archivdateien (plc_cleanup)
         # Aufzeichnung per Trigger (Vor-/Nachlauf): CaptureGate, solange die Aufzeichnung läuft (sonst dauernd).
         self.capture_mode = (conn.get("aufz_modus") == "trigger")
         self.gate = None
@@ -446,12 +447,14 @@ class Recorder:
         d = self.conn["csv_ordner"]
         return d if os.path.isabs(d) else os.path.join(BASE_DIR, d)
 
+    def archive_root(self):
+        """Archiv-Ordner der Einstellungen (relativ = ab Datenordner BASE_DIR)."""
+        base = self.conn.get("archiv_ordner") or "archiv"
+        return base if os.path.isabs(base) else os.path.join(BASE_DIR, base)
+
     def archive_dir(self, when):
         """Archiv-Ordner: <archiv>/<Name>/<Jahr>/<Monat>/<Tag>"""
-        base = self.conn.get("archiv_ordner") or "archiv"
-        if not os.path.isabs(base):
-            base = os.path.join(BASE_DIR, base)
-        return os.path.join(base, self.csv_base, f"{when:%Y}", f"{when:%m}", f"{when:%d}")
+        return os.path.join(self.archive_root(), self.csv_base, f"{when:%Y}", f"{when:%m}", f"{when:%d}")
 
     # ------------------------------------------------------------------ Meldungen und Status
     def emit(self, text):
@@ -527,6 +530,11 @@ class Recorder:
         if self.db_conf["typ"]:
             self.db = DbWriter(self.conn, self.names, self.emit)
             self.db.start()
+        from plc_cleanup import CleanupThread, settings as cleanup_settings
+        cs = cleanup_settings(self.conn)
+        if cs["csv_tage"] or cs["csv_mb"]:          # alte Aufzeichnungsdateien löschen (beim Start, dann stündlich)
+            self.cleanup = CleanupThread(self, cs)
+            self.cleanup.start()
         from plc_notify import Notifier
         self.notifier = Notifier(self.conn, self.conn.get("projekt", ""), self.emit)
         self.opcua = None
@@ -607,6 +615,9 @@ class Recorder:
         if self.opcua is not None:
             self.opcua.stop()
             self.opcua = None
+        if self.cleanup is not None:
+            self.cleanup.stop()
+            self.cleanup = None
         self.running = False
         if self.csv_fh:
             try:

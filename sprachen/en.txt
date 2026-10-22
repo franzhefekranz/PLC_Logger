@@ -338,6 +338,14 @@
 @ Blöcke prüfen
 > Check blocks
 
+# ---------------- plc_cleanup.py
+
+@ [Aufräumen] {0} alte Aufzeichnungsdateien gelöscht ({1})
+> [Clean-up] {0} old recording files deleted ({1})
+
+@ ⚠ [Aufräumen] {0}
+> ⚠ [Clean-up] {0}
+
 # ---------------- plc_common.py
 
 @ Untereinander
@@ -411,6 +419,12 @@
 @ Beim Beenden des Loggers die aktuelle CSV-Datei archivieren
 > Archive the current CSV file when the logger is closed
 
+@ CSV-Dateien und Archiv-ZIPs dieses Loggers löschen, deren letzte Änderung länger zurückliegt (0 = nie)
+> Delete this logger's CSV files and archive ZIPs whose last change is older (0 = never)
+
+@ Belegen CSV-Dateien und Archiv dieses Loggers mehr Platz, werden die ältesten gelöscht (0 = unbegrenzt)
+> If this logger's CSV files and archive take up more space, the oldest are deleted (0 = unlimited)
+
 @ CSV-Datei schreiben
 > Write CSV file
 
@@ -428,6 +442,12 @@
 
 @ Archiv-Ordner:
 > Archive folder:
+
+@ Löschen nach:
+> Delete after:
+
+@ Höchstens belegen:
+> Use at most:
 
 @ Per Trigger: in CSV-Datei/Datenbank wird nur geschrieben, wenn die Startbedingung erfüllt ist – mit den Werten der Vorlaufzeit davor und der Nachlaufzeit danach. Jede Aufnahme bekommt eine eigene CSV-Datei. Die Anzeige läuft immer.
 > By trigger: the CSV file/database is written only while the start condition is met – including the values of the pre-trigger time before and the post-trigger time after. Each capture gets its own CSV file. The display always runs.
@@ -918,6 +938,12 @@
 @ Spart Platz: ein Wert wird nur geschrieben, wenn er sich geändert hat
 > Saves space: a value is only written when it has changed
 
+@ Werte löschen, die älter sind (0 = nie). TimescaleDB: ganze Zeitabschnitte, QuestDB: ganze Tage. InfluxDB 3 und VictoriaMetrics: Aufbewahrungsdauer am Server einstellen
+> Delete values that are older (0 = never). TimescaleDB: whole chunks, QuestDB: whole days. InfluxDB 3 and VictoriaMetrics: set the retention period on the server
+
+@ Nur SQLite: belegen die Werte mehr Platz, werden die ältesten Tage gelöscht (0 = unbegrenzt). Die Datei schrumpft nicht, wächst aber nicht weiter
+> SQLite only: if the values take up more space, the oldest days are deleted (0 = unlimited). The file does not shrink but stops growing
+
 @ Datenbank testen
 > Test database
 
@@ -941,6 +967,12 @@
 
 @ Tabelle:
 > Table:
+
+@  Tagen
+>  days
+
+@ nie
+> never
 
 @ Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics hinter vmauth)
 > Without a user, the password is used as a token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics behind vmauth)
@@ -1261,11 +1293,23 @@
 @ Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)
 > Invalid table name: {0!r} (letters, digits, _ only)
 
+@ {0}: Aufbewahrungsdauer bitte in der Datenbank selbst einstellen
+> {0}: please set the retention period in the database itself
+
+@ {0} alte Werte gelöscht
+> {0} old values deleted
+
 @ normale PostgreSQL-Tabelle, TimescaleDB nicht verfügbar: {0}
 > regular PostgreSQL table, TimescaleDB not available: {0}
 
+@ {0} alte Zeitabschnitte gelöscht
+> {0} old chunks deleted
+
 @ ohne Deduplizierung: {0}
 > without deduplication: {0}
+
+@ alte Tagespartitionen gelöscht
+> old daily partitions deleted
 
 @ Tabelle wird beim ersten Schreiben angelegt ({0})
 > Table will be created on first write ({0})
@@ -1293,6 +1337,15 @@
 
 @ Verbindung fehlgeschlagen: {0}
 > Connection failed: {0}
+
+@ [Aufräumen] Datenbank: {0}
+> [Clean-up] Database: {0}
+
+@ [Aufräumen] {0}
+> [Clean-up] {0}
+
+@ ⚠ [Aufräumen] Datenbank: {0}
+> ⚠ [Clean-up] Database: {0}
 
 @ In der Konfiguration ist keine Datenbank eingestellt.
 > No database is configured.

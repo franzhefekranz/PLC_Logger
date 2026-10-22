@@ -57,6 +57,8 @@ Headless-Betrieb und die Logik-Tests ohne PySide6.
 * `plc_db` – Schreiben in Datenbanken (SQLite, MariaDB, PostgreSQL/TimescaleDB, QuestDB, InfluxDB …) in eigenem
   Thread mit Puffer bei Verbindungsausfall.
 * `plc_headless` – Aufzeichnung ohne Oberfläche, Meldungen auf die Konsole/ins Log.
+* `plc_cleanup` – Aufräumen alter CSV-/Archivdateien nach Alter oder Gesamtgröße (Datenbank: `cleanup` der
+  Backends in `plc_db`, ausgeführt vom Schreib-Thread).
 
 **Dienste**
 
@@ -103,6 +105,7 @@ vollständige Zeile, in der die übrigen Steuerungen ihren letzten Wert behalten
 | `PlcSampler` (je Steuerung) | `plc_recorder` | verbinden, zyklisch lesen, bei Fehlern neu verbinden |
 | `collector` | `plc_recorder` | Zeilen bilden, Formeln, Trigger, Puffer, CSV |
 | Archivierung | `plc_recorder` | volle CSV-Datei zippen, prüfen, Original löschen |
+| `aufraeumen` | `plc_cleanup` | beim Start und stündlich alte CSV-/Archivdateien löschen |
 | `db-writer` | `plc_db` | Datenbank schreiben (Lesen im Lesemodus: Thread `db-lesen` in `plc_db_dialog`) |
 | `webserver` | `plc_web` | Flask/werkzeug, jede Anfrage in eigenem Thread |
 | `opcua-server` | `plc_opcua_server` | asyncio-Schleife des OPC-UA-Servers |

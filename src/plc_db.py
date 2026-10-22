@@ -37,6 +37,7 @@ import os
 import re
 import sqlite3
 import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -119,6 +120,17 @@ class _Backend:
                 pass
             self.con = None
 
+    def cleanup(self, days=0, max_mb=0):
+        """Alte Werte löschen (siehe plc_cleanup): älter als ``days`` Tage; ``max_mb`` nur, wo die Datenbank es
+        unterstützt. Rückgabe: Meldungstext oder "" (nichts gelöscht). Ohne Unterstützung: ``NotImplementedError``."""
+        raise NotImplementedError(tr("{0}: Aufbewahrungsdauer bitte in der Datenbank selbst einstellen").format(
+            DB_TYPES.get(self.s["typ"], self.s["typ"])))
+
+    @staticmethod
+    def cutoff(days):
+        """Zeitpunkt (UTC, datetime mit Zeitzone) vor ``days`` Tagen."""
+        return datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+
 
 class SqliteBackend(_Backend):
     """SQLite-Datei: Zeit als ISO-Text in UTC, WAL-Modus für gleichzeitiges Lesen, Index (variable, zeit)."""
@@ -139,6 +151,41 @@ class SqliteBackend(_Backend):
         data = [(z.strftime("%Y-%m-%d %H:%M:%S.") + f"{z.microsecond // 1000:03d}", p, v, w) for z, p, v, w in rows]
         self.con.executemany(f"INSERT INTO {self.t} (zeit, projekt, variable, wert) VALUES (?, ?, ?, ?)", data)
         self.con.commit()
+
+    @staticmethod
+    def _iso(z):
+        """Zeit im Speicherformat der Tabelle (ISO-Text in UTC)."""
+        return z.strftime("%Y-%m-%d %H:%M:%S.") + f"{z.microsecond // 1000:03d}"
+
+    def used_bytes(self):
+        """Von Daten belegter Platz der Datei (Seiten minus freie Seiten; die Datei selbst schrumpft nicht)."""
+        cur = self.con.cursor()
+        pages = cur.execute("PRAGMA page_count").fetchone()[0]
+        free = cur.execute("PRAGMA freelist_count").fetchone()[0]
+        size = cur.execute("PRAGMA page_size").fetchone()[0]
+        return (pages - free) * size
+
+    def cleanup(self, days=0, max_mb=0):
+        """Zeilen älter als ``days`` Tage löschen; über ``max_mb`` jeweils den ältesten Tag, bis die Grenze eingehalten
+        ist. Freigegebener Platz wird für neue Werte wiederverwendet (die Datei wird nicht kleiner)."""
+        n = 0
+        if days > 0:
+            n += self.con.execute(f"DELETE FROM {self.t} WHERE zeit < ?", (self._iso(self.cutoff(days)),)).rowcount
+            self.con.commit()
+        if max_mb > 0:
+            self.con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            for _ in range(400):                       # höchstens 400 Tage je Durchlauf
+                if self.used_bytes() <= max_mb * 1024 * 1024:
+                    break
+                first = self.con.execute(f"SELECT MIN(zeit) FROM {self.t}").fetchone()[0]
+                if first is None:
+                    break
+                day = datetime.datetime.strptime(first[:10], "%Y-%m-%d") + datetime.timedelta(days=1)
+                k = self.con.execute(f"DELETE FROM {self.t} WHERE zeit < ?", (day.strftime("%Y-%m-%d"),)).rowcount
+                self.con.commit()
+                self.con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                n += k
+        return tr("{0} alte Werte gelöscht").format(n) if n else ""
 
 
 class MariaDbBackend(_Backend):
@@ -162,6 +209,20 @@ class MariaDbBackend(_Backend):
         with self.con.cursor() as cur:
             cur.executemany(f"INSERT INTO `{self.t}` (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)", data)
         self.con.commit()
+
+    def cleanup(self, days=0, max_mb=0):
+        """Zeilen älter als ``days`` Tage löschen – in Portionen, damit die Tabelle nicht lange gesperrt ist."""
+        if days <= 0:
+            return ""
+        limit, n = self.cutoff(days).replace(tzinfo=None), 0
+        while True:
+            with self.con.cursor() as cur:
+                k = cur.execute(f"DELETE FROM `{self.t}` WHERE zeit < %s LIMIT 50000", (limit,))
+            self.con.commit()
+            n += k or 0
+            if not k or k < 50000:
+                break
+        return tr("{0} alte Werte gelöscht").format(n) if n else ""
 
 
 class TimescaleBackend(_Backend):
@@ -197,6 +258,22 @@ class TimescaleBackend(_Backend):
         with self.con.cursor() as cur:
             cur.executemany(f'INSERT INTO "{self.t}" (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)', rows)
         self.con.commit()
+
+    def cleanup(self, days=0, max_mb=0):
+        """Daten älter als ``days`` Tage löschen: als Hypertable ganze Zeitabschnitte (drop_chunks), sonst DELETE."""
+        if days <= 0:
+            return ""
+        limit = self.cutoff(days)
+        with self.con.cursor() as cur:
+            if self.note == "TimescaleDB-Hypertable":
+                cur.execute("SELECT drop_chunks(%s, older_than => %s)", (self.t, limit))
+                n = len(cur.fetchall())
+                self.con.commit()
+                return tr("{0} alte Zeitabschnitte gelöscht").format(n) if n else ""
+            cur.execute(f'DELETE FROM "{self.t}" WHERE zeit < %s', (limit,))
+            n = cur.rowcount
+        self.con.commit()
+        return tr("{0} alte Werte gelöscht").format(n) if n else ""
 
 
 # ---- Datenbanken mit HTTP-Schnittstelle (QuestDB, InfluxDB 3, VictoriaMetrics), ohne Zusatzbibliothek.
@@ -469,6 +546,19 @@ class QuestDbBackend(_Backend):
         """Zeilen im Line Protocol über HTTP schreiben."""
         self.con.write(_ilp_lines(self.t, rows))
 
+    def cleanup(self, days=0, max_mb=0):
+        """Tagespartitionen löschen, die vollständig älter als ``days`` Tage sind (QuestDB löscht keine Einzelzeilen)."""
+        if days <= 0:
+            return ""
+        limit = self.cutoff(days).strftime("%Y-%m-%dT%H:%M:%S.000000Z")
+        try:
+            self.con.exec(f"ALTER TABLE {self.t} DROP PARTITION WHERE zeit < '{limit}'")
+        except RuntimeError as e:
+            if "no partitions" in str(e).lower() or "could not find" in str(e).lower():
+                return ""
+            raise
+        return tr("alte Tagespartitionen gelöscht")
+
 
 class InfluxDb3Backend(_Backend):
     """InfluxDB 3: Datenbank und Tabelle (Tags projekt, variable; Feld wert) anlegen, Werte im Line Protocol schreiben.
@@ -550,6 +640,10 @@ class DbWriter(threading.Thread):
         self.dropped = 0
         self._last = {}                 # "nur Änderungen": Variable -> (Wert, Zeit) zuletzt geschrieben
         self.backend = None
+        from plc_cleanup import settings as cleanup_settings
+        cs = cleanup_settings(conn)
+        self.clean_days, self.clean_mb = cs["db_tage"], cs["db_mb"]
+        self._next_clean = 0.0          # Aufräumen: beim ersten erfolgreichen Schreiben, dann stündlich
 
     # ---- aus dem Sammler-Thread
     def put(self, ts, row):
@@ -609,6 +703,8 @@ class DbWriter(threading.Thread):
             ok = self._flush()
             if stopping:
                 break
+            if ok and (self.clean_days or self.clean_mb) and time.monotonic() >= self._next_clean:
+                self._cleanup()
             if not ok:
                 self.stop_evt.wait(5.0)             # nach einem Fehler etwas warten, dann erneut versuchen
                 if self.stop_evt.is_set():
@@ -646,6 +742,20 @@ class DbWriter(threading.Thread):
                 self._set(ST_ERROR, f"Schreibfehler: {e}")
                 self.backend.close()
                 return False
+
+    def _cleanup(self):
+        """Alte Werte nach den Einstellungen löschen (im Schreib-Thread, mit dessen Verbindung); Ergebnis melden."""
+        from plc_cleanup import INTERVAL_S
+        self._next_clean = time.monotonic() + INTERVAL_S
+        try:
+            text = self.backend.cleanup(self.clean_days, self.clean_mb)
+            if text:
+                self.emit(tr("[Aufräumen] Datenbank: {0}").format(text))
+        except NotImplementedError as e:
+            self.emit(tr("[Aufräumen] {0}").format(e))
+            self.clean_days = self.clean_mb = 0       # nur einmal melden
+        except Exception as e:
+            self.emit(tr("⚠ [Aufräumen] Datenbank: {0}").format(e))
 
     def stop(self, timeout=15.0):
         """Restliche Werte schreiben und den Thread beenden."""

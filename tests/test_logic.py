@@ -59,6 +59,44 @@ def test_s7_source_array_as_block(tmp_path):
     assert block_spec(bits, 10, 99) == ("Messwerte.Bits", "DB10.DBX83.2", 0, 6, "BOOL")
 
 
+def test_cleanup_csv_and_sqlite(tmp_path):
+    """Aufräumen: CSV/Archiv nach Alter und Gesamtgröße (aktuelle Datei bleibt), SQLite nach Alter und Größe."""
+    import datetime as dt
+    import time as _t
+    import plc_cleanup as cl
+    import plc_db
+    csv_dir, arch = tmp_path / "logs", tmp_path / "archiv"
+    (arch / "log" / "2026" / "01" / "02").mkdir(parents=True)
+    csv_dir.mkdir()
+    now = _t.time()
+    files = {csv_dir / "log_alt.csv": 40, csv_dir / "log_neu.csv": 1, csv_dir / "log_aktuell.csv": 0,
+             csv_dir / "anderer_1.csv": 99, arch / "log" / "2026" / "01" / "02" / "log_a.zip": 30}
+    for f, age_days in files.items():
+        f.write_bytes(b"x" * 600_000)
+        os.utime(f, (now - age_days * 86400, now - age_days * 86400))
+    n, freed, err = cl.clean_csv(str(csv_dir), str(arch), "log", days=10, keep=[str(csv_dir / "log_aktuell.csv")])
+    assert n == 2 and not err and not (arch / "log" / "2026").exists()          # alte Datei + ZIP, leere Ordner weg
+    assert (csv_dir / "anderer_1.csv").exists() and (csv_dir / "log_aktuell.csv").exists()
+    n, _f, _e = cl.clean_csv(str(csv_dir), str(arch), "log", max_mb=1, keep=[str(csv_dir / "log_aktuell.csv")])
+    assert n == 1 and not (csv_dir / "log_neu.csv").exists()                   # 2 × 0,6 MB > 1 MB
+    s = plc_db.db_settings({"db_typ": "sqlite", "db_datei": str(tmp_path / "w.db")})
+    b = plc_db.SqliteBackend(s)
+    b.connect()
+    utc = dt.timezone.utc
+    old = dt.datetime.now(utc) - dt.timedelta(days=40)
+    b.insert([(old + dt.timedelta(seconds=k), "", "A", 1.0) for k in range(100)]
+             + [(dt.datetime.now(utc), "", "A", 2.0)])
+    assert "100" in b.cleanup(days=30)
+    assert b.con.execute("SELECT COUNT(*) FROM messwerte").fetchone()[0] == 1
+    b.insert([(old + dt.timedelta(days=d, seconds=k), "", "B" * 50, float(k)) for d in range(5) for k in range(3000)])
+    b.cleanup(max_mb=1)
+    assert b.used_bytes() <= 1024 * 1024
+    assert b.con.execute("SELECT COUNT(*) FROM messwerte").fetchone()[0] > 0     # nur die ältesten Tage gelöscht
+    b.close()
+    assert cl.settings({"aufr_csv_tage": "7", "aufr_db_mb": None}) == {"csv_tage": 7, "csv_mb": 0, "db_tage": 0,
+                                                                       "db_mb": 0}
+
+
 def test_iocheck_tracker_digital_and_swap():
     """Digitalsignal: Wechsel 0-1-0 ergibt automatisch „ok“; reagiert ein anderes als das erwartete Signal
     (vertauschte Verdrahtung), wird das erwartete Signal beim Wechsel vermerkt."""

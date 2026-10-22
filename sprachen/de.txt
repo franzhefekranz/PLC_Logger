@@ -338,6 +338,14 @@
 @ Blöcke prüfen
 > 
 
+# ---------------- plc_cleanup.py
+
+@ [Aufräumen] {0} alte Aufzeichnungsdateien gelöscht ({1})
+> 
+
+@ ⚠ [Aufräumen] {0}
+> 
+
 # ---------------- plc_common.py
 
 @ Untereinander
@@ -411,6 +419,12 @@
 @ Beim Beenden des Loggers die aktuelle CSV-Datei archivieren
 > 
 
+@ CSV-Dateien und Archiv-ZIPs dieses Loggers löschen, deren letzte Änderung länger zurückliegt (0 = nie)
+> 
+
+@ Belegen CSV-Dateien und Archiv dieses Loggers mehr Platz, werden die ältesten gelöscht (0 = unbegrenzt)
+> 
+
 @ CSV-Datei schreiben
 > 
 
@@ -427,6 +441,12 @@
 > 
 
 @ Archiv-Ordner:
+> 
+
+@ Löschen nach:
+> 
+
+@ Höchstens belegen:
 > 
 
 @ Per Trigger: in CSV-Datei/Datenbank wird nur geschrieben, wenn die Startbedingung erfüllt ist – mit den Werten der Vorlaufzeit davor und der Nachlaufzeit danach. Jede Aufnahme bekommt eine eigene CSV-Datei. Die Anzeige läuft immer.
@@ -918,6 +938,12 @@
 @ Spart Platz: ein Wert wird nur geschrieben, wenn er sich geändert hat
 > 
 
+@ Werte löschen, die älter sind (0 = nie). TimescaleDB: ganze Zeitabschnitte, QuestDB: ganze Tage. InfluxDB 3 und VictoriaMetrics: Aufbewahrungsdauer am Server einstellen
+> 
+
+@ Nur SQLite: belegen die Werte mehr Platz, werden die ältesten Tage gelöscht (0 = unbegrenzt). Die Datei schrumpft nicht, wächst aber nicht weiter
+> 
+
 @ Datenbank testen
 > 
 
@@ -940,6 +966,12 @@
 > 
 
 @ Tabelle:
+> 
+
+@  Tagen
+> 
+
+@ nie
 > 
 
 @ Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics hinter vmauth)
@@ -1261,10 +1293,22 @@
 @ Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)
 > 
 
+@ {0}: Aufbewahrungsdauer bitte in der Datenbank selbst einstellen
+> 
+
+@ {0} alte Werte gelöscht
+> 
+
 @ normale PostgreSQL-Tabelle, TimescaleDB nicht verfügbar: {0}
 > 
 
+@ {0} alte Zeitabschnitte gelöscht
+> 
+
 @ ohne Deduplizierung: {0}
+> 
+
+@ alte Tagespartitionen gelöscht
 > 
 
 @ Tabelle wird beim ersten Schreiben angelegt ({0})
@@ -1292,6 +1336,15 @@
 > 
 
 @ Verbindung fehlgeschlagen: {0}
+> 
+
+@ [Aufräumen] Datenbank: {0}
+> 
+
+@ [Aufräumen] {0}
+> 
+
+@ ⚠ [Aufräumen] Datenbank: {0}
 > 
 
 @ In der Konfiguration ist keine Datenbank eingestellt.
