@@ -693,9 +693,20 @@ NEEDS["web_tablet"] = {"logger_online", "iocheck_fenster"}
 
 def patch_dialogs():
     """Modale Dialoge ersetzen: exec über JOBS, Meldungen ohne Anzeige, Dateidialoge aus FILES, kein Browser."""
+    from PySide6.QtCore import Qt
     from PySide6.QtGui import QDesktopServices
-    from PySide6.QtWidgets import QDialog, QFileDialog, QInputDialog, QMessageBox
+    from PySide6.QtWidgets import QDialog, QFileDialog, QInputDialog, QMainWindow, QMessageBox, QWidget
     QDialog.exec = fake_exec
+    # Fenster nicht auf den (kleinen) Bildschirm des Build-Rechners legen: sonst begrenzt Windows ihre Größe. Mit
+    # WA_DontShowOnScreen gelten sie als sichtbar (Layout, Zeichnen, grab), erscheinen aber nicht auf dem Schirm.
+    for cls in (QWidget, QDialog, QMainWindow):
+        orig = cls.show
+
+        def show(self, _orig=orig):
+            if self.isWindow() and not isinstance(self, QMessageBox) and type(self).__name__ != "QMenu":
+                self.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+            _orig(self)
+        cls.show = show
     for kind in ("information", "warning", "critical"):
         setattr(QMessageBox, kind, staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok))
     QMessageBox.question = staticmethod(lambda *a, **k: QMessageBox.StandardButton.No)
@@ -736,6 +747,8 @@ def main():
     patch_dialogs()
     scr = app.primaryScreen().availableGeometry()
     print(f"Bildschirm: {scr.width()} x {scr.height()}, Stil: {app.style().name()}", flush=True)
+    import warnings
+    warnings.filterwarnings("ignore", category=FutureWarning)
     CTX.update(out=out, folder=folder, lang=args.lang, cfg=demo_config(folder))
     only = {x.strip() for x in args.only.split(",") if x.strip()}
     for name in list(only):                       # Voraussetzungen: Logger-Aufzeichnung bzw. IO-Check
