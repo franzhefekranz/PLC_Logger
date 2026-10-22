@@ -136,6 +136,10 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
        VictoriaMetrics (eigener Schreib-Thread).
    * - ``plc_db_dialog.py``
      - Lesemodus: Zeitraum aus der Datenbank wählen und im Logger anzeigen.
+   * - ``plc_cleanup.py``
+     - Aufräumen alter Aufzeichnungen (CSV/Archiv) nach Zeitraum oder Speicherplatz.
+   * - ``plc_iocheck_start.py``
+     - Startprogramm des IO-Checks als eigenes Programm (``PLCIOCheck.exe``).
    * - ``plc_events.py``
      - Trigger und Ereignisprotokoll (Auswertung, Datei, Quittierung).
    * - ``plc_event_viewer.py``
@@ -158,8 +162,8 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
    * - ``build.bat``, ``installer.iss``, ``tools/make_icon.py``, ``requirements.txt``
      - Erzeugung der Windows-Installationsdatei (siehe `Installationsdatei erstellen (Windows) <installer_>`__).
    * - ``app.ico``, ``logo.png``
-     - Programm-Icon und Logo (Vorgabe, wenn in der Konfiguration nichts eingetragen ist;
-       ``app.ico`` fließt auch in die ``.exe``-Dateien und den Installer ein).
+     - Programm-Icon (Vorgabe, wenn in der Konfiguration nichts eingetragen ist; fließt auch in
+       die ``.exe``-Dateien und den Installer ein) und Herstellerlogo (Startbild, „Über …“).
    * - ``doc/``
      - Bedienungsanleitung (diese Datei) und ihre Bilder (``doc/images/``).
    * - ``plctag.dll``
@@ -284,7 +288,10 @@ des Loggers:
 
 Der Logger kann das Konfigurationsprogramm auch selbst öffnen
 (**Konfig-Editor** in der Werkzeugleiste), und das Konfigurationsprogramm kann den
-Logger starten (**Datei › Logger mit dieser Konfiguration starten**).
+Logger bzw. den IO-Check starten (**Datei › Logger mit dieser Konfiguration starten**,
+**Datei › IO-Check mit dieser Konfiguration starten**). Der IO-Check hat außerdem ein
+eigenes Startprogramm: ``python src/plc_iocheck_start.py`` (installiert:
+``PLCIOCheck.exe``).
 
 Vorbereitung der Steuerungen
 ----------------------------------------------------------------------
@@ -477,6 +484,12 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
    * - Beim Beenden archivieren
      - Ist das Häkchen gesetzt (Standard), wird beim Beenden des Loggers auch die
        aktuelle, noch nicht volle CSV-Datei gepackt und archiviert.
+   * - Löschen nach, Höchstens belegen
+     - Aufräumen alter Aufzeichnungen dieses Loggers (CSV-Dateien und Archiv-ZIPs):
+       Dateien, deren letzte Änderung mehr als *n Tage* zurückliegt, werden gelöscht;
+       belegen alle zusammen mehr als *n MB*, werden die ältesten gelöscht, bis die
+       Grenze eingehalten ist. *nie*/*unbegrenzt* (0) = aus. Siehe
+       `Alte Aufzeichnungen aufräumen <aufraeumen_>`__.
    * - Aufzeichnung
      - *Dauernd* (Standard) oder *Per Trigger mit Vor- und Nachlauf*: dann wird nur
        gespeichert, wenn die Startbedingung erfüllt ist (siehe
@@ -514,11 +527,17 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
      - Spaltenzahl bei *Raster*; *automatisch* wählt sie aus der Diagrammzahl.
    * - Balken für Aktualwerte anzeigen
      - Schaltet die schmalen Balken neben den Diagrammen standardmäßig ein.
-   * - Logo (rechts oben)
-     - Bilddatei (PNG, SVG, JPG), die im Logger rechts oben in der Menüleiste
-       angezeigt wird (auf 28 Pixel Höhe skaliert). Ein relativer Pfad bezieht
-       sich auf den Programmordner. Ohne Angabe wird das mitgelieferte ``logo.png``
-       gezeigt (fehlt es, ein Standard-Symbol).
+   * - Balkenbreite
+     - Breite eines Balkens in Pixeln (4 … 40, Vorgabe 14).
+   * - Logo
+     - Bilddatei, z. B. das Firmenlogo. Sie erscheint im Logger rechts oben in der
+       Menüleiste (28 Pixel hoch), auf den Webseiten (Diagramme, Prozessbild,
+       Anmeldung) und im Kopf der PDF-Berichte und IO-Check-Protokolle. PNG und JPG
+       gehen überall, SVG nur im Logger und auf den Webseiten. Ein relativer Pfad
+       bezieht sich auf den Programmordner. **Leer = kein Logo.**
+   * - Kundenlogo
+     - Zweites Logo (z. B. des Kunden bzw. der Anlage), erscheint an denselben Stellen
+       links neben dem Logo bzw. im PDF links oben. Leer = kein Kundenlogo.
    * - Programm-Icon
      - Icon für Fenster und Taskleiste (PNG, ICO oder SVG). Ohne Angabe wird das
        mitgelieferte ``app.ico`` verwendet, sonst das Logo bzw. das Standard-Symbol.
@@ -955,9 +974,9 @@ erzeugt die Variablen ``Block[0]`` bis ``Block[19]``. Beispiel (``s7``):
 Startadresse ``DB5.DBD0``, Format ``REAL``, Anzahl 20 liest die Bytes 0 bis 79
 des DB 5.
 
-Arrays lassen sich bei ``tia``, ``clx``, ``opcua`` und ``ads`` auch direkt im Auswahldialog als
-Block übernehmen (Array markieren, **Markiertes Array als Block…** oder
-Doppelklick).
+Arrays lassen sich bei ``tia``, ``clx``, ``opcua``, ``ads`` und ``s7`` (aus der DB-Quelle) auch
+direkt im Auswahldialog als Block übernehmen (Array markieren, **Markiertes Array als Block…**
+bzw. **Array als Block …** oder Doppelklick).
 
 **Markierten Block testen** liest den Block einmal aus der Steuerung und zeigt die
 ersten Werte sowie die Lesezeit an.
@@ -1021,7 +1040,7 @@ Steuerungen wird zuerst gefragt, welche):
    * - ``s7``
      - Aus DB-Quelle wählen…
      - Exportierte DB-Quellen aus TIA Portal/STEP 7 (die SPS liefert über
-       PUT/GET keine Namen); Abgleich der DB-Größen mit der SPS.
+       PUT/GET keine Namen); Abgleich der DB-Größen mit der SPS, Arrays als Block.
    * - ``opcua``
      - Aus OPC-UA-Server wählen…
      - Adressraum des Servers (Ordner, Variablen mit Datentyp, Arrays als Block).
@@ -1047,8 +1066,10 @@ Allgemeines Vorgehen:
 #. **Auswählen.** Lesbare Werte anhaken. Bereits angelegte Variablen sind
    angehakt und ausgegraut. Nicht aufzeichenbare Typen (z. B. ``STRING``) sind
    grau dargestellt.
-#. **Arrays als Block** (``tia``, ``clx``, ``opcua``, ``ads``): Array markieren, **Markiertes Array
-   als Block…**, ersten Index und Anzahl festlegen.
+#. **Arrays als Block** (``tia``, ``clx``, ``opcua``, ``ads``, ``s7``): Array markieren, **Markiertes
+   Array als Block…** (``s7``: **Array als Block …**) oder Doppelklick, ersten Index und Anzahl
+   festlegen. Bei ``s7`` gilt das für eindimensionale Arrays aus Zahlen oder BOOL; die
+   Startadresse wird aus der DB-Quelle berechnet.
 #. **Übernehmen.** Unter *Neue Variablen anlegen in* das Diagramm bzw. die Y-Achse
    wählen und **Auswahl übernehmen** drücken. Adresse und Typ kommen aus der
    Steuerung bzw. Quelle.
@@ -1090,6 +1111,8 @@ Das Menü **Datei** des Konfigurationsprogramms enthält:
   (siehe `Ältere INI-Dateien umwandeln <ini-umwandeln_>`__).
 * **Logger mit dieser Konfiguration starten** (``Strg+R``) – speichert und
   startet den Logger mit dieser Datei.
+* **IO-Check mit dieser Konfiguration starten** – speichert und startet den
+  `IO-Check <io-check_>`__ mit den Steuerungen dieser Datei (eigenes Programm).
 
 Der Titel des Fensters zeigt Projektname und Dateiname. Die zuletzt benutzte
 Datei wird gemerkt (Datei ``plc_last.txt``); Logger und Konfigurationsprogramm
@@ -2556,7 +2579,8 @@ Balken für Aktualwerte
 ----------------------------------------------------------------------
 
 Neben jedem Diagramm zeigt je Variable ein schmaler Balken den aktuellen
-Wert. Die Skalierung entspricht der Y-Achse der Variable. Im Offline-Modus
+Wert (Breite einstellbar: Konfiguration › Anzeige › *Balkenbreite*). Die Skalierung
+entspricht der Y-Achse der Variable. Im Offline-Modus
 zeigen die Balken die Werte am Lineal 1. Fahren Sie mit der Maus über die
 Balken, um Namen und Werte als Tooltip zu sehen.
 
@@ -2637,6 +2661,8 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
 * **HTTPS und Anmeldung:** siehe unten.
 * **Prozessbild:** Kacheln mit Werten, Zeigern und Lampen unter ``/prozess``, siehe
   `Prozessbild`_.
+* **Logos:** Kundenlogo und Logo der Konfiguration (Reiter *Anzeige*) stehen in der
+  Kopfzeile der Seiten (Diagramme, Prozessbild, Anmeldung); leere Felder = kein Logo.
 * **Darstellung:** Die Seite zeigt je Seite (Tab) die Diagramme mit Chart.js, mit
   mehreren Y-Achsen, BOOL-Signalen als Treppenlinie und Status-LEDs der
   Steuerungen. Die Anzeige passt sich der Bildschirmgröße an.
@@ -2898,6 +2924,10 @@ Haken **CSV-Datei schreiben** im Reiter *Aufzeichnung* ein oder aus.
    * - Nur Änderungen schreiben
      - Ein Wert wird nur geschrieben, wenn er sich geändert hat, spätestens aber
        jede Minute. Spart bei langsam veränderlichen Werten viel Platz.
+   * - Löschen nach, Höchstens belegen
+     - Alte Werte automatisch löschen (siehe `Alte Aufzeichnungen aufräumen
+       <aufraeumen_>`__): nach *n Tagen* (SQLite, MariaDB, PostgreSQL/TimescaleDB,
+       QuestDB) bzw. wenn die Werte mehr als *n MB* belegen (nur SQLite).
    * - Datenbank testen
      - Verbindet sich, legt die Tabelle an und meldet das Ergebnis.
 
@@ -3199,7 +3229,9 @@ Ereignis-Viewer und Quittieren
 * **Im Diagramm zeigen** (Knopf oder Rechtsklick auf eine Zeile, nur im Logger): Der Logger
   wechselt in den Offline-Modus und zeigt den Zeitraum um das Ereignis, **Lineal 1** auf
   dem Beginn (Kommt), **Lineal 2** auf dem Ende (Geht). Liegen die Werte nicht mehr im
-  Speicher, lädt er die passende CSV-Datei aus dem CSV-Ordner bzw. dem Archiv.
+  Speicher, lädt er sie aus der Datenbank der Konfiguration (falls eine eingestellt ist;
+  10 Minuten vor und nach dem Ereignis), sonst die passende CSV-Datei aus dem CSV-Ordner
+  bzw. dem Archiv.
 * **Ordner öffnen** zeigt die Ereignisdatei im Explorer.
 
 .. figure:: images/ereignis_diagramm.png
@@ -3562,7 +3594,8 @@ PDF-Berichte
 
 Ein Bericht fasst einen Zeitraum auf wenigen Seiten zusammen:
 
-* **Kopf:** Projekt, Zeitraum, Datenbasis (Anzahl der Messzeilen, erste und letzte Messung).
+* **Kopf:** Projekt, Zeitraum, Datenbasis (Anzahl der Messzeilen, erste und letzte Messung);
+  darüber Kundenlogo und Logo aus der Konfiguration (Reiter *Anzeige*), sofern eingetragen.
 * **Kennwerte** je Variable: Minimum, Maximum, Mittelwert, Standardabweichung, letzter
   Wert und Anzahl gültiger Werte; bei BOOL-Variablen der Anteil der Zeit mit Wert 1
   (Einschaltdauer) und die Zahl der Einschaltvorgänge.
@@ -3610,11 +3643,19 @@ prüfen: Jedes Signal der IO-Liste wird live angezeigt und abgehakt; was sich ge
 bewegt hat, steht oben, vertauschte Signale fallen sofort auf. Der IO-Check liest
 selbst aus den Steuerungen der Konfiguration – eine Aufzeichnung muss nicht laufen.
 
-Öffnen: im Logger **Analyse › IO-Check …**, eigenständig mit ``PLCLogger.exe
---iocheck`` (Startmenü *PLC IO-Check*; AppImage: ``--iocheck``), optional mit einer
-Konfiguration oder einem gespeicherten Prüfstand (``*.iocheck.json``). **▶ Lesen
-starten** (F5) verbindet sich mit den Steuerungen; mit **Demo** werden die Signale
-simuliert (zum Ausprobieren ohne Steuerung).
+Öffnen:
+
+* als eigenes Programm ``PLCIOCheck.exe`` (Startmenü *PLC IO-Check*, optional auch auf
+  dem Desktop). Das Startbild zeigt die zuletzt benutzten Prüfstände
+  (``*.iocheck.json``) und Konfigurationen; eine Konfiguration beginnt einen neuen
+  Prüfstand mit deren Steuerungen, **Demo** startet mit simulierten Werten;
+* im Konfigurationsprogramm **Datei › IO-Check mit dieser Konfiguration starten**;
+* im Logger **Analyse › IO-Check …**;
+* Linux/AppImage bzw. aus dem Quelltext: ``--iocheck`` (``plc_logger.py --iocheck``),
+  optional mit einer Konfiguration oder einem Prüfstand.
+
+**▶ Lesen starten** (F5) verbindet sich mit den Steuerungen; mit **Demo** werden die
+Signale simuliert (zum Ausprobieren ohne Steuerung).
 
 .. note::
 
@@ -3660,7 +3701,16 @@ Analogeingang, ``AW``/``%QW`` = Analogausgang. Für den Treiber ``s7`` werden ``
 und ``P`` entfernt, für ``ads`` die TwinCAT-Schreibweise (``%IX0.1``) und für ``tia``
 der Symbolname (``IArea.<Name>``) verwendet. Zeilen ohne Adresse (Zwischenüberschriften)
 und doppelte Adressen entfallen. Beim zweiten Import lässt sich die Liste ersetzen oder
-ergänzen.
+ergänzen. Die Meldung nach dem Import nennt die erkannten Spalten.
+
+**Eigene Spaltenüberschriften:** Unter **Spalten …** steht je Feld, unter welchen
+Überschriften es in der Liste gesucht wird (mehrere durch Komma getrennt; Groß- und
+Kleinschreibung, Leer- und Sonderzeichen zählen nicht). Heißt die Spalte in den eigenen
+Listen z. B. „E/A“ oder „Klartext“, trägt man das hier einmal ein. **Ein leeres Feld
+schaltet die Spalte ab:** sie wird nicht eingelesen und in der Signalliste nicht
+angezeigt (z. B. BMK oder Steuerung, wenn es sie nicht gibt). Die Adresse ist Pflicht.
+**Vorgabe** stellt die eingebauten Namen wieder her. Die Einstellung gilt für alle
+Prüfstände dieses Benutzers.
 
 Signalliste und Prüfstatus
 ----------------------------------------------------------------------
@@ -3691,6 +3741,10 @@ Das in der Liste oder Matrix **gewählte Signal** gilt als *erwartet*. Wechselt
 stattdessen ein anderer Digitaleingang (und das erwartete nicht), erscheint eine rote
 Warnung „Vertauschung? Erwartet B12, gekommen B13“ mit Signalton; der Eintrag wird rot
 markiert.
+
+Der Knopf **Was hat sich bewegt?** in der Werkzeugleiste blendet die Seitenleiste aus
+und wieder ein (mehr Platz für die Signalliste; die Wahl wird gemerkt). Die Warnung bei
+einer Vertauschung erscheint dann in der Statuszeile.
 
 Analogwerte prüfen
 ----------------------------------------------------------------------
@@ -3829,7 +3883,7 @@ Abnahmeprotokoll (PDF)
 **Protokoll (PDF) …** erzeugt das Abnahmeprotokoll und öffnet es:
 
 * Kopf: Projekt, Prüfstand, Steuerungen, Prüfzeitraum und Ergebnis (geprüft in %, OK,
-  Fehler, übersprungen, offen).
+  Fehler, übersprungen, offen); darüber Kundenlogo und Logo der Konfiguration.
 * **Zusammenfassung** je Signalart und je Gruppe, **Prüfer** mit Anzahl der geprüften
   Signale (PC-Benutzer bzw. Anmeldename im Webserver).
 * **Fehler und offene Signale** – die Restpunkte.
@@ -3962,6 +4016,38 @@ Hinweise:
 Faustformel für die Dateigröße: Datensätze je Datei = Dauer ÷ Abtastintervall.
 Bei 200 ms Intervall entstehen 5 Datensätze pro Sekunde, also 432 000 pro Tag;
 ein Limit von 100 000 Datensätzen entspricht dann rund 5,5 Stunden je Datei.
+
+.. _aufraeumen:
+
+Alte Aufzeichnungen aufräumen
+----------------------------------------------------------------------
+
+Damit Platte bzw. Datenbank nicht volllaufen, löscht der Logger alte Aufzeichnungen auf
+Wunsch selbst – nach **Zeitraum** (*Löschen nach … Tagen*) und/oder nach
+**Speicherplatz** (*Höchstens belegen … MB*). Beide Grenzen sind voreingestellt aus
+(*nie* bzw. *unbegrenzt*).
+
+* **CSV und Archiv** (Reiter *Aufzeichnung*): betroffen sind nur die Dateien dieses
+  Loggers – ``<CSV-Name>_*.csv`` im CSV-Ordner und die ZIP-Dateien unter
+  ``<Archiv-Ordner>/<CSV-Name>/``. Maßgeblich ist die letzte Änderung einer Datei
+  (= Ende der Aufzeichnung darin). Die gerade beschriebene CSV-Datei wird nie
+  gelöscht; leer gewordene Archivordner werden entfernt.
+* **Datenbank** (Reiter *Datenbank*): Werte älter als *n Tage* werden gelöscht – bei
+  SQLite und MariaDB zeilenweise (in Portionen), bei TimescaleDB ganze Zeitabschnitte
+  (``drop_chunks``), bei QuestDB ganze Tagespartitionen. Die Speicherplatz-Grenze gibt
+  es nur für SQLite: Belegen die Werte mehr als *n MB*, wird jeweils der älteste Tag
+  gelöscht. Die Datei wird dabei nicht kleiner, der frei gewordene Platz wird für neue
+  Werte genutzt (verkleinern: ``VACUUM`` mit einem SQLite-Werkzeug). InfluxDB 3 und
+  VictoriaMetrics verwalten die Aufbewahrungsdauer selbst (Einstellung am Server).
+
+Geprüft wird beim Start der Aufzeichnung und danach stündlich, auch im Headless-Betrieb.
+Was gelöscht wurde, steht in der Statuszeile bzw. im Log („[Aufräumen] …“).
+
+.. warning::
+
+   Gelöschte Aufzeichnungen lassen sich nicht wiederherstellen. Grenzen so wählen, dass
+   die Daten so lange erhalten bleiben, wie sie gebraucht werden (z. B.
+   Aufbewahrungspflichten).
 
 Format
 ----------------------------------------------------------------------
@@ -4305,8 +4391,8 @@ falls PyInstaller sie nicht findet – als ``--collect-all`` in ``build.bat`` bz
 Installationsdatei erstellen (Windows)
 ======================================================================
 
-Aus den Python-Dateien lassen sich zwei eigenständige Programme
-(``PLCLogger.exe`` und ``PLCKonfiguration.exe``) und eine Setup-Datei erzeugen.
+Aus den Python-Dateien lassen sich drei eigenständige Programme
+(``PLCLogger.exe``, ``PLCKonfiguration.exe`` und ``PLCIOCheck.exe``) und eine Setup-Datei erzeugen.
 Dazu dienen:
 
 .. list-table::
@@ -4368,7 +4454,8 @@ einem USB-Stick), legen Sie eine leere Datei ``portable.txt`` neben die
   ``build.bat``, lädt das Skript sie einmalig aus dem GitHub-Release von libplctag); auf dem
   Zielrechner muss nichts installiert werden.
 * Der Logger startet die Konfiguration über **Konfig-Editor** in der
-  Werkzeugleiste (``PLCKonfiguration.exe`` im selben Ordner).
+  Werkzeugleiste (``PLCKonfiguration.exe`` im selben Ordner); ``PLCIOCheck.exe`` ist der
+  IO-Check als eigenes Programm (Startmenü *PLC IO-Check*).
 * Schlägt der Build fehl, steht die Ursache in den Meldungen des Fensters
   (häufig: kein Internet für pip, Python nicht im PATH, Virenscanner sperrt
   ``dist``). Mit ``build.bat exe`` bzw. ``build.bat installer`` lassen sich die
@@ -4537,8 +4624,9 @@ Logger und Konfigurationsprogramm haben ein Menü **Hilfe**:
 * **Bedienungsanleitung** öffnet diese Anleitung (PDF bzw. HTML) mit dem
   Standardprogramm des Systems. Ist die Oberfläche nicht auf Deutsch eingestellt, öffnet
   sich die englische Fassung (*User Manual*).
-* **Über PLC Datenlogger …** zeigt Version, Copyright, Lizenz, die Lizenzen der
-  Drittkomponenten und die Versionen der verwendeten Bibliotheken.
+* **Über PLC Datenlogger …** zeigt Version, Copyright, Links auf taxis-instruments.de und
+  den Quelltext auf GitHub, die Lizenz, die Lizenzen der Drittkomponenten und die
+  Versionen der verwendeten Bibliotheken.
 
 **F1** öffnet die Anleitung im Browser direkt an der Stelle, die zum aktuellen
 Fenster passt – auch in Dialogen. Maßgeblich ist das Feld mit dem Eingabefokus:
@@ -4690,7 +4778,8 @@ Fehlersuche
        ergeben Lücken. Beim Start meldet der Logger Formelfehler.
    * - Logo oder Icon erscheint nicht
      - Pfad in der Konfiguration prüfen (relative Pfade gelten vom
-       Programmordner). Ersatzweise PNG statt SVG verwenden.
+       Programmordner). Ersatzweise PNG statt SVG verwenden (im PDF gehen nur PNG und
+       JPG). Ein leeres Logo-Feld bedeutet „kein Logo“.
    * - Installierte Version findet die Konfiguration nicht
      - Die Daten liegen unter ``%APPDATA%\\PLCDatenlogger`` (nicht im Programmordner).
        Mit ``portable.txt`` neben der ``.exe`` wird der Programmordner verwendet.

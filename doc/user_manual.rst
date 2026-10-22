@@ -135,6 +135,10 @@ also the data folder (configuration, recordings, log file).
        VictoriaMetrics (own writer thread).
    * - ``plc_db_dialog.py``
      - Read mode: choose a time range from the database and show it in the logger.
+   * - ``plc_cleanup.py``
+     - Clean-up of old recordings (CSV/archive) by period or storage space.
+   * - ``plc_iocheck_start.py``
+     - Start program of the IO check as a program of its own (``PLCIOCheck.exe``).
    * - ``plc_events.py``
      - Triggers and event log (evaluation, file, acknowledgement).
    * - ``plc_event_viewer.py``
@@ -157,8 +161,8 @@ also the data folder (configuration, recordings, log file).
    * - ``build.bat``, ``installer.iss``, ``tools/make_icon.py``, ``requirements.txt``
      - Building the Windows installer (see `Building the installer (Windows) <installer_>`__).
    * - ``app.ico``, ``logo.png``
-     - Program icon and logo (default if nothing is entered in the configuration;
-       ``app.ico`` is also used for the ``.exe`` files and the installer).
+     - Program icon (default if nothing is entered in the configuration; also used for the
+       ``.exe`` files and the installer) and manufacturer logo (start screen, “About …”).
    * - ``doc/``
      - User manual (German ``bedienungsanleitung.rst``, English ``user_manual.rst``) and
        its images (``doc/images/``).
@@ -280,8 +284,10 @@ Without a file name, the **last used** configuration file is opened (default:
      - Open only the `IO check <io-check_>`__ (commissioning: check the signal list).
 
 The logger can open the configuration program itself (**Config editor** in the
-toolbar), and the configuration program can start the logger (**File › Start logger
-with this configuration**).
+toolbar), and the configuration program can start the logger or the IO check (**File ›
+Start logger with this configuration**, **File › Start IO check with this
+configuration**). The IO check also has a start program of its own:
+``python src/plc_iocheck_start.py`` (installed: ``PLCIOCheck.exe``).
 
 Preparing the controllers
 ----------------------------------------------------------------------
@@ -473,6 +479,11 @@ CSV file (one column per variable).
    * - Archive when closing
      - If ticked (default), the current, not yet full CSV file is also zipped and
        archived when the logger is closed.
+   * - Delete after, Use at most
+     - Clean-up of old recordings of this logger (CSV files and archive ZIPs): files
+       whose last change is more than *n days* ago are deleted; if all together take up
+       more than *n MB*, the oldest are deleted until the limit is met. *never*/
+       *unlimited* (0) = off. See `Cleaning up old recordings <aufraeumen_>`__.
    * - Recording
      - *Continuous* (default) or *By trigger with pre- and post-trigger time*: then data
        is only saved while the start condition is met (see
@@ -509,11 +520,17 @@ CSV file (one column per variable).
      - Number of columns for *Grid*; *automatic* derives it from the number of charts.
    * - Show bars for current values
      - Switches the narrow bars next to the charts on by default.
-   * - Logo (top right)
-     - Image file (PNG, SVG, JPG) shown in the logger at the top right of the menu bar
-       (scaled to 28 pixels height). A relative path refers to the program folder.
-       Without an entry the supplied ``logo.png`` is shown (if missing, a default
-       symbol).
+   * - Bar width
+     - Width of a bar in pixels (4 … 40, default 14).
+   * - Logo
+     - Image file, e.g. the company logo. It appears in the logger at the top right of
+       the menu bar (28 pixels high), on the web pages (charts, process view, login) and
+       in the header of PDF reports and IO check protocols. PNG and JPG work everywhere,
+       SVG only in the logger and on the web pages. A relative path refers to the
+       program folder. **Empty = no logo.**
+   * - Customer logo
+     - Second logo (e.g. of the customer or plant), shown in the same places to the left
+       of the logo, in the PDF at the top left. Empty = no customer logo.
    * - Program icon
      - Icon for windows and taskbar (PNG, ICO or SVG). Without an entry the supplied
        ``app.ico`` is used, otherwise the logo or the default symbol.
@@ -932,9 +949,9 @@ reads ``Messwerte[10]`` to ``Messwerte[29]`` with one request and creates the
 variables ``Block[0]`` to ``Block[19]``. Example (``s7``): start address ``DB5.DBD0``,
 format ``REAL``, count 20 reads bytes 0 to 79 of DB 5.
 
-With ``tia``, ``clx``, ``opcua`` and ``ads``, arrays can also be taken over as a block
-directly in the selection dialog (select the array, **Selected array as block…** or
-double-click).
+With ``tia``, ``clx``, ``opcua``, ``ads`` and ``s7`` (from the DB source), arrays can also be
+taken over as a block directly in the selection dialog (select the array, **Selected array
+as block…** or **Array as block …**, or double-click).
 
 **Test selected block** reads the block once from the controller and shows the first
 values and the read time.
@@ -995,7 +1012,7 @@ are asked first which one):
    * - ``s7``
      - Select from DB source…
      - Exported DB sources from TIA Portal/STEP 7 (the PLC delivers no names via
-       PUT/GET); comparison of the DB sizes with the PLC.
+       PUT/GET); comparison of the DB sizes with the PLC, arrays as block.
    * - ``opcua``
      - Select from OPC UA server…
      - Address space of the server (folders, variables with data type, arrays as block).
@@ -1019,8 +1036,10 @@ General procedure:
    by name.
 #. **Select.** Tick readable values. Variables already created are ticked and greyed
    out. Types that cannot be recorded (e.g. ``STRING``) are shown in grey.
-#. **Arrays as block** (``tia``, ``clx``, ``opcua``, ``ads``): select the array,
-   **Selected array as block…**, set first index and count.
+#. **Arrays as block** (``tia``, ``clx``, ``opcua``, ``ads``, ``s7``): select the array,
+   **Selected array as block…** (``s7``: **Array as block …**) or double-click, set first
+   index and count. With ``s7`` this applies to one-dimensional arrays of numbers or BOOL;
+   the start address is calculated from the DB source.
 #. **Take over.** Under *Create new variables in* choose the chart or Y axis and press
    **Take over selection**. Address and type come from the controller or source.
 #. **Check.** Check the values read with **Test connection**.
@@ -1060,6 +1079,8 @@ The **File** menu of the configuration program contains:
   `Converting older INI files <ini-umwandeln_>`__).
 * **Start logger with this configuration** (``Ctrl+R``) – saves and starts the logger
   with this file.
+* **Start IO check with this configuration** – saves and starts the `IO check
+  <io-check_>`__ with the controllers of this file (separate program).
 
 The window title shows project name and file name. The last used file is remembered
 (file ``plc_last.txt``); the logger and the configuration program open it again at the
@@ -2484,8 +2505,9 @@ Y axes and scaling
 Bars for current values
 ----------------------------------------------------------------------
 
-Next to each chart a narrow bar per variable shows the current value. The scaling
-corresponds to the variable's Y axis. In offline mode the bars show the values at
+Next to each chart a narrow bar per variable shows the current value (width adjustable:
+configuration › Display › *Bar width*). The scaling corresponds to the variable's Y
+axis. In offline mode the bars show the values at
 ruler 1. Move the mouse over the bars to see names and values as tooltip.
 
 BOOL variables
@@ -2561,6 +2583,8 @@ tablet or smartphone – also in headless operation.
 * **HTTPS and login:** see below.
 * **Process view:** tiles with values, gauges and lamps under ``/prozess``, see
   `Process view`_.
+* **Logos:** customer logo and logo of the configuration (tab *Display*) appear in the
+  header of the pages (charts, process view, login); empty fields = no logo.
 * **Display:** The page shows the charts per page (tab) with Chart.js, with several Y
   axes, BOOL signals as step lines and status LEDs of the controllers. The display adapts
   to the screen size.
@@ -2818,6 +2842,10 @@ the tick **Write CSV file** in the tab *Recording*.
    * - Write changes only
      - A value is only written if it has changed, but at least every minute. Saves a lot
        of space for slowly changing values.
+   * - Delete after, Use at most
+     - Delete old values automatically (see `Cleaning up old recordings
+       <aufraeumen_>`__): after *n days* (SQLite, MariaDB, PostgreSQL/TimescaleDB,
+       QuestDB) or when the values take up more than *n MB* (SQLite only).
    * - Test database
      - Connects, creates the table and reports the result.
 
@@ -3111,7 +3139,9 @@ Event viewer and acknowledgement
 * **Show in chart** (button or right-click on a row, only in the logger): the logger
   switches to offline mode and shows the time range around the event, **ruler 1** on the
   start (coming), **ruler 2** on the end (going). If the values are no longer in memory,
-  it loads the matching CSV file from the CSV folder or the archive.
+  it loads them from the database of the configuration (if one is set; 10 minutes before
+  and after the event), otherwise the matching CSV file from the CSV folder or the
+  archive.
 * **Open folder** shows the event file in the file manager.
 
 .. figure:: images/en/ereignis_diagramm.png
@@ -3477,7 +3507,8 @@ PDF reports
 A report summarizes a period on a few pages:
 
 * **Header:** project, period, data basis (number of measurement rows, first and last
-  measurement).
+  measurement); above it the customer logo and logo from the configuration (tab
+  *Display*), if entered.
 * **Statistics** per variable: minimum, maximum, mean, standard deviation, latest value
   and number of valid values; for BOOL variables the share of time with value 1 (on
   time) and the number of switch-on events.
@@ -3525,11 +3556,19 @@ every signal of the IO list is shown live and checked off; what has just moved i
 at the top, and swapped signals are noticed immediately. The IO check reads from the
 controllers of the configuration itself – no recording needs to be running.
 
-Opening: in the logger **Analysis › IO check …**, standalone with ``PLCLogger.exe
---iocheck`` (start menu *PLC IO-Check*; AppImage: ``--iocheck``), optionally with a
-configuration or a saved test progress (``*.iocheck.json``). **▶ Start reading** (F5)
-connects to the controllers; with **Demo** the signals are simulated (to try it out
-without a controller).
+Opening:
+
+* as a program of its own, ``PLCIOCheck.exe`` (start menu *PLC IO-Check*, optionally
+  also on the desktop). The start screen lists the recently used test files
+  (``*.iocheck.json``) and configurations; a configuration starts a new test file with
+  its controllers, **Demo** starts with simulated values;
+* in the configuration program **File › Start IO check with this configuration**;
+* in the logger **Analysis › IO check …**;
+* Linux/AppImage or from the source code: ``--iocheck`` (``plc_logger.py --iocheck``),
+  optionally with a configuration or a test file.
+
+**▶ Start reading** (F5) connects to the controllers; with **Demo** the signals are
+simulated (to try it out without a controller).
 
 .. note::
 
@@ -3575,7 +3614,16 @@ If type and data type are missing, they are derived from the address: ``E0.0``/`
 analog input, ``AW``/``%QW`` = analog output. For the driver ``s7`` ``%`` and ``P`` are
 removed, for ``ads`` the TwinCAT notation (``%IX0.1``) and for ``tia`` the symbol name
 (``IArea.<Name>``) is used. Rows without address (intermediate headings) and duplicate
-addresses are skipped. On a second import the list can be replaced or extended.
+addresses are skipped. On a second import the list can be replaced or extended. The
+message after the import names the recognized columns.
+
+**Own column headings:** **Columns …** lists per field the headings it is looked for in
+the list (several separated by commas; case, spaces and special characters do not
+matter). If a column is called e.g. “I/O” or “Plain text” in your own lists, enter it
+here once. **An empty field switches the column off:** it is neither imported nor shown
+in the signal list (e.g. device tag or controller if they do not exist). The address is
+required. **Default** restores the built-in names. The setting applies to all test
+files of this user.
 
 Signal list and test status
 ----------------------------------------------------------------------
@@ -3606,6 +3654,10 @@ an entry selects the signal.
 The **selected signal** in the list or matrix is regarded as *expected*. If another
 digital input changes instead (and the expected one does not), a red warning “Swapped?
 Expected B12, got B13” appears with a beep; the entry is marked red.
+
+The button **What has moved?** in the toolbar hides and shows the side panel (more room
+for the signal list; the choice is remembered). The swap warning then appears in the
+status bar.
 
 Checking analog values
 ----------------------------------------------------------------------
@@ -3744,7 +3796,7 @@ Acceptance protocol (PDF)
 **Protocol (PDF) …** creates the acceptance protocol and opens it:
 
 * Header: project, test progress file, controllers, test period and result (checked in
-  %, OK, faults, skipped, open).
+  %, OK, faults, skipped, open); above it the customer logo and logo of the configuration.
 * **Summary** per signal type and per group, **checkers** with the number of checked
   signals (PC user or login name in the web server).
 * **Faults and open signals** – the remaining items.
@@ -3877,6 +3929,36 @@ Notes:
 Rule of thumb for the file size: records per file = duration ÷ sampling interval. At an
 interval of 200 ms there are 5 records per second, i.e. 432,000 per day; a limit of
 100,000 records then corresponds to about 5.5 hours per file.
+
+.. _aufraeumen:
+
+Cleaning up old recordings
+----------------------------------------------------------------------
+
+So that the disk or the database does not fill up, the logger can delete old recordings
+itself – by **period** (*Delete after … days*) and/or by **storage space** (*Use at
+most … MB*). Both limits are switched off by default (*never* or *unlimited*).
+
+* **CSV and archive** (tab *Recording*): only the files of this logger are affected –
+  ``<CSV name>_*.csv`` in the CSV folder and the ZIP files under
+  ``<archive folder>/<CSV name>/``. The decisive time is the last change of a file
+  (= end of the recording in it). The CSV file currently being written is never
+  deleted; archive folders that became empty are removed.
+* **Database** (tab *Database*): values older than *n days* are deleted – row by row (in
+  portions) for SQLite and MariaDB, whole chunks for TimescaleDB (``drop_chunks``),
+  whole daily partitions for QuestDB. The storage limit exists for SQLite only: if the
+  values take up more than *n MB*, the oldest day is deleted at a time. The file does not
+  get smaller, the freed space is reused for new values (to shrink it: ``VACUUM`` with a
+  SQLite tool). InfluxDB 3 and VictoriaMetrics manage the retention period themselves
+  (setting on the server).
+
+The check runs when recording starts and then every hour, also in headless operation.
+What was deleted is shown in the status bar or the log (“[Clean-up] …”).
+
+.. warning::
+
+   Deleted recordings cannot be restored. Choose the limits so that the data is kept as
+   long as it is needed (e.g. retention obligations).
 
 Format
 ----------------------------------------------------------------------
@@ -4209,8 +4291,8 @@ modules of ``plc_treiber`` automatically (``--collect-submodules plc_treiber``).
 Creating the setup file (Windows)
 ======================================================================
 
-Two standalone programs (``PLCLogger.exe`` and ``PLCKonfiguration.exe``) and a setup
-file can be created from the Python files. The following files are used:
+Three standalone programs (``PLCLogger.exe``, ``PLCKonfiguration.exe`` and
+``PLCIOCheck.exe``) and a setup file can be created from the Python files. The following files are used:
 
 .. list-table::
    :header-rows: 1
@@ -4270,7 +4352,8 @@ uninstalling and during updates. If everything is to be stored next to the progr
   once from the GitHub release of libplctag); nothing has to be installed on the target
   computer.
 * The logger starts the configuration via **Config editor** in the toolbar
-  (``PLCKonfiguration.exe`` in the same folder).
+  (``PLCKonfiguration.exe`` in the same folder); ``PLCIOCheck.exe`` is the IO check as a
+  program of its own (start menu *PLC IO-Check*).
 * If the build fails, the cause is in the messages of the window (frequently: no internet
   for pip, Python not in PATH, virus scanner locks ``dist``). With ``build.bat exe`` the
   steps can be repeated separately.
@@ -4432,8 +4515,9 @@ Logger and configuration program have a **Help** menu:
 * **User manual** opens this manual (PDF or HTML) with the default program of the
   system. If the user interface is set to German, the German manual is opened, otherwise
   the English one.
-* **About PLC Datenlogger …** shows version, copyright, licence, the licences of the
-  third-party components and the versions of the libraries used.
+* **About PLC Datenlogger …** shows version, copyright, links to taxis-instruments.de and
+  the source code on GitHub, the licence, the licences of the third-party components and
+  the versions of the libraries used.
 
 **F1** opens the manual in the browser directly at the section that matches the current
 window – also in dialogs. The field with the input focus decides:
@@ -4576,7 +4660,8 @@ Troubleshooting
        calculated result in gaps. At start the logger reports formula errors.
    * - Logo or icon does not appear
      - Check the path in the configuration (relative paths refer to the program folder).
-       Use PNG instead of SVG as an alternative.
+       Use PNG instead of SVG as an alternative (PDFs only support PNG and JPG). An empty
+       logo field means “no logo”.
    * - Installed version does not find the configuration
      - The data is stored under ``%APPDATA%\\PLCDatenlogger`` (not in the program
        folder). With ``portable.txt`` next to the ``.exe`` the program folder is used.
