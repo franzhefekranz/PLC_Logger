@@ -2219,10 +2219,13 @@
 @ Notiz gespeichert.
 > 
 
-@  Für ältere Daten: Datei › Aus Datenbank laden …
+@ Datenbank nicht lesbar ({0}) – suche CSV-Dateien
 > 
 
-@ Für {0} liegen keine Messwerte im Speicher und keine passende CSV-Datei vor.{1}
+@ Geladen aus {0} ({1} Zeitpunkte)
+> 
+
+@ Für {0} liegen keine Messwerte im Speicher, in der Datenbank oder in einer CSV-Datei vor.
 > 
 
 @ Ereignis {0}: {1}

@@ -6,6 +6,7 @@ Die Fenster werden geöffnet, im Demo-Modus betrieben und ihre Dialoge aufgerufe
 (siehe conftest.qt_log). Ziel: Abstürze, fehlende Methoden und falsche Qt-Aufrufe finden, bevor ein Release entsteht."""
 import json
 import os
+import time
 
 import pytest
 
@@ -66,6 +67,22 @@ def test_logger_demo_recording(qt_log, demo_config, tmp_path):
     # Ereignis außerhalb der geladenen Daten: passende CSV-Datei wird gesucht
     w.goto_time(float(w.t[0]) + 0.2)
     assert abs(w.ruler_t[0] - (float(w.t[0]) + 0.2)) < 1e-6
+    # Ereignis von vorgestern: Werte kommen aus der Datenbank der Konfiguration (vor den CSV-Dateien)
+    import datetime as dt
+    import plc_db
+    from plc_common import load_config, load_plcs, save_config
+    conn, charts, cvars = load_config(demo_config)
+    conn.update(db_typ="sqlite", db_datei=str(tmp_path / "werte.db"))
+    save_config(conn, charts, cvars, demo_config, plcs=load_plcs(demo_config))
+    b = plc_db.SqliteBackend(plc_db.db_settings(conn))
+    b.connect()
+    t_ev = time.time() - 2 * 86400
+    z0 = dt.datetime.fromtimestamp(t_ev - 60, dt.timezone.utc)
+    b.insert([(z0 + dt.timedelta(seconds=k), conn.get("projekt") or "", v.name, float(k)) for k in range(120)
+              for v in cvars if not v.formula])
+    b.close()
+    w.goto_time(t_ev, t_ev + 5, "aus DB")
+    assert w.source == "db" and abs(w.ruler_t[0] - t_ev) < 1e-6, qt_log.messages
     for kind, _title, text in qt_log.messages:
         assert kind != "critical", text
     _close(w)

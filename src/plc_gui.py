@@ -1860,26 +1860,61 @@ class MainWindow(QMainWindow):
                 out.append(path)
         return out
 
+    def _load_db_for(self, t0, t1):
+        """Werte des Zeitraums t0..t1 (plus je 10 min davor/danach) aus der Datenbank der Konfiguration laden und
+        offline anzeigen. Rückgabe: True, wenn Werte geladen wurden (False: keine Datenbank, Fehler oder keine Werte)."""
+        from plc_db import create_reader, nice_raster
+        try:
+            conn, _charts, cfg_vars = load_config(self.config_path)
+        except Exception:
+            conn, cfg_vars = self.conn, self.vars
+        if not conn.get("db_typ"):
+            return False
+        names = [v.name for v in cfg_vars]
+        a, b = t0 - 600.0, t1 + 600.0
+        project = conn.get("projekt") or None
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            reader = create_reader(conn).connect()
+            try:
+                n = reader.count(names, a, b, project)
+                raster = 0 if n <= 2_000_000 else nice_raster(b - a)     # sehr viele Werte: Mittelwerte
+                t, nm, cols = reader.load(names, a, b, project, raster_s=raster,
+                                          hold=bool(int(conn.get("db_nur_aenderungen", 0) or 0)))
+                desc = reader.describe()
+            finally:
+                reader.close()
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            self.statusBar().showMessage(tr("Datenbank nicht lesbar ({0}) – suche CSV-Dateien").format(e), 10000)
+            return False
+        QApplication.restoreOverrideCursor()
+        if not len(t):
+            return False
+        if self.rec is not None and self.rec.running:
+            self.act_run.setChecked(False)      # Laden ersetzt die Daten im Speicher
+        self._show_loaded(nm, list(t), cols, "db", tr("Geladen aus {0} ({1} Zeitpunkte)").format(desc, len(t)))
+        return True
+
     def goto_time(self, t0, t1=None, label=""):
-        """Zeitraum um ein Ereignis anzeigen (offline): aus dem Speicher, sonst aus CSV-Dateien bzw. dem Archiv.
-        Lineal 1 auf den Beginn, Lineal 2 auf das Ende (bzw. kurz danach)."""
+        """Zeitraum um ein Ereignis anzeigen (offline): aus dem Speicher, sonst aus der Datenbank der Konfiguration
+        (falls eingestellt), sonst aus CSV-Dateien bzw. dem Archiv. Lineal 1 auf den Beginn, Lineal 2 auf das Ende (bzw.
+        kurz danach)."""
         t1 = t1 if t1 and t1 > t0 else None
         dur = (t1 - t0) if t1 else 0.0
         margin = max(30.0, dur * 0.5)
         a, b = t0 - margin, (t1 or t0) + margin
         have = len(self.t) and float(self.t[0]) <= t0 <= float(self.t[-1])
-        if not have:
+        if not have and not self._load_db_for(a, b):       # zuerst die Datenbank, dann CSV-Dateien/Archiv
             paths = self._log_files_for(a, b)
             if not paths:
-                hint = tr(" Für ältere Daten: Datei › Aus Datenbank laden …") if self.conn.get("db_typ") not in (
-                    None, "", "keine") else ""
                 QMessageBox.information(self, tr("Im Diagramm zeigen"), tr(
-                    "Für {0} liegen keine Messwerte im Speicher und keine passende CSV-Datei vor.{1}").format(
-                    fmt_time(t0)[:19], hint))
+                    "Für {0} liegen keine Messwerte im Speicher, in der Datenbank oder in einer CSV-Datei vor.").format(
+                    fmt_time(t0)[:19]))
                 return
             self._load_logs(paths, save=False)
-            if not (len(self.t) and float(self.t[0]) <= t0 <= float(self.t[-1])):
-                return
+        if not (len(self.t) and float(self.t[0]) <= t0 <= float(self.t[-1])):
+            return
         if self.online:
             self.act_online.setChecked(False)                 # Offline-Modus mit Momentaufnahme
         else:

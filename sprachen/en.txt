@@ -2219,11 +2219,14 @@
 @ Notiz gespeichert.
 > Note saved.
 
-@  Für ältere Daten: Datei › Aus Datenbank laden …
->  For older data: File › Load from database …
+@ Datenbank nicht lesbar ({0}) – suche CSV-Dateien
+> Database not readable ({0}) – searching CSV files
 
-@ Für {0} liegen keine Messwerte im Speicher und keine passende CSV-Datei vor.{1}
-> For {0} there are no measurements in memory and no matching CSV file.{1}
+@ Geladen aus {0} ({1} Zeitpunkte)
+> Loaded from {0} ({1} points in time)
+
+@ Für {0} liegen keine Messwerte im Speicher, in der Datenbank oder in einer CSV-Datei vor.
+> There are no measured values for {0} in memory, in the database or in a CSV file.
 
 @ Ereignis {0}: {1}
 > Event {0}: {1}
