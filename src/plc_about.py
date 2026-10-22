@@ -124,6 +124,8 @@ HELP_TOPICS = {
     "FftDialog": "Frequenzanalyse (FFT)",
     "WebUsersDialog": "HTTPS und Anmeldung",
     "PasswordDialog": "HTTPS und Anmeldung",
+    "NotifyDialog": "Benachrichtigungen",
+    "OpcUaServerDialog": "OPC-UA-Server",
 }
 
 

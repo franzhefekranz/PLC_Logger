@@ -2627,12 +2627,16 @@ Logger die Diagramme als Webseite bereit. Sie lässt sich mit jedem Browser im
 Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Betrieb.
 
 * **Adresse:** ``http://<IP-Adresse des Rechners>:<Port>/`` (Standard-Port 8080).
-  Die Adresse zeigt im Logger **Datei › Webserver-Adresse …**; beim Start steht sie
-  außerdem im Log. Gegebenenfalls muss die Firewall den Port freigeben.
+  Die Adresse zeigt im Logger **Datei › Webserver-Adresse …** – zusammen mit einem
+  **QR-Code**: mit der Kamera des Smartphones scannen statt abtippen (mit Zugriffscode,
+  sofern keine Anmeldung eingerichtet ist). Beim Start steht die Adresse außerdem im Log.
+  Gegebenenfalls muss die Firewall den Port freigeben.
 * **Zugriffscode:** Ist im Reiter ein Code eingetragen, wird die Seite mit
   ``http://…:8080/?token=CODE`` aufgerufen. Ohne Code und ohne Anmeldung kann jeder
   im Netzwerk zusehen; die Seite ist nur lesend, es gibt keine Steuerfunktion.
 * **HTTPS und Anmeldung:** siehe unten.
+* **Prozessbild:** Kacheln mit Werten, Zeigern und Lampen unter ``/prozess``, siehe
+  `Prozessbild`_.
 * **Darstellung:** Die Seite zeigt je Seite (Tab) die Diagramme mit Chart.js, mit
   mehreren Y-Achsen, BOOL-Signalen als Treppenlinie und Status-LEDs der
   Steuerungen. Die Anzeige passt sich der Bildschirmgröße an.
@@ -2697,6 +2701,119 @@ eingetragener Zugriffscode erlaubt weiterhin den Zugriff ohne Anmeldung
    Ohne HTTPS werden Passwörter und Messwerte unverschlüsselt übertragen. Anmeldung
    deshalb zusammen mit HTTPS verwenden. Für Zugriffe aus dem Internet gehört der
    Server zusätzlich hinter ein VPN oder einen Reverse-Proxy.
+
+.. _prozessbild:
+
+Prozessbild
+----------------------------------------------------------------------
+
+.. figure:: images/prozessbild.png
+   :alt: Prozessbild im Browser
+   :width: 95%
+   :align: center
+
+   Prozessbild: Text, Zeigerinstrumente, Zahlenwerte (Druck über der Warngrenze),
+   Zustandslampe, Balken und Kurzverlauf.
+
+Neben den Diagrammen bietet der Webserver ein **Prozessbild** – eine Übersicht mit
+großen, gut ablesbaren Kacheln, z. B. für einen Monitor in der Leitwarte oder ein Tablet
+an der Maschine. Aufruf: ``http://<IP>:<Port>/prozess``, der Link **Prozessbild** oben
+auf der Diagrammseite oder im Logger **Datei › Prozessbild im Browser** (öffnet den
+Standardbrowser dieses Rechners).
+
+Kachelarten:
+
+* **Zahlenwert** – großer Wert mit Einheit.
+* **Zeigerinstrument** – Bogen von Minimum bis Maximum, Warn- und Alarmbereiche farbig.
+* **Balken** – waagerecht oder (bei einer hohen, schmalen Kachel) senkrecht, z. B. Füllstand.
+* **Zustand (Lampe)** – für BOOL-Signale: Lampe mit Texten und Farben für EIN und AUS
+  (wahlweise umgekehrt).
+* **Kurzverlauf** – Linie der letzten Sekunden bis Stunden (*Zeitraum*) mit aktuellem Wert.
+* **Text / Überschrift** – z. B. Anlagenteil oder Hinweis.
+
+Für Zahlenwert, Zeiger, Balken und Verlauf lassen sich **obere und untere Warn- und
+Alarmgrenzen** eintragen: Wird eine überschritten, färbt sich die Kachel gelb bzw. rot.
+Ohne Messwert (Verbindung gestört) erscheint **—**. Mehrere **Seiten** stehen als Reiter
+oben. Auf dem Smartphone stehen die Kacheln untereinander (zwei je Zeile oder eine
+ganze Zeile).
+
+.. figure:: images/prozessbild_bearbeiten.png
+   :alt: Prozessbild bearbeiten
+   :width: 95%
+   :align: center
+
+   Bearbeiten: Kachel gewählt (blau), rechts ihre Eigenschaften.
+
+**Bearbeiten:** Knopf **✎ Bearbeiten** (am PC bzw. Tablet). Kacheln mit der Maus ziehen
+verschiebt sie auf dem Raster (12 Spalten), die Ecke unten rechts ändert die Größe;
+Pfeiltasten verschieben die gewählte Kachel, mit ``Umschalt`` ändern sie die Größe,
+``Entf`` löscht. Rechts stehen die Eigenschaften der gewählten Kachel (Art, Variable,
+Titel, Einheit, Nachkommastellen, Minimum/Maximum, Grenzen, Farben, Texte). **+ Kachel**,
+**Kopie**, **Löschen**, Seiten mit **+**/**−** anlegen bzw. löschen und umbenennen;
+**Vorschlag** füllt die Seite mit je einer Kachel pro Variable. **Speichern** übernimmt das
+Layout, **Abbrechen** verwirft die Änderungen.
+
+* Gespeichert wird in der Datei ``<Konfiguration>.prozessbild.json`` neben der
+  Konfigurationsdatei (z. B. ``anlage.prozessbild.json``); das Konfigurationsprogramm
+  ändert sie nicht. Die Kacheln verweisen auf den **Namen** der Variable – wird eine
+  Variable umbenannt, zeigt die Kachel „Variable fehlt“ und muss neu zugeordnet werden.
+* Ohne gespeichertes Layout zeigt die Seite einen Vorschlag (BOOL als Lampe, sonst
+  Zahlenwert).
+* **Wer darf bearbeiten:** Sind Benutzer eingerichtet (`HTTPS und Anmeldung`_), nur
+  angemeldete Benutzer – wer die Seite nur mit Zugriffscode aufruft, kann sie ansehen,
+  aber nicht ändern (gut für ein fest installiertes Anzeigegerät). Ohne Anmeldung darf
+  jeder mit Zugang zur Seite bearbeiten.
+
+.. _opcua-server:
+
+OPC-UA-Server
+======================================================================
+
+Der Logger kann seine Werte selbst als **OPC-UA-Server** bereitstellen – für ein
+Leitsystem, MES, SCADA, Node-RED oder einen weiteren Logger. Damit lassen sich z. B.
+Werte aus einer S5 oder einer Modbus-Steuerung, die selbst kein OPC UA kann, und die
+berechneten Variablen in einem OPC-UA-Netz weiterverwenden. Der Server ist **nur lesend**.
+
+**Einschalten:** Konfigurationsprogramm, Reiter *Webserver & Headless*, **OPC UA …**:
+
+* **OPC-UA-Server starten** – der Server läuft, solange die Aufzeichnung läuft (auch im
+  Headless-Betrieb); beim Start steht der Endpunkt in der Statuszeile bzw. im Log.
+* **Adresse (Host)** und **Port** (Standard 4840). Endpunkt:
+  ``opc.tcp://<Rechner>:4840/plc-datenlogger/``. Die Firewall muss den Port freigeben.
+* **Aktualisierung** – so oft werden geänderte Werte in den Server übernommen (Standard
+  500 ms; schneller als die Abtastzeit der Steuerungen bringt nichts).
+* **Sicherheit** – eine oder mehrere Stufen: *Keine*, *Basic256Sha256* (Signieren bzw.
+  Signieren und verschlüsseln), *Aes128Sha256RsaOaep*, *Aes256Sha256RsaPss*. Für die
+  verschlüsselten Endpunkte erzeugt der Logger beim ersten Start ein selbstsigniertes
+  Zertifikat (Ordner ``opcua`` im Datenordner, ``server_cert.der``); im Client muss es ggf.
+  als vertrauenswürdig angenommen werden. Eigenes Zertifikat: Dateien eintragen.
+* **Zugriff** – *Anonym* und/oder *Anmeldung mit den Benutzern des Webservers*
+  (dieselben Namen und Passwörter wie unter `HTTPS und Anmeldung`_). Für eine Anmeldung
+  sollte ein verschlüsselter Endpunkt eingeschaltet sein, sonst geht das Passwort im
+  Klartext über das Netz.
+
+**Adressraum** (Namensraum ``urn:plc-datenlogger``):
+
+.. code-block:: text
+
+   Objects
+   └─ PLC Datenlogger
+      ├─ SPS 1                 je Steuerung ein Ordner mit ihren Variablen
+      │  ├─ Temperatur         ns=2;s=Temperatur   (Double; BOOL-Variablen: Boolean)
+      │  └─ …
+      ├─ Berechnet             berechnete Variablen (Formeln)
+      ├─ Ereignisse            je Trigger: Boolean, True solange das Ereignis ansteht
+      └─ Status
+         ├─ SPS 1              Boolean: Verbindung in Ordnung
+         ├─ SPS 1_Text         Zustandstext der Verbindung
+         ├─ Zeitstempel        Zeit der letzten Messzeile
+         └─ Aufzeichnung       True, solange die Aufzeichnung läuft
+
+Die NodeId einer Variable ist ihr Name (``ns=<Index>;s=<Name>``; den Index liefert der
+Client über den Namensraum ``urn:plc-datenlogger``, meist 2). Der **Quellzeitstempel**
+ist die Zeit der Messung. Hat eine Variable keinen Wert (Steuerung nicht erreichbar),
+trägt sie den Status **BadNoCommunication**. Clients können die Werte lesen oder
+abonnieren (Subscription); gemeldet wird nur, was sich geändert hat.
 
 .. _headless:
 
@@ -3065,6 +3182,10 @@ Ereignis-Viewer und Quittieren
 * **Markierte quittieren** (oder Doppelklick auf eine Zeile) quittiert die
   ausgewählten Ereignisse, **Alle quittieren** alle offenen.
 * Die Anzeige aktualisiert sich selbst, sobald neue Ereignisse kommen (F5 = sofort).
+* **Im Diagramm zeigen** (Knopf oder Rechtsklick auf eine Zeile, nur im Logger): Der Logger
+  wechselt in den Offline-Modus und zeigt den Zeitraum um das Ereignis, **Lineal 1** auf
+  dem Beginn (Kommt), **Lineal 2** auf dem Ende (Geht). Liegen die Werte nicht mehr im
+  Speicher, lädt er die passende CSV-Datei aus dem CSV-Ordner bzw. dem Archiv.
 * **Ordner öffnen** zeigt die Ereignisdatei im Explorer.
 
 Der Viewer lässt sich auch **allein** starten – etwa neben einem Headless-Logger oder an
@@ -3078,6 +3199,60 @@ einem anderen Rechner mit Zugriff auf die Datei (Netzlaufwerk):
 
 Die installierte Version hat dafür im Startmenü die Verknüpfung *PLC Ereignisprotokoll*.
 Im Konfigurationsprogramm öffnet **Ereignisprotokoll anzeigen …** denselben Viewer.
+
+.. _benachrichtigungen:
+
+Benachrichtigungen
+----------------------------------------------------------------------
+
+Kommt ein Ereignis, kann der Logger es sofort weitermelden – per **E-Mail**, in einen
+**Microsoft-Teams**- oder **Slack**-Kanal, an einen beliebigen **Webhook** (JSON), als
+**Push-Nachricht aufs Handy** mit der App *ntfy* oder über **Telegram**. Einstellen im
+Konfigurationsprogramm, Reiter *Trigger & Ereignisse*, **Benachrichtigungen …**; daneben
+steht, ob und wohin gemeldet wird.
+
+**Wann gemeldet wird:**
+
+* **Bei Ereignissen benachrichtigen** – Hauptschalter.
+* **Priorität** – ab *Info*, *Warnung* (Standard) oder nur *Alarm*.
+* **Nur Trigger** – leer = alle; sonst die Namen, durch Komma getrennt.
+* **Auch melden, wenn ein Ereignis geht** – zusätzlich eine Nachricht, wenn die Bedingung
+  nicht mehr erfüllt ist (nur, wenn das Kommen gemeldet wurde).
+* **Sperrzeit je Trigger** (Standard 300 s) – kommt derselbe Trigger innerhalb dieser Zeit
+  erneut, wird nicht noch einmal gemeldet; die nächste Nachricht nennt die Zahl der
+  unterdrückten. Verhindert Meldungsfluten bei einem flatternden Signal.
+
+Die Nachricht enthält Priorität, Trigger, Meldungstext, Zeit, Projekt und Rechnername.
+
+**Kanäle** (je ein Reiter, einzeln einschaltbar):
+
+* **E-Mail:** SMTP-Server, Port (587 mit STARTTLS, 465 mit SSL/TLS, 25 unverschlüsselt),
+  Benutzer und Passwort (leer = ohne Anmeldung), Absender und Empfänger (mehrere durch
+  Komma getrennt).
+* **Teams / Slack / Webhook:** *Microsoft Teams (Workflows)* – im Teams-Kanal unter
+  *Workflows* die Vorlage „Bei Empfang einer Webhookanforderung in einem Kanal posten“
+  anlegen und deren Adresse eintragen; die Nachricht erscheint als Karte, Alarme rot.
+  *Slack* – Adresse eines *Incoming Webhook*. *Allgemein (JSON)* – sendet Titel, Text,
+  Trigger, Priorität, Art (KOMMT/GEHT), Zeit, Projekt und Rechner als JSON per POST, z. B.
+  an Node-RED, Home Assistant oder ein eigenes System.
+* **ntfy (Push):** App *ntfy* auf dem Handy installieren und ein Thema abonnieren; hier die
+  Adresse mit Thema eintragen, z. B. ``https://ntfy.sh/anlage-4711-xyz``. Alarme kommen mit
+  höchster Dringlichkeit. Bei ``ntfy.sh`` kann jeder mitlesen, der den Namen des Themas
+  kennt – einen schwer zu erratenden Namen wählen oder einen eigenen ntfy-Server
+  betreiben (dann ggf. Zugriffstoken eintragen).
+* **Telegram:** Bei *@BotFather* einen Bot anlegen (liefert das Bot-Token), dem Bot eine
+  Nachricht schreiben und die Chat-ID eintragen (z. B. über *@userinfobot*).
+
+**Testnachricht senden** schickt über alle eingeschalteten Kanäle eine Probe und zeigt je
+Kanal ✓ oder den Fehler. Gesendet wird im Hintergrund, die Aufzeichnung wartet nicht
+darauf; Fehler (Server nicht erreichbar, Anmeldung falsch) stehen in der Statuszeile bzw.
+der Logdatei. Benachrichtigungen funktionieren auch im Headless-Betrieb – der Rechner
+braucht dafür Zugang zum Mailserver bzw. zum Internet.
+
+.. note::
+
+   Passwörter und Token stehen im Klartext in der Konfigurationsdatei. Die Datei deshalb
+   nur Berechtigten zugänglich machen und für E-Mail ein eigenes Konto verwenden.
 
 
 .. _notizen:
@@ -3581,7 +3756,8 @@ Auf Smartphone oder Tablet prüfen
 
 Der Monteur an der Maschine sieht live, was ankommt, und hakt direkt dort ab; mehrere
 Geräte können gleichzeitig prüfen. **📱 Mobil …** in der Werkzeugleiste zeigt die Adresse
-(z. B. ``https://192.168.0.20:8080/io``) und kopiert sie in die Zwischenablage. Läuft im
+(z. B. ``https://192.168.0.20:8080/io``) mit einem **QR-Code** zum Scannen und kopiert sie in
+die Zwischenablage. Läuft im
 Logger bereits der Webserver, wird dieser verwendet (Link *IO-Check* oben auf der
 Diagrammseite); sonst startet der IO-Check einen eigenen mit den Einstellungen der
 Konfiguration (Reiter *Webserver & headless*: Port, HTTPS, Benutzer, Zugriffscode; ist der
@@ -4231,6 +4407,16 @@ sich geändert hat, steht in ``CHANGELOG.md``. Neue Version und Release:
    git push && git push origin v3.1.0          # Tag hochladen: GitHub baut Installer, ZIP und AppImages
 
 Passt der Tag nicht zu ``APP_VERSION``, bricht der Workflow ab.
+
+**Automatische Tests:** Der Workflow ``.github/workflows/tests.yml`` läuft bei jedem Push
+unter Linux und Windows: Programmlogik, Webserver, Benachrichtigungen, OPC-UA-Server,
+Sprachdateien und Anleitung sowie die Oberfläche mit echtem PySide6 (ohne Bildschirm).
+Fehler erscheinen als Hinweise am Lauf. Lokal:
+
+.. code-block:: console
+
+   pip install pytest
+   python -m pytest tests
 
 **Anleitung als PDF:** Diese Anleitung lässt sich mit Sphinx als PDF erzeugen – ohne
 LaTeX, über rinohtype:

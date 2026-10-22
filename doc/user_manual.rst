@@ -2551,12 +2551,16 @@ the charts as a web page. It can be opened with any browser in the network, e.g.
 tablet or smartphone – also in headless operation.
 
 * **Address:** ``http://<IP address of the computer>:<port>/`` (default port 8080). The
-  logger shows the address under **File › Web server address …**; it is also written to
-  the log at startup. The firewall may have to allow the port.
+  logger shows the address under **File › Web server address …** – together with a
+  **QR code**: scan it with the smartphone camera instead of typing (with the access code
+  if no login is set up). It is also written to the log at startup. The firewall may have
+  to allow the port.
 * **Access code:** If a code is entered in the tab, the page is opened with
   ``http://…:8080/?token=CODE``. Without code and without login anybody in the network
   can watch; the page is read-only, there is no control function.
 * **HTTPS and login:** see below.
+* **Process view:** tiles with values, gauges and lamps under ``/prozess``, see
+  `Process view`_.
 * **Display:** The page shows the charts per page (tab) with Chart.js, with several Y
   axes, BOOL signals as step lines and status LEDs of the controllers. The display adapts
   to the screen size.
@@ -2618,6 +2622,119 @@ allows access without login (``?token=CODE``, e.g. for a permanently installed d
    Without HTTPS, passwords and measurements are transmitted unencrypted. Therefore use
    login together with HTTPS. For access from the internet, the server should also be
    behind a VPN or a reverse proxy.
+
+.. _prozessbild:
+
+Process view
+----------------------------------------------------------------------
+
+.. figure:: images/en/prozessbild.png
+   :alt: Process view in the browser
+   :width: 95%
+   :align: center
+
+   Process view: text, gauges, numeric values (pressure above the warning limit), status
+   lamp, bars and short trend.
+
+Besides the charts the web server offers a **process view** – an overview with large,
+easily readable tiles, e.g. for a monitor in the control room or a tablet at the machine.
+Open it with ``http://<IP>:<port>/prozess``, the link **Prozessbild** at the top of the
+chart page or in the logger with **File › Process view in the browser** (opens the
+default browser of this computer). The web pages are in German.
+
+Tile types:
+
+* **Zahlenwert** (numeric value) – large value with unit.
+* **Zeigerinstrument** (gauge) – arc from minimum to maximum, warning and alarm ranges in
+  colour.
+* **Balken** (bar) – horizontal or (for a tall, narrow tile) vertical, e.g. a level.
+* **Zustand (Lampe)** (status lamp) – for BOOL signals: lamp with texts and colours for ON
+  and OFF (optionally inverted).
+* **Kurzverlauf** (short trend) – line of the last seconds to hours (*Zeitraum*) with the
+  current value.
+* **Text / Überschrift** (text / heading) – e.g. a plant section or a note.
+
+For value, gauge, bar and trend, **upper and lower warning and alarm limits** can be
+entered: if one is exceeded, the tile turns yellow or red. Without a measurement
+(connection lost) **—** is shown. Several **pages** appear as tabs at the top. On a
+smartphone the tiles are stacked (two per row or a full row).
+
+.. figure:: images/en/prozessbild_bearbeiten.png
+   :alt: Editing the process view
+   :width: 95%
+   :align: center
+
+   Editing: tile selected (blue), its properties on the right.
+
+**Editing:** button **✎ Bearbeiten** (on a PC or tablet). Dragging a tile with the mouse
+moves it on the grid (12 columns), the bottom right corner changes its size; the arrow
+keys move the selected tile, with ``Shift`` they change its size, ``Del`` deletes it. The
+properties of the selected tile are on the right (type, variable, title, unit, decimals,
+minimum/maximum, limits, colours, texts). **+ Kachel** (add tile), **Kopie** (copy),
+**Löschen** (delete), pages are added, deleted and renamed with **+**/**−**; **Vorschlag**
+(suggestion) fills the page with one tile per variable. **Speichern** (save) stores the
+layout, **Abbrechen** (cancel) discards the changes.
+
+* The layout is stored in the file ``<configuration>.prozessbild.json`` next to the
+  configuration file (e.g. ``plant.prozessbild.json``); the configuration program does
+  not change it. Tiles refer to the **name** of a variable – if a variable is renamed,
+  the tile shows "Variable fehlt" (variable missing) and has to be assigned again.
+* Without a saved layout the page shows a suggestion (BOOL as lamp, otherwise value).
+* **Who may edit:** if users are set up (`HTTPS and login`_), only logged-in users –
+  whoever opens the page with the access code only can view it but not change it (good
+  for a permanently installed display). Without login anybody with access to the page may
+  edit.
+
+.. _opcua-server:
+
+OPC UA server
+======================================================================
+
+The logger can provide its values itself as an **OPC UA server** – for a control system,
+MES, SCADA, Node-RED or another logger. This way, e.g. values from an S5 or a Modbus
+controller that cannot do OPC UA itself, and the calculated variables, can be used in
+an OPC UA network. The server is **read-only**.
+
+**Enable:** configuration program, tab *Web server & headless*, **OPC UA …**:
+
+* **Start OPC UA server** – the server runs as long as recording runs (also in headless
+  operation); at start the endpoint is shown in the status bar or the log.
+* **Address (host)** and **port** (default 4840). Endpoint:
+  ``opc.tcp://<computer>:4840/plc-datenlogger/``. The firewall must allow the port.
+* **Update** – how often changed values are taken over into the server (default 500 ms;
+  faster than the sampling time of the controllers is pointless).
+* **Security** – one or more levels: *None*, *Basic256Sha256* (sign or sign and encrypt),
+  *Aes128Sha256RsaOaep*, *Aes256Sha256RsaPss*. For the encrypted endpoints the logger
+  creates a self-signed certificate at the first start (folder ``opcua`` in the data
+  folder, ``server_cert.der``); the client may have to accept it as trusted. Own
+  certificate: enter the files.
+* **Access** – *Anonymous* and/or *Login with the web server users* (the same names and
+  passwords as in `HTTPS and login`_). For a login an encrypted endpoint should be
+  enabled, otherwise the password travels across the network in plain text.
+
+**Address space** (namespace ``urn:plc-datenlogger``):
+
+.. code-block:: text
+
+   Objects
+   └─ PLC Datenlogger
+      ├─ PLC 1                 one folder per controller with its variables
+      │  ├─ Temperature        ns=2;s=Temperature   (Double; BOOL variables: Boolean)
+      │  └─ …
+      ├─ Calculated            calculated variables (formulas)
+      ├─ Events                per trigger: Boolean, True while the event is active
+      └─ Status
+         ├─ PLC 1              Boolean: connection OK
+         ├─ PLC 1_Text         status text of the connection
+         ├─ Timestamp          time of the last measurement row
+         └─ Recording          True while recording runs
+
+The NodeId of a variable is its name (``ns=<index>;s=<name>``; the client gets the index
+via the namespace ``urn:plc-datenlogger``, usually 2). The folders *Calculated*, *Events*,
+*Timestamp* and *Recording* are named in the language of the interface; their NodeIds do
+not change. The **source timestamp** is the time of the measurement. If a variable has no
+value (controller not reachable), it has the status **BadNoCommunication**. Clients can
+read or subscribe to the values; only changes are reported.
 
 .. _headless:
 
@@ -2977,6 +3094,10 @@ Event viewer and acknowledgement
 * **Acknowledge selected** (or double-click a row) acknowledges the selected events,
   **Acknowledge all** all open ones.
 * The display updates itself as soon as new events arrive (F5 = immediately).
+* **Show in chart** (button or right-click on a row, only in the logger): the logger
+  switches to offline mode and shows the time range around the event, **ruler 1** on the
+  start (coming), **ruler 2** on the end (going). If the values are no longer in memory,
+  it loads the matching CSV file from the CSV folder or the archive.
 * **Open folder** shows the event file in the file manager.
 
 The viewer can also be started **on its own** – e.g. next to a headless logger or on
@@ -2990,6 +3111,60 @@ another computer with access to the file (network drive):
 
 The installed version has the shortcut *PLC Ereignisprotokoll* in the start menu for
 this. In the configuration program **Show event log …** opens the same viewer.
+
+.. _benachrichtigungen:
+
+Notifications
+----------------------------------------------------------------------
+
+When an event comes, the logger can pass it on immediately – by **e-mail**, into a
+**Microsoft Teams** or **Slack** channel, to any **webhook** (JSON), as a **push message to
+the phone** with the app *ntfy* or via **Telegram**. Set it up in the configuration
+program, tab *Triggers & events*, **Notifications …**; next to it you see whether and
+where notifications go.
+
+**When to notify:**
+
+* **Notify on events** – main switch.
+* **Priority** – from *Info*, *Warning* (default) or only *Alarm*.
+* **Only triggers** – empty = all; otherwise the names separated by commas.
+* **Also notify when an event goes** – an additional message when the condition is no
+  longer met (only if the coming was notified).
+* **Lock time per trigger** (default 300 s) – if the same trigger comes again within this
+  time, no further message is sent; the next message states how many were suppressed.
+  Prevents message floods from a fluttering signal.
+
+The message contains priority, trigger, message text, time, project and computer name.
+
+**Channels** (one tab each, can be enabled individually):
+
+* **E-mail:** SMTP server, port (587 with STARTTLS, 465 with SSL/TLS, 25 unencrypted),
+  user and password (empty = without login), sender and recipients (several separated by
+  commas).
+* **Teams / Slack / Webhook:** *Microsoft Teams (Workflows)* – in the Teams channel under
+  *Workflows* create the template "Post to a channel when a webhook request is received"
+  and enter its address; the message appears as a card, alarms in red. *Slack* – address
+  of an *incoming webhook*. *Generic (JSON)* – sends title, text, trigger, priority, type
+  (KOMMT/GEHT), time, project and computer as JSON by POST, e.g. to Node-RED, Home
+  Assistant or your own system.
+* **ntfy (push):** install the app *ntfy* on the phone and subscribe to a topic; enter the
+  address with topic here, e.g. ``https://ntfy.sh/plant-4711-xyz``. Alarms arrive with the
+  highest urgency. On ``ntfy.sh`` anybody who knows the name of the topic can read along –
+  choose a name that is hard to guess or run your own ntfy server (then enter an access
+  token if needed).
+* **Telegram:** create a bot with *@BotFather* (gives the bot token), send the bot a
+  message and enter the chat ID (e.g. via *@userinfobot*).
+
+**Send test message** sends a test via all enabled channels and shows ✓ or the error for
+each channel. Sending happens in the background, recording does not wait for it; errors
+(server not reachable, wrong login) are shown in the status bar or the log file.
+Notifications also work in headless operation – the computer needs access to the mail
+server or the internet for this.
+
+.. note::
+
+   Passwords and tokens are stored in plain text in the configuration file. Make the file
+   accessible to authorised persons only and use a separate account for e-mail.
 
 
 .. _notizen:
@@ -3495,7 +3670,8 @@ Checking on a smartphone or tablet
 
 The technician at the machine sees live what arrives and checks off right there; several
 devices can test at the same time. **📱 Mobile …** in the toolbar shows the address (e.g.
-``https://192.168.0.20:8080/io``) and copies it to the clipboard. If the web server is
+``https://192.168.0.20:8080/io``) with a **QR code** for scanning and copies it to the
+clipboard. If the web server is
 already running in the logger, it is used (link *IO-Check* at the top of the chart page);
 otherwise the IO check starts its own one with the settings of the configuration (tab
 *Web server & headless*: port, HTTPS, users, access code; if the port is in use, the next
@@ -4128,6 +4304,16 @@ listed in ``CHANGELOG.md`` (German). New version and release:
    git push && git push origin v3.1.0          # push the tag: GitHub builds installer, ZIP and AppImages
 
 If the tag does not match ``APP_VERSION``, the workflow stops.
+
+**Automatic tests:** the workflow ``.github/workflows/tests.yml`` runs on every push on
+Linux and Windows: program logic, web server, notifications, OPC UA server, language
+files and manual as well as the user interface with real PySide6 (without a screen).
+Failures appear as annotations on the run. Locally:
+
+.. code-block:: console
+
+   pip install pytest
+   python -m pytest tests
 
 **Manual as PDF:** This manual can be created as PDF with Sphinx – without LaTeX, via
 rinohtype:
