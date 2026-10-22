@@ -334,6 +334,7 @@ class _Parser:
 # Schreibmarke beim Vergeben der Adressen: aktuelles Byte und das nächste freie Bit darin (0 = Byte-Grenze).
 class _Cursor:
     def __init__(self):
+        """Position Byte 0, Bit 0."""
         self.byte = 0
         self.bit = 0
 
@@ -363,6 +364,7 @@ class _Cursor:
 # Erzeugt aus den Typbeschreibungen den Baum mit Adressen.
 class _Layout:
     def __init__(self, udts):
+        """``udts``: bekannte UDT-Definitionen (Name in Großbuchstaben -> Typ)."""
         self.udts = udts          # Name (groß) -> Typ
 
     # UDT-Verweise bis zum eigentlichen Typ auflösen (mit Schutz vor zyklischen Definitionen).
@@ -467,6 +469,8 @@ class Source:
     """Eine eingelesene Quelldatei (kann mehrere DBs/UDTs enthalten)."""
 
     def __init__(self, path, numbers=None):
+        """Quelldatei ``path`` lesen und zerlegen; ``numbers`` = vom Benutzer vergebene DB-Nummern für DBs ohne Nummer.
+        """
         self.path = path
         # Für TIA-Quellen ohne DB-Nummer: die vom Benutzer vergebenen Nummern, damit sie beim nächsten Start
         # automatisch wieder zugeordnet werden können (siehe entry()).
@@ -512,6 +516,7 @@ class Source:
 # Alle importierten Quellen zusammen (Grundlage des Symbolbaums im Dialog).
 class SymbolSet:
     def __init__(self):
+        """Leere Sammlung von Quelldateien."""
         self.sources = []
 
     # Eintrag laden: Pfad, optional mit '#<Nummern>' am Ende.
@@ -527,10 +532,12 @@ class SymbolSet:
         return src
 
     def remove(self, src):
+        """Quelldatei aus der Sammlung entfernen."""
         if src in self.sources:
             self.sources.remove(src)
 
     def entries(self):
+        """Einträge zum Speichern in der Konfiguration (Pfad, ggf. mit „#Nummern“)."""
         return [s.entry() for s in self.sources]
 
     def build(self):

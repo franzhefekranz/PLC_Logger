@@ -68,6 +68,9 @@ class SlmpClient:
     """SLMP-Client, 3E-Rahmen binär, Befehl 0401 (Lesen, Worteinheiten)."""
 
     def __init__(self, params):
+        """Verbindungsdaten aus den Parametern: Adresse, TCP/UDP, Format (iQ-R oder Q/L), Netzwerk/Station/Zielmodul,
+        Zeitlimit.
+        """
         p = params
         self.host, self.port = str(p.get("ip", "")), int(p.get("port", 5007))
         self.udp = str(p.get("protokoll", "tcp")) == "udp"
@@ -79,6 +82,7 @@ class SlmpClient:
         self.lock = threading.Lock()
 
     def connect(self):
+        """Socket öffnen (TCP mit TCP_NODELAY bzw. „verbundenes“ UDP)."""
         self.close()
         if self.udp:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -90,6 +94,7 @@ class SlmpClient:
         self.sock = s
 
     def close(self):
+        """Socket schließen."""
         if self.sock is not None:
             try:
                 self.sock.close()
@@ -98,12 +103,18 @@ class SlmpClient:
             self.sock = None
 
     def frame(self, command, subcommand, data):
+        """3E-Anfrage (binär) bilden: Kennung 0x5000, Netzwerk, Station, Zielmodul, Länge, Überwachungszeit
+        (250-ms-Schritte), Befehl, Unterbefehl, Daten.
+        """
         timer = max(1, min(0xFFFF, int(self.timeout * 4)))          # Überwachungszeit in 250-ms-Schritten
         body = struct.pack("<HHH", timer, command, subcommand) + data
         return (b"\x50\x00" + struct.pack("<BBHB", self.network, self.station, self.module_io, 0)
                 + struct.pack("<H", len(body)) + body)
 
     def exchange(self, req):
+        """Anfrage senden und Antwort empfangen; Endcode ≠ 0 -> DeviceError (Verbindung bleibt), unbrauchbare Antwort ->
+        ConnectionError.
+        """
         if self.sock is None:
             raise ConnectionError(tr("nicht verbunden"))
         with self.lock:
@@ -122,6 +133,9 @@ class SlmpClient:
         return resp[11:]
 
     def read_words(self, dev, start, count):
+        """Befehl 0401 (Lesen in Worteinheiten): ``count`` Wörter ab Kopfgerät ``start``; iQ-R mit 4-Byte-Gerätenummer
+        (Unterbefehl 0002).
+        """
         code = DEVICES[dev][0]
         if self.iqr:
             spec = struct.pack("<IH", start, code)
@@ -141,6 +155,9 @@ class SlmpReader(WordReader):
     default_gap = 16
 
     def parse(self, address, dtype):
+        """Adresse -> (Gerät, Wortnummer, Bit). Bitgeräte werden wortweise gelesen: Wort = Gerätenummer // 16, Bit =
+        Rest.
+        """
         dev, n, bit = parse(address)
         if DEVICES[dev][2]:
             if dtype == "BOOL":
@@ -151,26 +168,32 @@ class SlmpReader(WordReader):
         return dev, n, bit
 
     def area_limit(self, area):
+        """Höchstens 960 Wörter je Anfrage (Grenze des Protokolls)."""
         return min(960, int(self.plc.params.get("max_woerter", 960)))
 
     def open(self):
+        """SLMP-Client anlegen und verbinden."""
         self.client = SlmpClient(self.plc.params)
         self.client.connect()
 
     def close_transport(self):
+        """Verbindung schließen."""
         if getattr(self, "client", None) is not None:
             self.client.close()
 
     def read_words(self, dev, start, count):
+        """Wörter lesen; bei Bitgeräten ist das Kopfgerät Wortnummer · 16."""
         head = start * 16 if DEVICES[dev][2] else start      # Bitgerät: Kopfgerät = Wortnummer · 16
         return self.client.read_words(dev, head, count)
 
     def endpoint(self):
+        """„IP:Port“ für Fehlermeldungen."""
         p = self.plc.params
         return f"{p.get('ip', '')}:{p.get('port', 5007)}"
 
 
 class SlmpDriver(Driver):
+    """Treiber „slmp“ (siehe Modulbeschreibung)."""
     id = "slmp"
     name = tr("Mitsubishi MELSEC (SLMP / MC-Protokoll)")
     description = tr("iQ-R, iQ-F, Q, L über Ethernet; SLMP 3E-Rahmen binär, TCP oder UDP")
@@ -200,11 +223,13 @@ class SlmpDriver(Driver):
     block_uses_index = False
 
     def summary(self, plc):
+        """„IP:Port TCP/UDP [iQ-R]“."""
         p = plc.params
         return f"{p.get('ip', '')}:{p.get('port', 5007)} {str(p.get('protokoll', 'tcp')).upper()}" + \
                (" iQ-R" if p.get("serie") == "iqr" else "")
 
     def check_params(self, params):
+        """IP vorhanden und Zielmodul als Hexzahl lesbar?"""
         err = super().check_params(params)
         if err:
             return err
@@ -215,6 +240,7 @@ class SlmpDriver(Driver):
         return ""
 
     def check_address(self, address, dtype):
+        """Adresse, Typ und Bitnummer zueinander passend? Wortzugriff auf Bitgeräte nur ab Vielfachen von 16."""
         try:
             dev, n, bit = parse(address)
         except ValueError as e:
@@ -228,6 +254,7 @@ class SlmpDriver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Einheitliche Schreibweise (Hexgeräte in Großbuchstaben)."""
         try:
             dev, n, bit = parse(address)
         except ValueError:
@@ -236,6 +263,9 @@ class SlmpDriver(Driver):
         return f"{dev}{num}" + (f".{bit:X}" if bit is not None else "")
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements: Bitgeräte zählen Geräte (BOOL) bzw. 16er-Schritte, Wortgeräte Wörter; BOOL in
+        Wortgeräten zählt Bits.
+        """
         try:
             dev, n, bit = parse(block.address)
         except ValueError:
@@ -253,14 +283,17 @@ class SlmpDriver(Driver):
         return f"{dev}{format(num, 'X') if radix16 else num}"
 
     def check_block(self, block):
+        """Startadresse und Typ wie bei einer Einzelvariable prüfen."""
         err = self.check_address(block.address, block.dtype)
         return err or super().check_block(block)
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe SlmpReader)."""
         return SlmpReader(self, plc, variables)
 
 
 def _words(dtype):
+    """Anzahl Wörter eines Datentyps."""
     from plc_treiber.word_common import WORD_TYPES
     return WORD_TYPES.get(dtype, (1,))[0]
 

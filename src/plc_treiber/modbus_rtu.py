@@ -39,6 +39,7 @@ class SerialBusClient:
     """Übertragung für ModbusReader: Modbus RTU über pymodbus, Schnittstelle von mehreren Geräten geteilt."""
 
     def __init__(self, params):
+        """Übertragung für das Gerät ``unit`` an der Schnittstelle aus den Parametern (noch nicht geöffnet)."""
         self.p = params
         self.port = str(params.get("schnittstelle", "")).strip()
         self.unit = int(params.get("unit", 1))
@@ -51,6 +52,12 @@ class SerialBusClient:
                 int(p.get("datenbits", 8)))
 
     def connect(self):
+        """Schnittstelle öffnen bzw. mitbenutzen.
+
+        Mehrere Steuerungen (Geräte) können an EINER Schnittstelle hängen: die geöffnete Schnittstelle steht in
+        ``_PORTS`` mit Referenzzähler und Sperre und wird geteilt – vorausgesetzt, Baudrate, Parität, Stopp- und
+        Datenbits sind gleich.
+        """
         from pymodbus.client import ModbusSerialClient
         if not self.port:
             raise ConnectionError(tr("Keine Schnittstelle eingestellt"))
@@ -77,6 +84,7 @@ class SerialBusClient:
             self.entry = entry
 
     def close(self):
+        """Schnittstelle freigeben; geschlossen wird sie erst, wenn kein Gerät sie mehr benutzt."""
         if self.entry is None:
             return
         with _PORTS_LOCK:
@@ -91,6 +99,12 @@ class SerialBusClient:
             self.entry = None
 
     def request(self, fc, start, count):
+        """Eine Leseanfrage (Funktion 1–4) senden -> Antwortdaten wie im Modbus-Telegramm (Register Big Endian, Bits
+        gepackt), damit ModbusReader unverändert dekodieren kann.
+
+        Die Sperre der Schnittstelle sorgt dafür, dass immer nur ein Telegramm auf dem Bus ist. Keine Antwort gilt als
+        Verbindungsfehler, eine Ausnahmeantwort nur als Fehler dieser Anfrage.
+        """
         if self.entry is None:
             raise ConnectionError(tr("nicht verbunden"))
         client, lock = self.entry[0], self.entry[1]
@@ -122,15 +136,19 @@ class SerialBusClient:
 
 
 class ModbusRtuReader(ModbusReader):
+    """Wie ModbusReader, nur mit serieller Übertragung (SerialBusClient)."""
     def make_client(self):
+        """Serielle Übertragung statt TCP."""
         return SerialBusClient(self.plc.params)
 
     def endpoint(self):
+        """„Schnittstelle, Gerät n“ für Fehlermeldungen."""
         p = self.plc.params
         return f"{p.get('schnittstelle', '')}, Gerät {p.get('unit', 1)}"
 
 
 class ModbusRtuDriver(ModbusDriver):
+    """Treiber „modbus_rtu“: Adressen, Typen und Prüfungen wie Modbus TCP, Parameter für die serielle Schnittstelle."""
     id = "modbus_rtu"
     name = tr("Modbus RTU (seriell, pymodbus)")
     description = tr("RS-485/RS-232: Umrichter, Zähler, Regler; mehrere Geräte an einer Schnittstelle möglich")
@@ -159,21 +177,25 @@ class ModbusRtuDriver(ModbusDriver):
     library = "pymodbus, pyserial"
 
     def summary(self, plc):
+        """„COM3 19200 E1, Gerät n“."""
         p = plc.params
         return f"{p.get('schnittstelle', '')} {p.get('baud', 19200)} {p.get('paritaet', 'E')}{p.get('stoppbits', 1)}, " \
                f"Gerät {p.get('unit', 1)}"
 
     def check_params(self, params):
+        """Schnittstelle muss angegeben sein."""
         if not str(params.get("schnittstelle", "")).strip():
             return tr("Schnittstelle fehlt")
         return ""
 
     def check_library(self):
+        """pymodbus und pyserial vorhanden?"""
         import pymodbus  # noqa: F401
         import serial  # noqa: F401
         return True
 
     def create_reader(self, plc, variables):
+        """Leser für ein Gerät (siehe ModbusRtuReader)."""
         return ModbusRtuReader(self, plc, variables)
 
 

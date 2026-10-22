@@ -44,14 +44,20 @@ class UnknownDriver(Driver):
     """Platzhalter für Steuerungen mit einem Treiber, der nicht (mehr) vorhanden ist."""
 
     def __init__(self, ident):
+        """Platzhalter mit dem Kürzel aus der Konfiguration (die Steuerung bleibt erhalten, sie wird nur nicht gelesen).
+        """
         self.id = ident
         self.name = tr("{0} (Treiber fehlt)").format(ident)
 
     def create_reader(self, plc, variables):
+        """Lesen ist nicht möglich: verständliche Fehlermeldung für die Status-LED."""
         raise RuntimeError(tr("Treiber „{0}“ ist nicht installiert").format(self.id))
 
 
 def _register(mod, origin):
+    """Treiber eines Moduls eintragen: ``DRIVER`` (Objekt) oder eine Klasse ``Driver``; doppelte Kürzel und falsche
+    Typen landen in der Fehlerliste.
+    """
     drv = getattr(mod, "DRIVER", None)
     if drv is None:
         cls = getattr(mod, "Driver", None)
@@ -69,6 +75,7 @@ def _register(mod, origin):
 
 
 def _plugin_dirs():
+    """Ordner mit eigenen Treibern: ``<Datenordner>/treiber`` und die Ordner aus ``PLC_TREIBER``."""
     dirs = []
     try:
         from plc_common import BASE_DIR

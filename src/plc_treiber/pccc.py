@@ -45,13 +45,18 @@ def parse(address):
 
 
 class _Group:
+    """Eine Datei-Anfrage: Dateityp und -nummer, erstes Element, Anzahl und die Variablen darin."""
     __slots__ = ("ftype", "fnum", "start", "count", "items")
 
 
 class PcccReader(Reader):
+    """Leser für MicroLogix/SLC: Elemente einer Datei gruppenweise, übrige Adressen einzeln."""
     GAP = 8
 
     def __init__(self, driver, plc, variables):
+        """Adressen prüfen; Elemente derselben Datei nach Elementnummer sortieren und zu Gruppen zusammenfassen (Lücke
+        höchstens GAP, höchstens so viele Elemente, wie in eine Antwort passen).
+        """
         super().__init__(driver, plc, variables)
         self.plc_conn = None
         self.groups, self.singles = [], []                # Datei-Anfragen bzw. [(pos, Adresse)]
@@ -85,6 +90,7 @@ class PcccReader(Reader):
                     self.groups.append(cur)
 
     def connect(self):
+        """Mit pycomm3 (SLCDriver) verbinden – optional über einen CIP-Pfad – und einmal lesen."""
         self.close()
         from pycomm3 import SLCDriver
         p = self.plc.params
@@ -99,6 +105,9 @@ class PcccReader(Reader):
         return max(0, len(self.vars) - len(self.errors))
 
     def _read(self, address):
+        """Eine Adresse bzw. einen Dateibereich (``N7:0{10}``) lesen -> (Wert, Fehler); Ausnahmen gelten als
+        Verbindungsfehler.
+        """
         try:
             tag = self.plc_conn.read(address)
         except Exception as e:
@@ -106,6 +115,7 @@ class PcccReader(Reader):
         return tag.value, tag.error
 
     def read(self):
+        """Ein Messzyklus: Gruppen (ein Wert je Element, Bits ausmaskiert), dann die Einzeladressen."""
         if self.plc_conn is None:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
@@ -135,6 +145,7 @@ class PcccReader(Reader):
         return out
 
     def close(self):
+        """Verbindung schließen."""
         if self.plc_conn is not None:
             try:
                 self.plc_conn.close()
@@ -144,6 +155,7 @@ class PcccReader(Reader):
 
 
 class PcccDriver(Driver):
+    """Treiber „pccc“ (siehe Modulbeschreibung)."""
     id = "pccc"
     name = tr("Allen-Bradley MicroLogix / SLC 500 (PCCC)")
     description = tr("MicroLogix 1100/1400, SLC 5/05 über EtherNet/IP (pycomm3); Adressen wie N7:0, F8:2, B3:0/5")
@@ -161,10 +173,12 @@ class PcccDriver(Driver):
     library = "pycomm3"
 
     def summary(self, plc):
+        """IP-Adresse (ggf. mit CIP-Pfad)."""
         p = plc.params
         return str(p.get("ip", "")) + (f"/{p.get('pfad')}" if str(p.get("pfad", "")).strip() else "")
 
     def check_address(self, address, dtype):
+        """Adresse gültig, Typ unterstützt, BOOL genau dann, wenn eine Bitadresse angegeben ist?"""
         try:
             kind = parse(address)
         except ValueError as e:
@@ -179,9 +193,11 @@ class PcccDriver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Großbuchstaben ohne Leerzeichen."""
         return (address or "").strip().upper().replace(" ", "")
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements (BOOL zählt Bits über Elementgrenzen, sonst Elemente)."""
         try:
             kind = parse(block.address)
         except ValueError:
@@ -195,6 +211,7 @@ class PcccDriver(Driver):
         return f"{ftype}{fnum}:{elem + i}"
 
     def check_block(self, block):
+        """Blöcke nur in N-, F-, L- und B-Dateien."""
         try:
             kind = parse(block.address)
         except ValueError as e:
@@ -204,10 +221,12 @@ class PcccDriver(Driver):
         return super().check_block(block)
 
     def check_library(self):
+        """pycomm3 vorhanden?"""
         import pycomm3  # noqa: F401
         return True
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe PcccReader)."""
         return PcccReader(self, plc, variables)
 
 

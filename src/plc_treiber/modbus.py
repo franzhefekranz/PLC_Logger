@@ -63,6 +63,7 @@ def parse(address: str):
 
 
 def fmt(table, offset, bit, modicon) -> str:
+    """Adresse aus Tabelle, Offset und Bit: Modicon-Schreibweise (40001 …) oder mit Präfix (HR0 …), wie eingegeben."""
     b = f".{bit}" if bit is not None else ""
     if modicon:
         if offset + 1 > 9999:
@@ -91,12 +92,14 @@ class ModbusClient:
     """Minimaler Modbus-TCP-Client (Funktionen 1–4)."""
 
     def __init__(self, host, port=502, unit=1, timeout=2.0):
+        """Client für ``host:port`` und Geräteadresse ``unit`` (noch nicht verbunden)."""
         self.host, self.port, self.unit, self.timeout = host, int(port), int(unit), timeout
         self.sock = None
         self.tid = 0
         self.lock = threading.Lock()
 
     def connect(self):
+        """TCP-Verbindung öffnen (Nagle aus: kleine Anfragen sofort senden)."""
         self.close()
         s = socket.create_connection((self.host, self.port), timeout=self.timeout)
         s.settimeout(self.timeout)
@@ -104,6 +107,7 @@ class ModbusClient:
         self.sock = s
 
     def close(self):
+        """Verbindung schließen."""
         if self.sock is not None:
             try:
                 self.sock.close()
@@ -112,6 +116,7 @@ class ModbusClient:
             self.sock = None
 
     def _recv(self, n):
+        """Genau n Bytes empfangen (TCP liefert Telegramme ggf. in Teilen)."""
         buf = b""
         while len(buf) < n:
             chunk = self.sock.recv(n - len(buf))
@@ -126,6 +131,7 @@ class ModbusClient:
             raise ConnectionError(tr("nicht verbunden"))
         with self.lock:
             self.tid = (self.tid + 1) & 0xFFFF
+            # Telegramm: MBAP-Kopf (Transaktions-ID, Protokoll 0, Länge, Unit) + PDU (Funktion, Startadresse, Anzahl).
             pdu = struct.pack(">BHH", fc, start, count)
             self.sock.sendall(struct.pack(">HHHB", self.tid, 0, len(pdu) + 1, self.unit) + pdu)
             while True:
@@ -140,15 +146,23 @@ class ModbusClient:
 
 
 class ModbusError(Exception):
+    """Ausnahmeantwort des Geräts (z. B. ungültige Adresse) – betrifft nur die Anfrage, die Verbindung bleibt."""
     pass
 
 
 class _Item:
+    """Eine zu lesende Variable: Position im Ergebnis, Tabelle, Offset, Bit, Typ, Anzahl Register, Adresse."""
     __slots__ = ("pos", "table", "offset", "bit", "dtype", "regs", "address")
 
 
 class ModbusReader(Reader):
+    """Leser für Modbus TCP: fasst benachbarte Adressen je Tabelle zu Anfragen zusammen (siehe Parameter „Register je
+    Anfrage“ und „Lücke“).
+    """
     def __init__(self, driver, plc, variables):
+        """Adressen prüfen und den Leseplan bilden: je Tabelle nach Offset sortiert, zusammenfassen bis zur Höchstlänge
+        (Bits: 16-fach) bzw. solange die Lücke klein ist.
+        """
         super().__init__(driver, plc, variables)
         self.client = None
         items = []
@@ -186,14 +200,19 @@ class ModbusReader(Reader):
     # Übertragung (in Unterklassen austauschbar, z. B. Modbus RTU): Objekt mit connect(), close() und
     # request(Funktion, Start, Anzahl) -> Antwortdaten wie im Modbus-Telegramm (Register Big Endian, Bits gepackt).
     def make_client(self):
+        """Übertragung erzeugen – hier TCP; Modbus RTU ersetzt nur diese Methode (gleicher Leseplan, gleiches
+        Dekodieren).
+        """
         p = self.plc.params
         return ModbusClient(p.get("ip"), p.get("port", 502), p.get("unit", 1), int(p.get("timeout_ms", 2000)) / 1000.0)
 
     def endpoint(self):
+        """„IP:Port“ für Fehlermeldungen."""
         p = self.plc.params
         return f"{p.get('ip')}:{p.get('port', 502)}"
 
     def connect(self):
+        """Verbinden und einmal lesen -> Anzahl lesbarer Variablen."""
         self.close()
         self.client = self.make_client()
         try:
@@ -204,6 +223,9 @@ class ModbusReader(Reader):
         return max(0, len(self.vars) - len(self.errors))
 
     def read(self):
+        """Ein Messzyklus: alle Anfragen senden; Bits aus Coils/Discrete Inputs bzw. Registern holen, Mehrregisterwerte
+        in die eingestellte Byte-/Wortfolge bringen und dekodieren.
+        """
         out = [NAN] * len(self.vars)
         order = self.plc.params.get("wortfolge", "ABCD")
         for table, start, count, items in self.requests:
@@ -230,12 +252,14 @@ class ModbusReader(Reader):
         return out
 
     def close(self):
+        """Verbindung schließen."""
         if self.client is not None:
             self.client.close()
             self.client = None
 
 
 class ModbusDriver(Driver):
+    """Treiber „modbus“ (siehe Modulbeschreibung)."""
     id = "modbus"
     name = tr("Modbus TCP")
     description = tr("Holding-/Input-Register, Coils, Discrete Inputs; ohne Zusatzbibliothek")
@@ -261,10 +285,14 @@ class ModbusDriver(Driver):
     block_uses_index = False
 
     def summary(self, plc):
+        """„IP:Port, Unit n“."""
         p = plc.params
         return f"{p.get('ip', '')}:{p.get('port', 502)}, Unit {p.get('unit', 1)}"
 
     def check_address(self, address, dtype):
+        """Adresse und Typ zueinander passend? Coils/Discrete Inputs nur BOOL ohne Bit, BOOL aus Registern nur mit Bit
+        0–15.
+        """
         try:
             table, _off, bit, _m = parse(address)
         except ValueError as e:
@@ -284,6 +312,7 @@ class ModbusDriver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Einheitliche Schreibweise (gleiche Form wie eingegeben: Modicon oder Präfix)."""
         try:
             table, off, bit, modicon = parse(address)
         except ValueError:
@@ -291,6 +320,7 @@ class ModbusDriver(Driver):
         return fmt(table, off, bit, modicon)
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements: Bits bzw. Register weiterzählen (BOOL aus Registern: 16 Bits je Register)."""
         try:
             table, off, bit, modicon = parse(block.address)
         except ValueError:
@@ -303,13 +333,16 @@ class ModbusDriver(Driver):
         return fmt(table, off + i * REG_TYPES.get(block.dtype, (1,))[0], None, modicon)
 
     def check_block(self, block):
+        """Startadresse und Typ wie bei einer Einzelvariable prüfen."""
         err = self.check_address(block.address, block.dtype)
         return err or super().check_block(block)
 
     def type_size(self, dtype):
+        """Größe in Bytes (2 je Register)."""
         return 2 * REG_TYPES.get(dtype, (1,))[0]
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe ModbusReader)."""
         return ModbusReader(self, plc, variables)
 
 

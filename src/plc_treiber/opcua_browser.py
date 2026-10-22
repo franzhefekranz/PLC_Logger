@@ -15,14 +15,17 @@ class OpcUaBrowseModel:
     """Durchsuchen ohne Oberfläche: connect(), children(nodeid|None), close()."""
 
     def __init__(self, params):
+        """``params``: Verbindungsparameter (wie beim Treiber); verbunden wird erst in ``connect``."""
         self.params = params
         self.client = None
 
     def connect(self):
+        """Mit dem Server verbinden (gleiche Einstellungen wie der Treiber) -> self."""
         self.client = make_client(self.params)
         return self
 
     def close(self):
+        """Verbindung trennen."""
         close_client(self.client)
         self.client = None
 
@@ -74,7 +77,13 @@ ROLE = 0x0100 + 7                      # Qt.ItemDataRole.UserRole + 7
 
 
 class OpcUaBrowserDialog(QDialog):
+    """Dialog „OPC UA – Variablen wählen“: Adressraum als Baum, der beim Aufklappen nachgeladen wird.
+
+    Ergebnis nach OK: ``result_vars`` [(Name, NodeId, Typ)], ``result_blocks`` [(Name, NodeId, Start, Anzahl, Typ)] und
+    ``target_index``.
+    """
     def __init__(self, parent, plc, existing, target_labels, default_target=0):
+        """Oberfläche aufbauen, verbinden und die oberste Ebene (Objects) laden."""
         super().__init__(parent)
         self.setWindowTitle(tr("OPC UA – Variablen wählen ({0})").format(plc.params.get("endpoint", "")))
         self.existing = set(existing)
@@ -146,6 +155,7 @@ class OpcUaBrowserDialog(QDialog):
             parent_item.addChild(it)
 
     def on_expand(self, item):
+        """Beim ersten Aufklappen eines Knotens seine Kinder vom Server holen (einmalig, Merker ``_loaded``)."""
         o = item.data(0, ROLE) or {}
         if item.childCount() or o.get("_loaded"):
             return
@@ -161,9 +171,11 @@ class OpcUaBrowserDialog(QDialog):
         self.apply_filter()
 
     def apply_filter(self):
+        """Nur Knoten zeigen, deren Name den Filtertext enthält (bereits geladene Knoten)."""
         f = self.ed_filter.text().strip().lower()
 
         def walk(it):
+            """Rekursiv: Knoten sichtbar, wenn er selbst oder ein Kind passt."""
             visible = not f or f in it.text(0).lower()
             for i in range(it.childCount()):
                 visible = walk(it.child(i)) or visible
@@ -175,6 +187,7 @@ class OpcUaBrowserDialog(QDialog):
 
     # Übernehmen
     def add_block(self, item):
+        """Markiertes Array als Block vormerken (erster Index und Anzahl im kleinen Dialog)."""
         if item is None:
             return
         o = item.data(0, ROLE) or {}
@@ -202,7 +215,9 @@ class OpcUaBrowserDialog(QDialog):
             item.setText(1, item.text(1) + "  ▦")
 
     def take(self):
+        """OK: angehakte Variablen einsammeln, Verbindung trennen, Dialog schließen."""
         def walk(it, path):
+            """Rekursiv angehakte Variablen sammeln; Name = Pfad der Anzeigenamen mit Punkten."""
             for i in range(it.childCount()):
                 ch = it.child(i)
                 o = ch.data(0, ROLE) or {}
@@ -216,5 +231,6 @@ class OpcUaBrowserDialog(QDialog):
         self.accept()
 
     def reject(self):
+        """Abbrechen: Verbindung trennen."""
         self.model.close()
         super().reject()

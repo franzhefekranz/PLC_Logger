@@ -84,6 +84,7 @@ class Param:
             return self.default
 
     def to_text(self, value):
+        """Wert für die Konfigurationsdatei als Text (Wahrheitswerte als 1/0)."""
         if self.kind == "bool":
             return "1" if value else "0"
         return str(value)
@@ -98,6 +99,9 @@ class Reader:
     ``connect()``/``read()`` eine Ausnahme aus (z. B. ConnectionError); der Lese-Thread verbindet dann neu."""
 
     def __init__(self, driver, plc, variables):
+        """Leser für die Steuerung ``plc`` und ihre Variablen anlegen (noch ohne Verbindung). ``errors`` sammelt Fehler
+        einzelner Variablen.
+        """
         self.driver, self.plc, self.vars = driver, plc, list(variables)
         self.errors = {}
 
@@ -106,9 +110,13 @@ class Reader:
         raise NotImplementedError
 
     def read(self) -> list:
+        """Ein Messzyklus: alle Variablen lesen -> Liste von float in der Reihenfolge von ``self.vars`` (NaN = nicht
+        lesbar). Bei gestörter Verbindung eine Ausnahme auslösen.
+        """
         raise NotImplementedError
 
     def close(self):
+        """Verbindung schließen (darf mehrfach und ohne Verbindung aufgerufen werden)."""
         pass
 
 
@@ -130,6 +138,7 @@ class Driver:
 
     # ------------------------------------------------------------------ Parameter
     def default_params(self) -> dict:
+        """Vorgabewerte aller Parameter (für eine neue Steuerung)."""
         return {p.key: p.default for p in self.params}
 
     def normalize_params(self, raw: dict) -> dict:
@@ -174,6 +183,7 @@ class Driver:
         return ""
 
     def type_size(self, dtype: str) -> int:
+        """Größe eines Datentyps in Bytes (nur für Anzeigen)."""
         return TYPE_SIZES.get(dtype, 4)
 
     # ------------------------------------------------------------------ Lesen
@@ -182,6 +192,7 @@ class Driver:
         return True
 
     def create_reader(self, plc, variables) -> Reader:
+        """Leser für die Steuerung ``plc`` und die Variablen ``variables`` anlegen – muss jeder Treiber umsetzen."""
         raise NotImplementedError
 
     def read_once(self, plc, variables):

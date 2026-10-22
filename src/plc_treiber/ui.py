@@ -12,6 +12,7 @@ from plc_i18n import tr
 
 
 def _widget(p, value):
+    """Eingabefeld passend zur Art des Parameters ``p`` (int, float, choice, bool, password, Text) mit Startwert."""
     if p.kind == "int":
         w = QSpinBox()
         w.setRange(int(p.minimum), int(p.maximum))
@@ -43,6 +44,7 @@ def _widget(p, value):
 
 
 def _value(p, w):
+    """Wert aus dem Eingabefeld ``w`` lesen (Text ohne Leerzeichen am Rand; Passwörter unverändert)."""
     if p.kind in ("int", "float"):
         return w.value()
     if p.kind == "choice":
@@ -53,7 +55,11 @@ def _value(p, w):
 
 
 class PlcSettingsDialog(QDialog):
+    """Dialog „Verbindung – Steuerung (Treiber)“; nach OK steht das Parameter-Dict in ``result``."""
     def __init__(self, parent, plc_name, driver, params):
+        """Ein Feld je Parameter des Treibers (erweiterte im Bereich „Erweitert“), dazu ob die benötigte Bibliothek
+        installiert ist.
+        """
         super().__init__(parent)
         self.driver = driver
         self.result = None
@@ -94,6 +100,7 @@ class PlcSettingsDialog(QDialog):
         self.resize(480, 0)
 
     def _ok(self):
+        """Werte einsammeln und vom Treiber prüfen lassen; bei Fehler Meldung und Dialog offen lassen."""
         params = {k: _value(p, w) for k, (p, w) in self.widgets.items()}
         err = self.driver.check_params(params)
         if err:

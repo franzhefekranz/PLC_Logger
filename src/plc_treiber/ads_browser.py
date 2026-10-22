@@ -14,9 +14,11 @@ class AdsBrowseModel:
     """Symbole lesen: [{name, dtype, kind ("var"/"array"), lo, hi, comment}] (sortiert)."""
 
     def __init__(self, params):
+        """``params``: Verbindungsparameter der Steuerung (wie beim Treiber)."""
         self.params = params
 
     def load(self):
+        """Verbinden, Symboltabelle lesen, nur aufzeichenbare Symbole (Zahlen, Arrays aus Zahlen) behalten."""
         c = AdsClient(self.params)
         try:
             c.connect()
@@ -47,7 +49,14 @@ ROLE = 0x0100 + 7                      # Qt.ItemDataRole.UserRole + 7
 
 
 class AdsBrowserDialog(QDialog):
+    """Dialog „TwinCAT – Variablen wählen“: Symbolbaum mit Filter, Häkchen für Variablen, Doppelklick für Blöcke.
+
+    Ergebnis nach OK: ``result_vars`` [(Name, Symbol, Typ)], ``result_blocks`` [(Name, Symbol, Start, Anzahl, Typ)] und
+    ``target_index`` (Zieldiagramm).
+    """
     def __init__(self, parent, plc, existing, target_labels, default_target=0):
+        """Oberfläche aufbauen und die Symboltabelle lesen; ``existing`` = schon angelegte Symbole (werden ausgegraut).
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("TwinCAT – Variablen wählen ({0})").format(plc.params.get("ip", "")))
         self.existing = set(existing)
@@ -96,9 +105,11 @@ class AdsBrowserDialog(QDialog):
             QApplication.restoreOverrideCursor()
 
     def _fill(self, symbols):
+        """Symbole in den Baum eintragen; Ordner entstehen aus den Namensteilen (MAIN › Pumpe › fDruck)."""
         folders = {}
 
         def folder(path):
+            """Ordnerknoten zum Pfad (samt übergeordneten Ordnern) holen oder anlegen."""
             if not path:
                 return self.tree.invisibleRootItem()
             if path in folders:
@@ -126,10 +137,12 @@ class AdsBrowserDialog(QDialog):
         self.tree.expandToDepth(0)
 
     def apply_filter(self):
+        """Nur Einträge zeigen, deren Name, Typ oder Kommentar zum Filter passt (samt ihren Ordnern)."""
         from plc_util import text_filter
         match = text_filter(self.ed_filter.text())
 
         def walk(it):
+            """Rekursiv: Eintrag sichtbar, wenn er selbst oder ein Kind passt."""
             o = it.data(0, ROLE) or {}
             visible = bool(o) and match(o.get("name", ""), o.get("type", ""), o.get("comment", ""))
             for i in range(it.childCount()):
@@ -143,6 +156,7 @@ class AdsBrowserDialog(QDialog):
             self.tree.expandAll()
 
     def add_block(self, item):
+        """Markiertes Array als Block vormerken (erster Index und Anzahl im kleinen Dialog)."""
         if item is None:
             return
         o = item.data(0, ROLE) or {}
@@ -170,7 +184,9 @@ class AdsBrowserDialog(QDialog):
             item.setText(1, item.text(1) + "  ▦")
 
     def take(self):
+        """OK: alle angehakten, noch nicht vorhandenen Variablen einsammeln und den Dialog schließen."""
         def walk(it):
+            """Rekursiv angehakte Variablen sammeln (Name = Symbol mit „_“ statt Punkten)."""
             for i in range(it.childCount()):
                 ch = it.child(i)
                 o = ch.data(0, ROLE) or {}

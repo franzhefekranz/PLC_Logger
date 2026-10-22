@@ -47,16 +47,20 @@ ERRORS = {
 
 
 def ads_error(code):
+    """Text zu einem ADS-Fehlercode (bekannte Codes mit Hinweis, z. B. fehlende Route)."""
     return tr("ADS-Fehler 0x{0:X}: {1}").format(code, tr(ERRORS.get(code, "siehe Beckhoff-Infosys ADS Return Codes")))
 
 
 class AdsError(Exception):
+    """ADS-Fehlerantwort; ``code`` = ADS-Fehlercode."""
     def __init__(self, code):
+        """Fehler mit lesbarem Text und dem Code."""
         super().__init__(ads_error(code))
         self.code = code
 
 
 def parse_netid(text):
+    """AMS-Net-ID „a.b.c.d.e.f“ -> 6 Bytes (ValueError bei falschem Format)."""
     parts = str(text or "").strip().split(".")
     if len(parts) != 6:
         raise ValueError(tr("AMS-Net-ID mit 6 Zahlen erwartet, z. B. 5.12.34.56.1.1"))
@@ -92,6 +96,9 @@ class AdsClient:
     """AMS/TCP-Verbindung mit Read, ReadWrite und ReadState (ein Aufruf zur Zeit)."""
 
     def __init__(self, params):
+        """Verbindungsdaten: IP, TCP-Port, AMS-Net-ID/-Port der Steuerung (Standard: IP + .1.1, 851), eigene
+        AMS-Net-ID/-Port, Zeitlimit.
+        """
         p = params
         self.host = str(p.get("ip", ""))
         self.port = int(p.get("tcp_port", AMS_PORT))
@@ -105,6 +112,9 @@ class AdsClient:
         self.lock = threading.Lock()
 
     def connect(self):
+        """TCP-Verbindung öffnen; ohne eingestellte eigene AMS-Net-ID gilt die lokale IP-Adresse + .1.1 (sie muss zur
+        Route passen).
+        """
         self.close()
         s = socket.create_connection((self.host, self.port), timeout=self.timeout)
         s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -114,6 +124,7 @@ class AdsClient:
         self.source = parse_netid(self.source_text or f"{local}.1.1")
 
     def close(self):
+        """Verbindung schließen."""
         if self.sock is not None:
             try:
                 self.sock.close()
@@ -122,6 +133,7 @@ class AdsClient:
             self.sock = None
 
     def _recv(self, n):
+        """Genau n Bytes empfangen."""
         buf = b""
         while len(buf) < n:
             chunk = self.sock.recv(n - len(buf))
@@ -131,6 +143,12 @@ class AdsClient:
         return buf
 
     def request(self, cmd, data):
+        """ADS-Befehl senden und Antwort lesen.
+
+        Telegramm: AMS/TCP-Kopf (Länge) + AMS-Kopf (Ziel-/Quell-Net-ID und -Port, Befehl, Statusflags 0004 = Anfrage,
+        Datenlänge, Fehler, Invoke-ID) + Daten. Antworten mit anderer Invoke-ID werden übersprungen. Fehler im AMS-Kopf
+        oder im Ergebnisfeld -> AdsError.
+        """
         if self.sock is None:
             raise ConnectionError(tr("nicht verbunden"))
         with self.lock:
@@ -158,16 +176,19 @@ class AdsClient:
         return payload
 
     def read(self, group, offset, length):
+        """ADS Read: ``length`` Bytes ab Indexgruppe/-offset."""
         p = self.request(CMD_READ, struct.pack("<III", group, offset, length))
         n = struct.unpack_from("<I", p, 4)[0]
         return p[8:8 + n]
 
     def readwrite(self, group, offset, read_len, data):
+        """ADS ReadWrite: Daten schreiben und Antwortdaten lesen (für Symbolinfo und Summenanfragen)."""
         p = self.request(CMD_READWRITE, struct.pack("<IIII", group, offset, read_len, len(data)) + data)
         n = struct.unpack_from("<I", p, 4)[0]
         return p[8:8 + n]
 
     def read_state(self):
+        """ADS ReadState -> (ADS-Zustand, Gerätezustand) – prüft, ob die SPS-Laufzeit antwortet."""
         p = self.request(CMD_READSTATE, b"")
         return struct.unpack_from("<HH", p, 4)            # (ADS-Zustand, Gerätezustand)
 
@@ -212,6 +233,7 @@ class AdsClient:
 
 
 class _Req:
+    """Eine Teilanfrage der Summenanfrage: Indexgruppe, -offset, Länge und die Variablen darin (Position, Versatz)."""
     __slots__ = ("group", "offset", "length", "items", "base")
 
 
@@ -219,6 +241,7 @@ class AdsReader(Reader):
     """Löst Symbole beim Verbinden auf und liest alles mit Summenanfragen (je höchstens ``max_unter`` Teile)."""
 
     def __init__(self, driver, plc, variables):
+        """Leser anlegen; der Leseplan entsteht erst beim Verbinden (Symbole werden dann aufgelöst)."""
         super().__init__(driver, plc, variables)
         self.client = None
         self.requests = []
@@ -271,6 +294,7 @@ class AdsReader(Reader):
             self.requests.append(r)
 
     def connect(self):
+        """Verbinden, Zustand der Laufzeit abfragen, Symbole auflösen (``_plan``) und einmal lesen."""
         self.close()
         self.errors = {}
         self.client = AdsClient(self.plc.params)
@@ -286,6 +310,12 @@ class AdsReader(Reader):
         return max(0, len(self.vars) - len(self.errors))
 
     def read(self):
+        """Ein Messzyklus: Teilanfragen in Summenanfragen zu höchstens ``max_unter`` Teilen senden und dekodieren
+        (Little Endian).
+
+        Symbol- oder Versionsfehler bedeuten meist, dass die SPS neu geladen wurde: dann neu verbinden, damit die
+        Symbole neu aufgelöst werden.
+        """
         if self.client is None:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
@@ -316,6 +346,7 @@ class AdsReader(Reader):
         return out
 
     def close(self):
+        """Verbindung schließen."""
         if self.client is not None:
             self.client.close()
             self.client = None
@@ -342,6 +373,7 @@ def classify_symbol(name, tname, size):
 
 
 class AdsDriver(Driver):
+    """Treiber „ads“ (siehe Modulbeschreibung)."""
     id = "ads"
     name = tr("Beckhoff TwinCAT (ADS)")
     description = tr("TwinCAT 2/3 über ADS (AMS/TCP), symbolisch oder Indexgruppe/-offset; Route erforderlich")
@@ -369,10 +401,12 @@ class AdsDriver(Driver):
     browse_label = tr("Aus TwinCAT wählen…")
 
     def summary(self, plc):
+        """„IP AMS Net-ID:Port“."""
         p = plc.params
         return f"{p.get('ip', '')} AMS {p.get('ams_netid') or str(p.get('ip', '')) + '.1.1'}:{p.get('ams_port', 851)}"
 
     def check_params(self, params):
+        """IP vorhanden und eingetragene AMS-Net-IDs gültig?"""
         err = super().check_params(params)
         if err:
             return err
@@ -385,6 +419,7 @@ class AdsDriver(Driver):
         return ""
 
     def check_address(self, address, dtype):
+        """Adresse (Symbol, %-Adresse oder Gruppe:Offset) und Typ gültig?"""
         try:
             parse_address(address, dtype)
         except ValueError as e:
@@ -394,15 +429,18 @@ class AdsDriver(Driver):
         return ""
 
     def check_block(self, block):
+        """Blöcke: Array-Name ohne Index (die Elemente werden über den Index adressiert)."""
         a = block.address.strip()
         if not a or not _SYM.match(a) or a.endswith("]"):
             return tr("Array-Name (Symbol ohne Index) erwartet, z. B. MAIN.aWerte")
         return super().check_block(block)
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe AdsReader)."""
         return AdsReader(self, plc, variables)
 
     def browse(self, parent, ctx):
+        """Auswahldialog mit der Symboltabelle der Steuerung (Variablen und Arrays als Blöcke)."""
         from plc_treiber.ads_browser import AdsBrowserDialog
         dlg = AdsBrowserDialog(parent, ctx.plc, set(ctx.existing), ctx.target_labels, ctx.default_target)
         if not dlg.exec():

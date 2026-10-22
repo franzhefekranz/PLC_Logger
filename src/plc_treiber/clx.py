@@ -15,6 +15,7 @@ from plc_treiber.clx_common import BLOCK_TYPES, CPUS, TYPES, check_tag_name
 
 
 class ClxDriver(Driver):
+    """Treiber „clx“ (siehe Modulbeschreibung); gelesen wird mit libplctag (clx_io.TagReader)."""
     id = "clx"
     name = tr("Allen-Bradley Logix (EtherNet/IP, libplctag)")
     description = tr("ControlLogix, CompactLogix, Micro800; Tag-Namen wie in Studio 5000")
@@ -36,11 +37,14 @@ class ClxDriver(Driver):
     library = "libplctag (plctag.dll / libplctag.so), pycomm3"
 
     def summary(self, plc):
+        """„IP, Pfad 1,0, Steuerungstyp“."""
         p = plc.params
         cpu = tr(CPUS.get(p.get("cpu"), p.get("cpu", "")))
         return f"{p.get('ip', '')}" + (f", Pfad {p.get('pfad')}" if p.get("pfad") else "") + f", {cpu}"
 
     def normalize_params(self, raw):
+        """Parameter vereinheitlichen: CIP-Pfad ohne Leerzeichen, Steuerungstyp klein und bekannt (sonst ControlLogix).
+        """
         out = super().normalize_params(raw)
         out["pfad"] = str(out.get("pfad", "")).replace(" ", "")
         out["cpu"] = str(out.get("cpu", "controllogix")).lower()
@@ -49,6 +53,7 @@ class ClxDriver(Driver):
         return out
 
     def check_address(self, address, dtype):
+        """Tag-Name formal gültig und Typ unterstützt?"""
         if not check_tag_name(address):
             return tr("Ungültiger Tag-Name „{0}“").format(address)
         if dtype not in TYPES:
@@ -56,20 +61,24 @@ class ClxDriver(Driver):
         return ""
 
     def check_block(self, block):
+        """Blöcke: Array-Tag ohne Index."""
         if not check_tag_name(block.address) or "[" in block.address.rsplit(".", 1)[-1]:
             return tr("Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).").format(block.address)
         return super().check_block(block)
 
     def check_library(self):
+        """libplctag ladbar? (plctag.dll bzw. libplctag.so)"""
         from plc_treiber.clx_io import get_lib
         get_lib()
         return True
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (clx_io.TagReader)."""
         from plc_treiber.clx_io import TagReader
         return TagReader(plc, variables)
 
     def browse(self, parent, ctx):
+        """Auswahldialog mit der Tag-Liste der Steuerung (pycomm3); Arrays als Blöcke."""
         from plc_treiber.clx_browser import TagBrowser
         dlg = TagBrowser(parent, ctx.plc, set(ctx.existing), ctx.target_labels, ctx.default_target)
         if not dlg.exec():

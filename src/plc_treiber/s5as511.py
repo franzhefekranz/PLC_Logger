@@ -90,6 +90,7 @@ def s5time_ms(word):
 
 
 def decode(raw, dtype, bit=None):
+    """Wert eines Datentyps aus den gelesenen Bytes (S5: Big Endian; REAL im S5-Format KG, S5TIME in ms)."""
     if dtype == "BOOL":
         return float((raw[0] >> (bit or 0)) & 1)
     if dtype == "BYTE":
@@ -117,16 +118,19 @@ class AS511:
     """AS511-Dialog über eine serielle Schnittstelle (pyserial-Objekt mit read/write)."""
 
     def __init__(self, port, timeout=0.5):
+        """Dialog über die geöffnete Schnittstelle ``port`` (pyserial) mit Zeitlimit je Zeichen."""
         self.port = port
         self.timeout = timeout
 
     def _read(self, n):
+        """Genau n Bytes lesen; weniger in der Zeit = Steuerung antwortet nicht."""
         data = self.port.read(n)
         if len(data) < n:
             raise ConnectionError(tr("Keine Antwort von der S5 (Zeitüberschreitung)"))
         return data
 
     def _expect(self, seq, what):
+        """Erwartete Zeichenfolge lesen; DLE NAK oder etwas anderes -> AS511Error."""
         got = self._read(len(seq))
         if got != bytes(seq):
             if got[:2] == bytes([DLE, NAK]):
@@ -134,9 +138,11 @@ class AS511:
             raise AS511Error(tr("Unerwartete Antwort bei {0}: {1}").format(what, got.hex(" ")))
 
     def _send(self, data):
+        """Bytes senden."""
         self.port.write(bytes(data))
 
     def _send_dup(self, payload):
+        """Nutzdaten senden: jedes DLE verdoppeln (Transparenz), am Ende DLE EOT."""
         out = bytearray()
         for b in payload:
             out.append(b)
@@ -169,6 +175,8 @@ class AS511:
             self.port.reset_input_buffer()
         except Exception:
             pass
+        # Ablauf eines Auftrags: STX -> DLE ACK, Funktion -> STX, DLE ACK -> 16h DLE ETX (bereit), DLE ACK + Daten ->
+        # DLE ACK; dann ggf. Antwortdaten bis DLE ETX und zum Schluss 12h DLE ETX, jeweils mit DLE ACK quittiert.
         self._send([STX])
         self._expect([DLE, ACK], "STX")
         self._send([function])
@@ -227,16 +235,24 @@ _PORT_LOCKS_LOCK = threading.Lock()
 
 
 def _port_lock(name):
+    """Sperre für eine Schnittstelle (eine Schnittstelle, ein Dialog zur Zeit)."""
     with _PORT_LOCKS_LOCK:
         return _PORT_LOCKS.setdefault(name, threading.Lock())
 
 
 class _Item:
+    """Eine zu lesende Variable: Position, Bereich, DB, Byte-Offset, Bit, Typ, Größe, Adresse."""
     __slots__ = ("pos", "area", "db", "off", "bit", "dtype", "size", "address")
 
 
 class S5Reader(Reader):
+    """Leser für die S5 über AS511: Speicherbereiche werden nach dem Verbinden in absolute Adressen umgerechnet und
+    benachbarte zusammengefasst.
+    """
     def __init__(self, driver, plc, variables):
+        """Adressen prüfen und zerlegen; die absoluten Speicheradressen sind erst nach dem Verbinden bekannt
+        (Systemdaten, DB-Adressen).
+        """
         super().__init__(driver, plc, variables)
         self.serial = None
         self.as511 = None
@@ -290,6 +306,9 @@ class S5Reader(Reader):
         return reqs
 
     def connect(self):
+        """Schnittstelle öffnen (9600 Baud, 8E1), Systemdaten lesen (Anfangsadressen von E/A/M/T/Z), Leseplan bilden,
+        einmal lesen.
+        """
         self.close()
         import serial
         p = self.plc.params
@@ -315,6 +334,9 @@ class S5Reader(Reader):
         return max(0, len(self.vars) - len(self.errors))
 
     def read(self):
+        """Ein Messzyklus: jeden Speicherbereich mit Funktion 04h lesen; nach einer Abweisung 500 ms Pause
+        (AS511-Vorgabe).
+        """
         if self.as511 is None:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
@@ -335,6 +357,7 @@ class S5Reader(Reader):
         return out
 
     def close(self):
+        """Schnittstelle schließen."""
         if self.serial is not None:
             try:
                 self.serial.close()
@@ -345,6 +368,7 @@ class S5Reader(Reader):
 
 
 class S5Driver(Driver):
+    """Treiber „s5as511“ (siehe Modulbeschreibung)."""
     id = "s5as511"
     name = tr("Siemens S5 (PG-Schnittstelle AS511)")
     description = tr("S5-90U … 155U über die PG-Schnittstelle (20 mA) mit Pegelwandler an RS-232/USB")
@@ -371,13 +395,18 @@ class S5Driver(Driver):
     library = "pyserial"
 
     def summary(self, plc):
+        """„COM1 9600 8E1“."""
         p = plc.params
         return f"{p.get('schnittstelle', '')} {p.get('baud', 9600)} 8{p.get('paritaet', 'E')}1"
 
     def check_params(self, params):
+        """Schnittstelle muss angegeben sein."""
         return "" if str(params.get("schnittstelle", "")).strip() else tr("Schnittstelle fehlt")
 
     def check_address(self, address, dtype):
+        """Adresse gültig und Typ zur Größe passend (Bit = BOOL, Byte = BYTE, Wort = WORD/INT/S5TIME, Doppelwort =
+        DWORD/DINT/REAL)?
+        """
         try:
             area, _db, _off, bit, kind = parse(address)
         except ValueError as e:
@@ -397,6 +426,9 @@ class S5Driver(Driver):
         return ""
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements: DB in Datenwörtern (DL/DR für Bytes), Timer/Zähler fortlaufend, Bits über
+        Bytegrenzen.
+        """
         try:
             area, db, off, bit, kind = parse(block.address)
         except ValueError:
@@ -416,16 +448,19 @@ class S5Driver(Driver):
         return f"{area}{ {1: 'B', 2: 'W', 4: 'D'}[size]}{off + i * size}"
 
     def check_block(self, block):
+        """Wie eine Einzelvariable; Bit-Blöcke nur bei E, A und M."""
         err = self.check_address(block.address, block.dtype)
         if not err and block.dtype == "BOOL" and block.address.strip().upper().startswith("DB"):
             err = tr("Bit-Blöcke nur bei E, A und M (DB-Bits einzeln anlegen)")
         return err or super().check_block(block)
 
     def check_library(self):
+        """pyserial vorhanden?"""
         import serial  # noqa: F401
         return True
 
     def create_reader(self, plc, variables):
+        """Leser für eine S5 (siehe S5Reader)."""
         return S5Reader(self, plc, variables)
 
 

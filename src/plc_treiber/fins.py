@@ -70,6 +70,7 @@ def parse(address):
 
 
 def area_code(area):
+    """FINS-Bereichscode für Wortzugriff; erweiterter Datenspeicher: Bank 0–15 = A0–AF, Bank 16–24 = 60–68."""
     if area.startswith("E"):
         bank = int(area[1:])
         return 0xA0 + bank if bank < 16 else 0x60 + (bank - 16)
@@ -80,6 +81,7 @@ class FinsClient:
     """FINS-Client (TCP mit Knotennummern-Austausch oder UDP), Befehl 0101 (Speicherbereich lesen)."""
 
     def __init__(self, params):
+        """Verbindungsdaten: IP, Port, TCP/UDP, Netz- und Knotennummern (0 = automatisch), Zeitlimit."""
         p = params
         self.host, self.port = str(p.get("ip", "")), int(p.get("port", 9600))
         self.udp = str(p.get("protokoll", "tcp")) == "udp"
@@ -91,6 +93,11 @@ class FinsClient:
         self.lock = threading.Lock()
 
     def connect(self):
+        """Verbindung herstellen.
+
+        FINS/UDP: Knotennummern aus den IP-Adressen (letztes Byte), falls nicht eingestellt. FINS/TCP: nach dem
+        Verbindungsaufbau Knotennummern mit der Steuerung austauschen (Anfrage mit 0 = automatisch vergeben).
+        """
         self.close()
         if self.udp:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -123,6 +130,7 @@ class FinsClient:
             self.da1 = server & 0xFF
 
     def close(self):
+        """Socket schließen."""
         if self.sock is not None:
             try:
                 self.sock.close()
@@ -131,6 +139,11 @@ class FinsClient:
             self.sock = None
 
     def exchange(self, command, data):
+        """FINS-Befehl senden und die passende Antwort (gleiche Service-ID) abwarten.
+
+        Kopf: ICF 80, RSV, GCT 02, Ziel- und Quellnetz/-knoten/-einheit, SID. Bei TCP steckt der Rahmen zusätzlich in
+        einem FINS/TCP-Kopf. Endcodes außer 0000/0040 (Warnung) -> DeviceError.
+        """
         if self.sock is None:
             raise ConnectionError(tr("nicht verbunden"))
         with self.lock:
@@ -162,6 +175,7 @@ class FinsClient:
         return resp[14:]
 
     def read_words(self, area, start, count):
+        """Befehl 0101 (Speicherbereich lesen): ``count`` Wörter ab ``start``."""
         data = self.exchange(b"\x01\x01", struct.pack(">BHBH", area_code(area), start, 0, count))
         if len(data) < 2 * count:
             raise ConnectionError(tr("FINS-Antwort zu kurz"))
@@ -169,35 +183,43 @@ class FinsClient:
 
 
 class FinsReader(WordReader):
+    """Leser für Omron über WordReader."""
     default_max_words = 999
     default_gap = 16
 
     def parse(self, address, dtype):
+        """Adresse -> (Bereich, Wortnummer, Bit); Zähler-Istwerte liegen im Timerbereich ab 0x8000."""
         area, n, bit = parse(address)
         if area == "C":                                  # Zähler-Istwerte liegen ab 8000 hinter den Timern
             n += 0x8000
         return area, n, bit
 
     def area_limit(self, area):
+        """Höchstens 999 Wörter je Anfrage."""
         return min(999, int(self.plc.params.get("max_woerter", 999)))
 
     def open(self):
+        """FINS-Verbindung öffnen."""
         self.client = FinsClient(self.plc.params)
         self.client.connect()
 
     def close_transport(self):
+        """Verbindung schließen."""
         if getattr(self, "client", None) is not None:
             self.client.close()
 
     def read_words(self, area, start, count):
+        """Wörter lesen (Zähler über den Timerbereich)."""
         return self.client.read_words("T" if area == "C" else area, start, count)
 
     def endpoint(self):
+        """„IP:Port“ für Fehlermeldungen."""
         p = self.plc.params
         return f"{p.get('ip', '')}:{p.get('port', 9600)}"
 
 
 class FinsDriver(Driver):
+    """Treiber „fins“ (siehe Modulbeschreibung)."""
     id = "fins"
     name = tr("Omron (FINS)")
     description = tr("CJ, CS, CP, NJ/NX über Ethernet; FINS/TCP oder FINS/UDP, Port 9600")
@@ -224,10 +246,12 @@ class FinsDriver(Driver):
     block_uses_index = False
 
     def summary(self, plc):
+        """„IP:Port TCP/UDP“."""
         p = plc.params
         return f"{p.get('ip', '')}:{p.get('port', 9600)} {'UDP' if p.get('protokoll') == 'udp' else 'TCP'}"
 
     def check_address(self, address, dtype):
+        """Adresse gültig, Typ unterstützt, Bitnummer nur bei BOOL?"""
         try:
             _area, _n, bit = parse(address)
         except ValueError as e:
@@ -239,6 +263,7 @@ class FinsDriver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Einheitliche Schreibweise (D100, E2_50, CIO0.05)."""
         try:
             area, n, bit = parse(address)
         except ValueError:
@@ -247,6 +272,7 @@ class FinsDriver(Driver):
         return f"{prefix}{n}" + (f".{bit:02d}" if bit is not None else "")
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements (BOOL bitweise, sonst um die Wortzahl des Typs)."""
         try:
             area, n, bit = parse(block.address)
         except ValueError:
@@ -259,10 +285,12 @@ class FinsDriver(Driver):
         return f"{prefix}{n + i * WORD_TYPES.get(block.dtype, (1,))[0]}"
 
     def check_block(self, block):
+        """Startadresse und Typ wie bei einer Einzelvariable prüfen."""
         err = self.check_address(block.address, block.dtype)
         return err or super().check_block(block)
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe FinsReader)."""
         return FinsReader(self, plc, variables)
 
 

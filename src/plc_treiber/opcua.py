@@ -114,6 +114,7 @@ def make_client(params):
 
 
 def close_client(client):
+    """Client trennen; misslingt das, wenigstens den Hintergrund-Thread der Sync-Hülle beenden."""
     if client is None:
         return
     try:
@@ -126,6 +127,7 @@ def close_client(client):
 
 
 class _Request:
+    """Eine Leseanfrage: NodeId, optionaler Indexbereich (Array-Ausschnitt) und die Variablen darin."""
     __slots__ = ("nodeid", "index_range", "items", "lo", "n")
 
 
@@ -137,9 +139,11 @@ class _SubHandler:
     """Empfängt die Änderungsmeldungen der Subscription (im Thread von asyncua) und legt sie im Leser ab."""
 
     def __init__(self, reader):
+        """Handler für den Leser ``reader``."""
         self.reader = reader
 
     def datachange_notification(self, node, val, data):
+        """Geänderter Wert eines beobachteten Knotens: an den Leser weitergeben (mit Statuscode)."""
         try:
             handle = data.subscription_data.client_handle
             dv = data.monitored_item.Value
@@ -148,9 +152,11 @@ class _SubHandler:
         self.reader._on_change(handle, val, getattr(dv, "StatusCode", None) if dv is not None else None)
 
     def event_notification(self, event):
+        """Ereignisse werden nicht ausgewertet (nur Werte)."""
         pass
 
     def status_change_notification(self, status):
+        """Subscription vom Server beendet: merken – der nächste Lesezyklus verbindet neu."""
         self.reader._sub_failed = str(getattr(status, "Status", status))
 
 
@@ -158,6 +164,9 @@ class OpcUaReader(Reader):
     """Liest alle Knoten einer Steuerung mit möglichst wenigen Read-Anfragen (Fehler je Knoten getrennt)."""
 
     def __init__(self, driver, plc, variables):
+        """Leser anlegen; der Leseplan entsteht beim ersten Verbinden. Für die Subscription: Zwischenspeicher der
+        zuletzt gemeldeten Werte je Anfrage.
+        """
         super().__init__(driver, plc, variables)
         self.client = None
         self.requests = []
@@ -171,6 +180,7 @@ class OpcUaReader(Reader):
         self._alive_t = 0.0
 
     def _plan(self):
+        """Leseplan: eine Anfrage je Knoten; Block-Elemente eines Arrays als EINE Anfrage mit Indexbereich „lo:hi“."""
         from asyncua import ua
         blocks = {}
         for pos, v in enumerate(self.vars):
@@ -200,6 +210,9 @@ class OpcUaReader(Reader):
         self._plan_done = True
 
     def connect(self):
+        """Verbinden (Sicherheit, Anmeldung). Zyklisch: einmal lesen. Subscription: Anfangswerte lesen, dann die Knoten
+        beobachten lassen.
+        """
         self.close()
         if not self._plan_done:
             self._plan()
@@ -225,6 +238,9 @@ class OpcUaReader(Reader):
 
     # ---- Subscription
     def _subscribe(self):
+        """Subscription anlegen und je Anfrage ein beobachtetes Element (Meldeintervall, Abtastrate, ggf. Indexbereich)
+        – in Blöcken zu ``knoten_je_anfrage``. Nicht beobachtbare Knoten landen in ``errors``.
+        """
         from asyncua import ua
         p = self.plc.params
         period = float(p.get("melde_ms", 0) or 0) or float(self.plc.intervall_ms)
@@ -251,6 +267,7 @@ class OpcUaReader(Reader):
         self._alive_t = time.monotonic()
 
     def _on_change(self, handle, val, status):
+        """Gemeldeten Wert ablegen (läuft im Thread von asyncua, daher mit Sperre)."""
         k = self._handles.get(handle)
         if k is not None:
             with self._lock:
@@ -270,6 +287,9 @@ class OpcUaReader(Reader):
             raise ConnectionError(f"{type(e).__name__}: {e}") from None
 
     def _read_chunk(self, reqs):
+        """Eine Read-Anfrage für mehrere Knoten direkt über die asyncio-Schnittstelle (Zeitstempel werden nicht
+        angefordert).
+        """
         from asyncua import ua
         params = ua.ReadParameters()
         params.TimestampsToReturn = ua.TimestampsToReturn.Neither
@@ -284,6 +304,9 @@ class OpcUaReader(Reader):
         return self.client.tloop.post(aio.uaclient.read(params))
 
     def read(self):
+        """Ein Messzyklus: zyklisch lesen bzw. bei Subscription die zuletzt gemeldeten Werte liefern (nach einer Prüfung
+        der Verbindung).
+        """
         if self.client is None:
             raise ConnectionError(tr("nicht verbunden"))
         if self.mode != "abo" or self.sub is None:
@@ -340,6 +363,7 @@ class OpcUaReader(Reader):
             out[pos] = f
 
     def close(self):
+        """Subscription löschen und Verbindung trennen."""
         if self.sub is not None:
             try:
                 self.sub.delete()
@@ -354,6 +378,7 @@ class OpcUaReader(Reader):
 
 
 class OpcUaDriver(Driver):
+    """Treiber „opcua“ (siehe Modulbeschreibung)."""
     id = "opcua"
     name = tr("OPC UA (asyncua)")
     description = tr("Steuerungen und Server mit OPC UA: Beckhoff, B&R, Codesys, Siemens, Omron, Kepware …")
@@ -388,12 +413,14 @@ class OpcUaDriver(Driver):
     library = "asyncua"
 
     def summary(self, plc):
+        """Endpunkt, ggf. Sicherheitsstufe und „Subscription“."""
         p = plc.params
         sec = str(p.get("sicherheit", "none"))
         return (str(p.get("endpoint", "")) + ("" if sec == "none" else f" ({sec.split(',')[0]})")
                 + (", Subscription" if p.get("modus") == "abo" else ""))
 
     def check_params(self, params):
+        """Endpunkt mit opc.tcp:// und Zertifikat/Schlüssel nur gemeinsam."""
         url = str(params.get("endpoint", "")).strip()
         if not url.lower().startswith("opc.tcp://"):
             return tr("Der Endpunkt muss mit opc.tcp:// beginnen")
@@ -402,6 +429,7 @@ class OpcUaDriver(Driver):
         return ""
 
     def check_address(self, address, dtype):
+        """NodeId in üblicher Schreibweise (ns=…;i=/s=/g=/b=… oder nsu=…)?"""
         a = (address or "").strip()
         if not a:
             return tr("NodeId fehlt")
@@ -410,13 +438,16 @@ class OpcUaDriver(Driver):
         return ""
 
     def check_library(self):
+        """asyncua vorhanden?"""
         import asyncua  # noqa: F401
         return True
 
     def create_reader(self, plc, variables):
+        """Leser für einen Server (siehe OpcUaReader)."""
         return OpcUaReader(self, plc, variables)
 
     def browse(self, parent, ctx):
+        """Auswahldialog: Adressraum des Servers durchsuchen (Variablen und Arrays als Blöcke)."""
         from plc_treiber.opcua_browser import OpcUaBrowserDialog
         dlg = OpcUaBrowserDialog(parent, ctx.plc, set(ctx.existing), ctx.target_labels, ctx.default_target)
         if not dlg.exec():

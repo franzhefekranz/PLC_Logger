@@ -16,6 +16,7 @@ from plc_treiber.tia_common import BLOCK_TYPES, ROLES, TLS_MODES, TYPES, check_t
 
 
 class TiaDriver(Driver):
+    """Treiber „tia“ (siehe Modulbeschreibung); gelesen wird mit s7commplus (tia_io.TagReader)."""
     id = "tia"
     name = tr("Siemens S7-1200/1500 (S7CommPlus, symbolisch)")
     description = tr("Symbolischer Zugriff wie TIA Portal, auch optimierte Bausteine; ohne PUT/GET")
@@ -44,28 +45,34 @@ class TiaDriver(Driver):
     library = "s7commplus"
 
     def summary(self, plc):
+        """„IP:Port, TLS Modus“."""
         p = plc.params
         return f"{p.get('ip', '')}:{p.get('port', 102)}, TLS {tr(TLS_MODES.get(p.get('tls'), p.get('tls', '')))}"
 
     def check_address(self, address, dtype):
+        """Symbolischer Name formal gültig?"""
         if not check_tag_name(address):
             return tr("Ungültiger Variablenname „{0}“").format(address)
         return ""
 
     def check_block(self, block):
+        """Blöcke: Array ohne Index."""
         if not check_tag_name(block.address) or block.address.endswith("]"):
             return tr("Array „{0}“ ist leer oder ungültig (ohne Index angeben).").format(block.address)
         return super().check_block(block)
 
     def check_library(self):
+        """s7commplus vorhanden (und Python-Version ausreichend)?"""
         from plc_treiber.tia_io import check_library
         return check_library()
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (tia_io.TagReader)."""
         from plc_treiber.tia_io import TagReader
         return TagReader(plc, variables)
 
     def browse(self, parent, ctx):
+        """Auswahldialog mit der Variablenliste aus der Steuerung; Arrays als Blöcke."""
         from plc_treiber.tia_browser import TagBrowser
         dlg = TagBrowser(parent, ctx.plc, set(ctx.existing), ctx.target_labels, ctx.default_target)
         if not dlg.exec():

@@ -75,6 +75,7 @@ class TagReader:
     ``catalog_items`` (Tests) ersetzt die Variablenliste."""
 
     def __init__(self, plc: Plc, variables, client_factory=None, catalog_items=None):
+        """Reader anlegen (noch ohne Verbindung); die Kennungen werden erst in ``connect`` aufgelöst."""
         self.plc, self.vars = plc, list(variables)
         self.client_factory = client_factory
         self.catalog_items = catalog_items
@@ -85,6 +86,7 @@ class TagReader:
 
     # ------------------------------------------------------------------ Verbindung
     def _new_client(self):
+        """s7commplus-Client erzeugen (in Tests das Ersatzobjekt aus ``client_factory``)."""
         if self.client_factory:
             return self.client_factory()
         from s7commplus import Client             # erst hier importieren: Demo und Tests brauchen s7commplus nicht
@@ -148,6 +150,7 @@ class TagReader:
             self.errors[self.vars[i].tag] = tr("Variable in der Steuerung nicht gefunden")
 
     def _apply(self, catalog):
+        """Jede Variable im Katalog nachschlagen und die Kennung merken -> Indizes der nicht gefundenen Variablen."""
         missing = []
         for i, v in enumerate(self.vars):
             try:
@@ -192,10 +195,12 @@ class TagReader:
         return out
 
     def _read_items(self, indices):
+        """Eine GetMultiVariables-Anfrage für die Variablen mit diesen Indizes -> Rohwerte (None = Fehler)."""
         items = [(self.tags[i].access_area, list(self.tags[i].lids), 0) for i in indices]
         return self.client.read_symbolic_multi(items)
 
     def close(self):
+        """Verbindung trennen (Fehler beim Trennen werden ignoriert)."""
         if self.client is not None:
             try:
                 self.client.disconnect()

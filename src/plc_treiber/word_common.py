@@ -38,6 +38,7 @@ def decode(words, offset, dtype, bit=None):
 
 
 class _Item:
+    """Eine zu lesende Variable: Position im Ergebnis, Bereich, Wortnummer, Bit, Typ, Anzahl Wörter, Adresse."""
     __slots__ = ("pos", "area", "word", "bit", "dtype", "words", "address")
 
 
@@ -59,20 +60,27 @@ class WordReader(Reader):
         return int(self.plc.params.get("max_woerter", self.default_max_words))
 
     def open(self):
+        """Verbindung zur Steuerung öffnen (Unterklasse)."""
         raise NotImplementedError
 
     def close_transport(self):
+        """Verbindung schließen (Unterklasse)."""
         pass
 
     def read_words(self, area, start, count):
+        """``count`` Wörter ab ``start`` im Bereich ``area`` lesen -> Liste von Zahlen 0 … 65535 (Unterklasse)."""
         raise NotImplementedError
 
     def endpoint(self):
+        """„IP:Port“ für Fehlermeldungen."""
         p = self.plc.params
         return f"{p.get('ip', '')}:{p.get('port', '')}"
 
     # ------------------------------------------------------------------ Planung
     def __init__(self, driver, plc, variables):
+        """Leseplan aufstellen: Variablen prüfen, je Bereich nach Wortnummer sortieren und benachbarte (Lücke höchstens
+        ``luecke`` Wörter, Länge höchstens ``area_limit``) zu einer Anfrage zusammenfassen.
+        """
         super().__init__(driver, plc, variables)
         self.requests = []
         self._open = False
@@ -112,6 +120,7 @@ class WordReader(Reader):
 
     # ------------------------------------------------------------------ Reader
     def connect(self):
+        """Verbindung öffnen und einmal lesen -> Anzahl lesbarer Variablen."""
         self.close()
         try:
             self.open()
@@ -122,6 +131,9 @@ class WordReader(Reader):
         return max(0, len(self.vars) - len(self.errors))
 
     def read(self):
+        """Ein Messzyklus: alle Anfragen senden und die Werte dekodieren. Gerätefehler betreffen nur die Variablen der
+        Anfrage, Übertragungsfehler gelten als Verbindungsabbruch.
+        """
         if not self._open:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
@@ -143,6 +155,7 @@ class WordReader(Reader):
         return out
 
     def close(self):
+        """Verbindung schließen (Fehler beim Schließen werden ignoriert)."""
         if self._open:
             self._open = False
         try:

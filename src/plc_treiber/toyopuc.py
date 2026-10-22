@@ -60,6 +60,9 @@ ERRORS = {0x11: N_("CPU-Modul-Fehler"), 0x20: N_("Relaisbefehl: falsche Länge")
 
 
 def _segment(segments, n):
+    """Segment (Wortbasis, erste Nummer), in dem die Nummer n liegt, oder None (Programmbereiche bestehen aus mehreren
+    Segmenten).
+    """
     for start, end, base in segments:
         if start <= n <= end:
             return base, start
@@ -127,7 +130,9 @@ def parse(address):
 
 
 class ComputerLinkClient:
+    """Computer-Link-Client (binär über TCP oder UDP)."""
     def __init__(self, params):
+        """Verbindungsdaten (IP, Port, TCP/UDP, Zeitlimit)."""
         self.host, self.port = str(params.get("ip", "")), int(params.get("port", 1025))
         self.udp = str(params.get("protokoll", "tcp")) == "udp"
         self.timeout = int(params.get("timeout_ms", 2000)) / 1000.0
@@ -135,6 +140,7 @@ class ComputerLinkClient:
         self.lock = threading.Lock()
 
     def connect(self):
+        """Socket öffnen (TCP mit TCP_NODELAY bzw. „verbundenes“ UDP)."""
         self.close()
         if self.udp:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -146,6 +152,7 @@ class ComputerLinkClient:
         self.sock = s
 
     def close(self):
+        """Socket schließen."""
         if self.sock is not None:
             try:
                 self.sock.close()
@@ -154,6 +161,9 @@ class ComputerLinkClient:
             self.sock = None
 
     def exchange(self, cmd, data):
+        """Befehl senden (Kopf 00 00, Länge, Befehl, Daten) und Antwort lesen; Fehlercode -> DeviceError, ungültige
+        Antwort -> ConnectionError.
+        """
         if self.sock is None:
             raise ConnectionError(tr("nicht verbunden"))
         frame = bytes([0x00, 0x00]) + struct.pack("<H", 1 + len(data)) + bytes([cmd]) + data
@@ -173,6 +183,7 @@ class ComputerLinkClient:
         return resp[5:]
 
     def read_words(self, area, addr, count):
+        """Wörter lesen: Befehl 1C (Grundbereich) bzw. 94 (erweiterter und Programmbereich, mit Bereichsnummer)."""
         kind, no = area
         if kind == "1C":
             data = self.exchange(0x1C, struct.pack("<HH", addr, count))
@@ -184,31 +195,38 @@ class ComputerLinkClient:
 
 
 class ToyopucReader(WordReader):
+    """Leser für TOYOPUC über WordReader (Relais werden wortweise gelesen, Bit = Relaisnummer % 16)."""
     default_max_words = 512
     default_gap = 16
 
     def parse(self, address, dtype):
+        """Adresse -> (Bereich, Wortadresse, Bit); einzelne Relais nur als BOOL."""
         area, word, bit, relay = parse(address)
         if relay and dtype != "BOOL":
             raise ValueError(tr("Einzelne Relais haben den Typ BOOL (16 Relais als Wort: z. B. M010W)"))
         return area, word, bit
 
     def area_limit(self, area):
+        """Höchstens 512 Wörter je Anfrage."""
         return min(512, int(self.plc.params.get("max_woerter", 512)))
 
     def open(self):
+        """Computer-Link-Verbindung öffnen."""
         self.client = ComputerLinkClient(self.plc.params)
         self.client.connect()
 
     def close_transport(self):
+        """Verbindung schließen."""
         if getattr(self, "client", None) is not None:
             self.client.close()
 
     def read_words(self, area, start, count):
+        """Wörter eines Bereichs lesen."""
         return self.client.read_words(area, start, count)
 
 
 class ToyopucDriver(Driver):
+    """Treiber „toyopuc“ (siehe Modulbeschreibung)."""
     id = "toyopuc"
     name = tr("JTEKT TOYOPUC (Computer Link)")
     description = tr("PC10G/PC10, PC3J, Nano 10GX, TOYOPUC-Plus über Ethernet (Computer-Link-Protokoll)")
@@ -230,10 +248,12 @@ class ToyopucDriver(Driver):
     block_uses_index = False
 
     def summary(self, plc):
+        """„IP:Port TCP/UDP“."""
         p = plc.params
         return f"{p.get('ip', '')}:{p.get('port', 1025)} {str(p.get('protokoll', 'tcp')).upper()}"
 
     def check_address(self, address, dtype):
+        """Adresse gültig und Typ passend (einzelne Relais nur BOOL, Bitnummer nur bei BOOL)?"""
         try:
             _area, _w, bit, relay = parse(address)
         except ValueError as e:
@@ -247,9 +267,13 @@ class ToyopucDriver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Großbuchstaben ohne Leerzeichen."""
         return (address or "").strip().upper().replace(" ", "")
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements in derselben Schreibweise (Stellenzahl bleibt): Relais einzeln, BOOL in Wörtern
+        bitweise, sonst wortweise.
+        """
         a = (block.address or "").strip().upper()
         m = _RE.match(a)
         if not m:
@@ -267,9 +291,11 @@ class ToyopucDriver(Driver):
         return f"{pre}{area}{n + i * step:0{width}X}" + ("W" if packed else "")
 
     def check_block(self, block):
+        """Startadresse und Typ wie bei einer Einzelvariable prüfen."""
         return self.check_address(block.address, block.dtype) or super().check_block(block)
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe ToyopucReader)."""
         return ToyopucReader(self, plc, variables)
 
 

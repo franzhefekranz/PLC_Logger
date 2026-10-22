@@ -109,6 +109,7 @@ def cache_path(plc: Plc):
 
 
 def save_cache(plc: Plc, data):
+    """Tag-Liste als JSON zwischenspeichern (ein Ordner je Steuerung, siehe ``cache_path``)."""
     os.makedirs(os.path.dirname(cache_path(plc)), exist_ok=True)
     with open(cache_path(plc), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
@@ -153,6 +154,7 @@ class TagNode:
 
     @property
     def length(self):
+        """Anzahl der Elemente (Produkt aller Array-Dimensionen; 1 ohne Array)."""
         n = 1
         for d in self.dims:
             n *= max(d, 1)
@@ -163,6 +165,7 @@ class TagTree:
     """Baum über der einfachen Form der Tag-Liste."""
 
     def __init__(self, data):
+        """Baum über ``data`` ({"tags": [...], "types": {...}}); Knoten entstehen erst beim Aufklappen."""
         self.data = data or {"tags": [], "types": {}}
         self.types = self.data.get("types", {})
 
@@ -174,6 +177,7 @@ class TagTree:
         return out
 
     def _node(self, label, path, type_name, dims, struct, access=""):
+        """Knoten passender Art anlegen: Array, Struktur oder einfache Variable (Blatt)."""
         if dims:
             return TagNode(label, path, type_name, "array", list(dims), struct, access)
         return TagNode(label, path, type_name, "struct" if struct else "leaf", [], struct, access)
@@ -217,6 +221,8 @@ class TagTree:
         hits = []
 
         def visit(n, depth):
+            """Rekursiv absteigen und passende Variablen/Arrays sammeln (begrenzt auf ``limit`` Treffer und 12 Ebenen).
+            """
             if len(hits) >= limit or depth > 12:
                 return
             if n.kind in ("leaf", "array") and text in n.path.lower():

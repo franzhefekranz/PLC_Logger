@@ -53,6 +53,7 @@ def parse(address: str):
 
 
 def fmt(letter, db, byte, bit, dtype) -> str:
+    """Adresse in einheitlicher deutscher Schreibweise (z. B. DB10.DBD4, MW10, E0.1) aus ihren Teilen."""
     return s7_address("DB" if letter == "DB" else letter, db, byte, bit, dtype)
 
 
@@ -69,6 +70,7 @@ def _areas():
 
 
 def _block_db_type():
+    """snap7-Konstante für den Bausteintyp DB (Name je nach python-snap7-Version) oder None."""
     for mod, attr in (("snap7.type", "Block"), ("snap7.types", "Block"), ("snap7.type", "Blocks"), ("snap7.types", "Blocks")):
         try:
             m = __import__(mod, fromlist=[attr])
@@ -93,6 +95,7 @@ def list_plc_dbs(client) -> dict:
 
 
 class _Item:
+    """Eine zu lesende Variable mit zerlegter Adresse: Position in der Ergebnisliste, Bereich, DB, Byte, Bit, Typ."""
     __slots__ = ("pos", "area", "db", "byte", "bit", "dtype", "address")
 
 
@@ -100,6 +103,9 @@ class S7Reader(Reader):
     """Liest mit snap7: Blöcke mit einer Anfrage je Block, Einzelvariablen einzeln."""
 
     def __init__(self, driver, plc, variables):
+        """Leseplan aufstellen: Variablen eines Blocks werden zu EINER Anfrage über den ganzen Bytebereich
+        zusammengefasst, alle übrigen einzeln gelesen. Ungültige Adressen stehen gleich in ``errors``.
+        """
         super().__init__(driver, plc, variables)
         self.client = None
         self.plan = []           # [("block", area, db, start, nbytes, [items]) | ("single", item)]
@@ -126,6 +132,9 @@ class S7Reader(Reader):
             self.plan.append(("block", area, db, start, end - start, items))
 
     def connect(self):
+        """Mit Rack/Slot verbinden und einmal lesen (erst ein erfolgreicher Lesezyklus beweist die Verbindung) -> Anzahl
+        lesbarer Variablen.
+        """
         from snap7.client import Client
         self.close()
         self.areas = _areas()
@@ -140,6 +149,9 @@ class S7Reader(Reader):
 
     @staticmethod
     def _decode(raw, it, base):
+        """Wert einer Variable aus den gelesenen Bytes (``base`` = erstes gelesenes Byte): BOOL als Bit, sonst struct
+        (Big Endian).
+        """
         off = it.byte - base
         if it.dtype == "BOOL":
             return float((raw[off] >> it.bit) & 1)
@@ -156,6 +168,9 @@ class S7Reader(Reader):
         self.errors[addr] = str(exc)
 
     def read(self):
+        """Ein Messzyklus nach dem Leseplan. Fehler einer Anfrage betreffen nur ihre Variablen – außer die Verbindung
+        ist weg (siehe ``_failed``).
+        """
         out = [NAN] * len(self.vars)
         c = self.client
         for entry in self.plan:
@@ -183,6 +198,7 @@ class S7Reader(Reader):
         return out
 
     def close(self):
+        """Verbindung trennen."""
         if self.client is not None:
             try:
                 self.client.disconnect()
@@ -192,6 +208,7 @@ class S7Reader(Reader):
 
 
 class S7Driver(Driver):
+    """Treiber „s7“ (siehe Modulbeschreibung)."""
     id = "s7"
     name = tr("Siemens S7 (PUT/GET, snap7)")
     description = tr("S7-300/400/1200/1500 über S7-Kommunikation; absolute Adressen, nicht optimierte Bausteine")
@@ -210,9 +227,11 @@ class S7Driver(Driver):
     library = "python-snap7"
 
     def summary(self, plc):
+        """„IP, Rack r/Slot s“."""
         return f"{plc.params.get('ip', '')}, Rack {plc.params.get('rack', 0)}/Slot {plc.params.get('slot', 1)}"
 
     def check_address(self, address, dtype):
+        """Adresse zerlegbar und Datentyp bekannt? -> Fehlertext oder ""."""
         try:
             parse(address)
         except ValueError as e:
@@ -222,6 +241,7 @@ class S7Driver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Einheitliche Schreibweise (englische Bereichsbuchstaben und Kurzformen werden umgesetzt)."""
         try:
             area, db, byte, bit, letter = parse(address)
         except ValueError:
@@ -229,6 +249,7 @@ class S7Driver(Driver):
         return fmt(letter, db, byte, bit, dtype)
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements: BOOL zählt Bits weiter (über Bytegrenzen), sonst um die Typgröße in Bytes."""
         try:
             area, db, byte, bit, letter = parse(block.address)
         except ValueError:
@@ -239,6 +260,7 @@ class S7Driver(Driver):
         return fmt(letter, db, byte + i * S7_TYPES.get(block.dtype, (4,))[0], 0, block.dtype)
 
     def check_block(self, block):
+        """Startadresse gültig und Format für Blöcke erlaubt?"""
         try:
             parse(block.address)
         except ValueError as e:
@@ -246,14 +268,19 @@ class S7Driver(Driver):
         return super().check_block(block)
 
     def check_library(self):
+        """python-snap7 vorhanden? (ImportError sonst)"""
         import snap7  # noqa: F401
         return True
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe S7Reader)."""
         return S7Reader(self, plc, variables)
 
     # ------------------------------------------------------------------ Auswahldialog
     def browse(self, parent, ctx):
+        """Auswahldialog aus importierten DB-Quellen (S7 liefert über PUT/GET keine Namen); bereits vorhandene Adressen
+        werden markiert. Die Liste der Quellen wird in den Treiberdaten der Konfiguration gespeichert.
+        """
         from plc_treiber.s7_browser import SymbolBrowser
         from plc_treiber.s7_symbols import config_type
         existing = set()

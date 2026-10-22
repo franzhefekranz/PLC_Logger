@@ -64,13 +64,16 @@ def logical(dev, n):
 
 
 def device_text(dev, n):
+    """Gerät als Text für den Befehl (W, B, VB hexadezimal, alle übrigen dezimal)."""
     if dev in ("W", "B", "VB"):
         return f"{dev}{n:X}"
     return f"{dev}{n}"
 
 
 class HostLinkClient:
+    """Host-Link-Client (ASCII-Befehle über TCP, Antwort je Zeile mit CR LF)."""
     def __init__(self, params):
+        """Verbindungsdaten (IP, Port 8501, Zeitlimit); ``buf`` hält empfangene, noch nicht verarbeitete Zeichen."""
         self.host, self.port = str(params.get("ip", "")), int(params.get("port", 8501))
         self.timeout = int(params.get("timeout_ms", 2000)) / 1000.0
         self.sock = None
@@ -78,6 +81,7 @@ class HostLinkClient:
         self.lock = threading.Lock()
 
     def connect(self):
+        """TCP-Verbindung öffnen."""
         self.close()
         s = socket.create_connection((self.host, self.port), timeout=self.timeout)
         s.settimeout(self.timeout)
@@ -85,6 +89,7 @@ class HostLinkClient:
         self.sock, self.buf = s, b""
 
     def close(self):
+        """Verbindung schließen."""
         if self.sock is not None:
             try:
                 self.sock.close()
@@ -110,6 +115,9 @@ class HostLinkClient:
         return resp
 
     def read_consecutive(self, device, count, fmt=""):
+        """Befehl RDS: ``count`` aufeinanderfolgende Geräte ab ``device`` lesen (``fmt`` z. B. .U = 16 Bit
+        vorzeichenlos) -> Liste von Zahlen.
+        """
         resp = self.command(f"RDS {device}{fmt} {count}")
         tokens = [t for t in re.split(r"[ ,]+", resp) if t]
         if len(tokens) < count:
@@ -123,6 +131,9 @@ class KvReader(WordReader):
     default_gap = 16
 
     def __init__(self, driver, plc, variables):
+        """Leseplan: Wortgeräte über WordReader; Bitgeräte je Gerät zu Gruppen fortlaufender Bits (über Kanalgrenzen,
+        siehe ``logical``); Timer/Zähler einzeln.
+        """
         self.bits = []          # (pos, Gerät, Nummer, Adresse)
         self.counters = []      # (pos, Gerät, Nummer, Adresse)
         super().__init__(driver, plc, variables)
@@ -141,6 +152,7 @@ class KvReader(WordReader):
                     self.bit_requests.append(cur)
 
     def claim(self, pos, v):
+        """Bitgeräte und Timer/Zähler liest dieser Leser selbst (nicht über Wortanfragen)."""
         dev, n, _bit = parse(v.address)
         if dev in BIT_DEVICES:
             if v.dtype != "BOOL":
@@ -153,20 +165,27 @@ class KvReader(WordReader):
         return False
 
     def parse(self, address, dtype):
+        """Adresse -> (Gerät, Nummer, Bit)."""
         return parse(address)
 
     def open(self):
+        """Host-Link-Verbindung öffnen."""
         self.client = HostLinkClient(self.plc.params)
         self.client.connect()
 
     def close_transport(self):
+        """Verbindung schließen."""
         if getattr(self, "client", None) is not None:
             self.client.close()
 
     def read_words(self, dev, start, count):
+        """Wortgeräte als 16-Bit-Werte (Format .U) lesen."""
         return self.client.read_consecutive(device_text(dev, start), count, ".U")
 
     def read(self):
+        """Ein Messzyklus: Wortgeräte (WordReader), dann die Bitgruppen (RDS ohne Format, Wert 0/1) und die Istwerte der
+        Timer/Zähler (RD … .D, 32 Bit).
+        """
         out = super().read()
         for dev, lo, hi, items, first in self.bit_requests:
             try:
@@ -192,11 +211,13 @@ class KvReader(WordReader):
         return out
 
     def endpoint(self):
+        """„IP:Port“ für Fehlermeldungen."""
         p = self.plc.params
         return f"{p.get('ip', '')}:{p.get('port', 8501)}"
 
 
 class KvDriver(Driver):
+    """Treiber „kvhostlink“ (siehe Modulbeschreibung)."""
     id = "kvhostlink"
     name = tr("KEYENCE KV (Host Link)")
     description = tr("KV-8000/7000/5000/3000/Nano, KV-X über Ethernet, Host-Link-Protokoll (Port 8501)")
@@ -216,9 +237,11 @@ class KvDriver(Driver):
     block_uses_index = False
 
     def summary(self, plc):
+        """„IP:Port“."""
         return f"{plc.params.get('ip', '')}:{plc.params.get('port', 8501)}"
 
     def check_address(self, address, dtype):
+        """Adresse, Typ und Bitnummer zueinander passend? Bitgeräte nur BOOL, Timer/Zähler als Ganzzahl."""
         try:
             dev, n, bit = parse(address)
         except ValueError as e:
@@ -234,6 +257,7 @@ class KvDriver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Einheitliche Schreibweise."""
         try:
             dev, n, bit = parse(address)
         except ValueError:
@@ -241,6 +265,9 @@ class KvDriver(Driver):
         return device_text(dev, n) + (f".{bit}" if bit is not None else "")
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements: Kanal-Bitgeräte zählen über die Kanalgrenze (R1015 -> R1100), übrige Geräte
+        fortlaufend, BOOL in Wortgeräten bitweise.
+        """
         try:
             dev, n, bit = parse(block.address)
         except ValueError:
@@ -256,9 +283,11 @@ class KvDriver(Driver):
         return device_text(dev, n + i * WORD_TYPES.get(block.dtype, (1,))[0])
 
     def check_block(self, block):
+        """Startadresse und Typ wie bei einer Einzelvariable prüfen."""
         return self.check_address(block.address, block.dtype) or super().check_block(block)
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (siehe KvReader)."""
         return KvReader(self, plc, variables)
 
 

@@ -49,6 +49,9 @@ def parse(address):
 
 
 class SimReader(Reader):
+    """Reader: liest die Variablen EINER Steuerung (ein Objekt je Lese-Thread). ``self.vars``, ``self.plc`` und
+    ``self.errors`` stellt die Basisklasse bereit.
+    """
     def connect(self):
         # Hier: Verbindung zur Steuerung aufbauen (Socket, Bibliothek …). Bei Fehlern eine Ausnahme auslösen.
         self.t0 = time.time()
@@ -87,6 +90,7 @@ class SimReader(Reader):
 
 
 class SimDriver(Driver):
+    """Beschreibung des Treibers: Kennung, Name, Parameter, Datentypen und Hilfetexte für die Adressen."""
     id = "sim"
     name = "Simulation (Vorlage)"
     description = "Testwerte ohne Steuerung – Beispiel für einen eigenen Treiber"
@@ -99,9 +103,11 @@ class SimDriver(Driver):
     block_hint = "z. B. sinus:10 (Elemente: Perioden 10, 11, 12 … s)"
 
     def summary(self, plc):
+        """Kurzbeschreibung der Verbindung für die Übersicht im Konfigurationsprogramm."""
         return f"Simulation, Amplitude {plc.params.get('amplitude', 100)}"
 
     def check_address(self, address, dtype):
+        """Adresse prüfen -> Fehlertext oder "" (wird beim Eingeben und Speichern aufgerufen)."""
         try:
             parse(address)
         except ValueError as e:
@@ -109,6 +115,7 @@ class SimDriver(Driver):
         return ""
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements eines Blocks (hier: Periode um i Sekunden erhöht)."""
         try:
             kind, arg = parse(block.address)
         except ValueError:
@@ -116,6 +123,7 @@ class SimDriver(Driver):
         return f"{kind}:{arg + i:g}"
 
     def create_reader(self, plc, variables):
+        """Reader für eine Steuerung und ihre Variablen erzeugen."""
         return SimReader(self, plc, variables)
 
 

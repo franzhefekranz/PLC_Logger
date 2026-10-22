@@ -40,6 +40,9 @@ class BlockSpecDialog(QDialog):
     """Kleiner Dialog: Startindex und Anzahl für die Übernahme eines Arrays als Block."""
 
     def __init__(self, parent, node):
+        """Eingabefelder für Startindex und Anzahl, begrenzt auf die Indexgrenzen (TIA: Array[lo..hi]) des Arrays
+        ``node``.
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("Array als Block übernehmen"))
         n, lo = node.length, node.lower
@@ -163,6 +166,7 @@ class TagBrowser(QDialog):
         job = {"result": None, "error": None, "t0": time.time()}
 
         def work():
+            """Läuft im Hintergrund-Thread: Variablenliste lesen, Ergebnis oder Fehler in ``job`` ablegen."""
             try:
                 job["result"] = fetch_tag_list(self.plc)     # speichert die Liste auch zwischen
             except Exception as e:          # Verbindung, fehlendes s7commplus …
@@ -176,6 +180,9 @@ class TagBrowser(QDialog):
         self.poll.start(150)
 
     def _poll(self):
+        """Timer (Qt-Thread): Fortschritt anzeigen, solange der Lade-Thread läuft; danach Fehler melden oder die Liste
+        zwischenspeichern und anzeigen.
+        """
         job = self._job
         if job is None:
             self.poll.stop()
@@ -267,6 +274,7 @@ class TagBrowser(QDialog):
         self._busy = False
 
     def _double_click(self, item):
+        """Doppelklick auf ein Array: als Block übernehmen."""
         n = item.data(0, ROLE_NODE)
         if n is not None and n.can_block:
             self.take_block()
@@ -285,6 +293,7 @@ class TagBrowser(QDialog):
         self._update_count()
 
     def _update_count(self):
+        """Anzeige „n Variablen, m Blöcke gewählt“ aktualisieren."""
         nb = len(self.result_blocks)
         self.lbl_count.setText(tr("{0} Variablen").format(len(self.checked)) + (tr(", {0} Blöcke").format(nb) if nb else "") + tr(" gewählt"))
 
@@ -305,6 +314,7 @@ class TagBrowser(QDialog):
             self._update_count()
 
     def take_selection(self):
+        """OK: angehakte Variablen (nach Namen sortiert) und Zieldiagramm übernehmen und den Dialog schließen."""
         if not self.checked and not self.result_blocks:
             QMessageBox.information(self, tr("Auswahl"), tr("Es sind keine neuen Variablen angehakt und keine Blöcke vorgemerkt."))
             return

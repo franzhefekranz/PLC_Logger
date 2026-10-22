@@ -44,6 +44,9 @@ def cache_path(plc: Plc):
 
 
 def save_cache(plc: Plc, data):
+    """Variablenliste als JSON zwischenspeichern – erst in eine Hilfsdatei, dann ersetzen, damit ein Abbruch keine halbe
+    Datei hinterlässt.
+    """
     os.makedirs(os.path.dirname(cache_path(plc)), exist_ok=True)
     tmp = cache_path(plc) + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -138,6 +141,7 @@ class TagNode:
 
     @property
     def length(self):
+        """Anzahl der Elemente der ersten Array-Dimension (0 ohne Array)."""
         return self.dims[0] if self.dims else 0
 
 
@@ -172,9 +176,11 @@ def split_name(name):
 
 
 class _Build:
+    """Hilfsknoten beim Aufbau des Baums aus der flachen Liste (Glieder des Namens -> verschachtelte Knoten)."""
     __slots__ = ("label", "path", "type", "children", "is_index", "leaf")
 
     def __init__(self, label, path, is_index=False):
+        """Knoten mit Beschriftung und vollem Pfad; ``is_index`` = Glied ist ein Array-Index „[3]“."""
         self.label, self.path, self.is_index = label, path, is_index
         self.type, self.children, self.leaf = "", {}, False
 
@@ -188,6 +194,9 @@ class TagTree:
                    "S7Timers": tr("Zeiten (S7Timers)"), "S7Counters": tr("Zähler (S7Counters)")}
 
     def __init__(self, data):
+        """Baum aus der flachen Liste ``data`` ({"items": [{name, type …}]}) aufbauen: jeder Name wird in Glieder
+        zerlegt und eingefügt.
+        """
         self.data = data or {"items": []}
         self.types = {}                               # Kompatibilität mit dem Dialog (keine UDT-Beschreibungen)
         self.root = _Build("", "")
@@ -200,6 +209,9 @@ class TagTree:
             self.leaves.append((name, it.get("data_type", "")))
 
     def _insert(self, name, dtype):
+        """Variable ``name`` Glied für Glied in den Baum einfügen (fehlende Zwischenknoten anlegen); der letzte Knoten
+        ist das Blatt.
+        """
         node, path = self.root, ""
         for tok in split_name(name):
             is_index = tok.startswith("[")
@@ -230,6 +242,7 @@ class TagTree:
         return TagNode(b.label, b.path, "STRUCT", "struct")
 
     def _find(self, path):
+        """Knoten zum Pfad ``path`` suchen (leer = Wurzel) oder None."""
         node = self.root
         if not path:
             return node

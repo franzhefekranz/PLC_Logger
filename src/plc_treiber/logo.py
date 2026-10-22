@@ -75,6 +75,7 @@ def parse_tsap(text):
 
 
 class _Item:
+    """Eine zu lesende Variable: Position im Ergebnis, VM-Byte, Bit, Typ, Adresse."""
     __slots__ = ("pos", "byte", "bit", "dtype", "address")
 
 
@@ -84,6 +85,9 @@ class LogoReader(Reader):
     GAP = 32
 
     def __init__(self, driver, plc, variables):
+        """Adressen auf den Variablenspeicher abbilden (abhängig von der Gerätegeneration) und benachbarte zu Bereichen
+        zusammenfassen (Lücke höchstens GAP, Länge höchstens MAX_BYTES).
+        """
         super().__init__(driver, plc, variables)
         self.client = None
         gen = str(plc.params.get("generation", "0BA8"))
@@ -114,6 +118,7 @@ class LogoReader(Reader):
                 self.ranges.append([it.byte, end, [it]])
 
     def connect(self):
+        """Mit den TSAP-Werten verbinden und einmal lesen -> Anzahl lesbarer Variablen."""
         self.close()
         from snap7.logo import Logo
         p = self.plc.params
@@ -133,6 +138,7 @@ class LogoReader(Reader):
         return max(0, len(self.vars) - len(self.errors))
 
     def read(self):
+        """Ein Messzyklus: jeden VM-Bereich mit einer Anfrage lesen (DB 1) und die Variablen dekodieren (Big Endian)."""
         if self.client is None:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
@@ -162,6 +168,7 @@ class LogoReader(Reader):
         return out
 
     def close(self):
+        """Verbindung trennen."""
         if self.client is not None:
             try:
                 self.client.disconnect()
@@ -171,6 +178,7 @@ class LogoReader(Reader):
 
 
 class LogoDriver(Driver):
+    """Treiber „logo“ (siehe Modulbeschreibung)."""
     id = "logo"
     name = tr("Siemens LOGO! (0BA7/0BA8)")
     description = tr("LOGO! 7 und 8 über S7-Kommunikation (python-snap7); VM-Adressen oder I/Q/M/AI/AQ/AM")
@@ -193,10 +201,12 @@ class LogoDriver(Driver):
     library = "python-snap7"
 
     def summary(self, plc):
+        """„IP, LOGO! 0BA8, TSAP 02.00“."""
         p = plc.params
         return f"{p.get('ip', '')}, LOGO! {p.get('generation', '0BA8')}, TSAP {p.get('tsap_logo', '02.00')}"
 
     def check_params(self, params):
+        """IP vorhanden und beide TSAP-Werte lesbar (hh.hh oder Zahl)?"""
         err = super().check_params(params)
         if err:
             return err
@@ -210,6 +220,7 @@ class LogoDriver(Driver):
         return ""
 
     def check_address(self, address, dtype):
+        """Adresse gültig, Typ unterstützt, Bitadresse nur mit BOOL?"""
         try:
             _byte, bit, _t = vm_address(address)
         except ValueError as e:
@@ -221,9 +232,11 @@ class LogoDriver(Driver):
         return ""
 
     def normalize_address(self, address, dtype):
+        """Großbuchstaben ohne Leerzeichen."""
         return (address or "").strip().upper().replace(" ", "")
 
     def block_element_address(self, block, i):
+        """Adresse des i-ten Elements im VM (BOOL als Vx.y, sonst VB/VW/VD in Typgröße)."""
         try:
             byte, bit, _t = vm_address(block.address)
         except ValueError:
@@ -236,14 +249,17 @@ class LogoDriver(Driver):
         return f"{prefix}{byte + i * size}"
 
     def check_block(self, block):
+        """Startadresse und Typ wie bei einer Einzelvariable prüfen."""
         err = self.check_address(block.address, block.dtype)
         return err or super().check_block(block)
 
     def check_library(self):
+        """python-snap7 (mit LOGO!-Unterstützung) vorhanden?"""
         import snap7.logo  # noqa: F401
         return True
 
     def create_reader(self, plc, variables):
+        """Leser für eine LOGO! (siehe LogoReader)."""
         return LogoReader(self, plc, variables)
 
 

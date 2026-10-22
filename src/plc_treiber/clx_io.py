@@ -115,6 +115,9 @@ class PlcTagLib:
     """ctypes-Hülle der benötigten libplctag-Funktionen."""
 
     def __init__(self, path=None):
+        """Bibliothek laden und die Signaturen (Rückgabe- und Argumenttypen) der benutzten C-Funktionen festlegen – ohne
+        sie würde ctypes Zahlen falsch übergeben.
+        """
         path = path or find_library()
         if not path:
             raise RuntimeError(tr("libplctag wurde nicht gefunden: plctag.dll (64 Bit, aus "
@@ -144,37 +147,48 @@ class PlcTagLib:
             pass
 
     def _sig(self, name, restype, argtypes):
+        """Rückgabe- und Argumenttypen einer C-Funktion setzen."""
         f = getattr(self.dll, name)
         f.restype, f.argtypes = restype, argtypes
 
     # --- dünne Aufrufe (Namen wie in C ohne Präfix)
     def create(self, attrs: str, timeout_ms: int) -> int:
+        """plc_tag_create: Tag mit Attribut-Text anlegen -> Handle (>= 0) oder Fehlercode (< 0); timeout 0 = asynchron.
+        """
         return self.dll.plc_tag_create(attrs.encode("utf-8"), timeout_ms)
 
     def destroy(self, h):
+        """plc_tag_destroy: Tag freigeben."""
         return self.dll.plc_tag_destroy(h)
 
     def read(self, h, timeout_ms=0):
+        """plc_tag_read: Lesen anstoßen (timeout 0 = asynchron, Ergebnis über ``status``)."""
         return self.dll.plc_tag_read(h, timeout_ms)
 
     def status(self, h):
+        """plc_tag_status: Zustand eines Tags (0 = OK, 1 = in Arbeit, < 0 = Fehler)."""
         return self.dll.plc_tag_status(h)
 
     def abort(self, h):
+        """plc_tag_abort: laufende Anfrage abbrechen."""
         return self.dll.plc_tag_abort(h)
 
     def decode(self, err) -> str:
+        """Fehlercode als Text (plc_tag_decode_error)."""
         s = self.dll.plc_tag_decode_error(err)
         return s.decode("utf-8", "replace") if s else f"Fehler {err}"
 
     def elem_size(self, h, default):
+        """Elementgröße eines Tags in Bytes (von der Steuerung gemeldet, sonst ``default``)."""
         v = self.dll.plc_tag_get_int_attribute(h, b"elem_size", 0)
         return v if v > 0 else default
 
     def get(self, h, dtype, offset):
+        """Wert des Typs ``dtype`` am Byte-Offset ``offset`` des gelesenen Puffers."""
         return float(getattr(self.dll, GETTERS[dtype])(h, offset))
 
     def get_bit(self, h, bit):
+        """Bit ``bit`` des gelesenen Puffers."""
         return float(self.dll.plc_tag_get_bit(h, bit) > 0)
 
 
@@ -209,6 +223,7 @@ class _Entry:
     __slots__ = ("name", "handle", "dtype", "count", "items", "bit", "esize", "error")
 
     def __init__(self, name, dtype, count, items, bit):
+        """Eintrag für den Tag ``name`` (bei Blöcken der Name des ersten Elements und ``count`` Elemente)."""
         self.name, self.dtype, self.count, self.items, self.bit = name, dtype, count, items, bit
         self.handle, self.esize, self.error = None, TYPES[dtype][0], ""
 
@@ -221,6 +236,7 @@ class TagReader:
     stören die übrigen Tags nicht. Sind ALLE Tags gestört (Verbindung weg), löst ``read()`` ConnectionError aus."""
 
     def __init__(self, plc: Plc, variables, lib=None):
+        """Leseplan aufstellen: je Einzelvariable ein Tag, je Block EIN Tag über alle Elemente (elem_count)."""
         self.plc, self.vars = plc, list(variables)
         self.lib = lib
         self.entries = []
@@ -246,6 +262,7 @@ class TagReader:
 
     @property
     def timeout_ms(self):
+        """Zeitlimit je Lesezyklus (mindestens 100 ms)."""
         return max(100, int(self.plc.timeout_ms))
 
     def connect(self):
@@ -375,25 +392,30 @@ class FakeLib:
     ``missing``: Tag-Namen, die es "nicht gibt"; ``offline=True``: Steuerung nicht erreichbar."""
 
     def __init__(self, missing=(), offline=False):
+        """Simulierte Bibliothek; ``missing`` = Tags, die es nicht gibt, ``offline`` = Steuerung nicht erreichbar."""
         self.missing, self.offline = set(missing), offline
         self.tags, self.next = {}, 1
         self.t0 = time.time()
         self.version = "fake"
 
     def create(self, attrs, timeout_ms):
+        """Tag „anlegen“: Attribute merken, fortlaufende Handle-Nummer."""
         a = dict(p.split("=", 1) for p in attrs.split("&"))
         h, self.next = self.next, self.next + 1
         self.tags[h] = a
         return h
 
     def destroy(self, h):
+        """Tag freigeben."""
         self.tags.pop(h, None)
         return 0
 
     def read(self, h, timeout_ms=0):
+        """Lesen gelingt immer sofort (Werte entstehen in ``get``)."""
         return PLCTAG_STATUS_OK
 
     def status(self, h):
+        """Zeitüberschreitung im Offline-Fall, „nicht gefunden“ für fehlende Tags, sonst OK."""
         if self.offline:
             return PLCTAG_ERR_TIMEOUT
         if self.tags[h]["name"].split("[")[0] in self.missing or self.tags[h]["name"] in self.missing:
@@ -401,15 +423,19 @@ class FakeLib:
         return PLCTAG_STATUS_OK
 
     def abort(self, h):
+        """Nichts abzubrechen."""
         return 0
 
     def decode(self, err):
+        """Fehlertexte wie die echte Bibliothek."""
         return {-19: "PLCTAG_ERR_NOT_FOUND", -32: "PLCTAG_ERR_TIMEOUT"}.get(err, f"Fehler {err}")
 
     def elem_size(self, h, default):
+        """Elementgröße wie vorgegeben."""
         return default
 
     def get(self, h, dtype, offset):
+        """Simulierter Wert: BOOL wechselt jede Sekunde, REAL als Sinus, Ganzzahlen als Rampe."""
         t = time.time() - self.t0
         k = (hash(self.tags[h]["name"]) % 7) + offset
         if dtype == "BOOL":
@@ -419,4 +445,5 @@ class FakeLib:
         return float(int(t * 10 + k) % 1000)
 
     def get_bit(self, h, bit):
+        """Simuliertes Bit (wechselt jede Sekunde)."""
         return float(int(time.time() - self.t0) % 2)
