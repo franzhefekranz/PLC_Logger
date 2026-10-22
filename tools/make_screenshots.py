@@ -242,6 +242,9 @@ def s_logger_online():
     CTX["w"] = w
     w.resize(1600, 1000)
     w.show()
+    from PySide6.QtCore import Qt
+    wait(300)
+    w.resizeDocks([w.dock], [230], Qt.Orientation.Vertical)     # Wertetabelle: mehrere Zeilen sichtbar
     w.act_run.setChecked(True)
     t_end = time.time() + 75
     while time.time() < t_end:
@@ -307,6 +310,7 @@ def s_layouts():
 @shot("logger_offline")
 def s_offline():
     """Offline mit Linealen, Wertetabelle, Ausschnitte."""
+    from PySide6.QtCore import Qt
     w = CTX["w"]
     w.act_run.setChecked(False)
     wait(400)
@@ -320,7 +324,10 @@ def s_offline():
     wait(600)
     save("logger_offline", w)
     save("logger_lineale", w, (0, 0, 1430, 420))
-    save("wertetabelle", w.dock)
+    w.resizeDocks([w.dock], [420], Qt.Orientation.Vertical)
+    wait(400)
+    save("wertetabelle", w.dock, (0, 0, min(760, w.dock.width()), w.dock.height()))
+    w.resizeDocks([w.dock], [230], Qt.Orientation.Vertical)
     p = w.panels[2] if len(w.panels) > 2 else w.master
     pm = p.grab()
     save("bool_signale", pm, (0, max(0, pm.height() - 240), min(600, pm.width()), min(240, pm.height())))
