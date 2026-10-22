@@ -66,6 +66,9 @@ class IoSignal:
     scanned: bool = False                 # aus einem Scan-Bereich (nicht aus der IO-Liste)
 
     def __post_init__(self):
+        """Laufzeitfelder anlegen, die nicht gespeichert werden (letzter Wert, Zeit des Wechsels, Lesefehler, Zustand
+        der automatischen Prüfpunkte).
+        """
         self.value = math.nan             # letzter Wert (binär 0/1, analog Rohwert)
         self.changed = 0.0                # Zeitpunkt des letzten Wechsels (time.time())
         self.error = ""                   # Lesefehler dieses Signals
@@ -75,26 +78,34 @@ class IoSignal:
 
     @property
     def key(self):
+        """Eindeutiger Schlüssel (Steuerung, vereinheitlichte Adresse) – erkennt dasselbe Signal auch in anderer
+        Schreibweise.
+        """
         return (self.plc, canon_address(self.address))
 
     @property
     def binary(self) -> bool:
+        """True bei Digitalsignalen (DI/DO)."""
         return self.kind in ("DI", "DO")
 
     @property
     def is_input(self) -> bool:
+        """True bei Eingängen (DI/AI) – nur sie können sich „im Feld“ bewegen und vertauscht sein."""
         return self.kind in ("DI", "AI")
 
     @property
     def label(self) -> str:
+        """Anzeigename: Symbol, sonst Adresse."""
         return self.symbol or self.address
 
     def to_dict(self) -> dict:
+        """Für die Prüfstand-Datei: nur Felder mit Inhalt (spart Platz), Adresse, Art und Status immer."""
         d = asdict(self)
         return {k: v for k, v in d.items() if v not in ("", {}, 0, False) or k in ("address", "kind", "status")}
 
     @classmethod
     def from_dict(cls, d: dict):
+        """Signal aus der Prüfstand-Datei; unbekannte Felder (neuere Versionen) werden ignoriert."""
         names = cls.__dataclass_fields__
         sig = cls(**{k: v for k, v in d.items() if k in names})
         sig.points = {str(k): float(v) for k, v in (sig.points or {}).items()}
@@ -102,6 +113,7 @@ class IoSignal:
 
 
 def norm_address(address: str) -> str:
+    """Adresse ohne Leerzeichen und in Großbuchstaben."""
     return (address or "").strip().replace(" ", "").upper()
 
 
@@ -118,10 +130,12 @@ def canon_address(address: str) -> str:
 
 
 def user_name() -> str:
+    """Angemeldeter Benutzer des Rechners (Prüfer, wenn am PC abgehakt wird)."""
     return os.environ.get("USERNAME") or os.environ.get("USER") or ""
 
 
 def now_text() -> str:
+    """Jetzt als „JJJJ-MM-TT hh:mm:ss“."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -184,6 +198,7 @@ def guess_kind_dtype(address: str, kind_text: str = "", dtype_text: str = ""):
 
 
 def _parse_kind(text: str) -> str:
+    """Signalart aus einer Spalte „Typ“: DI, DE, Digitaleingang, Input … -> DI/DO/AI/AO oder ""."""
     t = (text or "").strip().upper().replace(" ", "").replace("-", "")
     if not t:
         return ""
@@ -240,6 +255,9 @@ COLUMNS = {
 
 
 def _key(text) -> str:
+    """Spaltenüberschrift vergleichbar machen: klein, nur Buchstaben und Ziffern („Logische Adresse“ ->
+    „logischeadresse“).
+    """
     return re.sub(r"[^0-9a-zäöüß]", "", str(text or "").lower())
 
 
@@ -256,6 +274,7 @@ def map_columns(header) -> dict:
 
 
 def _num(text, default=None):
+    """Zahl aus einer Zelle (auch mit Dezimalkomma); leer oder ungültig: ``default``."""
     if text in (None, ""):
         return default
     if isinstance(text, (int, float)):
@@ -293,6 +312,7 @@ def import_rows(header, rows):
                             "Logische Adresse, Operand, Tag-Name)."))
 
     def cell(row, fld):
+        """Inhalt der Spalte für ``fld`` als Text (ganze Zahlen aus Excel ohne „.0“)."""
         i = cols.get(fld)
         if i is None or i >= len(row) or row[i] is None:
             return ""
@@ -330,6 +350,7 @@ def import_rows(header, rows):
 
 
 def import_file(path):
+    """IO-Liste aus einer CSV- oder Excel-Datei importieren -> (Signale, Warnungen)."""
     from plc_export import read_table
     header, rows = read_table(path)
     if not header:
@@ -348,6 +369,7 @@ class ScanRange:
     plc: str = ""
 
     def addresses(self, driver_id: str) -> list:
+        """Alle Bitadressen des Bereichs in der Schreibweise des Treibers (über dessen Blockadressen)."""
         drv = get_driver(driver_id)
         blk = Block(name="scan", address=driver_address(self.start, driver_id), dtype="BOOL",
                     count=max(1, int(self.count)), driver=driver_id)
@@ -378,6 +400,7 @@ def matrix_rows(signals, per_row: int = 8):
             continue
         parts = s7_parts(sig.address)
         if parts and parts[1] == "X":
+            # Zeile je (Steuerung, Bereich, Byte); Spalte = Bitnummer.
             by_byte.setdefault((sig.plc, parts[0], parts[2]), [None] * 8)[parts[3]] = sig
         else:
             other.append(sig)
@@ -400,6 +423,7 @@ def matrix_rows(signals, per_row: int = 8):
 # Analogwerte
 # ---------------------------------------------------------------------------------------------------------------------
 def scale(sig: IoSignal, raw: float) -> float:
+    """Rohwert in die technische Einheit umrechnen (lineare Skalierung Rohwert min/max -> Messbereich min/max)."""
     span = sig.raw_max - sig.raw_min
     if not span or math.isnan(raw):
         return math.nan
@@ -407,10 +431,12 @@ def scale(sig: IoSignal, raw: float) -> float:
 
 
 def point_target(sig: IoSignal, pct: float) -> float:
+    """Sollwert eines Prüfpunkts (0/50/100 %) in der technischen Einheit."""
     return sig.eng_min + (sig.eng_max - sig.eng_min) * pct / 100.0
 
 
 def point_ok(sig: IoSignal, pct: float, eng: float, tol_pct: float) -> bool:
+    """True, wenn der Messwert ``eng`` innerhalb der Toleranz (in % des Messbereichs) um den Prüfpunkt liegt."""
     span = abs(sig.eng_max - sig.eng_min) or 1.0
     return not math.isnan(eng) and abs(eng - point_target(sig, pct)) <= span * tol_pct / 100.0
 
@@ -458,6 +484,7 @@ def analog_fault(sig: IoSignal, raw: float) -> str:
 # ---------------------------------------------------------------------------------------------------------------------
 @dataclass
 class Change:
+    """Ein erkannter Wechsel eines Signals (für „Was hat sich bewegt?“), ggf. mit Hinweis auf Vertauschung."""
     ts: float
     sig: IoSignal
     old: float
@@ -481,6 +508,7 @@ class IoTracker:
     SWAP_QUIET_S = 3.0
 
     def __init__(self):
+        """Leerer Tracker: Optionen (automatisch abhaken, Prüfpunkte, Toleranz) und die Wechselhistorie."""
         self.auto_ok = False
         self.auto_points = True
         self.tolerance = 1.0              # % des Messbereichs
@@ -491,13 +519,20 @@ class IoTracker:
         self.seq = 0
 
     def _log(self, ch: Change):
+        """Wechsel nummerieren und vorn in die Historie einfügen (höchstens HISTORY Einträge)."""
         self.seq += 1
         ch.seq = self.seq
         self.history.insert(0, ch)
         del self.history[self.HISTORY:]
 
     def feed(self, sig: IoSignal, value: float, ts: float, error: str = ""):
-        """Neuen Wert eines Signals verarbeiten. Rückgabe: Change oder None."""
+        """Neuen Wert eines Signals verarbeiten. Rückgabe: Change oder None.
+
+        Digital: ein Wechsel setzt die Flankenbits; nach 0→1→0 wird ein offenes Signal bei „automatisch abhaken“ OK.
+        Analog: Drahtbruch erkennen (Fehlerwert kommt und geht), Prüfpunkte verfolgen und nur Änderungen über 2 % des
+        Messbereichs als Wechsel melden (Rauschen). Wechselt ein anderes Eingangssignal als das gerade geprüfte, bekommt
+        der Wechsel einen Hinweis „Vertauschung?“ – aber nur, wenn das geprüfte Signal einige Sekunden ruhig war.
+        """
         sig.error = error
         old = sig.value
         if value is None or math.isnan(value):
@@ -509,6 +544,7 @@ class IoTracker:
         broke = False
         if not sig.binary and sig.is_input:
             if analog_broken(sig, value):
+                # Neuer Drahtbruch, wenn noch keiner gesehen wurde oder das Signal schon wieder gültig war.
                 broke = not sig.seen & SEEN_BREAK or bool(sig.seen & SEEN_BACK)
                 sig.seen = (sig.seen | SEEN_BREAK) & ~SEEN_BACK if broke else sig.seen
             elif sig.seen & SEEN_BREAK and not sig.seen & SEEN_BACK:
@@ -549,6 +585,9 @@ class IoTracker:
         return ch
 
     def _analog_points(self, sig: IoSignal, value: float, ts: float):
+        """Prüfpunkte automatisch übernehmen: liegt der Wert des geprüften (oder auf einem Smartphone gewählten)
+        Analogsignals STABLE_S lang um 0/50/100 %, wird der Punkt eingetragen; sind alle drei da, wird das Signal OK.
+        """
         if not self.auto_points or (sig is not self.expected and sig not in self.watched):
             return
         eng = scale(sig, value)
@@ -578,6 +617,7 @@ class IoTracker:
         return point_ok(sig, pct, eng, self.tolerance)
 
     def pop_status_changes(self):
+        """Automatisch geänderte Signale seit dem letzten Abruf abholen (das Fenster aktualisiert sie)."""
         out, self.status_changed = self.status_changed, []
         return out
 
@@ -595,6 +635,7 @@ def progress(signals):
 # ---------------------------------------------------------------------------------------------------------------------
 @dataclass
 class IoProject:
+    """Ein Prüfstand: Signale, Scan-Bereiche, zugehörige Konfiguration und Optionen (Datei ``*.iocheck.json``)."""
     signals: list = field(default_factory=list)
     scans: list = field(default_factory=list)
     config: str = ""                       # Konfigurationsdatei (Steuerungen)
@@ -602,6 +643,7 @@ class IoProject:
     path: str = ""
 
     def save(self, path=None):
+        """Prüfstand speichern (erst in eine temporäre Datei, dann ersetzen)."""
         path = path or self.path
         doc = {"format": FORMAT, "version": 1, "gespeichert": now_text(), "config": self.config,
                "options": self.options, "scans": [asdict(s) for s in self.scans],
@@ -614,6 +656,7 @@ class IoProject:
 
     @classmethod
     def load(cls, path):
+        """Prüfstand laden; andere JSON-Dateien werden mit einer Meldung abgewiesen."""
         with open(path, encoding="utf-8") as f:
             doc = json.load(f)
         if doc.get("format") != FORMAT:
@@ -629,6 +672,7 @@ RESULT_HEADER = [N_("Steuerung"), N_("Adresse"), N_("Symbol"), N_("Kommentar"), 
 
 
 def result_rows(signals):
+    """Zeilen der Ergebnistabelle (eine je Signal, Messpunkte als Text)."""
     rows = []
     for s in signals:
         pts = ", ".join(f"{p} %: {s.points[str(p)]:g}{(' ' + s.unit) if s.unit else ''}"
@@ -639,6 +683,7 @@ def result_rows(signals):
 
 
 def write_result(path, signals):
+    """Ergebnis als CSV- oder Excel-Datei speichern."""
     from plc_export import write_table
     write_table(path, [tr(h) for h in RESULT_HEADER], result_rows(signals), sheet=tr("IO-Check"))
 
@@ -684,6 +729,7 @@ class IoReader(threading.Thread):
     Status ("verbinde", "ok", "fehler", Text) ebenfalls über die Warteschlange. demo: simulierte Werte."""
 
     def __init__(self, idx: int, plc: Plc, signals, out: queue.Queue, interval_ms=200, demo=False):
+        """Lese-Thread für Steuerung Nummer ``idx`` und ihre Signale; Ergebnisse gehen in die Warteschlange ``out``."""
         super().__init__(name=f"iocheck-{plc.name}", daemon=True)
         self.idx, self.plc, self.signals, self.out = idx, plc, list(signals), out
         self.interval = max(0.05, interval_ms / 1000.0)
@@ -691,12 +737,17 @@ class IoReader(threading.Thread):
         self.stop_evt = threading.Event()
 
     def stop(self):
+        """Thread beenden lassen (wirkt beim nächsten Warten)."""
         self.stop_evt.set()
 
     def _status(self, state, text):
+        """Verbindungszustand über die Warteschlange an das Fenster melden."""
         self.out.put(("status", self.idx, state, text))
 
     def run(self):
+        """Lese-Schleife (wie im Recorder): verbinden, lesen, Werte und Fehler je Signal melden; bei Fehlern neu
+        verbinden.
+        """
         if self.demo:
             return self._run_demo()
         try:
@@ -793,6 +844,9 @@ class IoWebBridge:
     WATCH_S = 15.0
 
     def __init__(self):
+        """Leere Brücke; ``version`` wird bei jeder neuen Signalliste erhöht (die Webseite lädt dann die festen Daten
+        neu).
+        """
         self.lock = threading.Lock()
         self.version = 0
         self.signals, self.matrix, self.groups = [], [], []
@@ -805,6 +859,7 @@ class IoWebBridge:
         self.watch = {}                       # Signal-Index -> Zeitpunkt der letzten Auswahl auf einer Webseite
 
     def publish(self, signals, tracker, title, matrix):
+        """Neue Signalliste veröffentlichen (Fenster-Thread): Signale, Tracker, Titel und Matrix als Indizes."""
         index = {id(s): i for i, s in enumerate(signals)}
         with self.lock:
             self.version += 1
@@ -815,17 +870,28 @@ class IoWebBridge:
             self.watch = {}
 
     def set_title(self, title):
+        """Titel des Prüfstands für die Webseite."""
         self.title = title
 
     def set_plc_state(self, states):
+        """Zustand der Steuerungen für die Webseite."""
         self.plc_state = [list(x) for x in states]
 
     def watched(self):
+        """Signale, die auf einer Webseite in den letzten WATCH_S Sekunden gewählt waren (deren Analog-Prüfpunkte werden
+        verfolgt).
+        """
         now = time.time()
         with self.lock:
             return {self.signals[i] for i, t in self.watch.items() if now - t < self.WATCH_S and i < len(self.signals)}
 
     def snapshot(self, client_version=None, selected=None, user=""):
+        """Daten für die Webseite: feste Daten (Adressen, Texte, Matrix) nur, wenn die Seite eine ältere Version kennt;
+        dazu je Signal Status, Wert, Fehler, Alter des letzten Wechsels, Flanken, Prüfer, Bemerkung, Messpunkte sowie
+        die letzten Wechsel und den Fortschritt.
+
+        ``selected``: auf der Webseite gewähltes Signal (wird beobachtet); ``user``: Prüfer der Anfrage.
+        """
         now = time.time()
         with self.lock:
             sigs, tracker, version = self.signals, self.tracker, self.version

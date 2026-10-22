@@ -101,6 +101,9 @@ class _Backend:
     note = ""
 
     def __init__(self, s):
+        """Einstellungen ``s`` (siehe ``db_settings``) übernehmen; der Tabellenname wird geprüft, weil er direkt in
+        SQL-Befehle eingesetzt wird.
+        """
         self.s = s
         self.con = None
         if not check_table_name(s["tabelle"]):
@@ -108,6 +111,7 @@ class _Backend:
         self.t = s["tabelle"]
 
     def close(self):
+        """Verbindung schließen (Fehler beim Schließen sind ohne Bedeutung)."""
         if self.con is not None:
             try:
                 self.con.close()
@@ -117,7 +121,9 @@ class _Backend:
 
 
 class SqliteBackend(_Backend):
+    """SQLite-Datei: Zeit als ISO-Text in UTC, WAL-Modus für gleichzeitiges Lesen, Index (variable, zeit)."""
     def connect(self):
+        """Datei öffnen bzw. anlegen, Tabelle und Index anlegen, falls sie fehlen."""
         os.makedirs(os.path.dirname(self.s["datei"]) or ".", exist_ok=True)
         self.con = sqlite3.connect(self.s["datei"], timeout=10, check_same_thread=False)
         cur = self.con.cursor()
@@ -128,6 +134,7 @@ class SqliteBackend(_Backend):
         self.con.commit()
 
     def insert(self, rows):
+        """Zeilen in einer Transaktion einfügen."""
         # SQLite kennt keinen Zeitstempeltyp: ISO-Text in UTC mit Millisekunden (sortierbar, von Grafana lesbar).
         data = [(z.strftime("%Y-%m-%d %H:%M:%S.") + f"{z.microsecond // 1000:03d}", p, v, w) for z, p, v, w in rows]
         self.con.executemany(f"INSERT INTO {self.t} (zeit, projekt, variable, wert) VALUES (?, ?, ?, ?)", data)
@@ -135,7 +142,9 @@ class SqliteBackend(_Backend):
 
 
 class MariaDbBackend(_Backend):
+    """MariaDB/MySQL über PyMySQL: DATETIME(3) in UTC, InnoDB mit Indizes für Variable+Zeit und Zeit."""
     def connect(self):
+        """Verbinden und die Tabelle anlegen, falls sie fehlt."""
         import pymysql                                  # nur bei Bedarf (pip install PyMySQL)
         s = self.s
         self.con = pymysql.connect(host=s["host"], port=s["port"], user=s["user"], password=s["passwort"],
@@ -148,6 +157,7 @@ class MariaDbBackend(_Backend):
         self.con.commit()
 
     def insert(self, rows):
+        """Zeilen mit ``executemany`` in einer Transaktion einfügen (DATETIME ohne Zeitzone, Werte in UTC)."""
         data = [(z.replace(tzinfo=None), p, v, w) for z, p, v, w in rows]   # DATETIME ohne Zeitzone (UTC)
         with self.con.cursor() as cur:
             cur.executemany(f"INSERT INTO `{self.t}` (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)", data)
@@ -155,7 +165,9 @@ class MariaDbBackend(_Backend):
 
 
 class TimescaleBackend(_Backend):
+    """PostgreSQL/TimescaleDB über psycopg 3: TIMESTAMPTZ; mit TimescaleDB als Hypertable (zeitlich partitioniert)."""
     def connect(self):
+        """Verbinden, Tabelle anlegen, nach Möglichkeit in eine Hypertable umwandeln und den Index anlegen."""
         import psycopg                                  # nur bei Bedarf (pip install "psycopg[binary]")
         s = self.s
         self.con = psycopg.connect(host=s["host"], port=s["port"], dbname=s["name"], user=s["user"] or None,
@@ -181,6 +193,7 @@ class TimescaleBackend(_Backend):
         self.con.commit()
 
     def insert(self, rows):
+        """Zeilen in einer Transaktion einfügen."""
         with self.con.cursor() as cur:
             cur.executemany(f'INSERT INTO "{self.t}" (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)', rows)
         self.con.commit()
@@ -229,6 +242,7 @@ class HttpDbError(RuntimeError):
     """Fehlerantwort eines HTTP-Datenbankservers (``code`` = HTTP-Status)."""
 
     def __init__(self, label, code, text):
+        """Fehlertext „<Datenbank> HTTP <Status>: <Meldung>“; der Status bleibt in ``code`` für die Auswertung."""
         super().__init__(f"{label} HTTP {code}: {text}")
         self.code = code
 
@@ -290,6 +304,7 @@ class _HttpDb:
     write_path = "/write"
 
     def __init__(self, s, timeout=10.0):
+        """Basis-URL und Anmeldekopf aus den Einstellungen bilden."""
         self.s = s
         self.url = server_url(s)
         self.timeout = timeout
@@ -313,11 +328,13 @@ class _HttpDb:
             raise HttpDbError(self.label, e.code, _http_error_text(e)) from None
 
     def get_json(self, path, params=None, data=None, timeout=None):
+        """Anfrage senden und die Antwort als JSON lesen."""
         with self.open(path, params, data=data, timeout=timeout,
                        content_type="application/json") as resp:
             return json.loads(resp.read().decode("utf-8") or "{}")
 
     def write_params(self):
+        """Zusätzliche Parameter der Schreibadresse (InfluxDB: Datenbankname); Standard: keine."""
         return None
 
     def write(self, lines):
@@ -331,9 +348,11 @@ class _HttpDb:
         raise NotImplementedError
 
     def cursor(self):
+        """Cursor im Stil von DB-API für SQL-Abfragen mit CSV-Ergebnis (siehe ``_CsvCursor``)."""
         return _CsvCursor(self)
 
     def close(self):
+        """Nichts zu tun: jede Anfrage nutzt eine eigene HTTP-Verbindung."""
         pass                                            # zustandslos (jede Anfrage eine eigene HTTP-Verbindung)
 
 
@@ -350,6 +369,7 @@ class QuestDbHttp(_HttpDb):
         return data
 
     def csv_query(self, sql):
+        """SQL-Abfrage über /exp; die Antwort ist eine CSV-Datei."""
         return self.open("/exp", {"query": sql}, timeout=120.0)
 
 
@@ -360,6 +380,7 @@ class InfluxDb3Http(_HttpDb):
     write_path = "/api/v3/write_lp"
 
     def write_params(self):
+        """InfluxDB 3 braucht beim Schreiben den Namen der Datenbank."""
         return {"db": self.s["name"]}
 
     def configure(self, what, body):
@@ -375,6 +396,7 @@ class InfluxDb3Http(_HttpDb):
             raise
 
     def csv_query(self, sql):
+        """SQL-Abfrage über /api/v3/query_sql mit CSV-Ergebnis."""
         return self.open("/api/v3/query_sql", {"db": self.s["name"], "q": sql, "format": "csv"}, timeout=120.0)
 
 
@@ -390,20 +412,24 @@ class _CsvCursor:
     um); leere Felder werden zu None. Die HTTP-Schnittstellen kennen keine Parameter: ``?`` wird durch Literale ersetzt."""
 
     def __init__(self, http):
+        """Cursor für die Verbindung ``http``; noch ohne Abfrage."""
         self.http = http
         self._resp = None
         self._rows = iter(())
 
     def execute(self, sql, params=()):
+        """Abfrage senden (Parameter als Literale eingesetzt); die Kopfzeile des CSV wird übersprungen."""
         self.close()
         self._resp = self.http.csv_query(_bind(sql, params))
         self._rows = csv.reader(io.TextIOWrapper(self._resp, encoding="utf-8", newline=""))
         next(self._rows, None)                          # Kopfzeile mit den Spaltennamen
 
     def fetchmany(self, n):
+        """Bis zu n weitere Zeilen; leere Felder werden zu None."""
         return [tuple(None if v == "" else v for v in row) for row in itertools.islice(self._rows, n) if row]
 
     def fetchall(self):
+        """Alle restlichen Zeilen (in Blöcken gelesen)."""
         out = []
         while True:
             chunk = self.fetchmany(20000)
@@ -412,6 +438,7 @@ class _CsvCursor:
             out.extend(chunk)
 
     def close(self):
+        """Antwortstrom schließen."""
         if self._resp is not None:
             try:
                 self._resp.close()
@@ -427,6 +454,7 @@ class QuestDbBackend(_Backend):
     Zeitüberschreitung) nicht zu doppelten Zeilen."""
 
     def connect(self):
+        """Tabelle anlegen: zeitlich partitioniert, projekt/variable als SYMBOL, nach Möglichkeit mit Deduplizierung."""
         con = QuestDbHttp(self.s)
         table = (f"CREATE TABLE IF NOT EXISTS {self.t} (zeit TIMESTAMP, projekt SYMBOL, variable SYMBOL, wert DOUBLE) "
                  "TIMESTAMP(zeit) PARTITION BY DAY")
@@ -438,6 +466,7 @@ class QuestDbBackend(_Backend):
         self.con = con
 
     def insert(self, rows):
+        """Zeilen im Line Protocol über HTTP schreiben."""
         self.con.write(_ilp_lines(self.t, rows))
 
 
@@ -446,6 +475,7 @@ class InfluxDb3Backend(_Backend):
     Gleiche Serie und gleicher Zeitpunkt überschreiben sich – ein wiederholt gesendeter Stapel ergibt keine Dubletten."""
 
     def connect(self):
+        """Datenbank und Tabelle anlegen (409 = gibt es schon); bei Rechtefehlern abbrechen."""
         con = InfluxDb3Http(self.s)
         con.configure("database", {"db": self.s["name"]})
         try:
@@ -459,6 +489,7 @@ class InfluxDb3Backend(_Backend):
         self.con = con
 
     def insert(self, rows):
+        """Zeilen im Line Protocol schreiben."""
         self.con.write(_ilp_lines(self.t, rows))
 
 
@@ -466,12 +497,14 @@ class VictoriaMetricsBackend(_Backend):
     """VictoriaMetrics: nichts anzulegen (Metrik <tabelle>_wert entsteht beim Schreiben); Werte im Line Protocol."""
 
     def connect(self):
+        """Erreichbarkeit und Anmeldung prüfen (Abfrage der Labels)."""
         con = VictoriaMetricsHttp(self.s)
         con.get_json("/api/v1/labels")                  # erreichbar und Anmeldung gültig?
         self.note = tr("Metrik {0}, Labels projekt und variable").format(vm_metric(self.t))
         self.con = con
 
     def insert(self, rows):
+        """Zeilen im Line Protocol schreiben (Metrik ``<tabelle>_wert``)."""
         self.con.write(_ilp_lines(self.t, rows))
 
 
@@ -502,6 +535,8 @@ class DbWriter(threading.Thread):
     ``status()`` liefert (Zustand, Text) für die Status-LED; Meldungen gehen an ``emit``."""
 
     def __init__(self, conn, names, emit=None, interval_s=1.0):
+        """Schreib-Thread anlegen (noch nicht gestartet). ``names``: Variablennamen in der Reihenfolge der Messzeilen.
+        """
         super().__init__(name="db-writer", daemon=True)
         self.s = db_settings(conn)
         self.names = list(names)
@@ -518,6 +553,12 @@ class DbWriter(threading.Thread):
 
     # ---- aus dem Sammler-Thread
     def put(self, ts, row):
+        """Eine Messzeile (aus dem Sammler-Thread) in den Puffer übernehmen – nur gültige Werte.
+
+        Mit „nur Änderungen“ entfällt ein Wert, wenn er gleich dem zuletzt geschriebenen ist und dieser jünger als
+        ``HEARTBEAT_S`` ist. Läuft der Puffer über (Datenbank lange nicht erreichbar), werden die ältesten Werte
+        verworfen und gezählt.
+        """
         z = datetime.datetime.fromtimestamp(round(ts, 3), datetime.timezone.utc)
         proj, only = self.s["projekt"], self.s["nur_aenderungen"]
         items = []
@@ -543,11 +584,13 @@ class DbWriter(threading.Thread):
 
     # ---- Zustand
     def _set(self, state, text):
+        """Zustand für die Status-LED setzen; bei einer Änderung eine Meldung ausgeben."""
         if self.state != (state, text):
             self.state = (state, text)
             self.emit(tr("[Datenbank] {0}").format(text))
 
     def status(self):
+        """(Zustand, Text) für die Status-LED, mit geschriebenen, wartenden und verworfenen Werten."""
         with self.lock:
             queued = len(self.buf)
         st, text = self.state
@@ -558,6 +601,9 @@ class DbWriter(threading.Thread):
 
     # ---- Thread
     def run(self):
+        """Thread-Hauptschleife: etwa jede Sekunde den Puffer schreiben; nach einem Fehler 5 s warten. Beim Stoppen ein
+        letztes Mal schreiben.
+        """
         while True:
             stopping = self.stop_evt.wait(self.interval)
             ok = self._flush()
@@ -645,41 +691,54 @@ class _ReadSql:
         raise NotImplementedError
 
     def table(self, t):
+        """Tabellenname in der Schreibweise der Datenbank (ggf. mit Anführungszeichen)."""
         return t
 
     def floor(self, expr):          # ganzzahliger Anteil (Zeit >= 0)
+        """Ganzzahliger Anteil eines Ausdrucks (für Zeiten >= 0)."""
         return f"FLOOR({expr})"
 
     def project_cond(self, project):    # Bedingung und Parameter für den Projektnamen
+        """Bedingung und Parameter für den Projektnamen."""
         return f"projekt = {self.ph}", [project]
 
     def raster_sql(self, t, where, r):  # Spalten: Rasternummer (Unix-Zeit / r), variable, Mittelwert; nach Zeit sortiert
+        """SQL für Mittelwerte je Zeitraster r: Spalten Rasternummer (Unix-Zeit / r), Variable, Mittelwert; nach Zeit
+        sortiert.
+        """
         bucket = self.floor(f"{self.epoch()} / {r!r}")
         return f"SELECT {bucket} AS b, variable, AVG(wert) FROM {t}{where} GROUP BY b, variable ORDER BY b"
 
 
 class _SqliteSql(_ReadSql):
+    """SQLite: Zeit ist ISO-Text; Unix-Zeit aus strftime('%s') plus Millisekunden."""
     ph = "?"
 
     def floor(self, expr):          # FLOOR fehlt in manchen SQLite-Versionen; CAST schneidet ab (für Zeiten >= 0 gleich)
+        """FLOOR fehlt in manchen SQLite-Versionen; CAST schneidet ab (für Zeiten >= 0 gleichwertig)."""
         return f"CAST({expr} AS INTEGER)"
 
     def epoch(self):
+        """Unix-Zeit der Spalte zeit, exakt auf Millisekunden (julianday wäre um einige µs ungenau)."""
         # exakt auf Millisekunden (julianday wäre als Gleitkommazahl um einige µs ungenau)
         return "(CAST(strftime('%s', zeit) AS INTEGER) + CAST(substr(zeit, 21, 3) AS INTEGER) / 1000.0)"
 
     def bound(self, epoch):
+        """Zeitgrenze als ISO-Text in UTC (vergleichbar mit der Textspalte zeit)."""
         z = datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc)
         return z.strftime("%Y-%m-%d %H:%M:%S.") + f"{z.microsecond // 1000:03d}"
 
 
 class _MariaSql(_ReadSql):
+    """MariaDB/MySQL: Platzhalter %s, Tabellenname in Backticks, Sitzungszeitzone UTC."""
     ph = "%s"
 
     def epoch(self):
+        """Unix-Zeit über UNIX_TIMESTAMP (Sitzungszeitzone UTC, siehe DbReader.connect)."""
         return "UNIX_TIMESTAMP(zeit)"            # Sitzungszeitzone wird auf UTC gestellt (siehe DbReader.connect)
 
     def bound(self, epoch):
+        """Zeitgrenze als datetime ohne Zeitzone (UTC)."""
         return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).replace(tzinfo=None)
 
     def table(self, t):
@@ -687,12 +746,15 @@ class _MariaSql(_ReadSql):
 
 
 class _PgSql(_ReadSql):
+    """PostgreSQL/TimescaleDB: Platzhalter %s, Zeit als TIMESTAMPTZ."""
     ph = "%s"
 
     def epoch(self):
+        """Unix-Zeit über EXTRACT(EPOCH …)."""
         return "EXTRACT(EPOCH FROM zeit)::double precision"
 
     def bound(self, epoch):
+        """Zeitgrenze als datetime mit Zeitzone UTC."""
         return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc)
 
     def table(self, t):
@@ -700,20 +762,25 @@ class _PgSql(_ReadSql):
 
 
 class _QuestSql(_ReadSql):
+    """QuestDB: Zeitstempel in Mikrosekunden, Mittelwerte mit SAMPLE BY; Werte als Literale (HTTP ohne Parameter)."""
     ph = "?"                        # QuestDbHttp setzt die Werte selbst als Literale ein
 
     def epoch(self):
+        """Unix-Zeit aus den Mikrosekunden des Zeitstempels."""
         return "(cast(zeit AS long) / 1000000.0)"       # Zeitstempel = Mikrosekunden seit 1970
 
     def bound(self, epoch):
+        """Zeitgrenze als datetime in UTC (wird als Literal eingesetzt)."""
         return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc)
 
     def project_cond(self, project):
+        """Leerer Projektname steht in QuestDB als NULL – dann ``IS NULL`` statt Vergleich."""
         if not project:                                 # leerer Projektname wird als NULL geschrieben
             return "projekt IS NULL", []
         return super().project_cond(project)
 
     def raster_sql(self, t, where, r):
+        """Mittelwerte mit SAMPLE BY (QuestDB-eigenes Zeitraster, Zeitstempel = Beginn des Rasters)."""
         # SAMPLE BY: QuestDB-eigene Zeitraster (Zeitstempel = Beginn des Rasters); Einheit T = Millisekunden
         ms = max(int(round(r * 1000)), 1)
         inner = f"SELECT zeit, variable, avg(wert) AS m FROM {t}{where} SAMPLE BY {ms}T ALIGN TO CALENDAR"
@@ -726,12 +793,15 @@ class _InfluxSql(_QuestSql):
     time_col = "time"
 
     def epoch(self):
+        """Unix-Zeit aus den Nanosekunden der Spalte time."""
         return "(CAST(time AS BIGINT) / 1000000000.0)"
 
     def table(self, t):
+        """Tabellenname in doppelten Anführungszeichen."""
         return f'"{t}"'
 
     def raster_sql(self, t, where, r):
+        """Mittelwerte mit date_bin (Raster ab 1970-01-01, Zeitstempel = Beginn des Rasters)."""
         # date_bin: Zeitraster ab 1970-01-01 (Zeitstempel = Beginn des Rasters)
         ms = max(int(round(r * 1000)), 1)
         bucket = f"date_bin(INTERVAL '{ms} milliseconds', time)"
@@ -751,6 +821,9 @@ class DbReader:
     ``conn`` ist das Verbindungs-Dict der Konfiguration; ``sqlite_file`` liest stattdessen eine andere SQLite-Datei."""
 
     def __init__(self, conn, sqlite_file=None):
+        """Leser für die Datenbank der Konfiguration (bzw. die SQLite-Datei ``sqlite_file``) anlegen – noch ohne
+        Verbindung.
+        """
         s = dict(db_settings(conn))
         if sqlite_file:
             s["typ"], s["datei"] = "sqlite", sqlite_file
@@ -764,9 +837,11 @@ class DbReader:
         self.con = None
 
     def describe(self):
+        """Kurzbeschreibung der Datenbank (ohne Passwort)."""
         return describe(self.s)
 
     def connect(self):
+        """Verbindung öffnen (SQLite nur lesend, MariaDB mit Sitzungszeitzone UTC) -> self."""
         s = self.s
         if s["typ"] == "sqlite":
             if not os.path.exists(s["datei"]):
@@ -791,6 +866,7 @@ class DbReader:
         return self
 
     def close(self):
+        """Verbindung schließen."""
         if self.con is not None:
             try:
                 self.con.close()
@@ -819,6 +895,7 @@ class DbReader:
                 pass
 
     def _where(self, project, t0=None, t1=None, names=None):
+        """WHERE-Teil und Parameter aus Projekt, Zeitgrenzen und Variablennamen (alles optional)."""
         ph, cond, params = self.sql.ph, [], []
         if project is not None:
             c, p = self.sql.project_cond(project)
@@ -879,6 +956,12 @@ class DbReader:
         state = {"last": None, "n": 0}
 
         def each(chunk):
+            """Einen Block Ergebniszeilen verarbeiten: neue Zeitpunkte an die Zeitachse hängen, Werte mit (Zeile,
+            Spalte) merken.
+
+            Die Zeilen kommen nach Zeit sortiert; so entsteht die Zeitachse ohne nachträgliches Sortieren. Mit Raster
+            ist der Zeitstempel die Mitte des Rasters.
+            """
             for key, var, val in chunk:
                 k = col_of.get(var)
                 if k is None or key is None:
@@ -904,6 +987,7 @@ class DbReader:
             rows = np.asarray(idx, dtype=np.int64)
             ks = np.fromiter((k for k, _v in vals), dtype=np.int64, count=len(vals))
             vs = np.fromiter((v for _k, v in vals), dtype=float, count=len(vals))
+            # Alle Werte in einem Schritt in die Matrix (Variable × Zeitpunkt) schreiben; Lücken bleiben NaN.
             cols[ks, rows] = vs
         if hold and len(times):
             cols = _hold(cols)
@@ -932,18 +1016,22 @@ class VmReader:
         self.con = None
 
     def describe(self):
+        """Kurzbeschreibung der Datenbank (ohne Passwort)."""
         return describe(self.s)
 
     def connect(self):
+        """Erreichbarkeit und Anmeldung prüfen -> self."""
         self.con = VictoriaMetricsHttp(self.s)
         self.con.get_json("/api/v1/labels")
         return self
 
     def close(self):
+        """Nichts offen zu halten (zustandslose HTTP-Anfragen)."""
         self.con = None
 
     # ---- Hilfen
     def _sel(self, project=None, name=None):
+        """Serien-Selektor ``{__name__="…", projekt="…", variable="…"}`` (projekt/variable optional)."""
         parts = [f"__name__={_prom_str(self.metric)}"]
         if project is not None:
             parts.append(f"projekt={_prom_str(project)}")
@@ -952,6 +1040,7 @@ class VmReader:
         return "{" + ",".join(parts) + "}"
 
     def _data(self, path, params):
+        """Prometheus-Anfrage senden und den Teil ``data`` der Antwort liefern (Fehlerstatus -> RuntimeError)."""
         res = self.con.get_json(path, params, timeout=120.0)
         if res.get("status") not in (None, "success"):
             raise RuntimeError(f"VictoriaMetrics: {res.get('error') or res}")
@@ -973,6 +1062,7 @@ class VmReader:
 
     # ---- Übersicht
     def projects(self):
+        """Projektnamen (Werte des Labels projekt); Serien ohne Label projekt ergeben den leeren Namen."""
         span = {"start": "0", "match[]": self._sel()}
         names = [str(p) for p in (self._data("/api/v1/label/projekt/values", span) or [])]
         if self._data("/api/v1/series", {"start": "0", "match[]": self._sel("")}):
@@ -980,6 +1070,9 @@ class VmReader:
         return sorted(set(names))
 
     def variables(self, project=None):
+        """Je Variable erster/letzter Zeitpunkt und Anzahl Werte über die gesamte Zeit (Funktionen
+        tfirst/tlast/count_over_time).
+        """
         sel, w = self._sel(project), f"{self._all_time()}s"
         count = {m.get("variable"): v for m, v in self._instant(f"sum by (variable) (count_over_time({sel}[{w}]))")}
         first = {m.get("variable"): v for m, v in self._instant(f"min by (variable) (tfirst_over_time({sel}[{w}]))")}
@@ -988,6 +1081,7 @@ class VmReader:
                 for n in sorted(last) if n is not None]
 
     def count(self, names, t0, t1, project=None):
+        """Anzahl Werte der Variablen im Zeitraum (count_over_time über das Fenster t0 … t1)."""
         w = max(int(math.ceil(t1 - t0)), 1)
         total = 0
         for n in dict.fromkeys(names):
@@ -1005,6 +1099,7 @@ class VmReader:
         n_total = 0
 
         def check(n):
+            """Nach jedem Teilstück: Abbruch prüfen, Werte zählen (Speicherschutz) und Fortschritt melden."""
             nonlocal n_total
             if cancel is not None and cancel():
                 raise LoadCancelled()
@@ -1076,6 +1171,7 @@ def _hold(cols):
         valid = ~np.isnan(row)
         if not valid.any():
             continue
+        # Für jede Stelle den Index des letzten gültigen Werts davor bestimmen (laufendes Maximum), dann einsetzen.
         pos = np.where(valid, np.arange(n), 0)
         np.maximum.accumulate(pos, out=pos)
         filled = row[pos]

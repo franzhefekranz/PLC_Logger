@@ -52,23 +52,30 @@ def settings(raw) -> dict:
 
 
 def active_channels(s) -> list:
+    """Schlüssel der eingeschalteten Kanäle (z. B. ["email", "ntfy"])."""
     return [k for k in CHANNELS if s.get(k, {}).get("aktiv")]
 
 
 # ---- Nachricht ----------------------------------------------------------------------------------------------------
 class Message:
+    """Eine Benachrichtigung: Art (KOMMT/GEHT), Trigger, Priorität, Meldetext, Zeit und Projekt; Titel und Text für alle
+    Kanäle.
+    """
     def __init__(self, kind, trigger, prio, text, ts, project=""):
+        """Nachricht anlegen; der Rechnername kommt dazu, damit bei mehreren Loggern klar ist, wer meldet."""
         self.kind, self.trigger, self.prio, self.text, self.ts, self.project = kind, trigger, prio, text, ts, project
         self.host = socket.gethostname()
 
     @property
     def title(self):
+        """Kurzzeile, z. B. „[Alarm] Übertemperatur – Kesselhaus“ (beim Gehen mit „(gegangen)“)."""
         state = tr("gegangen") if self.kind == "GEHT" else ""
         head = f"[{tr(self.prio)}] {self.trigger}" + (f" ({state})" if state else "")
         return f"{head} – {self.project}" if self.project else head
 
     @property
     def body(self):
+        """Mehrzeiliger Text: Meldung, Zeit, Trigger, Priorität, ggf. Hinweis „gegangen“, Projekt und Rechner."""
         when = datetime.fromtimestamp(self.ts).strftime("%d.%m.%Y %H:%M:%S")
         lines = [self.text or self.trigger, "", tr("Zeit: {0}").format(when), tr("Trigger: {0}").format(self.trigger),
                  tr("Priorität: {0}").format(tr(self.prio))]
@@ -89,6 +96,7 @@ def _post(url, data: bytes, headers=None):
 
 
 def send_email(c, msg: Message):
+    """E-Mail über SMTP senden (STARTTLS, SSL/TLS oder unverschlüsselt; Anmeldung nur mit Benutzer)."""
     if not c.get("server") or not c.get("an"):
         raise ValueError(tr("SMTP-Server und Empfänger angeben"))
     m = EmailMessage()
@@ -115,6 +123,9 @@ def send_email(c, msg: Message):
 
 
 def webhook_payload(kind, msg: Message) -> dict:
+    """Inhalt des Webhooks je Art: Teams = Adaptive Card (Alarm rot, Warnung gelb), Slack = Text mit fettem Titel, sonst
+    ein JSON-Objekt mit allen Feldern.
+    """
     if kind == "teams":                     # Teams-Workflow „Bei Empfang einer Webhookanforderung posten“
         color = {"Alarm": "Attention", "Warnung": "Warning"}.get(msg.prio, "Default")
         return {"type": "message", "attachments": [{
@@ -132,6 +143,7 @@ def webhook_payload(kind, msg: Message) -> dict:
 
 
 def send_webhook(c, msg: Message):
+    """Nachricht als JSON an die Webhook-Adresse senden (Teams-Workflow, Slack oder beliebig)."""
     if not c.get("url"):
         raise ValueError(tr("Webhook-Adresse angeben"))
     _post(c["url"], json.dumps(webhook_payload(c.get("art", "teams"), msg)).encode("utf-8"),
@@ -139,6 +151,11 @@ def send_webhook(c, msg: Message):
 
 
 def send_ntfy(c, msg: Message):
+    """Push über ntfy: Text als Inhalt, Titel/Priorität/Symbol als Kopfzeilen (Alarm = höchste Dringlichkeit).
+
+    HTTP-Kopfzeilen dürfen nur Latin-1 enthalten; der Titel wird deshalb so umkodiert, dass ntfy ihn wieder als UTF-8
+    liest. Ohne Thema in der Adresse (nur ntfy.sh) wird abgelehnt – sonst ginge die Nachricht ins Leere.
+    """
     url = (c.get("url") or "").strip()
     if not url or url.rstrip("/").endswith("ntfy.sh"):
         raise ValueError(tr("ntfy-Adresse mit Thema angeben, z. B. https://ntfy.sh/mein-thema"))
@@ -153,6 +170,7 @@ def send_ntfy(c, msg: Message):
 
 
 def send_telegram(c, msg: Message):
+    """Nachricht über die Telegram-Bot-API an die Chat-ID senden."""
     if not c.get("token") or not c.get("chat"):
         raise ValueError(tr("Bot-Token und Chat-ID angeben"))
     _post(f"https://api.telegram.org/bot{c['token']}/sendMessage",
@@ -176,6 +194,7 @@ def send_all(s, msg: Message, channels=None):
 
 
 def test_message(project=""):
+    """Testnachricht (Priorität Info) für den Knopf „Testnachricht senden“."""
     return Message("KOMMT", tr("Testnachricht"), "Info",
                    tr("Testnachricht des PLC Datenloggers – die Benachrichtigung funktioniert."), time.time(), project)
 
@@ -185,6 +204,11 @@ class Notifier:
     """Nimmt Ereignisse der Trigger entgegen, filtert (Priorität, Trigger, Sperrzeit) und sendet im Hintergrund."""
 
     def __init__(self, conn, project="", emit=None, sender=None):
+        """Einstellungen lesen und – falls eingeschaltet – den Sende-Thread starten.
+
+        ``conn``: Einstellungen der Konfiguration (oder direkt die Benachrichtigungs-Einstellung); ``emit``: Meldungen
+        (Fehler beim Senden); ``sender``: Ersatz für ``send_all`` (Tests).
+        """
         self.s = settings(conn.get("benachrichtigung", "")) if isinstance(conn, dict) else settings(conn)
         self.project = project
         self.emit = emit or (lambda _t: None)
@@ -201,6 +225,7 @@ class Notifier:
             self.thread.start()
 
     def __bool__(self):
+        """True, wenn Benachrichtigungen eingeschaltet sind und mindestens ein Kanal aktiv ist."""
         return bool(self.s.get("aktiv")) and bool(active_channels(self.s))
 
     def event(self, kind, trigger, prio, text, ts):
@@ -216,6 +241,8 @@ class Notifier:
                 return False                       # nur, wenn das Kommen gemeldet wurde
             self.sent_open.discard(trigger)
         if kind == "KOMMT":
+            # Sperrzeit: kommt derselbe Trigger zu früh erneut, wird nur gezählt; die nächste gesendete Meldung nennt
+            # die Zahl.
             block = float(self.s.get("sperre_s") or 0)
             last = self.last.get(trigger)
             if last is not None and ts - last < block:
@@ -230,6 +257,9 @@ class Notifier:
         return True
 
     def _run(self):
+        """Sende-Thread: Nachrichten aus der Warteschlange über alle Kanäle senden, Fehler je Kanal melden; None
+        beendet.
+        """
         while True:
             msg = self.q.get()
             if msg is None:

@@ -116,6 +116,13 @@ class ReportAccumulator:
     vom Sammler-Thread des Recorders gefüttert; ``freeze`` liefert eine unabhängige Kopie zum Schreiben."""
 
     def __init__(self, names, dtypes, t0, t1, buckets=1500, kind="", label=""):
+        """Leeren Sammler für den Zeitraum t0 … t1 anlegen.
+
+        Je Variable: Summen für Anzahl, Mittelwert und Standardabweichung (Summe und Quadratsumme), Minimum, Maximum,
+        letzter Wert, bei BOOL Einschaltdauer und Zahl der Einschaltvorgänge. Für den Verlauf wird der Zeitraum in
+        ``buckets`` gleich lange Abschnitte geteilt, in denen jeweils Minimum, Maximum, Summe und Anzahl gesammelt
+        werden – der Speicherbedarf hängt so nicht von der Zahl der Messungen ab.
+        """
         n = len(names)
         self.names, self.dtypes = list(names), list(dtypes)
         self.t0, self.t1, self.kind, self.label = float(t0), float(t1), kind, label
@@ -138,8 +145,14 @@ class ReportAccumulator:
         self.is_bool = np.array([d == "BOOL" for d in self.dtypes], dtype=bool)
 
     def add(self, ts, row):
+        """Eine Messzeile (Zeit, Werte in der Reihenfolge von ``names``) einrechnen; NaN-Werte zählen nicht.
+
+        BOOL: Die Zeit seit der vorigen Zeile zählt zur Einschaltdauer, wenn der vorige Wert 1 war; ein Wechsel 0 → 1
+        zählt als Einschaltvorgang.
+        """
         row = np.asarray(row, dtype=float)
         ok = np.isfinite(row)
+        # Abschnitt (0 … nb−1), in den der Zeitpunkt fällt.
         b = int((ts - self.t0) / (self.t1 - self.t0) * self.nb) if self.t1 > self.t0 else 0
         b = min(max(b, 0), self.nb - 1)
         self.bmin[ok, b] = np.fmin(self.bmin[ok, b], row[ok])
@@ -208,6 +221,7 @@ class ReportAccumulator:
         for i, n in enumerate(self.names):
             c = self.cnt[i]
             mean = self.sum[i] / c if c else math.nan
+            # Stichprobenvarianz aus Summe und Quadratsumme: (Σx² − n·x̄²) / (n − 1).
             var = (self.sq[i] - c * mean * mean) / (c - 1) if c > 1 else math.nan
             sd = math.sqrt(max(var, 0.0)) if var == var else math.nan
             share = self.on_time[i] / span if (self.is_bool[i] and span > 0) else math.nan
@@ -251,6 +265,7 @@ class ReportAccumulator:
         return [s_ for s_ in segs if s_[2] > 0]
 
     def freeze(self):
+        """Unabhängige Kopie für den Schreib-Thread (der Sammler rechnet danach mit dem nächsten Zeitraum weiter)."""
         import copy
         return copy.deepcopy(self)
 
@@ -267,6 +282,9 @@ _HW = [278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278
 
 
 def text_width(text, size, bold=False):
+    """Breite eines Textes in Punkt (aus der Breitentabelle von Helvetica; fett etwa 6 % breiter) – für Ausrichtung und
+    Kürzen.
+    """
     w = sum(_HW[ord(c) - 32] if 32 <= ord(c) <= 126 else 556 for c in text)
     return w * size / 1000.0 * (1.06 if bold else 1.0)
 
@@ -282,6 +300,9 @@ def _color(c):
 
 
 def _pdf_text(text):
+    """Text für einen PDF-String: Windows-1252 (Kodierung der Standardschrift), Klammern und Backslash maskiert, ohne
+    Zeilenumbrüche.
+    """
     raw = str(text).encode("cp1252", "replace")
     return raw.replace(b"\\", b"\\\\").replace(b"(", b"\\(").replace(b")", b"\\)").replace(b"\r", b"").replace(b"\n", b" ")
 
@@ -291,17 +312,21 @@ class PdfWriter:
     W, H = 595.28, 841.89
 
     def __init__(self):
+        """Leeres Dokument; ``pages`` hält je Seite die Liste der Zeichenbefehle."""
         self.pages = []
         self.cur = None
 
     def new_page(self):
+        """Neue Seite beginnen; die folgenden Zeichenbefehle gehen auf sie."""
         self.cur = []
         self.pages.append(self.cur)
 
     def _op(self, s):
+        """Einen PDF-Zeichenbefehl (Bytes) an die aktuelle Seite anhängen."""
         self.cur.append(s)
 
     def text(self, x, y, s, size=9, bold=False, color="#000000", align="left"):
+        """Text an (x, y) schreiben (Grundlinie), links-, rechtsbündig oder zentriert; F1 = Helvetica, F2 = fett."""
         if align != "left":
             w = text_width(s, size, bold)
             x -= w if align == "right" else w / 2
@@ -309,10 +334,12 @@ class PdfWriter:
                  + _pdf_text(s) + b") Tj ET")
 
     def line(self, x0, y0, x1, y1, color="#000000", width=0.5, dash=None):
+        """Gerade Linie von (x0, y0) nach (x1, y1), optional gestrichelt ``dash=(Strich, Lücke)``."""
         d = f"[{dash[0]} {dash[1]}] 0 d" if dash else "[] 0 d"
         self._op(f"{_color(color)} RG {width:.2f} w {d} {x0:.2f} {y0:.2f} m {x1:.2f} {y1:.2f} l S".encode())
 
     def rect(self, x, y, w, h, fill=None, stroke=None, width=0.5):
+        """Rechteck: gefüllt, umrandet oder beides."""
         ops = f"{x:.2f} {y:.2f} {w:.2f} {h:.2f} re"
         if fill and stroke:
             self._op(f"{_color(fill)} rg {_color(stroke)} RG {width:.2f} w [] 0 d {ops} B".encode())
@@ -336,9 +363,16 @@ class PdfWriter:
         self._op((pre + f"{_color(color)} RG {width:.2f} w [] 0 d 1 j " + " ".join(parts) + " S Q").encode())
 
     def save(self, path, title=""):
+        """PDF-Datei schreiben: Schriften, je Seite ein komprimierter Inhaltsstrom und das Seitenobjekt, Seitenbaum,
+        Info, Katalog und die Querverweistabelle (Byte-Positionen aller Objekte).
+
+        Geschrieben wird in eine temporäre Datei, die dann ersetzt wird – ein abgebrochener Lauf hinterlässt keine halbe
+        PDF-Datei.
+        """
         objs = []                                         # Inhalt der Objekte 1..n
 
         def add(data):
+            """Objekt anhängen -> seine Nummer (1-basiert, wie im PDF verwendet)."""
             objs.append(data)
             return len(objs)
         font1 = add(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
@@ -406,12 +440,14 @@ def _time_ticks(t0, t1, target=8):
 
 
 def _fmt(v, dtype="REAL"):
+    """Wert für die Kennwerttabelle; ohne Wert „—“."""
     if v is None or (isinstance(v, float) and math.isnan(v)):
         return "—"
     return fmt_value(float(v), dtype)
 
 
 def _fmt_dur(s):
+    """Dauer in Sekunden als h:mm:ss."""
     s = int(round(s))
     h, rem = divmod(s, 3600)
     m, sec = divmod(rem, 60)
@@ -422,6 +458,7 @@ class _Doc:
     """Seitenaufbau mit Kopf-/Fußzeile und fortlaufender Schreibposition."""
 
     def __init__(self, title, subtitle):
+        """Dokument mit Titel (Kopfzeile links) und Untertitel (rechts) beginnen."""
         self.pdf = PdfWriter()
         self.title, self.subtitle = title, subtitle
         self.page_no = 0
@@ -429,6 +466,7 @@ class _Doc:
         self.new_page()
 
     def new_page(self):
+        """Neue Seite mit Kopfzeile, Linie, Fußzeile und Seitennummer; Schreibposition unter den Kopf."""
         self.pdf.new_page()
         self.page_no += 1
         p, W, H = self.pdf, PdfWriter.W, PdfWriter.H
@@ -440,10 +478,12 @@ class _Doc:
         self.y = H - 58
 
     def need(self, h):
+        """Neue Seite beginnen, wenn auf der aktuellen weniger als h Punkt Platz ist."""
         if self.y - h < 40:
             self.new_page()
 
     def heading(self, text):
+        """Zwischenüberschrift schreiben (mit Seitenumbruch, wenn sie sonst allein unten stünde)."""
         self.need(30)
         self.y -= 6
         self.pdf.text(MARGIN, self.y, text, 10.5, bold=True, color=HEAD)
@@ -456,6 +496,7 @@ def _table(doc, cols, rows, widths, aligns, size=8):
     rh = size + 5
 
     def header():
+        """Kopfzeile der Tabelle mit grauem Hintergrund zeichnen."""
         x = MARGIN
         p.rect(MARGIN, doc.y - 3, sum(widths), rh, fill="#e8edf3")
         for c, w, a in zip(cols, widths, aligns):
@@ -620,6 +661,7 @@ def write_report(path, acc, charts, variables, project="", events=(), partial=Fa
 
 
 def _var_for(variables, name):
+    """Variable mit dem Namen ``name`` aus der Konfiguration (für Farbe und Achse); unbekannt: Vorgabe-Variable."""
     from plc_common import Variable
     return next((v for v in variables if v.name == name), None) or Variable(name=name)
 
@@ -637,12 +679,14 @@ def events_in(log, t0, t1):
 
 
 def report_dir(conn):
+    """Ordner der Berichte (Einstellung ``bericht_ordner``, relativ zum Datenordner)."""
     from plc_common import BASE_DIR
     d = (conn.get("bericht_ordner") or "berichte").strip()
     return d if os.path.isabs(d) else os.path.join(BASE_DIR, d)
 
 
 def report_path(conn, acc, base_name, partial=False):
+    """Freier Dateiname für den Bericht: <Name>_bericht_<Zeitraum>_<Beginn>[_teil].pdf, bei Bedarf mit _1, _2 …"""
     stamp = datetime.fromtimestamp(acc.t0).strftime("%Y%m%d_%H%M")
     name = f"{base_name}_bericht_{acc.kind or 'zeitraum'}_{stamp}{'_teil' if partial else ''}.pdf"
     path, n = os.path.join(report_dir(conn), name), 1
@@ -655,6 +699,7 @@ def report_path(conn, acc, base_name, partial=False):
 def write_in_background(path, acc, charts, variables, project, events, partial, notify, wait=False):
     """Bericht in einem eigenen Thread schreiben (Meldung über notify). wait=True: auf das Ende warten."""
     def run():
+        """Thread-Funktion: Bericht schreiben und Erfolg oder Fehler melden."""
         try:
             write_report(path, acc, charts, variables, project, events, partial)
             notify(tr("Bericht erstellt: {0}").format(path))

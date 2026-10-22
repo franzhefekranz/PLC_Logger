@@ -36,6 +36,9 @@ COL = {k: i for i, (k, _t) in enumerate(COLS)}
 
 
 def value_text(sig) -> str:
+    """Wert eines Signals für Tabelle und Tooltip: digital 0/1, analog skaliert mit Einheit und Rohwert; Lesefehler mit
+    ⚠.
+    """
     if sig.error and math.isnan(sig.value):
         return "⚠ " + sig.error
     if math.isnan(sig.value):
@@ -51,35 +54,51 @@ def value_text(sig) -> str:
 # Tabelle der Signale
 # ---------------------------------------------------------------------------------------------------------------------
 class SignalModel(QAbstractTableModel):
+    """Tabellenmodell der Signalliste (Qt Model/View): eine Zeile je Signal, Spalten nach COLS; nur „Bemerkung“ ist
+    editierbar.
+
+    Das Modell hält nur die Signal-Objekte; Farben, Symbole und Tooltips berechnet ``data`` bei jeder Anzeige aus deren
+    aktuellem Zustand. Neue Werte melden ``refresh_values``/``refresh_rows`` (dataChanged), statt die Tabelle neu
+    aufzubauen.
+    """
     edited = Signal(object)
 
     def __init__(self, parent=None):
+        """Leeres Modell."""
         super().__init__(parent)
         self.signals = []
 
     def set_signals(self, signals):
+        """Neue Signalliste übernehmen (Ansicht wird komplett neu aufgebaut)."""
         self.beginResetModel()
         self.signals = list(signals)
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
+        """Anzahl Zeilen = Anzahl Signale (flache Tabelle, keine Unterebenen)."""
         return 0 if parent.isValid() else len(self.signals)
 
     def columnCount(self, parent=QModelIndex()):
+        """Anzahl Spalten (COLS)."""
         return len(COLS)
 
     def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        """Spaltenüberschriften (übersetzt)."""
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             return tr(COLS[section][1])
         return None
 
     def flags(self, index):
+        """Zellen wählbar; die Spalte Bemerkung zusätzlich editierbar."""
         f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
         if COLS[index.column()][0] == "remark":
             f |= Qt.ItemFlag.ItemIsEditable
         return f
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        """Inhalt einer Zelle je Rolle: Text, Hintergrund (Status, gelb nach einem Wechsel), Schriftfarbe, LED-Farbe in
+        der Wertspalte, Tooltip mit Details und Fett für geprüfte Status.
+        """
         if not index.isValid():
             return None
         s = self.signals[index.row()]
@@ -124,6 +143,7 @@ class SignalModel(QAbstractTableModel):
         return None
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
+        """Bemerkung übernehmen und ``edited`` senden (das Fenster speichert dann)."""
         if role == Qt.ItemDataRole.EditRole and COLS[index.column()][0] == "remark":
             sig = self.signals[index.row()]
             sig.remark = str(value)
@@ -133,10 +153,12 @@ class SignalModel(QAbstractTableModel):
         return False
 
     def refresh_values(self):
+        """Nur die Wertspalte neu zeichnen lassen (nach neuen Messwerten)."""
         if self.signals:
             self.dataChanged.emit(self.index(0, COL["value"]), self.index(len(self.signals) - 1, COL["value"]))
 
     def refresh_rows(self, sigs=None):
+        """Ganze Zeilen der Signale ``sigs`` neu zeichnen lassen (alle, wenn None)."""
         if not self.signals:
             return
         if sigs is None:
@@ -149,15 +171,21 @@ class SignalModel(QAbstractTableModel):
 
 
 class SignalFilter(QSortFilterProxyModel):
+    """Filter der Signalliste: Suchtext (alle Wörter in Adresse, Symbol, Kommentar, BMK oder Bemerkung), Gruppe, Typ und
+    Status.
+    """
     def __init__(self, parent=None):
+        """Ohne Filter (alles sichtbar)."""
         super().__init__(parent)
         self.text, self.group, self.kind, self.status = "", "", "", ""
 
     def set_filter(self, text, group, kind, status):
+        """Neue Filterwerte setzen und die Liste neu filtern."""
         self.text, self.group, self.kind, self.status = text.lower(), group, kind, status
         self.invalidateFilter()
 
     def filterAcceptsRow(self, row, parent):
+        """Zeile anzeigen? (von Qt für jede Zeile des Quellmodells aufgerufen)"""
         s = self.sourceModel().signals[row]
         if self.group and s.group != self.group:
             return False
@@ -175,12 +203,18 @@ class SignalFilter(QSortFilterProxyModel):
 # Matrix: Binärsignale als LEDs (Byte × Bit), geprüfte abgehakt/farbig
 # ---------------------------------------------------------------------------------------------------------------------
 class MatrixWidget(QWidget):
+    """Binärsignale als Raster von LEDs (Zeile = Byte, Spalte = Bit), mit Prüfstatus und Hervorhebung frischer Wechsel.
+
+    Klick wählt ein Signal (``selected``), Doppelklick schaltet OK an/aus, Rechtsklick öffnet das Statusmenü
+    (``status_request``).
+    """
     selected = Signal(object)               # Signal angeklickt
     status_request = Signal(object, str)    # (Signal, Status) über Doppelklick/Kontextmenü
 
     CELL, GAP, LABEL_W, HEAD_H, SECTION_H = 34, 4, 92, 18, 26
 
     def __init__(self, parent=None):
+        """Leere Matrix; ``layout_items`` merkt sich die Rechtecke der Zellen für Zeichnen und Mausklicks."""
         super().__init__(parent)
         self.rows = []
         self.sections = []                  # [(y, Abschnitt oder None, Bitanzahl bzw. Zeilenbeschriftung)]
@@ -190,6 +224,7 @@ class MatrixWidget(QWidget):
         self.setMouseTracking(True)
 
     def set_rows(self, rows):
+        """Neue Zeilen (siehe ``plc_iocheck.matrix_rows``) übernehmen, Anordnung berechnen, Größe anpassen."""
         self.rows = rows
         self._layout()
         self.resize(self.sizeHint())
@@ -197,6 +232,7 @@ class MatrixWidget(QWidget):
         self.update()
 
     def _layout(self):
+        """Position jeder Zelle, der Abschnittsüberschriften und der Bitnummern berechnen."""
         self.layout_items, self.sections = [], []
         y, last = 6, None
         for section, label, cells in self.rows:
@@ -217,13 +253,16 @@ class MatrixWidget(QWidget):
         self._height = y + 6
 
     def sizeHint(self):
+        """Benötigte Größe (die Matrix steht in einer Scrollfläche)."""
         n = max((len(c) for _s, _l, c in self.rows), default=8)
         return QSize(self.LABEL_W + n * (self.CELL + self.GAP) + 10, self._height)
 
     def minimumSizeHint(self):
+        """Nicht kleiner als nötig (sonst würde die Scrollfläche abschneiden)."""
         return self.sizeHint()
 
     def paintEvent(self, _ev):
+        """Abschnittsüberschriften, Bitnummern, Zeilenbeschriftungen und alle Zellen zeichnen."""
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         pal = self.palette()
@@ -254,6 +293,9 @@ class MatrixWidget(QWidget):
         p.end()
 
     def _paint_cell(self, p, r, sig, now, small):
+        """Eine Zelle: Hintergrund nach Status, LED (Eingang grün, Ausgang orange, 0 grau, Fehler rot), gelber Ring nach
+        einem Wechsel, Haken/Kreuz bzw. blauer Punkt (0→1 gesehen), Rahmen um das gewählte Signal.
+        """
         bg = STATUS_BG.get(sig.status)
         p.setPen(QPen(QColor("#b0bec5"), 1))
         p.setBrush(QColor(bg) if bg else self.palette().color(self.palette().ColorRole.Base))
@@ -288,12 +330,14 @@ class MatrixWidget(QWidget):
             p.drawRoundedRect(r.adjusted(-2, -2, 2, 2), 6, 6)
 
     def _at(self, pos):
+        """Signal unter der Mausposition oder None."""
         for r, sig in self.layout_items:
             if r.contains(pos):
                 return sig
         return None
 
     def mouseMoveEvent(self, ev):
+        """Tooltip mit Adresse, Kommentar, Wert, Status und Prüfer des Signals unter der Maus."""
         sig = self._at(ev.position())
         if sig is None:
             self.setToolTip("")
@@ -307,6 +351,7 @@ class MatrixWidget(QWidget):
         self.setToolTip("<br>".join(x for x in lines if x))
 
     def mousePressEvent(self, ev):
+        """Signal wählen; mit der rechten Maustaste zusätzlich das Statusmenü."""
         sig = self._at(ev.position())
         if sig is None:
             return
@@ -322,6 +367,7 @@ class MatrixWidget(QWidget):
             menu.exec(ev.globalPosition().toPoint())
 
     def mouseDoubleClickEvent(self, ev):
+        """Doppelklick: OK setzen bzw. zurücknehmen."""
         sig = self._at(ev.position())
         if sig is not None:
             self.status_request.emit(sig, "offen" if sig.status == "ok" else "ok")
@@ -331,7 +377,10 @@ class MatrixWidget(QWidget):
 # Dialog: Bereiche scannen
 # ---------------------------------------------------------------------------------------------------------------------
 class ScanDialog(QDialog):
+    """Dialog „Bereiche scannen“: Liste der Scan-Bereiche (Steuerung, Startadresse, Anzahl Bits); Ergebnis in ``scans``.
+    """
     def __init__(self, parent, scans, plcs):
+        """Tabelle mit den vorhandenen Bereichen und Knöpfen Hinzufügen/Entfernen."""
         super().__init__(parent)
         self.setWindowTitle(tr("Bereiche scannen"))
         self.plcs = plcs
@@ -364,6 +413,7 @@ class ScanDialog(QDialog):
         self.scans = list(scans)
 
     def _add(self, s):
+        """Zeile für einen Bereich anhängen (Auswahl der Steuerung, Startadresse, Anzahl)."""
         r = self.table.rowCount()
         self.table.insertRow(r)
         cb = QComboBox()
@@ -379,6 +429,7 @@ class ScanDialog(QDialog):
         self.table.setCellWidget(r, 2, sp)
 
     def _ok(self):
+        """Zeilen mit Startadresse übernehmen; die erste Steuerung wird als "" gespeichert (Standard)."""
         out = []
         first = self.plcs[0].name if self.plcs else ""
         for r in range(self.table.rowCount()):
@@ -396,9 +447,13 @@ class ScanDialog(QDialog):
 # Analogwert des gewählten Signals
 # ---------------------------------------------------------------------------------------------------------------------
 class AnalogPanel(QGroupBox):
+    """Feld unter der Signalliste für das gewählte Analogsignal: großer Wert, Rohwert, Fehlerwerte, Drahtbruchprüfung,
+    Skalierung und die Prüfpunkte 0/50/100 %.
+    """
     changed = Signal(object)
 
     def __init__(self, tracker, parent=None):
+        """Felder anlegen; ``tracker`` liefert die Toleranz und übernimmt Prüfpunkte."""
         super().__init__(tr("Analogwert"), parent)
         self.tracker, self.sig = tracker, None
         grid = QGridLayout(self)
@@ -464,6 +519,7 @@ class AnalogPanel(QGroupBox):
         grid.setColumnStretch(3, 1)
 
     def set_signal(self, sig):
+        """Anzuzeigendes Signal wählen (bei Digitalsignalen wird das Feld ausgeblendet)."""
         self.sig = sig
         self.setVisible(sig is not None and not sig.binary)
         if self.isVisible():
@@ -476,6 +532,7 @@ class AnalogPanel(QGroupBox):
             self.refresh()
 
     def _edited(self):
+        """Skalierung oder Einheit geändert: ins Signal übernehmen und melden (``changed``)."""
         if self.sig is None:
             return
         for key, sp in self.ed.items():
@@ -485,18 +542,23 @@ class AnalogPanel(QGroupBox):
         self.changed.emit(self.sig)
 
     def _take(self, pct):
+        """Prüfpunkt ``pct`` mit dem aktuellen Wert übernehmen."""
         if self.sig is not None and not math.isnan(self.sig.value):
             self.tracker.take_point(self.sig, pct)
             self.refresh()
             self.changed.emit(self.sig)
 
     def _clear(self):
+        """Alle Messpunkte des Signals löschen."""
         if self.sig is not None:
             self.sig.points = {}
             self.refresh()
             self.changed.emit(self.sig)
 
     def refresh(self):
+        """Anzeige mit dem aktuellen Wert aktualisieren: skalierter Wert, Fehler, Fortschritt der Drahtbruchprüfung,
+        Soll/Ist der Prüfpunkte.
+        """
         s = self.sig
         if s is None or not self.isVisible():
             return
@@ -531,7 +593,16 @@ class AnalogPanel(QGroupBox):
 # Hauptfenster
 # ---------------------------------------------------------------------------------------------------------------------
 class IoCheckWindow(QMainWindow):
+    """Hauptfenster des IO-Checks: Werkzeugleiste, Reiter Signalliste und Matrix, rechts „Was hat sich bewegt?“.
+
+    Das Lesen läuft in je einem ``IoReader``-Thread pro Steuerung; ein Timer (150 ms) holt die Werte aus der
+    Warteschlange, gibt sie an den ``IoTracker`` und aktualisiert die Anzeige. Die ``IoWebBridge`` stellt alles der
+    Webseite /io bereit; deren Befehle werden ebenfalls im Timer übernommen.
+    """
     def __init__(self, config_path="", plcs=None, demo=False, project_path="", parent=None):
+        """Fenster aufbauen; ``config_path``: Konfiguration mit den Steuerungen, ``project_path``: Prüfstand zum Öffnen,
+        ``demo``: simulierte Werte.
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("IO-Check"))
         self.resize(1280, 800)
@@ -565,11 +636,14 @@ class IoCheckWindow(QMainWindow):
 
     # ------------------------------------------------------------------ Aufbau
     def _build_toolbar(self, demo):
+        """Werkzeugleiste: Datei-Aktionen, Protokoll, Mobil, Lesen starten/stoppen, Demo, automatisch abhaken, Toleranz.
+        """
         tb = QToolBar(tr("IO-Check"))
         tb.setMovable(False)
         self.addToolBar(tb)
 
         def act(text, slot, tip="", key=None):
+            """Aktion mit Text, Tooltip und Tastenkürzel anlegen und in die Leiste stellen."""
             a = QAction(text, self)
             a.triggered.connect(slot)
             if tip:
@@ -616,6 +690,9 @@ class IoCheckWindow(QMainWindow):
         self.lbl_plc = QLabel()
 
     def _build_central(self):
+        """Mittelteil: Reiter Signalliste (Filter, Fortschritt, Tabelle, Statusknöpfe, Analogfeld) und Matrix; rechts
+        die Liste der Wechsel.
+        """
         split = QSplitter(Qt.Orientation.Horizontal)
         self.tabs = QTabWidget()
         split.addWidget(self.tabs)
@@ -754,6 +831,7 @@ class IoCheckWindow(QMainWindow):
     # ------------------------------------------------------------------ Daten
     @staticmethod
     def _load_plcs(path):
+        """Steuerungen aus der Konfiguration (Fehler: keine)."""
         try:
             return load_plcs(path) if path else []
         except Exception:
@@ -804,6 +882,7 @@ class IoCheckWindow(QMainWindow):
                               self.cb_kind.currentData() or "", self.cb_status.currentData() or "")
 
     def _plc_for(self, name):
+        """Steuerung zum Namen aus der IO-Liste (leer = erste); ohne Konfiguration im Demo-Modus eine Demo-Steuerung."""
         if not self.plcs:
             return Plc(name="Demo", driver="s7") if self.chk_demo.isChecked() else None
         for p in self.plcs:
@@ -812,10 +891,12 @@ class IoCheckWindow(QMainWindow):
         return self.plcs[0] if not name else None
 
     def _update_title(self):
+        """Fenstertitel mit Dateiname und * bei ungespeicherten Änderungen."""
         name = os.path.basename(self.project.path) if self.project.path else tr("(nicht gespeichert)")
         self.setWindowTitle(f"{tr('IO-Check')} – {name}{' *' if self.dirty else ''}")
 
     def _update_progress(self):
+        """Fortschrittsbalken: geprüft von gesamt, mit OK/Fehler/übersprungen."""
         pr = io.progress(self.all_signals)
         done = pr["ok"] + pr["fehler"] + pr["uebersprungen"]
         self.progress.setMaximum(max(1, pr["gesamt"]))
@@ -824,6 +905,8 @@ class IoCheckWindow(QMainWindow):
             done, pr["gesamt"], pr["ok"], pr["fehler"], pr["uebersprungen"]))
 
     def _mark_dirty(self):
+        """Änderung vermerken; ist der Prüfstand schon gespeichert, sofort automatisch speichern (nichts geht verloren).
+        """
         self.dirty = True
         self._update_progress()
         self._update_title()
@@ -837,15 +920,20 @@ class IoCheckWindow(QMainWindow):
                 self.statusBar().showMessage(tr("Speichern fehlgeschlagen: {0}").format(e), 8000)
 
     def _options(self):
+        """Optionen für die Prüfstand-Datei."""
         return {"auto_ok": self.chk_auto.isChecked(), "tolerance": self.sp_tol.value()}
 
     def _options_changed(self, *_):
+        """Optionen an den Tracker weitergeben."""
         self.tracker.auto_ok = self.chk_auto.isChecked()
         self.tracker.tolerance = self.sp_tol.value()
         self.analog.refresh()
 
     # ------------------------------------------------------------------ Datei
     def import_list(self):
+        """IO-Liste importieren; bei vorhandener Liste fragen, ob ersetzt oder ergänzt wird (Ergänzen übernimmt nur neue
+        Adressen).
+        """
         path, _f = QFileDialog.getOpenFileName(self, tr("IO-Liste importieren"), "",
                                                tr("Tabellen (*.xlsx *.xlsm *.csv *.txt);;Alle Dateien (*)"))
         if not path:
@@ -885,6 +973,9 @@ class IoCheckWindow(QMainWindow):
         QMessageBox.information(self, tr("IO-Liste importieren"), msg)
 
     def open_project(self, path=None):
+        """Prüfstand öffnen (fragt vorher nach dem Speichern); seine Konfiguration liefert die Steuerungen, falls noch
+        keine geladen sind.
+        """
         if not self._confirm_discard():
             return
         if not path:
@@ -908,6 +999,7 @@ class IoCheckWindow(QMainWindow):
         self._rebuild()
 
     def save_project(self, as_new=False):
+        """Prüfstand speichern (``as_new`` oder ohne Dateiname: Dateidialog) -> True bei Erfolg."""
         path = self.project.path
         if as_new or not path:
             path, _f = QFileDialog.getSaveFileName(self, tr("IO-Check speichern"), path or "io-check" + io.EXTENSION,
@@ -930,6 +1022,7 @@ class IoCheckWindow(QMainWindow):
         return True
 
     def export_result(self):
+        """Ergebnis als Excel- oder CSV-Datei speichern."""
         path, _f = QFileDialog.getSaveFileName(self, tr("Ergebnis exportieren"), "io-check-ergebnis.xlsx",
                                                tr("Excel (*.xlsx);;CSV (*.csv)"))
         if not path:
@@ -942,6 +1035,7 @@ class IoCheckWindow(QMainWindow):
         self.statusBar().showMessage(tr("Ergebnis gespeichert: {0}").format(path), 6000)
 
     def edit_scans(self):
+        """Dialog „Bereiche scannen“; danach Liste und Matrix neu aufbauen und zur Matrix wechseln."""
         plcs = self.plcs or ([Plc(name="Demo", driver="s7")] if self.chk_demo.isChecked() else [])
         if not plcs:
             QMessageBox.information(self, tr("Bereiche scannen"), tr("In der Konfiguration ist keine Steuerung "
@@ -955,6 +1049,7 @@ class IoCheckWindow(QMainWindow):
             self.tabs.setCurrentIndex(1)
 
     def _confirm_discard(self):
+        """Ungespeicherte Änderungen? Speichern, verwerfen oder abbrechen -> True = weitermachen."""
         if not self.dirty or not self.all_signals:
             return True
         r = QMessageBox.question(self, tr("IO-Check"), tr("Der Prüfstand ist nicht gespeichert. Jetzt speichern?"),
@@ -965,6 +1060,7 @@ class IoCheckWindow(QMainWindow):
         return r == QMessageBox.StandardButton.Discard
 
     def closeEvent(self, ev):
+        """Schließen: Lesen stoppen, von der Webseite abmelden, eigenen Webserver beenden."""
         if not self._confirm_discard():
             ev.ignore()
             return
@@ -982,6 +1078,7 @@ class IoCheckWindow(QMainWindow):
 
     # ------------------------------------------------------------------ Protokoll und Webseite
     def _conn(self):
+        """Einstellungen der Konfiguration (für Projektname und Webserver)."""
         from plc_common import default_connection, load_config
         try:
             return load_config(self.project.config)[0] if self.project.config else default_connection()
@@ -989,10 +1086,12 @@ class IoCheckWindow(QMainWindow):
             return default_connection()
 
     def _project_title(self):
+        """Titel für Webseite und Protokoll: Projektname der Konfiguration, sonst Name der Prüfstand-Datei."""
         name = self._conn().get("projekt", "") if self.project.config else ""
         return name or (os.path.basename(self.project.path).replace(io.EXTENSION, "") if self.project.path else "")
 
     def make_protocol(self):
+        """Abnahmeprotokoll (PDF) erzeugen und mit dem Standardprogramm öffnen."""
         if not self.all_signals:
             QMessageBox.information(self, tr("IO-Check"), tr("Zuerst eine IO-Liste importieren oder Bereiche scannen."))
             return
@@ -1010,6 +1109,11 @@ class IoCheckWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
     def show_mobile(self):
+        """Adresse der Mobilseite mit QR-Code zeigen.
+
+        Läuft im Programm schon ein Webserver (Logger), wird er verwendet; sonst startet der IO-Check einen eigenen mit
+        den Einstellungen der Konfiguration (ist der Port belegt, einen der nächsten fünf).
+        """
         try:
             import plc_web
         except Exception as e:
@@ -1055,16 +1159,19 @@ class IoCheckWindow(QMainWindow):
 
     # ------------------------------------------------------------------ Status
     def selected_signals(self):
+        """In der Tabelle markierte Signale (über den Filter auf die Zeilen des Modells umgerechnet)."""
         rows = sorted({self.proxy.mapToSource(i).row() for i in self.view.selectionModel().selectedRows()})
         return [self.model.signals[r] for r in rows]
 
     def set_selected_status(self, status):
+        """Status der markierten Signale setzen (ohne Markierung: das gerade geprüfte Signal)."""
         sigs = self.selected_signals()
         if not sigs and self.tracker.expected is not None:
             sigs = [self.tracker.expected]
         self.set_status(sigs, status)
 
     def set_status(self, sigs, status):
+        """Status setzen; bei „Fehler“ wird eine Bemerkung abgefragt."""
         if not sigs:
             return
         remark = None
@@ -1081,21 +1188,25 @@ class IoCheckWindow(QMainWindow):
         self._mark_dirty()
 
     def _signal_edited(self, sig):
+        """Signal im Analogfeld geändert: Zeile neu zeichnen und speichern."""
         self.model.refresh_rows([sig])
         self._mark_dirty()
 
     # ------------------------------------------------------------------ Auswahl = erwartetes Signal
     def _row_changed(self, cur, _prev):
+        """Andere Zeile gewählt: dieses Signal wird das erwartete (für Vertauschungen und Analogfeld)."""
         if not cur.isValid():
             return
         sig = self.model.signals[self.proxy.mapToSource(cur).row()]
         self._set_expected(sig)
 
     def _matrix_selected(self, sig):
+        """In der Matrix gewählt: erwartetes Signal setzen und in der Tabelle markieren."""
         self._set_expected(sig)
         self._select_in_view(sig)
 
     def _select_in_view(self, sig):
+        """Signal in der Tabelle markieren und hinscrollen, ohne die Auswahl-Signale auszulösen."""
         try:
             row = next(r for r, s in enumerate(self.model.signals) if s is sig)
         except StopIteration:
@@ -1108,6 +1219,7 @@ class IoCheckWindow(QMainWindow):
             self.view.scrollTo(idx)
 
     def _set_expected(self, sig):
+        """Erwartetes (gerade geprüftes) Signal setzen: Tracker, Matrix, Analogfeld und Anzeige „Erwartet“."""
         self.tracker.expected = sig
         self.matrix.current = sig
         self.matrix.update()
@@ -1118,6 +1230,7 @@ class IoCheckWindow(QMainWindow):
         self.lbl_expected.setText(tr("Erwartet: {0}").format(txt))
 
     def _change_clicked(self, row, _col):
+        """Doppelklick auf einen Wechsel: dieses Signal wählen."""
         if 0 <= row < len(self.tracker.history):
             sig = self.tracker.history[row].sig
             self._set_expected(sig)
@@ -1125,12 +1238,14 @@ class IoCheckWindow(QMainWindow):
 
     # ------------------------------------------------------------------ Lesen
     def toggle_reading(self):
+        """Lesen starten bzw. stoppen (Knopf und F5)."""
         if self.readers:
             self.stop_reading()
         else:
             self.start_reading()
 
     def start_reading(self):
+        """Signale den Steuerungen zuordnen und je Steuerung einen Lese-Thread starten (Takt höchstens 200 ms)."""
         if not self.all_signals:
             QMessageBox.information(self, tr("IO-Check"), tr("Zuerst eine IO-Liste importieren oder Bereiche scannen."))
             return
@@ -1154,6 +1269,7 @@ class IoCheckWindow(QMainWindow):
         self.chk_demo.setEnabled(False)
 
     def stop_reading(self):
+        """Alle Lese-Threads beenden und die Anzeige der Steuerungen zurücksetzen."""
         for r in self.readers:
             r.stop()
         for r in self.readers:
@@ -1166,6 +1282,9 @@ class IoCheckWindow(QMainWindow):
         self.bridge.set_plc_state([])
 
     def _tick(self):
+        """Timer (150 ms): Meldungen der Lese-Threads verarbeiten (Status, Werte -> Tracker), Webbefehle übernehmen,
+        Anzeige aktualisieren.
+        """
         got = False
         while True:
             try:
@@ -1215,6 +1334,7 @@ class IoCheckWindow(QMainWindow):
         return out
 
     def _show_plc_state(self):
+        """Zustand der Steuerungen in der Statusleiste (farbige Punkte) und für die Webseite."""
         colors = {"ok": "#2e7d32", "verbinde": "#b8860b", "fehler": "#c62828", "aus": "#7d8590"}
         parts = []
         plcs = self.plcs or [Plc(name="Demo", driver="s7")]
@@ -1230,6 +1350,9 @@ class IoCheckWindow(QMainWindow):
                                           for i, (_s, t) in sorted(self.plc_state.items())))
 
     def _refresh_changes(self):
+        """Liste der Wechsel und großes Feld „zuletzt bewegt“ aktualisieren; bei einer möglichen Vertauschung roter
+        Hinweis (10 s) und Signalton.
+        """
         hist = self.tracker.history
         head = hist[0] if hist else None
         if head is self._hist_seen:
@@ -1270,6 +1393,7 @@ class IoCheckWindow(QMainWindow):
 
     @staticmethod
     def _change_text(ch):
+        """Wechsel als Text: digital „0 → 1“, analog skaliert mit Einheit."""
         s = ch.sig
         if s.binary:
             return f"{int(ch.old)} → {int(ch.new)}"
@@ -1345,6 +1469,7 @@ def run_iocheck(arg=None, demo=False):
 
 
 def _is_project(path):
+    """True, wenn die JSON-Datei ein Prüfstand ist (Kennung im Dateianfang) – sonst gilt sie als Konfiguration."""
     try:
         with open(path, encoding="utf-8") as f:
             return f'"format": "{io.FORMAT}"' in f.read(400)

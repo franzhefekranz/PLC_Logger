@@ -32,6 +32,8 @@ def layout_path(config_path):
 
 
 def _num(v, default=None):
+    """Eingabe als endliche Zahl (Text oder Zahl) oder ``default`` – NaN, unendlich und riesige Werte werden abgewiesen.
+    """
     if v is None or v == "":
         return default
     try:
@@ -42,6 +44,7 @@ def _num(v, default=None):
 
 
 def _int(v, lo, hi, default):
+    """Eingabe als ganze Zahl, begrenzt auf lo … hi; ungültig: ``default``."""
     try:
         return max(lo, min(hi, int(v)))
     except (TypeError, ValueError):
@@ -95,6 +98,7 @@ def clean_layout(doc) -> dict:
 
 
 def load_layout(config_path):
+    """Gespeichertes Layout zur Konfiguration lesen und prüfen -> dict oder None (fehlt bzw. unlesbar)."""
     path = layout_path(config_path)
     try:
         with open(path, encoding="utf-8") as f:
@@ -104,6 +108,7 @@ def load_layout(config_path):
 
 
 def save_layout(config_path, doc):
+    """Layout prüfen und speichern (erst in eine temporäre Datei, dann ersetzen) -> die bereinigte Fassung."""
     path = layout_path(config_path)
     doc = clean_layout(doc)
     tmp = path + ".tmp"
@@ -220,6 +225,10 @@ body.edit main{margin-right:300px}
 <script>
 (function(){
 'use strict';
+/* Ablauf: load() holt Layout und Variablen (/api/prozess) und baut die Kacheln (build); tick() holt im Takt der
+   Webserver-Einstellung die aktuellen Werte (/api/data, für Kurzverläufe mit Verlauf) und render() trägt sie ein.
+   Bearbeiten (setEdit): Kacheln ziehen/vergrößern (dragHandlers), Eigenschaften rechts (props), Speichern = POST.
+   Alle Texte aus dem Layout werden mit textContent gesetzt (nie als HTML) – Titel können nichts einschleusen. */
 var TOKEN=new URLSearchParams(location.search).get('token')||'';
 function api(u){return TOKEN?u+(u.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(TOKEN):u;}
 function $(id){return document.getElementById(id);}

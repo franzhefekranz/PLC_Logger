@@ -86,6 +86,8 @@ def main():
     QDialog.exec = lambda self: 0                      # modale Dialoge (Meldungen) nicht abwarten
     for kind in ("information", "warning", "critical", "question"):
         setattr(QMessageBox, kind, staticmethod(lambda *a, **k: QMessageBox.StandardButton.No))
+    import socket
+    socket.gethostname = lambda: "ipc-kesselhaus"     # neutraler Rechnername in Endpunkt-Adressen
     folder = tempfile.mkdtemp(prefix="plc_bilder_")
     cfg = demo_config(folder)
 

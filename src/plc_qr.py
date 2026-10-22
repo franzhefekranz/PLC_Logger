@@ -16,6 +16,7 @@ _ECL_M = 0                                  # Formatbits der Stufe M
 
 
 def _data_words(version):
+    """Anzahl der Datenwörter (Bytes) einer Version bei Fehlerkorrektur M."""
     k, g1, g2, _ec = _BLOCKS_M[version]
     return k * g1 + (k + 1) * g2
 
@@ -34,10 +35,12 @@ for _i in range(255, 512):
 
 
 def _gf_mul(a, b):
+    """Multiplikation im Galois-Feld GF(256) über die Logarithmentafeln (Grundlage von Reed-Solomon)."""
     return 0 if a == 0 or b == 0 else _EXP[_LOG[a] + _LOG[b]]
 
 
 def _rs_generator(n):
+    """Generatorpolynom für n Prüfwörter: (x − α⁰)(x − α¹)…(x − αⁿ⁻¹)."""
     g = [1]
     for i in range(n):
         g = [a ^ _gf_mul(b, _EXP[i]) for a, b in zip(g + [0], [0] + g)]
@@ -45,6 +48,7 @@ def _rs_generator(n):
 
 
 def _rs_remainder(data, n):
+    """Reed-Solomon-Prüfwörter: Rest der Polynomdivision der Daten durch das Generatorpolynom."""
     gen = _rs_generator(n)
     rem = [0] * n
     for d in data:
@@ -60,6 +64,7 @@ def _codewords(data: bytes, version):
     bits = []
 
     def put(value, n):
+        """``value`` als ``n`` Bits (höchstwertiges zuerst) an die Bitfolge hängen."""
         bits.extend((value >> (n - 1 - i)) & 1 for i in range(n))
     put(0b0100, 4)                            # Byte-Modus
     put(len(data), 8 if version < 10 else 16)
@@ -101,27 +106,36 @@ def _bch(value, poly, bits_poly):
 
 
 def _format_bits(mask):
+    """15 Formatbits: Fehlerkorrekturstufe und Maske, BCH-gesichert und mit dem Muster 0x5412 verknüpft."""
     data = (_ECL_M << 3) | mask
     return ((data << 10) | _bch(data, 0x537, 11)) ^ 0x5412
 
 
 def _version_bits(version):
+    """18 Versionsbits (ab Version 7): Versionsnummer mit BCH-Prüfteil."""
     return (version << 12) | _bch(version, 0x1F25, 13)
 
 
 class _Matrix:
+    """Die Modulmatrix eines QR-Codes: ``m`` = Farbe der Module, ``fn`` = Funktionsmodul (nicht maskieren, keine Daten).
+    """
     def __init__(self, version):
+        """Leere Matrix der Größe 17 + 4·Version."""
         self.v = version
         self.n = 17 + 4 * version
         self.m = [[False] * self.n for _ in range(self.n)]
         self.fn = [[False] * self.n for _ in range(self.n)]       # Funktionsmodul (nicht maskieren)
 
     def set(self, x, y, dark, fn=True):
+        """Modul (x, y) setzen und als Funktionsmodul markieren."""
         self.m[y][x] = dark
         if fn:
             self.fn[y][x] = True
 
     def functions(self):
+        """Funktionsmuster zeichnen: Taktlinien, drei Suchmuster, Ausrichtungsmuster, Platz für Format- und
+        Versionsbits.
+        """
         n = self.n
         for i in range(n):                                       # Taktlinien
             self.set(6, i, i % 2 == 0)
@@ -151,6 +165,7 @@ class _Matrix:
                 self.set(b, a, bit)
 
     def format(self, mask):
+        """Formatbits für ``mask`` an beide vorgesehenen Stellen schreiben (plus das immer dunkle Modul)."""
         n, bits = self.n, _format_bits(mask)
         for i in range(6):
             self.set(8, i, (bits >> i) & 1 == 1)
@@ -166,6 +181,9 @@ class _Matrix:
         self.set(8, n - 8, True)                                 # immer dunkel
 
     def place(self, words):
+        """Datenbits im Zickzack einsetzen: in Doppelspalten von rechts nach links, abwechselnd auf- und abwärts,
+        Funktionsmodule überspringen (Spalte 6 ist die Taktlinie).
+        """
         n, i = self.n, 0
         bits = [(w >> (7 - b)) & 1 for w in words for b in range(8)]
         right = n - 1
@@ -183,6 +201,7 @@ class _Matrix:
             right -= 2
 
     def apply_mask(self, mask):
+        """Maske ``mask`` (0 … 7) auf alle Datenmodule anwenden (Funktionsmodule bleiben)."""
         f = (lambda x, y: (x + y) % 2 == 0, lambda x, y: y % 2 == 0, lambda x, y: x % 3 == 0,
              lambda x, y: (x + y) % 3 == 0, lambda x, y: (x // 3 + y // 2) % 2 == 0,
              lambda x, y: x * y % 2 + x * y % 3 == 0, lambda x, y: (x * y % 2 + x * y % 3) % 2 == 0,
@@ -193,6 +212,9 @@ class _Matrix:
                     self.m[y][x] = not self.m[y][x]
 
     def penalty(self):
+        """Strafpunkte nach ISO/IEC 18004: lange gleichfarbige Folgen, 2×2-Blöcke, suchmusterähnliche Folgen und
+        unausgeglichenes Hell/Dunkel. Die Maske mit den wenigsten Punkten wird verwendet.
+        """
         m, n, p = self.m, self.n, 0
         for line in list(m) + [list(c) for c in zip(*m)]:
             run, prev = 0, None
@@ -240,6 +262,7 @@ def encode(text: str):
 
 
 def to_svg(matrix, scale=6, border=4, dark="#000", light="#fff"):
+    """Matrix als SVG-Bild (``scale`` Pixel je Modul, ``border`` Module Ruhezone)."""
     n = len(matrix)
     size = (n + 2 * border) * scale
     rects = "".join(f'<rect x="{(x + border) * scale}" y="{(y + border) * scale}" width="{scale}" height="{scale}"/>'

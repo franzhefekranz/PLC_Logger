@@ -99,6 +99,7 @@ def local_ip():
 # Benutzer, Passwörter und Zertifikat
 # ---------------------------------------------------------------------------------------
 def tls_dir():
+    """Ordner für das selbstsignierte Zertifikat und den Sitzungsschlüssel (``web_tls`` im Datenordner)."""
     return os.path.join(BASE_DIR, "web_tls")
 
 
@@ -183,11 +184,13 @@ RUNNING = []
 
 
 def set_io_bridge(bridge):
+    """IO-Check-Fenster an- bzw. abmelden (None); danach zeigen alle Webserver es unter /io."""
     global _io_bridge
     _io_bridge = bridge
 
 
 def io_bridge():
+    """Angemeldete IO-Check-Brücke oder None."""
     return _io_bridge
 
 
@@ -214,10 +217,14 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         return Response(raw, status=status, mimetype="application/json", headers=headers)
 
     def token_ok():
+        """True, wenn die Anfrage den richtigen Zugriffscode trägt (``?token=`` oder Kopf ``X-Token``; Vergleich in
+        konstanter Zeit).
+        """
         sent = request.args.get("token", "") or request.headers.get("X-Token", "")
         return bool(token) and hmac.compare_digest(sent.encode(), token.encode())
 
     def logged_in():
+        """True, wenn die Sitzung zu einem (noch vorhandenen) Benutzer gehört."""
         u = session.get("user")
         return bool(u) and u in users
 
@@ -238,6 +245,9 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.after_request
     def security_headers(resp):
+        """Sicherheits-Kopfzeilen für jede Antwort: kein MIME-Raten, nicht in fremde Seiten einbetten, kein Referrer;
+        bei HTTPS HSTS.
+        """
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Frame-Options", "DENY")
         resp.headers.setdefault("Referrer-Policy", "no-referrer")
@@ -247,6 +257,11 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
+        """Anmeldeseite: GET zeigt das Formular, POST prüft Benutzer und Passwort.
+
+        Nach 5 Fehlversuchen ist die Adresse 60 s gesperrt; jeder Fehlversuch wartet zusätzlich 0,8 s. Bei Erfolg
+        beginnt eine neue Sitzung (``session.clear``, schützt vor untergeschobenen Sitzungen).
+        """
         if not users:
             return redirect("./")
         err = ""
@@ -278,6 +293,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/logout")
     def logout():
+        """Abmelden: Sitzung löschen und zur Anmeldung bzw. Startseite."""
         session.clear()
         return redirect("login" if users else "./")
 
@@ -291,6 +307,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/")
     def index():
+        """Startseite mit den Diagrammen; läuft nur der IO-Check (keine Aufzeichnung), geht es direkt zu /io."""
         if get_rec() is None and _io_bridge is not None:
             return redirect("io" + (("?token=" + request.args["token"]) if request.args.get("token") else ""))
         user = session.get("user") if users else ""
@@ -301,6 +318,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
         return Response(INDEX_HTML.replace("__CDN__", CDN_URL).replace("__LOGOUT__", out), mimetype="text/html")
 
     def _tok():
+        """Zugriffscode der Anfrage für Links auf andere Seiten (``?token=…``) oder ""."""
         return ("?token=" + html.escape(request.args["token"])) if request.args.get("token") else ""
 
     def may_edit():
@@ -310,6 +328,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
     # ---- Prozessbild --------------------------------------------------------------------------------------------
     @app.route("/prozess")
     def prozess_page():
+        """Seite des Prozessbilds (HTML aus plc_web_prozess) mit Links zu Diagrammen und Abmelden."""
         from plc_web_prozess import PROZESS_HTML
         user = session.get("user") if users else ""
         out = '<a class="lnk" href="./' + _tok() + '">Diagramme</a>'
@@ -320,6 +339,12 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/api/prozess", methods=["GET", "POST"])
     def api_prozess():
+        """Layout des Prozessbilds lesen (GET) oder speichern (POST, JSON).
+
+        GET liefert Layout (gespeichert oder Vorschlag), die Variablen und ob der Benutzer bearbeiten darf;
+        ``?vorschlag=1`` liefert immer den Vorschlag. POST prüft die Berechtigung, nimmt nur JSON an (Schutz vor
+        Formularen fremder Seiten) und speichert das bereinigte Layout.
+        """
         import plc_web_prozess as wp
         rec = get_rec()
         if rec is None:
@@ -346,6 +371,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/static/<path:name>")
     def static_file(name):
+        """Statische Dateien (Chart.js) aus den Ordnern ``web_static`` ausliefern."""
         for d in static_dirs():
             if os.path.exists(os.path.join(d, name)):
                 return send_from_directory(d, name, max_age=3600)
@@ -353,6 +379,9 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/api/config")
     def api_config():
+        """Aufbau für die Seite: Projekt, Seiten, Diagramme mit Achsen und Variablen; ``version`` ändert sich mit jedem
+        neuen Recorder.
+        """
         rec = get_rec()
         if rec is None:
             return reply({"version": None, "message": "Keine Aufzeichnung aktiv", "refresh_ms": refresh_ms})
@@ -369,6 +398,13 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/api/data")
     def api_data():
+        """Messwerte eines Zeitfensters für die Diagramme.
+
+        Parameter: ``window`` (Sekunden), ``end`` (Endzeit, leer = live), ``max`` (Punkte je Kurve), ``only`` (nur diese
+        Variablen-Indizes als Kurve). Die Kurven werden auf die Bildschirmbreite verdichtet (Min/Max je Abschnitt
+        bleiben erhalten); Zeiten relativ zu t0, um Daten zu sparen. Dazu letzte Werte, Zustand der Steuerungen und
+        offene Ereignisse.
+        """
         rec = get_rec()
         if rec is None:
             return reply({"version": None})
@@ -402,6 +438,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/api/status")
     def api_status():
+        """Nur Zustand: Steuerungen, Zeilenzahl, läuft die Aufzeichnung, offene Ereignisse."""
         rec = get_rec()
         if rec is None:
             return reply({"version": None})
@@ -420,6 +457,9 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/api/io")
     def api_io():
+        """IO-Check: Momentaufnahme der Signale für die Mobilseite (``ver`` = bekannte Version, ``sel`` = gewähltes
+        Signal).
+        """
         b = _io_bridge
         if b is None:
             return reply({"active": False})
@@ -433,6 +473,8 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/api/io/cmd", methods=["POST"])
     def api_io_cmd():
+        """IO-Check: Befehl von der Mobilseite (Status setzen, Bemerkung …); nur JSON, Prüfer = angemeldeter Benutzer.
+        """
         b = _io_bridge
         if b is None:
             return reply({"error": "inactive"}, 409)
@@ -447,6 +489,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
 
     @app.route("/api/io/protokoll.pdf")
     def api_io_protocol():
+        """IO-Check: Abnahmeprotokoll als PDF erzeugen und im Browser anzeigen."""
         b = _io_bridge
         if b is None or not b.signals:
             abort(404)
@@ -480,6 +523,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False):
             return {"open": 0, "list": []}
 
     def _plcs(rec):
+        """Zustand der Steuerungen für die Status-LEDs der Webseite."""
         return [{"name": n, "state": s, "text": t, "read_ms": round(ms, 1)} for n, s, t, ms in rec.status_list()]
 
     return app
@@ -498,6 +542,7 @@ class WebServer:
 
     def __init__(self, get_rec, host="0.0.0.0", port=8080, token="", refresh_ms=1000, https=False, cert="", key="",
                  users=None):
+        """Flask-Anwendung anlegen (noch nicht gestartet); Benutzer als {Name: Hash} oder JSON-Text."""
         self.host, self.port = host, int(port)
         self.https = bool(https)
         self.cert, self.key = cert, key
@@ -509,6 +554,7 @@ class WebServer:
 
     @classmethod
     def from_conn(cls, get_rec, conn):
+        """Webserver mit den Einstellungen der Konfiguration (siehe ``web_settings``)."""
         host, port, token, refresh, https, cert, key, users = web_settings(conn)
         return cls(get_rec, host, port, token, refresh, https, cert, key, json.loads(users))
 
@@ -527,6 +573,7 @@ class WebServer:
         return ctx
 
     def fingerprint(self):
+        """SHA-256-Fingerabdruck des verwendeten Zertifikats (nur bei HTTPS, sonst "")."""
         return cert_fingerprint(getattr(self, "cert_used", "")) if self.https else ""
 
     def start(self):
@@ -538,6 +585,7 @@ class WebServer:
         RUNNING.append(self)
 
     def stop(self):
+        """Server beenden und aus der Liste der laufenden Server entfernen."""
         if self in RUNNING:
             RUNNING.remove(self)
         if self.srv:

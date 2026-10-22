@@ -65,6 +65,7 @@ def security_label(key):
 
 
 def endpoint_url(s, host=None):
+    """Endpunkt-Adresse für Clients; bei 0.0.0.0 (alle Netzwerkkarten) steht der Rechnername darin."""
     h = host or s.get("host") or "0.0.0.0"
     if h in ("0.0.0.0", "::", ""):
         h = socket.gethostname()
@@ -72,6 +73,7 @@ def endpoint_url(s, host=None):
 
 
 def describe(s) -> str:
+    """Kurztext für das Konfigurationsprogramm: „aus“ oder Endpunkt mit Sicherheit und Zugriffsart."""
     s = settings(s)
     if not s["aktiv"]:
         return tr("aus")
@@ -105,9 +107,13 @@ class _Users:
     """Anmeldung am OPC-UA-Server mit den Benutzern des Webservers (Passwort-Hash, siehe plc_webauth)."""
 
     def __init__(self, users, anonymous):
+        """``users``: {Name: Passwort-Hash} der Web-Benutzer; ``anonymous``: Zugriff ohne Anmeldung erlaubt."""
         self.users, self.anonymous = users, anonymous
 
     def get_user(self, iserver, username=None, password=None, certificate=None):
+        """Von asyncua bei jeder Sitzung aufgerufen: anonym (ohne Name) nur, wenn erlaubt; sonst Name und Passwort
+        prüfen. None = abgewiesen.
+        """
         from asyncua.server.user_managers import User, UserRole       # beide asyncua-Versionen
         from plc_webauth import check_password
         if username is None:
@@ -122,6 +128,11 @@ class OpcUaServer:
     veröffentlicht wird im Takt ``intervall_ms`` nur, was sich geändert hat."""
 
     def __init__(self, conn, variables, plcs, triggers=(), emit=None, status_fn=None):
+        """Server für die Variablen ``variables`` der Steuerungen ``plcs`` vorbereiten (noch nicht gestartet).
+
+        ``triggers``: für den Ordner Ereignisse; ``emit``: Meldungen; ``status_fn``: liefert [(Zustand, Text)] je
+        Steuerung für den Ordner Status.
+        """
         self.s = settings(conn.get("opcua_server", "")) if isinstance(conn, dict) else settings(conn)
         self.conn = conn if isinstance(conn, dict) else {}
         self.vars, self.plcs = list(variables), list(plcs)
@@ -140,14 +151,19 @@ class OpcUaServer:
         self.recording = True
 
     def __bool__(self):
+        """True, wenn der Server eingeschaltet ist."""
         return bool(self.s.get("aktiv"))
 
     # ---- Schnittstelle zum Recorder (andere Threads) ------------------------------------------------------------
     def update(self, ts, row):
+        """Neueste Messzeile übernehmen (vom Sammler-Thread); veröffentlicht wird im eigenen Takt – Zwischenwerte
+        zwischen zwei Takten entfallen.
+        """
         with self.lock:
             self.latest = (ts, row)
 
     def event(self, kind, trigger, prio, text, ts):
+        """Kommen/Gehen eines Triggers merken (gleiche Schnittstelle wie Notifier.event)."""
         with self.lock:
             self.active[trigger] = (kind == "KOMMT")
 
@@ -165,6 +181,7 @@ class OpcUaServer:
         return True
 
     def stop(self, wait_s=5.0):
+        """Server-Thread beenden: das Stopp-Ereignis wird thread-sicher in seiner asyncio-Schleife gesetzt."""
         if self.thread is None:
             return
         if self.loop is not None and self.stop_evt is not None:
@@ -177,6 +194,7 @@ class OpcUaServer:
 
     # ---- Server-Thread ------------------------------------------------------------------------------------------
     def _thread(self):
+        """Thread-Funktion: eigene asyncio-Schleife; Fehler beim Start landen in ``error`` (``start`` meldet sie)."""
         try:
             asyncio.run(self._main())
         except Exception as e:                    # Port belegt, Zertifikat, fehlende Bibliothek …
@@ -185,6 +203,13 @@ class OpcUaServer:
             self.ready.set()
 
     async def _main(self):
+        """Server einrichten, Adressraum anlegen und bis zum Stopp im Takt veröffentlichen.
+
+        Reihenfolge: Server mit Benutzerprüfung, Name, Endpunkt, Anwendungs-URI, Sicherheitsstufen (mit Zertifikat),
+        erlaubte Anmeldearten, Namensraum. Dann die Knoten: je Steuerung ein Ordner mit ihren Variablen, „Berechnet“,
+        „Ereignisse“, „Status“. Danach läuft der Server (``async with``); jede Runde schreibt ``_publish`` die
+        Änderungen.
+        """
         from asyncua import Server, ua
         from plc_common import APP_VERSION
         from plc_webauth import parse_users
@@ -225,6 +250,8 @@ class OpcUaServer:
         folders = {}
 
         async def folder(key, name):              # NodeId fest (Ordner:<key>), Anzeigename ggf. übersetzt
+            """Ordner unter „PLC Datenlogger“ einmal anlegen (feste NodeId ``Ordner:<key>``, Anzeigename übersetzbar).
+            """
             if key not in folders:
                 folders[key] = await root.add_folder(ua.NodeId(f"Ordner:{key}", idx), name)
             return folders[key]
@@ -289,7 +316,11 @@ class OpcUaServer:
             await asyncio.sleep(0.05)
 
     async def _publish(self, server, ua, last_vals, last_ev, last_st, ev_nodes, st_nodes, ts_node):
-        """Geänderte Werte, Ereignisse und Zustände in den Adressraum schreiben."""
+        """Geänderte Werte, Ereignisse und Zustände in den Adressraum schreiben.
+
+        Variablen nur bei neuer Messzeile und geändertem Wert (spart Meldungen an Abonnenten); ohne Wert mit Status
+        BadNoCommunication, Quellzeitstempel = Zeit der Messung.
+        """
         with self.lock:
             latest, active = self.latest, dict(self.active)
         if latest is not None and latest[0] != self._last_ts:
