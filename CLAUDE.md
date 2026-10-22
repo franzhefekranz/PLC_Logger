@@ -2,7 +2,9 @@
 
 * Sprache im Projekt: Deutsch (Code-Kommentare, Commit-Nachrichten, Anleitung). Oberflächentexte mit `tr("…")`;
   neue Texte in `sprachen/en.txt` übersetzen (`python tools/extract_tr.py plc .`).
-* Prüfen: `ruff check --select F --select E9 src tools`.
+* Prüfen: `ruff check --select F --select E9 src tools tests` und `python -m pytest tests` (GUI-Tests brauchen PySide6,
+  `QT_QPA_PLATFORM=offscreen`). Der Workflow *Tests* läuft bei jedem Push (Linux und Windows); neue Fenster/Dialoge in
+  `tests/test_gui.py` aufnehmen.
 
 ## Versionierung
 
