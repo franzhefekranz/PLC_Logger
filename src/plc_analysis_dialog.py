@@ -79,16 +79,20 @@ class _AnalysisBase(QDialog):
         self.export_rows = ([], [])                       # (Kopfzeile, Zeilen) für „Werte speichern“
 
     def current_range(self):
+        """Gewählter Zeitbereich (t0, t1); ohne Auswahl der letzte Eintrag (alle Daten)."""
         return self.cb_range.currentData() or (self.ranges[-1][1], self.ranges[-1][2])
 
     def var(self, name):
+        """Variable mit dem Namen ``name`` oder None."""
         return next((v for v in self.vars if v.name == name), None)
 
     def fetch(self, names):
+        """Messwerte der Variablen ``names`` im gewählten Zeitbereich -> (Zeiten, {Name: Werte})."""
         a, b = self.current_range()
         return self.data_fn(a, b, names)
 
     def save_image(self):
+        """Diagramm als PNG-Bild speichern."""
         path, _ = QFileDialog.getSaveFileName(self, tr("Bild speichern"), os.path.join(self.base_dir, "analyse.png"),
                                               tr("PNG-Bild (*.png)"))
         if not path:
@@ -100,6 +104,7 @@ class _AnalysisBase(QDialog):
             QMessageBox.warning(self, tr("Bild speichern"), tr("Die Datei konnte nicht geschrieben werden."))
 
     def save_csv(self):
+        """Die berechneten Werte (``export_rows``) als CSV-Datei mit Semikolon speichern (UTF-8 mit BOM für Excel)."""
         head, rows = self.export_rows
         if not rows:
             QMessageBox.information(self, tr("Werte speichern"), tr("Es sind keine Werte vorhanden."))
@@ -120,6 +125,7 @@ class _AnalysisBase(QDialog):
             QMessageBox.warning(self, tr("Werte speichern"), str(e))
 
     def recompute(self):
+        """Daten holen und Diagramm neu zeichnen – von den abgeleiteten Klassen umgesetzt."""
         raise NotImplementedError
 
 
@@ -128,6 +134,7 @@ class XYDialog(_AnalysisBase):
     """Eine oder mehrere Variablen (Y) über einer anderen Variable (X) – z. B. Druck über Hub, Kennlinien."""
 
     def __init__(self, parent, variables, data_fn, ranges, base_dir, x_name="", y_names=()):
+        """Bedienelemente: X-Variable, Liste der Y-Variablen (ankreuzen), Darstellung, Ausgleichsgerade."""
         super().__init__(parent, tr("XY-Diagramm"), variables, data_fn, ranges, base_dir)
         names = [v.name for v in self.vars]
         self.cb_x = QComboBox()
@@ -162,10 +169,12 @@ class XYDialog(_AnalysisBase):
         self.recompute()
 
     def y_names(self):
+        """Namen der angekreuzten Y-Variablen."""
         return [self.lst_y.item(i).text() for i in range(self.lst_y.count())
                 if self.lst_y.item(i).checkState() == Qt.CheckState.Checked]
 
     def recompute(self):
+        """Je Y-Variable die Wertepaare (X, Y) zeichnen; optional Ausgleichsgerade und Korrelationskoeffizient r."""
         self.plot.clear()
         xn, yns = self.cb_x.currentText(), self.y_names()
         if not xn or not yns:
@@ -208,6 +217,9 @@ class FftDialog(_AnalysisBase):
     """Frequenzanalyse einer Variable: Amplitudenspektrum mit den stärksten Frequenzen."""
 
     def __init__(self, parent, variables, data_fn, ranges, base_dir, name=""):
+        """Bedienelemente: Variable, Fensterfunktion, Vorbehandlung (Mittelwert/Trend), X-Achse Frequenz oder
+        Periodendauer.
+        """
         super().__init__(parent, tr("Frequenzanalyse (FFT)"), variables, data_fn, ranges, base_dir)
         names = [v.name for v in self.vars if v.dtype != "BOOL"] or [v.name for v in self.vars]
         self.cb_var = QComboBox()
@@ -242,6 +254,9 @@ class FftDialog(_AnalysisBase):
         self.recompute()
 
     def recompute(self):
+        """Spektrum berechnen (siehe ``plc_analysis.spectrum``) und zeichnen; die stärksten Frequenzen werden markiert
+        und mit Periodendauer aufgelistet.
+        """
         self.plot.clear()
         name = self.cb_var.currentText()
         if not name:

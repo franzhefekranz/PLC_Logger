@@ -305,6 +305,9 @@ class AboutDialog(QDialog):
     """Dialog „Über …“: Programm, Lizenz, Drittkomponenten und Bibliotheksversionen in Registerkarten."""
 
     def __init__(self, parent=None):
+        """Kopf mit Symbol, Name, Version und Copyright; darunter Registerkarten Programm, Bibliotheken,
+        Drittkomponenten und die Lizenztexte (soweit die Dateien gefunden werden).
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("Über {0}").format(APP_NAME))
         self.resize(680, 560)
@@ -347,6 +350,7 @@ class AboutDialog(QDialog):
         return b
 
     def _link(self, url):
+        """Link im Text: Internet-Adressen im Browser öffnen, LICENSE/COPYING zur passenden Registerkarte wechseln."""
         target = url.toString()
         if url.scheme() in ("http", "https", "mailto"):
             QDesktopServices.openUrl(url)
@@ -356,6 +360,9 @@ class AboutDialog(QDialog):
             self.tabs.setCurrentWidget(self.tab_lgpl)
 
     def _about_page(self):
+        """Registerkarte „Programm“: Kurzbeschreibung, Lizenzhinweis und Hinweis auf die austauschbaren Qt-Bibliotheken
+        (LGPL).
+        """
         b = self._browser()
         b.setHtml(
             "<p>" + tr("Liest zyklisch Werte aus Steuerungen, zeichnet sie als CSV und/oder in einer Datenbank auf "
@@ -375,6 +382,8 @@ class AboutDialog(QDialog):
         return b
 
     def _libraries_page(self):
+        """Registerkarte „Bibliotheken“: Versionen von Python, Qt, PySide6 und den Zusatzpaketen (für Fehlerberichte).
+        """
         from PySide6 import __version__ as pyside_version
         from PySide6.QtCore import qVersion
         rows = [("Python", platform.python_version()), ("Qt", qVersion()), ("PySide6", pyside_version)]
@@ -388,6 +397,7 @@ class AboutDialog(QDialog):
         return b
 
     def _text_page(self, text, markdown=False):
+        """Textanzeige für eine Lizenzdatei (Markdown oder Festbreitenschrift)."""
         b = self._browser()
         if markdown:
             b.setMarkdown(text)
@@ -397,6 +407,7 @@ class AboutDialog(QDialog):
         return b
 
     def _add_license_tab(self, name, title):
+        """Registerkarte mit dem Text der Datei ``name`` anhängen -> Seite oder None, wenn die Datei fehlt."""
         text = _read(name)
         if not text:
             return None
@@ -406,6 +417,7 @@ class AboutDialog(QDialog):
 
 
 def show_about(parent=None):
+    """Dialog „Über …“ modal anzeigen."""
     AboutDialog(parent).exec()
 
 

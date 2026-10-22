@@ -10,6 +10,8 @@ Erzeugt die Bilder der neueren Funktionen, deren Fenster sich ohne Steuerung zei
 * ``opcua_server.png``         Dialog OPC-UA-Server
 * ``webserver_qr.png``         Webserver-Adresse mit QR-Code
 * ``ereignis_diagramm.png``    Logger nach „Im Diagramm zeigen“ (offline, Lineale auf Beginn und Ende)
+* ``config_web_headless.png``  Konfigurationsprogramm, Reiter Webserver & Headless (mit OPC-UA-Server)
+* ``config_trigger_ereignis.png`` Konfigurationsprogramm, Reiter Trigger & Ereignisse (mit Benachrichtigungen)
 
 Deutsch landet in ``doc/images``, Englisch in ``doc/images/en``. Läuft auch ohne Bildschirm
 (``QT_QPA_PLATFORM=offscreen``); der Workflow *Screenshots* führt das Skript unter Windows aus, damit die Bilder wie
@@ -39,7 +41,14 @@ def demo_config(folder):
     port = s.getsockname()[1]
     s.close()
     conn = default_connection()
-    conn.update(csv_ordner=folder, projekt="Kesselhaus Linie 1", web_port=port, web_host="127.0.0.1")
+    from plc_webauth import hash_password
+    conn.update(csv_ordner=folder, projekt="Kesselhaus Linie 1", web_port=port, web_host="127.0.0.1",
+                web_benutzer={"franz": hash_password("geheim123", 1000)},
+                benachrichtigung={"aktiv": True, "prio_min": "Warnung",
+                                  "email": {"aktiv": True, "server": "smtp.firma.de", "an": "schicht@firma.de"},
+                                  "ntfy": {"aktiv": True, "url": "https://ntfy.sh/kesselhaus-4711"}},
+                opcua_server={"aktiv": True, "port": 4840, "sicherheit": ["none", "Basic256Sha256,SignAndEncrypt"],
+                              "anonym": False, "benutzer": "web"})
     path = os.path.join(folder, "anlage.json")
     save_config(conn, charts, variables, path, plcs=[Plc(name="SPS 1")])
     return path
@@ -113,20 +122,35 @@ def main():
     shot(dlg, os.path.join(out, "webserver_qr.png"))
     dlg.close()
 
+    # Konfigurationsprogramm: Reiter Webserver & Headless (nur die Seite) und Trigger & Ereignisse (mit Reiterleiste)
+    import plc_config
+    cw = plc_config.ConfigWindow(cfg)
+    cw.resize(1600, 900)
+    cw.show()
+    wait(500)
+    cw.tabs.setCurrentIndex(3)
+    wait(300)
+    cw.tabs.currentWidget().grab().save(os.path.join(out, "config_web_headless.png"))
+    cw.tabs.setCurrentIndex(5)
+    wait(300)
+    cw.tabs.grab().save(os.path.join(out, "config_trigger_ereignis.png"))
+    print("Bilder: Konfigurationsprogramm")
+    cw.close()
+
     # Logger: Ereignis im Diagramm zeigen (Demo-Aufzeichnung, dann offline mit Linealen)
     import plc_gui
     w = plc_gui.MainWindow(cfg, demo=True)
     w.resize(1280, 760)
     w.show()
     w.act_run.setChecked(True)
-    t_end = time.time() + 25
+    t_end = time.time() + 75
     while time.time() < t_end:
         wait(200)
     w.act_run.setChecked(False)
     wait(500)
     t = w.rec.snapshot()[0] if w.rec is not None else w.t
-    t_mid = float(t[len(t) // 2])
-    w.goto_time(t_mid, t_mid + 4.0, "Übertemperatur")
+    t_mid = float(t[len(t) // 2])                     # Mitte der Aufzeichnung: links und rechts liegen Daten
+    w.goto_time(t_mid, t_mid + 6.0, "Übertemperatur")
     wait(600)
     shot(w, os.path.join(out, "ereignis_diagramm.png"))
     w.close()

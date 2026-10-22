@@ -84,9 +84,11 @@ def build_svg(width, height, title, x_range, axes, series, rulers=(), legend=(),
         x1 = x0 + 1.0
 
     def sx(x):
+        """Zeit -> x-Koordinate in Pixeln (linear von x0 … x1 auf die Plotbreite)."""
         return px + (np.asarray(x, dtype=float) - x0) / (x1 - x0) * pw
 
     def sy(ai, y):
+        """Wert -> y-Koordinate in Pixeln für die Y-Achse ``ai`` (SVG zählt y von oben, daher ph − …)."""
         a = axes[ai]
         span = (a["hi"] - a["lo"]) or 1.0
         return py + ph - (np.asarray(y, dtype=float) - a["lo"]) / span * ph

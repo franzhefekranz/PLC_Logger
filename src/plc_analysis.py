@@ -23,6 +23,11 @@ WINDOWS = {"hann": N_("Hann (Standard)"), "hamming": N_("Hamming"), "blackman": 
 
 
 def _window(name, n):
+    """Fensterfunktion ``name`` mit n Werten (Hann, Hamming, Blackman, Rechteck oder Flat-Top).
+
+    Das Fenster blendet den Anfang und das Ende der Messreihe weich aus, damit der harte Schnitt an den Rändern keine
+    Scheinfrequenzen erzeugt („Leckeffekt“). Flat-Top liefert genaue Amplituden, aber breitere Spitzen.
+    """
     if name == "hamming":
         return np.hamming(n)
     if name == "blackman":
@@ -76,6 +81,8 @@ def spectrum(t, y, window="hann", detrend="mean"):
         yu = yu - yu.mean()
     w = _window(window, n)
     spec = np.fft.rfft(yu * w)
+    # Normierung: ×2 für das einseitige Spektrum (die negativen Frequenzen fallen weg), ÷ (n · Fenstermittel)
+    # gleicht die Dämpfung durch das Fenster aus. Gleichanteil und Nyquist-Frequenz kommen nur einmal vor (÷2).
     amp = np.abs(spec) * 2.0 / (n * w.mean())
     amp[0] /= 2.0
     if n % 2 == 0:
@@ -102,6 +109,7 @@ def find_peaks(f, amp, count=5, min_rel=0.05):
     for i in idx[:count]:
         y0, y1, y2 = a[i - 1], a[i], a[i + 1]
         den = y0 - 2 * y1 + y2
+        # Parabel durch die drei Nachbarpunkte: Scheitel liegt p Rasterschritte neben dem Maximum (−0,5 … 0,5).
         p = 0.5 * (y0 - y2) / den if den else 0.0
         out.append((float(f[i] + p * df), float(y1)))
     return out

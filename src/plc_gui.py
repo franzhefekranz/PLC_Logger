@@ -170,6 +170,7 @@ class BoolSample(_NoClickSample):
     N = 800      # Anzahl der Zeitpunkte des Verlaufs über die Diagrammbreite
 
     def __init__(self, item, color):
+        """Muster für die Kurve ``item`` in der Farbe ``color``; der Verlauf kommt später über ``set_history``."""
         super().__init__(item)
         self.color = QColor(color)
         self.vals = None        # auf N Zeitpunkte abgetasteter Verlauf (numpy) oder None
@@ -179,6 +180,7 @@ class BoolSample(_NoClickSample):
         self.on_change = None   # Rückruf, wenn sich Verlauf oder Stil ändern (zeichnet die Streifen neu)
 
     def _changed(self):
+        """Muster neu zeichnen und die Streifen im Diagramm benachrichtigen (``on_change``)."""
         self.update()
         if self.on_change:
             self.on_change()
@@ -213,14 +215,22 @@ class BoolLanes(QGraphicsItem):
     """Kindobjekt der ViewBox (Pixelkoordinaten); liest Verläufe und Zeilenhöhen vom ChartPanel."""
 
     def __init__(self, panel, vb):
+        """Streifen-Element in der ViewBox ``vb`` des Diagramms ``panel`` anlegen (über den Kurven, Z-Wert 5)."""
         super().__init__(vb)
         self.panel, self.vb = panel, vb
         self.setZValue(5)
 
     def boundingRect(self):
+        """Zeichenbereich = ganze Plotfläche (Pflichtmethode jedes QGraphicsItem)."""
         return QRectF(self.vb.boundingRect())
 
     def paint(self, p, *args):
+        """Je sichtbarer BOOL-Variable eine Spur in Höhe ihrer Legendenzeile zeichnen.
+
+        Der abgetastete Verlauf (``BoolSample.vals``) wird in Abschnitte gleichen Zustands zerlegt: Abschnitte mit 1 als
+        gefülltes Rechteck über der Grundlinie, Abschnitte mit 0 als Linie auf der Grundlinie. Hervorgehobene Kurven
+        werden dicker, andere bei einer Hervorhebung blasser gezeichnet.
+        """
         panel = self.panel
         rect = self.vb.boundingRect()
         # Die Streifen beginnen rechts von der Legende und reichen bis zum rechten Diagrammrand.
@@ -307,6 +317,7 @@ class ChartTitle(QLabel):
     dropped = Signal(int)
 
     def __init__(self, text, ci):
+        """Titelzeile mit Text ``text`` für das Diagramm Nummer ``ci``; nimmt gezogene Titelzeilen an."""
         super().__init__(text)
         self.ci = ci
         # Position des Mausklicks, um den Beginn des Ziehens zu erkennen.
@@ -592,6 +603,7 @@ class ChartPanel(QWidget):
             self._show_cursor(False)
 
     def _show_cursor(self, on):
+        """Linie, Wertekästchen und Punkte der Mauszeiger-Anzeige ein- bzw. ausblenden."""
         for item in (self.cursor_line, self.cursor_text, *self.cursor_dots):
             item.setVisible(on)
 
@@ -602,6 +614,7 @@ class ChartPanel(QWidget):
         super().leaveEvent(ev)
 
     def _on_mouse_moved(self, pos):
+        """Mausbewegung über der Szene: über der Plotfläche die Werte am Mauszeiger anzeigen, sonst ausblenden."""
         if not self.cursor_enabled:
             return
         # Nur über der eigentlichen Plotfläche (nicht über Achsen und Beschriftung).
@@ -970,11 +983,13 @@ class _Dot(QWidget):
     """Ein farbiger Punkt (die eigentliche LED)."""
 
     def __init__(self):
+        """Punkt mit 14 × 14 Pixeln, anfangs grau (Zustand „aus“)."""
         super().__init__()
         self.setFixedSize(14, 14)
         self.color = QColor(LED_COLORS["off"])
 
     def paintEvent(self, _ev):
+        """Gefüllten Kreis in der Zustandsfarbe mit etwas dunklerem Rand zeichnen."""
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(QPen(self.color.darker(160), 1))
@@ -987,6 +1002,7 @@ class PlcLed(QWidget):
     """Status-LED mit Name; der Tooltip zeigt den Text des Zustands (Verbindung, Fehler, Zykluszeit)."""
 
     def __init__(self, name):
+        """LED (Punkt) und Name der Steuerung nebeneinander; ``_key`` merkt den zuletzt gezeigten Zustand."""
         super().__init__()
         lay = QHBoxLayout(self)
         lay.setContentsMargins(6, 0, 6, 0)
@@ -1591,6 +1607,7 @@ class MainWindow(QMainWindow):
         return self.t, self.y
 
     def _pid_data(self, t0, t1, names):
+        """Messwerte der Variablen ``names`` im Zeitraum t0 … t1 -> (Zeiten, {Name: Werte}) für die PID-Optimierung."""
         t, y = self._pid_source()
         i0 = int(np.searchsorted(t, t0, side="left"))
         i1 = int(np.searchsorted(t, t1, side="right"))
@@ -2442,6 +2459,12 @@ class MainWindow(QMainWindow):
             self._load_logs(paths, save=True)
 
     def _load_logs(self, paths, save):
+        """CSV-/ZIP-Dateien laden (mehrere werden zeitlich aneinandergehängt) und offline anzeigen.
+
+        Mit ``save=True`` wird angeboten, die zusammengefügten Daten als eine neue CSV-Datei zu speichern (die
+        Quelldateien werden nie überschrieben). Die Datentypen für das Format der Werte kommen aus der aktuellen bzw.
+        der Konfigurationsdatei; unbekannte Spalten gelten als REAL.
+        """
         from plc_csvjoin import read_and_join
         from plc_export import write_values
         # Läuft gerade eine Aufzeichnung, wird sie beendet (Laden ersetzt die Daten im Speicher).

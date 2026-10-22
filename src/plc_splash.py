@@ -61,11 +61,13 @@ class LogoLabel(QLabel):
     """QLabel mit Logo; Strg + Umschalt + Doppelklick öffnet das versteckte Info-Fenster."""
 
     def __init__(self, pixmap=None, parent=None):
+        """Logo-Feld, optional gleich mit Bild."""
         super().__init__(parent)
         if pixmap is not None:
             self.setPixmap(pixmap)
 
     def mouseDoubleClickEvent(self, ev):
+        """Doppelklick mit Strg + Umschalt: verstecktes Info-Fenster öffnen; sonst normal weiterreichen."""
         mods = ev.modifiers()
         if (mods & Qt.KeyboardModifier.ControlModifier) and (mods & Qt.KeyboardModifier.ShiftModifier):
             EasterEggDialog(self.window()).exec()
@@ -90,6 +92,7 @@ class Scope(QWidget):
     """Kleines animiertes Oszilloskop (für das Info-Fenster)."""
 
     def __init__(self, parent=None):
+        """Oszilloskop-Fläche; ein Timer (30 ms) schiebt die Kurven weiter."""
         super().__init__(parent)
         self.setMinimumSize(460, 170)
         self.phase = 0.0
@@ -98,10 +101,12 @@ class Scope(QWidget):
         self.timer.start(30)
 
     def _tick(self):
+        """Phase weiterschieben und neu zeichnen (ergibt die Animation)."""
         self.phase += 0.06
         self.update()
 
     def paintEvent(self, _ev):
+        """Raster und drei sich verändernde Sinuskurven zeichnen, oben die Zeit seit dem Programmstart."""
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
@@ -136,6 +141,7 @@ class EasterEggDialog(QDialog):
     """Verstecktes Info-Fenster mit Oszilloskop, Versionen und einer Weisheit des Tages."""
 
     def __init__(self, parent=None):
+        """Logo, Oszilloskop, Versionen von Python/Qt, Datenordner und ein zufälliger Spruch."""
         super().__init__(parent)
         self.setWindowTitle(tr("Über {0} – psst …").format(APP_NAME))
         self.setStyleSheet(STYLE + "QDialog { background: %s; }" % C_BG1)
@@ -177,6 +183,7 @@ class EasterEggDialog(QDialog):
         self.next_quote()
 
     def next_quote(self):
+        """Einen anderen zufälligen Spruch anzeigen."""
         self.quote.setText("„" + random.choice(QUOTES) + "“")
 
 
@@ -187,6 +194,7 @@ class _Banner(QWidget):
     """Linke Seite des Startbilds: Verlauf, Messkurven im Hintergrund, Logo, Name und Version."""
 
     def __init__(self, logo_path, subtitle, parent=None):
+        """Logo (aus der Konfiguration, sonst Programmsymbol), Programmname, Untertitel und Version untereinander."""
         super().__init__(parent)
         self.setFixedWidth(300)
         self.subtitle = subtitle
@@ -209,6 +217,7 @@ class _Banner(QWidget):
         lay.addWidget(ver)
 
     def paintEvent(self, _ev):
+        """Hintergrund: Farbverlauf, drei blasse Messkurven und ein Akzentstrich am linken Rand."""
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         g = QLinearGradient(0, 0, self.width(), self.height())
@@ -242,6 +251,11 @@ class StartWindow(QWidget):
     chosen = Signal()
 
     def __init__(self, kind="logger", current_path="", select=True):
+        """Rahmenloses Startbild aufbauen: links ``_Banner``, rechts Liste der zuletzt benutzten Konfigurationen und
+        Knöpfe.
+
+        ``select=False`` (Datei schon angegeben oder Startbild abgeschaltet): sofort die Lade-Anzeige statt der Auswahl.
+        """
         super().__init__(None, Qt.WindowType.FramelessWindowHint | Qt.WindowType.Window)
         from plc_about import install_help
         install_help()                               # F1: Kontexthilfe (hier: Abschnitt „Startbild“)
@@ -327,6 +341,7 @@ class StartWindow(QWidget):
 
     # ------------------------------------------------------------------ Liste
     def _fill_recent(self):
+        """Liste der zuletzt benutzten Konfigurationen füllen (Name, Ordner, Änderungszeit); die aktuelle steht oben."""
         self.list.clear()
         files = recent_configs()
         if self.current and os.path.exists(self.current) and self.current not in files:
@@ -348,12 +363,14 @@ class StartWindow(QWidget):
             self.list.addItem(it)
 
     def _update(self):
+        """„Öffnen“ nur freigeben, wenn ein Listeneintrag mit Datei gewählt ist."""
         if not hasattr(self, "btn_open"):          # Liste wird gefüllt, bevor die Knöpfe existieren
             return
         it = self.list.currentItem()
         self.btn_open.setEnabled(bool(it and it.data(Qt.ItemDataRole.UserRole)))
 
     def _center(self):
+        """Fenster in der Mitte des Hauptbildschirms platzieren."""
         scr = QApplication.primaryScreen()
         if scr is not None:
             g = scr.availableGeometry()
@@ -361,24 +378,32 @@ class StartWindow(QWidget):
 
     # ------------------------------------------------------------------ Auswahl
     def _finish(self, path, new=False, demo=False):
+        """Auswahl abschließen: Einstellung „Startbild zeigen“ speichern, Ergebnis setzen, auf Lade-Anzeige umschalten
+        und ``chosen`` senden.
+        """
         save_settings(startbild=not self.chk_skip.isChecked())
         self.result = {"path": path, "new": new, "demo": demo}
         self.set_loading("Lade …")
         self.chosen.emit()
 
     def open_selected(self):
+        """Gewählte Konfiguration öffnen."""
         it = self.list.currentItem()
         p = it.data(Qt.ItemDataRole.UserRole) if it else None
         if p:
             self._finish(p)
 
     def browse(self):
+        """Konfigurationsdatei über den Dateidialog wählen."""
         start = os.path.dirname(self.current) if self.current else BASE_DIR
         p, _flt = QFileDialog.getOpenFileName(self, tr("Konfiguration öffnen"), start, FILE_FILTER)
         if p:
             self._finish(os.path.abspath(p))
 
     def new_file(self):
+        """Neue Konfiguration: im Logger Dateiname wählen (Datei legt plc_logger.py an), im Konfigurationsprogramm leer
+        beginnen.
+        """
         if self.kind == "config":
             self._finish("", new=True)
             return
@@ -389,10 +414,12 @@ class StartWindow(QWidget):
             self._finish(os.path.abspath(p), new=True)
 
     def demo(self):
+        """Logger im Demo-Modus mit der gewählten (oder aktuellen) Konfiguration starten."""
         it = self.list.currentItem()
         self._finish((it.data(Qt.ItemDataRole.UserRole) if it else "") or self.current, demo=True)
 
     def cancel(self):
+        """Abbrechen: kein Ergebnis, Fenster schließen – das Programm beendet sich danach."""
         self.result = None
         self.close()
         self.chosen.emit()
@@ -415,14 +442,17 @@ class StartWindow(QWidget):
 
     # Rahmenloses Fenster mit der Maus verschieben
     def mousePressEvent(self, ev):
+        """Rahmenloses Fenster verschieben: Abstand des Mausklicks zur Fensterecke merken."""
         if ev.button() == Qt.MouseButton.LeftButton:
             self._drag = ev.globalPosition().toPoint() - self.frameGeometry().topLeft()
 
     def mouseMoveEvent(self, ev):
+        """Fenster mit gedrückter Maustaste mitziehen."""
         if self._drag is not None and ev.buttons() & Qt.MouseButton.LeftButton:
             self.move(ev.globalPosition().toPoint() - self._drag)
 
     def mouseReleaseEvent(self, _ev):
+        """Verschieben beenden."""
         self._drag = None
 
     def closeEvent(self, ev):
@@ -432,6 +462,7 @@ class StartWindow(QWidget):
         super().closeEvent(ev)
 
     def keyPressEvent(self, ev):
+        """Tasten: Esc = Abbrechen, Eingabe = Öffnen (nur solange die Auswahl sichtbar ist)."""
         if ev.key() == Qt.Key.Key_Escape and self.buttons.isVisible():
             self.cancel()
         elif ev.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self.buttons.isVisible():
@@ -452,6 +483,8 @@ def choose(kind, current_path="", explicit=False):
     if not select:
         return win, {"path": current_path, "new": False, "demo": False}
     from PySide6.QtCore import QEventLoop
+    # Eigene Ereignisschleife: wartet, bis der Benutzer gewählt hat (Signal chosen), ohne app.exec() zu starten –
+    # das Hauptprogramm läuft danach mit der Auswahl weiter.
     loop = QEventLoop()
     win.chosen.connect(loop.quit)
     loop.exec()

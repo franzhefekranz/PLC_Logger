@@ -44,6 +44,9 @@ class NoteDialog(QDialog):
     """Notiz von Hand ins Ereignisprotokoll eintragen (Zeit, Text, Verfasser)."""
 
     def __init__(self, parent=None, when=None):
+        """Dialog mit Zeitpunkt (Standard: ``when`` bzw. jetzt), Notiztext und Verfasser (Standard: angemeldeter
+        Benutzer).
+        """
         super().__init__(parent)
         self.setWindowTitle(tr("Notiz ins Ereignisprotokoll"))
         self.resize(520, 300)
@@ -67,6 +70,7 @@ class NoteDialog(QDialog):
         self.ed_text.setFocus()
 
     def _check(self):
+        """OK nur mit Text; sonst Hinweis und der Dialog bleibt offen."""
         if not self.ed_text.toPlainText().strip():
             QMessageBox.warning(self, tr("Notiz"), tr("Bitte einen Text eingeben."))
             return
@@ -96,6 +100,12 @@ class EventViewer(QDialog):
     """Tabelle der Ereignisse mit Filter und Quittierung (nicht modal)."""
 
     def __init__(self, log: EventLog, parent=None, on_change=None, standalone=False, on_goto=None):
+        """Viewer für das Protokoll ``log`` aufbauen: Filterzeile, Tabelle, Knöpfe und Aktualisierung im Sekundentakt.
+
+        ``on_change``: wird nach Quittieren/Notiz aufgerufen (Logger: Zähler in der Statusleiste aktualisieren).
+        ``standalone``: allein gestartet (zusätzlich „Datei öffnen …“). ``on_goto(Beginn, Ende, Text)``: nur im Logger –
+        Knopf und Kontextmenü „Im Diagramm zeigen“.
+        """
         super().__init__(parent)
         self.log, self.on_change, self.standalone = log, on_change, standalone
         self.on_goto = on_goto                # Rückruf (Beginn, Ende, Text): Ereignis im Diagramm zeigen (Logger)
@@ -134,6 +144,7 @@ class EventViewer(QDialog):
             hh.setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
         hh.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
         self.table.itemSelectionChanged.connect(self._update_buttons)
+        # Doppelklick quittiert – aber nur, wenn unter den markierten Zeilen ein offenes Ereignis ist.
         self.table.doubleClicked.connect(
             lambda _i: self.ack_selected() if self.selected_ids() & self.log.open_ids else None)
         lay.addWidget(self.table, 1)
@@ -192,6 +203,9 @@ class EventViewer(QDialog):
         self.fill(force=True)
 
     def _poll(self):
+        """Timer (jede Sekunde): Datei neu einlesen, wenn ein anderes Programm sie geändert hat; Tabelle nur bei neuen
+        Daten neu füllen.
+        """
         if self.isVisible():
             if self.log.changed_on_disk():
                 self.log.reload()
@@ -211,6 +225,7 @@ class EventViewer(QDialog):
         n_notes = len(events) - total
         prio = self.cb_prio.currentData() or ""
         text = self.ed_find.text().strip().lower()
+        # Filter: nur offene, Priorität (oder nur Notizen) und Suchtext in Trigger oder Meldung.
         shown = [e for e in events
                  if (not self.chk_open.isChecked() or e.offen) and (not prio or e.prio == prio)
                  and (not text or text in e.trigger.lower() or text in e.text.lower())]
@@ -256,6 +271,7 @@ class EventViewer(QDialog):
         self._update_buttons()
 
     def selected_event(self):
+        """Das markierte Ereignis (genau eine Zeile gewählt) oder None."""
         ids = self.selected_ids()
         if len(ids) != 1:
             return None
@@ -263,6 +279,7 @@ class EventViewer(QDialog):
         return next((e for e in self.log.events() if e.id == i), None)
 
     def goto_selected(self):
+        """Markiertes Ereignis im Logger zeigen: Kommen (und ggf. Gehen) als Zeitpunkte an ``on_goto`` übergeben."""
         e = self.selected_event()
         if e is None or self.on_goto is None:
             return
@@ -273,6 +290,7 @@ class EventViewer(QDialog):
             self.on_goto(t0, t1, f"{e.trigger}: {e.text}".strip(": "))
 
     def _context_menu(self, pos):
+        """Rechtsklick auf eine Zeile: Zeile wählen, Menü „Im Diagramm zeigen“ (nur im Logger) und „Quittieren“."""
         from PySide6.QtWidgets import QMenu
         row = self.table.rowAt(pos.y())
         if row < 0:
@@ -286,10 +304,12 @@ class EventViewer(QDialog):
         menu.exec(self.table.viewport().mapToGlobal(pos))
 
     def selected_ids(self):
+        """IDs der Ereignisse in den markierten Zeilen (die ID steht als UserRole in Spalte 0)."""
         rows = {i.row() for i in self.table.selectedItems()}
         return {self.table.item(r, 0).data(Qt.ItemDataRole.UserRole) for r in rows if self.table.item(r, 0)}
 
     def _update_buttons(self):
+        """Knöpfe passend zu Auswahl und offenen Ereignissen freigeben bzw. sperren."""
         n_open = self.log.open_count()
         self.btn_all.setEnabled(n_open > 0)
         self.btn_all.setText(tr("Alle quittieren ({0})").format(n_open) if n_open else tr("Alle quittieren"))
@@ -297,6 +317,7 @@ class EventViewer(QDialog):
         self.btn_goto.setEnabled(len(self.selected_ids()) == 1)
 
     def new_note(self):
+        """Notiz-Dialog zeigen, Notiz eintragen und Anzeige aktualisieren."""
         if add_note(self, self.log):
             self.fill(force=True)
             if self.on_change:
@@ -304,6 +325,7 @@ class EventViewer(QDialog):
 
     # ------------------------------------------------------------------ Quittieren
     def _done(self, n):
+        """Nach dem Quittieren: Tabelle neu füllen, Logger benachrichtigen; Hinweis, wenn nichts quittiert wurde."""
         self.fill(force=True)
         if self.on_change:
             self.on_change()
@@ -311,6 +333,7 @@ class EventViewer(QDialog):
             QMessageBox.information(self, tr("Quittieren"), tr("Keine offenen Ereignisse ausgewählt."))
 
     def ack_selected(self):
+        """Die markierten offenen Ereignisse quittieren (mit dem angemeldeten Benutzer)."""
         ids = self.selected_ids()
         if not ids:
             return
@@ -322,6 +345,7 @@ class EventViewer(QDialog):
         self._done(n)
 
     def ack_all(self):
+        """Nach Rückfrage alle offenen Ereignisse quittieren."""
         n_open = self.log.open_count()
         if not n_open:
             return
@@ -337,6 +361,7 @@ class EventViewer(QDialog):
 
     # ------------------------------------------------------------------ Datei
     def open_folder(self):
+        """Ordner der Ereignisdatei im Dateimanager öffnen."""
         folder = os.path.dirname(self.log.path)
         if os.path.isdir(folder):
             QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
@@ -344,6 +369,7 @@ class EventViewer(QDialog):
             QMessageBox.information(self, tr("Ordner"), tr("Der Ordner existiert noch nicht:\n{0}\n\nEr wird beim ersten Ereignis angelegt.").format(folder))
 
     def choose_file(self):
+        """Andere Ereignisdatei wählen und anzeigen (nur im allein gestarteten Viewer)."""
         start = os.path.dirname(self.log.path)
         path, _flt = QFileDialog.getOpenFileName(self, tr("Ereignisprotokoll öffnen"), start,
                                               tr("Ereignisprotokoll (*.csv);;Alle Dateien (*)"))

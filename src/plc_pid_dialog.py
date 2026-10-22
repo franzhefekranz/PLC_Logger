@@ -24,6 +24,11 @@ NONE = tr("(keiner)")
 
 
 def _fill_combo(cb, names, current, allow_none=False):
+    """Auswahlliste mit Variablennamen füllen und ``current`` wählen; optional Eintrag „(keiner)“.
+
+    Ist ``current`` nicht (mehr) vorhanden, z. B. nach dem Umbenennen einer Variable, bleibt er als „(unbekannt)“
+    sichtbar, statt still auf eine andere Variable zu springen.
+    """
     cb.clear()
     if allow_none:
         cb.addItem(NONE, "")
@@ -42,6 +47,9 @@ class PidSetupDialog(QDialog):
     """Soll-/Ist-/Stellwert, Reglertyp und Regelverhalten eines Diagramms festlegen (ändert ``chart`` bei OK)."""
 
     def __init__(self, parent, chart, chart_names, all_names):
+        """Auswahl von Soll-, Ist- und Stellwert (Vorschlag aus den Variablennamen, siehe ``guess_roles``), Reglertyp
+        und Regelverhalten.
+        """
         super().__init__(parent)
         self.chart = chart
         self.setWindowTitle(tr("PID-Optimierung – {0}").format(chart.name))
@@ -83,6 +91,7 @@ class PidSetupDialog(QDialog):
         self.resize(520, 300)
 
     def accept_checked(self):
+        """OK: Istwert und Stellwert müssen gewählt und verschieden sein; dann die Auswahl ins Diagramm übernehmen."""
         iw, stw = self.cb_iw.currentData(), self.cb_stw.currentData()
         if not iw or not stw or iw == stw:
             QMessageBox.warning(self, tr("PID-Optimierung"), tr("Bitte Istwert und Stellwert (zwei verschiedene "
@@ -101,6 +110,7 @@ COLS = [tr("Einstellregel"), "Kp", "Ti [s]", "Td [s]", "Ki [1/s]", "Kd [s]", tr(
 
 
 def _num(v, unit=""):
+    """Zahl für die Ergebnistabelle (4 signifikante Stellen, optional Einheit); NaN = „—“, unendlich = „∞“."""
     if v is None or (isinstance(v, float) and math.isnan(v)):
         return "—"
     if isinstance(v, float) and math.isinf(v):
@@ -115,6 +125,9 @@ class PidTuneDialog(QDialog):
     (Zeiten, {Name: Werte}); ranges: [(Bezeichnung, t0, t1)] wählbarer Zeitbereiche (der erste ist voreingestellt)."""
 
     def __init__(self, parent, chart, names, get_data, ranges):
+        """Dialog aufbauen: oben Auswahl (Variablen, Zeitbereich, Reglertyp, Verhalten), links Modell und
+        Ergebnistabelle, rechts drei Diagramme (Messung/Modell, Stellwert, simulierter Sollwertsprung).
+        """
         super().__init__(parent)
         import pyqtgraph as pg                       # erst hier (das Konfigurationsprogramm braucht es nicht)
         self.pg = pg
@@ -228,6 +241,9 @@ class PidTuneDialog(QDialog):
 
     # ------------------------------------------------------------------ Berechnung
     def calculate(self):
+        """Daten des Zeitbereichs holen und das Streckenmodell bestimmen (``plc_pid.identify``); Fehler erscheinen rot
+        im Dialog.
+        """
         iw, stw, sw = self.cb_iw.currentData(), self.cb_stw.currentData(), self.cb_sw.currentData()
         if not iw or not stw or iw == stw:
             QMessageBox.warning(self, tr("PID-Optimierung"), tr("Bitte Istwert und Stellwert auswählen."))
@@ -262,6 +278,12 @@ class PidTuneDialog(QDialog):
         self.retune()
 
     def retune(self):
+        """Reglerparameter für das bestimmte Modell nach allen Regeln berechnen, simulieren und in die Tabelle
+        schreiben.
+
+        Wird auch beim Wechsel von Reglertyp oder Verhalten aufgerufen – das Modell muss dafür nicht neu bestimmt
+        werden. Die erste Zeile ist die empfohlene Regel (fett), instabile Ergebnisse sind rot.
+        """
         if self.model is None:
             return
         typ, beh = self.cb_typ.currentText(), self.cb_beh.currentData()
@@ -287,6 +309,8 @@ class PidTuneDialog(QDialog):
 
     # ------------------------------------------------------------------ Anzeige
     def draw_fit(self):
+        """Messung (Istwert, ggf. Sollwert) und simulierte Modellantwort übereinander zeichnen, darunter den Stellwert.
+        """
         pg, m = self.pg, self.model
         self.plot_fit.clear()
         self.plot_u.clear()
@@ -300,6 +324,7 @@ class PidTuneDialog(QDialog):
         self.plot_u.plot(tt, m.u, pen=pg.mkPen("#27ae60", width=2))
 
     def draw_loop(self):
+        """Simulierten Sollwertsprung zeichnen: die gewählte Regel rot und dick, alle übrigen stabilen Regeln grau."""
         pg = self.pg
         self.plot_loop.clear()
         if self.model is None or not self.tunings:
@@ -325,6 +350,9 @@ class PidTuneDialog(QDialog):
         self.plot_loop.setTitle(tr("Simulierter Sollwertsprung: {0} (grau: übrige Regeln)").format(tn.method))
 
     def copy(self):
+        """Modell und Parameter aller Regeln als Text in die Zwischenablage kopieren (für Inbetriebnahmeprotokoll oder
+        E-Mail).
+        """
         if self.model is None:
             return
         lines = [f"PID-Optimierung – {self.chart.name}",

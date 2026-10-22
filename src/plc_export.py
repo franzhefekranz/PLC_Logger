@@ -31,10 +31,12 @@ DOWNSAMPLE_METHODS = {
 
 
 def is_excel(path):
+    """True, wenn der Dateiname auf eine Excel-Datei (.xlsx/.xlsm) endet – sonst wird CSV geschrieben bzw. gelesen."""
     return os.path.splitext(path)[1].lower() in (".xlsx", ".xlsm")
 
 
 def _openpyxl():
+    """openpyxl importieren; fehlt das Paket, eine verständliche Fehlermeldung statt ImportError."""
     try:
         import openpyxl
         return openpyxl
@@ -102,6 +104,8 @@ def downsample(t, y, interval, method="mittel", dtypes=None):
     if len(t) == 0 or interval <= 0:
         return t, y
     start = math.floor(t[0] / interval) * interval
+    # Nummer des Rasterintervalls jeder Messung; first/last = erster und letzter Index jedes belegten Intervalls.
+    # reduceat fasst dann je Intervall alle Werte in einem Schritt zusammen (ohne Python-Schleife über die Zeilen).
     bucket = np.floor((t - start) / interval + 1e-9).astype(np.int64)
     first = np.flatnonzero(np.r_[True, bucket[1:] != bucket[:-1]])     # erster Index jedes belegten Intervalls
     last = np.r_[first[1:] - 1, len(t) - 1]
@@ -193,6 +197,9 @@ def export_dialog_class():
         erster, letzter Zeitpunkt im Bereich)."""
 
         def __init__(self, parent, ranges, count, n_vars, n_visible):
+            """Dialog aufbauen: Auswahl des Zeitbereichs, „nur eingeblendete Variablen“, Downsampling (Raster und
+            Verfahren) und die voraussichtliche Zeilenzahl.
+            """
             super().__init__(parent)
             self.setWindowTitle(tr("Werte exportieren"))
             self.ranges, self.count = ranges, count
@@ -254,9 +261,12 @@ def export_dialog_class():
             self._update()
 
         def _range(self):
+            """Gewählter Zeitbereich (t0, t1) oder None."""
             return self.ranges[self.grp.checkedId()][2]
 
         def _update(self):
+            """Zeilenzahl für die aktuelle Auswahl anzeigen (mit Downsampling: höchstens eine Zeile je Rasterintervall).
+            """
             rng = self._range()
             if rng is None:
                 self.lbl_rows.setText("")
@@ -270,6 +280,7 @@ def export_dialog_class():
                 self.lbl_rows.setText(tr("{0} Zeilen").format(n))
 
         def _ok(self):
+            """Auswahl in ``self.result`` übernehmen und den Dialog schließen."""
             self.result = {"range": self._range(), "key": self.ranges[self.grp.checkedId()][0],
                            "visible_only": self.chk_visible.isChecked() and self.chk_visible.isEnabled(),
                            "interval": self.sp_int.value() if self.chk_ds.isChecked() else 0.0,
