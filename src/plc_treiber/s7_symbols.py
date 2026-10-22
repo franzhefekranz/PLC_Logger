@@ -86,11 +86,18 @@ class SymNode:
     db: int = 0
     note: str = ""
     source: object = None     # nur bei kind == "db"
+    dims: list = field(default_factory=list)   # nur bei kind == "array": [(von, bis), …] je Dimension
 
     # Nur Blätter mit einem vom Logger lesbaren Typ können zur Aufzeichnung ausgewählt werden.
     @property
     def supported(self) -> bool:
         return self.kind == "leaf" and config_type(self.dtype) is not None
+
+    @property
+    def block_ok(self) -> bool:
+        """Eindimensionales Array aus aufzeichenbaren Elementen -> als Block (Blocklesemodus) übernehmbar."""
+        first = next((c for c in self.children if c.kind != "note"), None)
+        return self.kind == "array" and len(self.dims) == 1 and first is not None and first.supported
 
 
 # Tokenizer: erkennt (in dieser Reihenfolge) Namen in Anführungszeichen, ':=', '..', Bezeichner,
@@ -419,7 +426,7 @@ class _Layout:
         # Array
         _, dims, elem = typ
         cur.align(True)
-        node = SymNode(name, "array", byte=cur.byte)
+        node = SymNode(name, "array", byte=cur.byte, dims=list(dims))
         # Gesamtzahl der Elemente = Produkt der Dimensionsgrößen.
         count = math.prod(hi - lo + 1 for lo, hi in dims)
         is_bool = self.resolve(elem) == ("elem", "BOOL")
@@ -585,3 +592,20 @@ class SymbolSet:
                 seen[d.number] = fname
                 nodes.append(root)
         return nodes, errors
+
+
+def block_spec(node, first, count):
+    """Block (Blocklesemodus) aus einem eindimensionalen Array: ab Index ``first`` höchstens ``count`` Elemente.
+
+    Rückgabe wie bei BrowseResult.blocks: (Name, Startadresse, 0, Anzahl, Typ). Die Startadresse ist die des Elements
+    [first]; sie wird aus der Adresse des ersten Elements berechnet (Elemente liegen lückenlos: Typgröße bzw. 1 Bit),
+    damit es auch für Elemente jenseits der im Baum gezeigten funktioniert."""
+    from plc_common import Block, s7_address
+    from plc_treiber.s7 import DRIVER
+    lo, hi = node.dims[0]
+    first = max(lo, min(int(first), hi))
+    count = max(1, min(int(count), hi - first + 1))
+    elem = next(c for c in node.children if c.kind != "note")
+    ct = config_type(elem.dtype)
+    base = Block(address=s7_address("DB", node.db, elem.byte, elem.bit, ct), dtype=ct, driver="s7")
+    return node.path, DRIVER.block_element_address(base, first - lo), 0, count, ct

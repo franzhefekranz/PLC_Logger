@@ -302,6 +302,7 @@ class S7Driver(Driver):
         for n in dlg.result_nodes:
             ct = config_type(n.dtype) or "REAL"
             res.variables.append((n.path, s7_address("DB", n.db, n.byte, n.bit, ct), ct))
+        res.blocks = list(dlg.result_blocks)          # Arrays im Blocklesemodus (Startadresse, Anzahl)
         return res
 
 

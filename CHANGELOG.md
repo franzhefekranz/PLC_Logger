@@ -43,6 +43,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **Logo und Kundenlogo** (Konfiguration › Ansicht): erscheinen im Logger rechts oben, auf den Webseiten (Diagramme,
   Prozessbild, Anmeldung) und im Kopf der PDF-Berichte und IO-Check-Protokolle. PNG und JPG werden ohne
   Zusatzbibliothek in das PDF eingebettet (PNG mit Transparenz auf weißem Grund).
+* **S7: Arrays aus der DB-Quelle als Block** (Variablen aus SPS-Symbolen › *Array als Block …* oder Doppelklick auf
+  das Array): erster Index und Anzahl wählen, die Startadresse wird aus der Quelle berechnet; gelesen wird im
+  Blocklesemodus mit einer Anfrage.
 * **Balkenbreite einstellbar** (Konfiguration › Ansicht › *Balkenbreite*, 4 … 40 Pixel, Vorgabe 14).
 * „Über PLC Datenlogger“ und das versteckte Info-Fenster zeigen das feste Herstellerlogo, dazu Links auf
   taxis-instruments.de und den Quelltext auf GitHub. Strg + Umschalt + Doppelklick auf das Logo im Dialog „Über …“

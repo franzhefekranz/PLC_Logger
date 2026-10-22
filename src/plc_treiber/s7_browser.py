@@ -24,15 +24,15 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDialog, QFileDialog, QHBoxLayout, QInputDialog,
-    QLabel, QLineEdit, QMessageBox, QPushButton, QTreeWidget, QTreeWidgetItem,
+    QApplication, QComboBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout, QHBoxLayout, QInputDialog,
+    QLabel, QLineEdit, QMessageBox, QPushButton, QSpinBox, QTreeWidget, QTreeWidgetItem,
     QVBoxLayout,
 )
 
 
 # Variable: zur Adressdarstellung; list_plc_dbs: DB-Liste der SPS.
 from plc_common import s7_address
-from plc_treiber.s7_symbols import SymbolSet, config_type
+from plc_treiber.s7_symbols import SymbolSet, block_spec, config_type
 from plc_i18n import tr
 
 # Im Baum hängt am ersten Eintrag jeder Zeile der zugehörige SymNode (UserRole).
@@ -62,6 +62,7 @@ class SymbolBrowser(QDialog):
         # Ergebnis des SPS-Abgleichs: {DB-Nummer: Größe in Bytes}; leer, solange nicht abgeglichen wurde.
         self.plc_sizes = {}
         self.result_nodes = []
+        self.result_blocks = []          # vorgemerkte Blöcke: (Name, Startadresse, 0, Anzahl, Typ)
         self.target_index = default_target
         # True, solange der Baum programmatisch geändert wird (Häkchen-Signale dann ignorieren).
         self._busy = False
@@ -102,6 +103,7 @@ class SymbolBrowser(QDialog):
         self.tree.setColumnWidth(1, 100)
         self.tree.setColumnWidth(2, 140)
         self.tree.itemChanged.connect(self.on_item_changed)
+        self.tree.itemDoubleClicked.connect(lambda it, _c: self.take_block(it))
 
         # Statuszeile unter dem Baum: Fehler der Quellen, Zahl der gefundenen SPS-Bausteine.
         self.status = QLabel("")
@@ -112,6 +114,10 @@ class SymbolBrowser(QDialog):
         self.cb_target.addItems(targets)
         if 0 <= default_target < len(targets):
             self.cb_target.setCurrentIndex(default_target)
+        self.btn_block = QPushButton(tr("Array als Block …"))
+        self.btn_block.setToolTip(tr("Markiertes Array (eindimensional, Zahlen oder BOOL) im Blocklesemodus übernehmen: "
+                                     "alle Elemente mit einer Anfrage lesen (auch per Doppelklick auf das Array)"))
+        self.btn_block.clicked.connect(lambda: self.take_block(self.tree.currentItem()))
         btn_ok = QPushButton(tr("Auswahl übernehmen"))
         btn_ok.setDefault(True)
         btn_ok.clicked.connect(self.take_selection)
@@ -120,6 +126,7 @@ class SymbolBrowser(QDialog):
         bottom = QHBoxLayout()
         bottom.addWidget(QLabel(tr("Neue Variablen anlegen in:")))
         bottom.addWidget(self.cb_target, 1)
+        bottom.addWidget(self.btn_block)
         bottom.addWidget(btn_ok)
         bottom.addWidget(btn_close)
 
@@ -382,13 +389,47 @@ class SymbolBrowser(QDialog):
         for i in range(item.childCount()):
             self._collect(item.child(i), out)
 
+    def take_block(self, item):
+        """Markiertes Array als Block vormerken: erster Index und Anzahl im kleinen Dialog; Startadresse = Adresse des
+        ersten gewählten Elements (die Elemente liegen lückenlos hintereinander)."""
+        n = item.data(0, ROLE_NODE) if item is not None else None
+        if n is None or n.kind != "array":
+            return
+        if not n.block_ok:
+            QMessageBox.information(self, tr("Block"), tr("Als Block lassen sich nur eindimensionale Arrays aus Zahlen "
+                                                          "oder BOOL übernehmen."))
+            return
+        lo, hi = n.dims[0]
+        d = QDialog(self)
+        d.setWindowTitle(tr("Array als Block – {0}").format(n.path))
+        fl = QFormLayout(d)
+        sp_start, sp_n = QSpinBox(), QSpinBox()
+        sp_start.setRange(lo, hi)
+        sp_n.setRange(1, min(1000, hi - lo + 1))
+        sp_n.setValue(min(hi - lo + 1, 1000))
+        fl.addRow(tr("Erster Index:"), sp_start)
+        fl.addRow(tr("Anzahl:"), sp_n)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        bb.accepted.connect(d.accept)
+        bb.rejected.connect(d.reject)
+        fl.addRow(bb)
+        if not d.exec():
+            return
+        self.add_block(n, sp_start.value(), sp_n.value())
+        item.setText(3, (item.text(3) + "  " if item.text(3) else "") + tr("▦ als Block vorgemerkt"))
+
+    def add_block(self, n, first, count):
+        """Block aus dem Array ``n`` ab Index ``first`` mit ``count`` Elementen vormerken (ohne Dialog)."""
+        self.result_blocks.append(block_spec(n, first, count))
+
     # Auswahl übernehmen: Ergebnis merken und den Dialog schließen (accept).
     def take_selection(self):
         out = []
         for i in range(self.tree.topLevelItemCount()):
             self._collect(self.tree.topLevelItem(i), out)
-        if not out:
-            QMessageBox.information(self, tr("Auswahl"), tr("Es sind keine neuen Variablen angehakt."))
+        if not out and not self.result_blocks:
+            QMessageBox.information(self, tr("Auswahl"), tr("Es sind keine neuen Variablen angehakt und keine Blöcke "
+                                                            "vorgemerkt."))
             return
         self.result_nodes = out
         self.target_index = self.cb_target.currentIndex()

@@ -42,6 +42,23 @@ def test_iocheck_column_aliases():
     assert io.map_columns(["Logische Adresse"], {}) == {"address": 0}  # Vorgabe ohne eigene Namen
 
 
+def test_s7_source_array_as_block(tmp_path):
+    """S7-DB-Quelle: eindimensionales Array als Block – Startadresse des gewählten Elements, Anzahl begrenzt."""
+    from plc_treiber.s7_symbols import SymbolSet, block_spec
+    src = tmp_path / "m.db"
+    src.write_text('DATA_BLOCK "Messwerte"\nVERSION : 0.1\n   VAR\n      Zaehler : Int;\n'
+                   '      Werte : Array[1..20] of Real;\n      Bits : Array[0..15] of Bool;\n   END_VAR\n'
+                   'BEGIN\nEND_DATA_BLOCK\n', encoding="utf-8")
+    ss = SymbolSet()
+    ss.load(str(src) + "#10")
+    roots, errors = ss.build()
+    assert not errors
+    werte, bits = roots[0].children[1], roots[0].children[2]
+    assert werte.block_ok and not roots[0].children[0].block_ok
+    assert block_spec(werte, 3, 5) == ("Messwerte.Werte", "DB10.DBD10", 0, 5, "REAL")
+    assert block_spec(bits, 10, 99) == ("Messwerte.Bits", "DB10.DBX83.2", 0, 6, "BOOL")
+
+
 def test_iocheck_tracker_digital_and_swap():
     """Digitalsignal: Wechsel 0-1-0 ergibt automatisch „ok“; reagiert ein anderes als das erwartete Signal
     (vertauschte Verdrahtung), wird das erwartete Signal beim Wechsel vermerkt."""

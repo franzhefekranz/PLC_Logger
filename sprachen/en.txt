@@ -4737,6 +4737,12 @@
 @ Filter (Name)…
 > Filter (name)…
 
+@ Array als Block …
+> Array as block …
+
+@ Markiertes Array (eindimensional, Zahlen oder BOOL) im Blocklesemodus übernehmen: alle Elemente mit einer Anfrage lesen (auch per Doppelklick auf das Array)
+> Add the selected array (one-dimensional, numbers or BOOL) in block read mode: read all elements with one request (also by double-clicking the array)
+
 @ Nicht lesbare Quellen: 
 > Unreadable sources: 
 
@@ -4791,8 +4797,14 @@
 @ In der SPS wurden keine Datenbausteine gefunden.
 > No data blocks found in the PLC.
 
-@ Es sind keine neuen Variablen angehakt.
-> No new variables are checked.
+@ Als Block lassen sich nur eindimensionale Arrays aus Zahlen oder BOOL übernehmen.
+> Only one-dimensional arrays of numbers or BOOL can be added as a block.
+
+@ ▦ als Block vorgemerkt
+> ▦ marked as block
+
+@ Es sind keine neuen Variablen angehakt und keine Blöcke vorgemerkt.
+> No new variables are checked and no blocks are marked.
 
 # ---------------- plc_treiber/s7_symbols.py
 
@@ -5038,9 +5050,6 @@
 
 @ Bitte ein eindimensionales Array aus Zahlen oder BOOL markieren (z. B. Array[1..100] of Real).
 > Please select a one-dimensional array of numbers or BOOL (e.g. Array[1..100] of Real).
-
-@ Es sind keine neuen Variablen angehakt und keine Blöcke vorgemerkt.
-> No new variables are checked and no blocks are marked.
 
 # ---------------- plc_treiber/tia_common.py
 
