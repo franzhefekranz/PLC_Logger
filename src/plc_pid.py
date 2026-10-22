@@ -55,6 +55,7 @@ class PidError(Exception):
 
 @dataclass
 class Model:
+    """Ergebnis der Streckenbestimmung: Modellart und Parameter, Güte und die Daten für die Anzeige im Dialog."""
     kind: str                  # "FOPDT" (PT1 + Totzeit) oder "IPDT" (I-Strecke + Totzeit)
     K: float                   # Verstärkung (FOPDT) bzw. Integrierbeiwert Ki in 1/s (IPDT)
     T: float                   # Zeitkonstante in s (nur FOPDT)
@@ -69,6 +70,9 @@ class Model:
     warnings: list = field(default_factory=list)
 
     def describe(self):
+        """Modell als Text für den Dialog, z. B. „PT1 mit Totzeit: K = 1.5, T = 12 s, Totzeit θ = 2 s – Übereinstimmung
+        97 %“.
+        """
         if self.kind == "IPDT":
             return (tr("I-Strecke mit Totzeit: Ki = {0:.4g} 1/s, Totzeit θ = {1:.3g} s – Übereinstimmung {2:.0f} %").format(self.K, self.theta, self.fit))
         return (tr("PT1 mit Totzeit: K = {0:.4g}, T = {1:.3g} s, Totzeit θ = {2:.3g} s – Übereinstimmung {3:.0f} %").format(self.K, self.T, self.theta, self.fit))
@@ -76,6 +80,7 @@ class Model:
 
 @dataclass
 class Tuning:
+    """Reglerparameter nach einer Einstellregel (Standardform) und deren Bewertung aus der Simulation."""
     method: str
     kp: float
     ti: float                  # s (inf = kein I-Anteil)
@@ -152,6 +157,10 @@ def resample(t, u, y, max_points=MAX_POINTS):
 
 
 def _fit_percent(y, ym):
+    """Übereinstimmung von Messung y und Modell ym in %: 100 · (1 − ‖y − ym‖ / ‖y − Mittelwert‖) (NRMSE-Fit).
+
+    100 % = deckungsgleich, 0 % = nicht besser als eine waagerechte Linie auf dem Mittelwert; kann negativ werden.
+    """
     den = np.linalg.norm(y - y.mean())
     return 100.0 * (1.0 - np.linalg.norm(y - ym) / den) if den > 0 else 0.0
 
@@ -160,6 +169,11 @@ def _fit_percent(y, ym):
 # 1. Modell
 # ---------------------------------------------------------------------------------------
 def _fopdt_error(t, u, y, T, theta, dt):
+    """PT1-Modell mit Zeitkonstante T und Totzeit θ an die Daten anpassen -> (Fehlerquadratsumme, [Offset, K], x).
+
+    Der verzögerte Stellwert wird durch ein PT1 mit Verstärkung 1 gefiltert (x); Offset und K ergeben sich dann linear
+    über kleinste Quadrate aus y ≈ Offset + K·x.
+    """
     ud = _delayed(t, u, theta)
     x = _lowpass(ud, math.exp(-dt / T), ud[0])        # Strecke zu Beginn im Gleichgewicht
     p, sse = _ls([np.ones_like(x), x], y)
@@ -167,6 +181,11 @@ def _fopdt_error(t, u, y, T, theta, dt):
 
 
 def _ipdt_error(t, u, y, theta, dt):
+    """I-Strecke mit Totzeit θ anpassen -> (Fehlerquadratsumme, [c, Ki, −Ki·u0], ∫u, t).
+
+    Ansatz y = c + Ki·∫u(τ−θ)dτ − Ki·u0·t: der letzte Term erlaubt einen Arbeitspunkt u0, bei dem der Istwert konstant
+    bleibt.
+    """
     ud = _delayed(t, u, theta)
     integ = np.concatenate([[0.0], np.cumsum(ud[:-1]) * dt])      # ∫ u(τ−θ) dτ
     tt = t - t[0]
@@ -228,6 +247,9 @@ def identify(t, u, y):
     sse_i, p_i, integ, tt = _ipdt_error(t, u, y, best_i[1], dt)
     y_i = p_i[0] + p_i[1] * integ + p_i[2] * tt
 
+    # I-Strecke wählen, wenn sie deutlich besser passt – oder ähnlich gut, während das PT1-Modell eine Zeitkonstante
+    # weit
+    # jenseits des Zeitbereichs braucht (dann sieht man von der PT1-Kurve nur den Anfang, also praktisch eine Rampe).
     use_ipdt = (T > 2.0 * span and sse_i <= sse_f * 1.2) or sse_i < 0.8 * sse_f
     if use_ipdt:
         m = Model("IPDT", float(p_i[1]), float("inf"), float(best_i[1]), float(p_i[0]), _fit_percent(y, y_i), dt,
@@ -277,6 +299,7 @@ def tune(m: Model, ctype="PID", behaviour="normal"):
     """Reglerparameter nach allen Regeln -> Liste von Tuning (zuerst die empfohlene Regel)."""
     K, th = m.K, _theta_eff(m)
     pid = ctype == "PID"
+    # Gewünschtes Verhalten -> Faktor für die Zeitkonstante des geschlossenen Kreises (größer = langsamer, robuster).
     fac = {"schnell": 0.5, "normal": 1.0, "robust": 3.0}.get(behaviour, 1.0)
     out = []
     if m.kind == "IPDT":
@@ -355,6 +378,8 @@ def simulate_loop(m: Model, tn: Tuning, duration=None, step=1.0, n=1500):
     dt = duration / n
     nd = int(round(m.theta / dt))
     a = math.exp(-dt / m.T) if m.kind == "FOPDT" else 1.0
+    # Zeitdiskrete Simulation: in jedem Schritt Regler rechnen, Stellwert in den Totzeit-Puffer schieben, den
+    # verzögerten Stellwert auf die Strecke geben (PT1 als Differenzengleichung bzw. Integrator).
     buf = [0.0] * (nd + 1)                     # Totzeit-Puffer des Stellwerts
     y = x = integ = d_state = 0.0
     tf = tn.td / 10 if tn.td > 0 else 0.0

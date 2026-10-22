@@ -41,6 +41,10 @@ def N_(text):
 
 
 def _placeholders(text):
+    """Namen der Platzhalter eines Textes, sortiert (``{0} von {1}`` -> ['0', '1']); None bei ungültigen Klammern.
+
+    Damit prüft ``parse_file``, ob eine Übersetzung dieselben Platzhalter enthält – sonst stürzte ``.format()`` ab.
+    """
     try:
         return sorted(str(f) for _lit, f, _spec, _conv in string.Formatter().parse(text) if f is not None)
     except ValueError:
@@ -48,10 +52,13 @@ def _placeholders(text):
 
 
 def _unescape(s):
+    """``\n`` in der Sprachdatei -> Zeilenumbruch, ``\\`` -> Backslash (Hilfszeichen \0 schützt doppelte Backslashes).
+    """
     return s.replace("\\\\", "\0").replace("\\n", "\n").replace("\0", "\\")
 
 
 def escape(s):
+    """Gegenstück zu ``_unescape``: Text für eine Zeile der Sprachdatei (Zeilenumbrüche als ``\n``)."""
     return s.replace("\\", "\\\\").replace("\n", "\\n")
 
 
@@ -113,6 +120,7 @@ def available():
 
 
 def _find(code):
+    """Pfad der Sprachdatei ``<Kürzel>.txt`` (Datenordner vor Programmordner) oder None."""
     for folder in folders():
         p = os.path.join(folder, f"{code}.txt")
         if os.path.exists(p):
@@ -141,6 +149,7 @@ def load(code=None):
 
 
 def current():
+    """Kürzel der geladenen Sprache (lädt beim ersten Aufruf die Sprache aus den Einstellungen)."""
     if _table is None:
         load()
     return _lang
@@ -195,6 +204,7 @@ def fill_language_menu(menu, window, restart_cmd):
     a.setToolTip(tr("Eigene Übersetzung: de.txt kopieren, umbenennen (z. B. fr.txt) und übersetzen"))
 
     def open_folder():
+        """Ordner der eigenen Sprachdateien öffnen; die Vorlage ``de.txt`` wird bei Bedarf dorthin kopiert."""
         folder = folders()[0]
         os.makedirs(folder, exist_ok=True)
         tpl = _find(DEFAULT)                          # Vorlage in den Datenordner kopieren, falls sie dort fehlt
@@ -210,6 +220,10 @@ def fill_language_menu(menu, window, restart_cmd):
 
 
 def _switch(window, code, restart_cmd):
+    """Andere Sprache wählen: in den Einstellungen speichern und anbieten, das Programm neu zu starten.
+
+    Die Texte werden beim Aufbau der Fenster übersetzt; ein Wechsel wirkt deshalb erst nach dem Neustart.
+    """
     from PySide6.QtWidgets import QMessageBox
     from plc_common import save_settings
     if code == current():

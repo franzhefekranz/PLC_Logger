@@ -1,0 +1,40 @@
+# Bilder der Bedienungsanleitung erzeugen (tools/make_screenshots.py) – unter Windows, damit die Fenster wie im
+# echten Programm aussehen. Start von Hand; die Bilder (deutsch und englisch) landen im Zweig "bilder" und als
+# Artifact. Übernehmen: git fetch origin bilder && git checkout origin/bilder -- doc/images
+name: Screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bilder:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Abhängigkeiten
+        run: python -m pip install PySide6-Essentials pyqtgraph numpy Flask cryptography openpyxl asyncua python-snap7
+      - name: Bilder erzeugen
+        run: |
+          python tools/make_screenshots.py --lang de
+          python tools/make_screenshots.py --lang en
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bilder
+          path: doc/images
+      - name: In den Zweig "bilder" übernehmen
+        shell: bash
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout -B bilder
+          git add doc/images
+          git commit -m "Bilder der Anleitung (automatisch erzeugt)" || echo "keine Änderung"
+          git push -f origin bilder

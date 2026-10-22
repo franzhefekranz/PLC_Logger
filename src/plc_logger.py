@@ -29,6 +29,7 @@ from plc_common import last_config_path, load_config, remember_config_path
 
 
 def parse_args(argv):
+    """Befehlszeile auswerten (siehe Modulbeschreibung). Die Betriebsarten schließen sich gegenseitig aus."""
     ap = argparse.ArgumentParser(description="PLC Datenlogger")
     ap.add_argument("config", nargs="?", help="Konfigurationsdatei (JSON)")
     ap.add_argument("--config", dest="config_opt", help="Konfigurationsdatei (wie das Positionsargument)")
@@ -46,6 +47,12 @@ def parse_args(argv):
 
 
 def main(argv=None):
+    """Einstiegspunkt: Betriebsart wählen und starten -> Exit-Code.
+
+    Reihenfolge: Konfigurationsprogramm (``--konfig``), Ereignis-Viewer (``--ereignisse``), IO-Check (``--iocheck``);
+    sonst Logger – headless, wenn die Konfiguration es verlangt oder ``--headless`` angegeben ist (``--gui`` erzwingt
+    die Oberfläche). Die Module werden erst hier importiert, damit z. B. der Headless-Betrieb kein Qt braucht.
+    """
     args = parse_args(sys.argv[1:] if argv is None else argv)
     explicit = args.config_opt or args.config
     if args.konfig:

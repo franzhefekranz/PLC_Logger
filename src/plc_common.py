@@ -171,6 +171,7 @@ class Plc:
     enabled: bool = True          # False: Steuerung wird nicht gelesen (ihre Variablen bleiben ohne Wert)
 
     def __post_init__(self):
+        """Ohne Parameter (neue Steuerung) die Vorgabewerte des Treibers eintragen, z. B. IP, Rack und Slot."""
         if not self.params:
             try:
                 self.params = get_driver(self.driver).default_params()
@@ -178,6 +179,11 @@ class Plc:
                 self.params = {}
 
     def __getattr__(self, name):
+        """Fehlendes Attribut als Treiberparameter lesen: ``plc.ip`` liefert ``plc.params["ip"]``.
+
+        Wird nur aufgerufen, wenn das normale Attribut nicht existiert. ``params`` und Doppelunterstrich-Namen sind
+        ausgenommen, sonst entstünde beim Kopieren/Unpickeln (``__setstate__``) eine Endlosschleife.
+        """
         # Nur für fehlende Attribute: Treiberparameter (plc.ip, plc.rack …) – für Leser und Anzeigen.
         if name in ("params", "__setstate__") or name.startswith("__"):
             raise AttributeError(name)
@@ -295,9 +301,15 @@ class Block:
     driver: str = DEFAULT_DRIVER                # Treiber der Steuerung (bestimmt die Elementadressen)
 
     def size_bytes(self) -> int:
+        """Größe des Blocks in Bytes (Anzahl × Größe des Datentyps) – für die Prüfung der Anfragegröße."""
         return self.count * TYPES.get(self.dtype, 4)
 
     def element_address(self, i: int) -> str:
+        """Adresse des i-ten Elements in der Schreibweise des Treibers (z. B. ``DB10.DBD8`` oder ``Messwerte[2]``).
+
+        Die Berechnung übernimmt der Treiber (Byte-Abstände bzw. Array-Index); ist er nicht verfügbar, wird die
+        Tag-Schreibweise ``Adresse[Index]`` angenommen.
+        """
         try:
             return get_driver(self.driver).block_element_address(self, i)
         except Exception:
@@ -305,6 +317,11 @@ class Block:
 
     # Erzeugt aus dem Block die einzelnen Variablen ('Name[0]' ... 'Name[n-1]' oder eigene Namen).
     def variables(self) -> list:
+        """Die Elemente des Blocks als einzelne Variablen (``Name[0]`` … ``Name[n-1]`` oder eigene Namen).
+
+        Jedes Element bekommt eine eigene, aus der Blockfarbe abgeleitete Farbe (siehe ``_shade``) und merkt sich in
+        ``block``/``block_idx``, zu welchem Block es gehört – der Recorder liest so alle Elemente mit einer Anfrage.
+        """
         out = []
         for i in range(self.count):
             # Einzelne Elemente dürfen in einem ANDEREN Diagramm/auf einer anderen Y-Achse liegen als der Rest
@@ -353,6 +370,9 @@ class ConfigFormatError(ValueError):
 
 
 def _new_cp():
+    """Leere interne Darstellung der Konfiguration (ConfigParser ohne %-Platzhalter, damit Formeln mit ``%`` erhalten
+    bleiben).
+    """
     import configparser
     return configparser.ConfigParser(interpolation=None)
 
@@ -388,6 +408,11 @@ def _to_text(value):
 
 
 def _section_to_json(sec):
+    """Einen Abschnitt (Schlüssel -> Text) in ein JSON-Objekt mit passenden Typen umsetzen.
+
+    Die Blockschlüssel ``elem_<i>`` (eigene Elementnamen) und ``elemziel_<i>`` (abweichendes Diagramm/Achse) werden zu
+    den verschachtelten Objekten ``elementnamen`` bzw. ``elementziele`` zusammengefasst.
+    """
     out = {}
     for k, v in sec.items():
         m = re.fullmatch(r"elem_(\d+)", k)
@@ -407,6 +432,11 @@ def _section_to_json(sec):
 
 
 def _json_to_section(d):
+    """Gegenstück zu ``_section_to_json``: JSON-Objekt -> Abschnitt mit Textwerten.
+
+    ``elementnamen``/``elementziele`` werden wieder zu ``elem_<i>``/``elemziel_<i>``; die Achsenliste der Diagramme
+    behandelt der Aufrufer (eigene Abschnitte ``DiagrammN_AchseM``).
+    """
     sec = {}
     for k, v in d.items():
         if k == "elementnamen" and isinstance(v, dict):
@@ -420,6 +450,8 @@ def _json_to_section(d):
     return sec
 
 
+# Die Gruppen (Steuerungen, Diagramme, Variablen, Blöcke, Trigger) stehen intern als Zählabschnitt
+# (z. B. [Variablen] anzahl=3) plus nummerierte Abschnitte ([Var1] … [Var3]); in der Datei als JSON-Liste.
 def cp_to_json(cp) -> dict:
     """Interne Darstellung (Abschnitte) -> JSON-Dokument."""
     doc = {"format": CONFIG_FORMAT, "version": CONFIG_VERSION}
@@ -579,6 +611,8 @@ _GUESS = (("rack", "s7"), ("slot", "s7"), ("pfad", "clx"), ("cpu", "clx"), ("tls
 _PLC_KEYS = ("name", "treiber", "intervall_ms", "aktiv")
 
 
+# Die Einzelprogramme (S7-, CLX-, TIA-Datenlogger) kannten noch keinen Eintrag 'treiber'. Ihre Dateien werden
+# an typischen Parametern erkannt, z. B. 'rack'/'slot' = Siemens S7, 'pfad'/'cpu' = Allen-Bradley Logix.
 def guess_driver(section) -> str:
     """Treiber einer Steuerung: Eintrag 'treiber', sonst aus den vorhandenen Parametern erraten (Dateien des S7-,
     CLX- bzw. TIA-Datenloggers)."""
@@ -593,6 +627,12 @@ def guess_driver(section) -> str:
 
 
 def _plc_from(section, name, default_interval=200):
+    """Eine Steuerung aus einem Abschnitt der Konfiguration erzeugen.
+
+    Allgemeine Schlüssel (Name, Treiber, Intervall, aktiv) gehören zur Steuerung, alle übrigen sind Treiberparameter;
+    der Treiber bringt sie in seine Form (``normalize_params``: Typen, alte Schlüsselnamen). Das Intervall ist
+    mindestens 10 ms.
+    """
     drv_id = guess_driver(section)
     raw = {k: v for k, v in section.items() if k not in _PLC_KEYS}
     try:
@@ -863,10 +903,12 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
     path = path or CONFIG_FILE
     if not plcs:
         plcs = [Plc()]
+    # Die Felder der ersten Steuerung (ip, rack …) stehen bei den Steuerungen, nicht mehr bei den Einstellungen.
     conn = {k: v for k, v in conn.items() if k not in ("ip", "pfad", "cpu", "rack", "slot", "port", "intervall_ms")}
     # Block-Elemente nie als einzelne [VarN] speichern - sie entstehen beim Laden aus [BlockN].
     variables = [v for v in variables if not v.block]
     cp = _new_cp()
+    # Interne Darstellung aufbauen: jeder Abschnitt ist ein Wörterbuch Schlüssel -> Text (Zahlen 1-basiert).
     cp["Verbindung"] = {k: str(v) for k, v in conn.items()}
     cp["Steuerungen"] = {"anzahl": str(len(plcs))}
     for i, p in enumerate(plcs, 1):

@@ -131,12 +131,17 @@ def text_filter(pattern):
         w = w[1:] if neg else w
         if any(c in w for c in "*?["):
             rx = re.compile(fnmatch.translate(w).replace(r"\Z", "").rstrip("$"), re.S)
+            # Die äußere Funktion bindet den aktuellen Wert von rx bzw. w (sonst sähen alle Prüfungen das letzte Wort
+            # der Schleife).
             match = (lambda rx: lambda s: rx.search(s) is not None)(rx)
         else:
             match = (lambda w: lambda s: w in s)(w)
         tests.append((neg, match))
 
     def check(*fields):
+        """Alle Suchwörter prüfen: ein Wort passt, wenn es in irgendeinem Feld vorkommt; ausschließende Wörter
+        (``-wort``) dürfen in keinem Feld vorkommen.
+        """
         texts = [str(f or "").lower() for f in fields]
         for neg, match in tests:
             hit = any(match(t) for t in texts)

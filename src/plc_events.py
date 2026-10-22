@@ -150,10 +150,12 @@ class Event:
 
     @property
     def offen(self):
+        """True, solange ein quittierpflichtiges Ereignis noch nicht quittiert ist."""
         return self.pflicht and not self.quittiert
 
 
 def _stamp(ts=None):
+    """Zeitstempel für das Protokoll: lokale Zeit „JJJJ-MM-TT hh:mm:ss.mmm“ (Standard: jetzt)."""
     ts = time.time() if ts is None else ts
     ms = int(round(ts * 1000))
     return datetime.fromtimestamp(ms // 1000).strftime("%Y-%m-%d %H:%M:%S") + f".{ms % 1000:03d}"
@@ -163,6 +165,10 @@ class EventLog:
     """Ereignisprotokoll-Datei mit Quittierung (thread-sicher)."""
 
     def __init__(self, path):
+        """Protokoll zur Datei ``path`` öffnen; die Datei wird erst beim ersten Eintrag angelegt.
+
+        Beim Öffnen werden die nächste freie ID und die offenen Ereignisse aus der Datei bestimmt (``reload``).
+        """
         self.path = path
         self.lock = threading.Lock()
         self.next_id = 1
@@ -173,6 +179,7 @@ class EventLog:
 
     # ---- Lesen
     def _rows(self):
+        """Alle gültigen Zeilen der Datei ohne Kopfzeile (fremde oder beschädigte Zeilen werden übersprungen)."""
         try:
             with open(self.path, encoding="utf-8", newline="") as f:
                 rows = list(csv.reader(f, delimiter=";"))
@@ -199,6 +206,7 @@ class EventLog:
                     by_id[eid].gegangen = zeit
                 else:
                     by_id[eid].quittiert, by_id[eid].benutzer = zeit, user
+        # Die Datei ist nach Schreibzeit geordnet; angezeigt wird nach Ereigniszeit, neueste zuerst.
         out.reverse()
         out.sort(key=lambda e: e.zeit, reverse=True)       # neueste zuerst (Notizen dürfen zurückdatiert sein)
         return out
@@ -213,6 +221,7 @@ class EventLog:
             self.version += 1
 
     def _file_mtime(self):
+        """Änderungszeit der Datei oder None, wenn sie (noch) nicht existiert."""
         try:
             return os.path.getmtime(self.path)
         except OSError:
@@ -234,6 +243,12 @@ class EventLog:
 
     # ---- Schreiben
     def _write(self, rows):
+        """Zeilen an die Datei anhängen (vorher Kopfzeile, falls die Datei neu ist). Aufruf nur mit gehaltener Sperre.
+
+        Die Zeilen werden erst in einen Puffer geschrieben und dann mit einem einzigen ``write`` angehängt, damit ein
+        zweiter Prozess (Viewer, Headless-Logger) keine halben Zeilen sieht. Die eigene Änderungszeit wird gemerkt,
+        damit ``changed_on_disk`` nur fremde Änderungen meldet.
+        """
         new = not os.path.exists(self.path)
         os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
         buf = io.StringIO()
@@ -270,6 +285,7 @@ class EventLog:
             return eid
 
     def go(self, eid, trigger, ts=None):
+        """Ereignis ``eid`` geht (Bedingung nicht mehr erfüllt): GEHT-Eintrag mit derselben ID."""
         with self.lock:
             self._write([[eid, _stamp(ts), "GEHT", trigger.name, trigger.prio, "", ""]])
 
@@ -292,6 +308,12 @@ class EventLog:
 # Auswertung (im Sammler-Thread des Recorders)
 # ---------------------------------------------------------------------------------------
 class _State:
+    """Laufzustand eines Triggers in der TriggerEngine.
+
+    ``since``: Zeitpunkt, seit dem die Bedingung ununterbrochen erfüllt ist (für die Verzögerung); ``on``: Ereignis
+    steht an; ``eid``: ID des KOMMT-Eintrags (für GEHT); ``text``: Meldetext beim Kommen (für die Benachrichtigung beim
+    Gehen).
+    """
     __slots__ = ("trigger", "formula", "since", "on", "eid", "text")
 
     def __init__(self, trigger, formula):
@@ -300,6 +322,9 @@ class _State:
 
 
 def _fmt(v):
+    """Wert für den Meldetext: ganze Zahlen ohne Nachkommastellen, sonst zwei Stellen bzw. vier signifikante; ohne Wert
+    „—“.
+    """
     if v is None or (isinstance(v, float) and math.isnan(v)):
         return "—"
     v = float(v)
@@ -332,10 +357,21 @@ class TriggerEngine:
                 self.errors.append(f"Trigger {t.name}: {e}")
 
     def __bool__(self):
+        """True, wenn mindestens ein Trigger ausgewertet wird."""
         return bool(self.states)
 
     def evaluate(self, ts, values):
-        """values: {Variablenname: Wert} der aktuellen Zeile."""
+        """Alle Trigger für eine Messzeile auswerten und Kommen/Gehen protokollieren.
+
+        ``values``: {Variablenname: Wert} der aktuellen Zeile. Ablauf je Trigger:
+
+        * Bedingung erfüllt, Ereignis steht noch nicht an: Beginn merken; ist die Verzögerung abgelaufen, KOMMT-Eintrag
+          mit dem Meldetext (Platzhalter ``{Name}`` durch die aktuellen Werte ersetzt), Meldung und Benachrichtigung.
+        * Bedingung nicht erfüllt: Verzögerung zurücksetzen; stand das Ereignis an, GEHT-Eintrag (falls eingestellt) und
+          Benachrichtigung „geht“.
+
+        Rechenfehler und NaN gelten als „nicht erfüllt“.
+        """
         for st in self.states:
             try:
                 r = st.formula.evaluate(ts, values)

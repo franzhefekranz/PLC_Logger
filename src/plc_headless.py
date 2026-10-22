@@ -64,6 +64,8 @@ def run(config_path, demo=False):
     log.info("Headless-Modus gestartet – Projekt „%s“, %d Steuerung(en), %d Variablen%s",
              projekt, len(plcs), len(variables), " (Demo)" if demo else "")
 
+    # Der Recorder startet beim Start auch Trigger, Benachrichtigungen, Datenbank und OPC-UA-Server; seine Meldungen
+    # gehen über log.info in die Logdatei.
     rec = Recorder(conn, plcs, charts, variables, demo=demo, log=log.info, config_path=config_path)
     for err in rec.formula_errors:
         log.warning("Formelfehler: %s", err)
@@ -72,6 +74,9 @@ def run(config_path, demo=False):
     stop = threading.Event()
 
     def on_signal(signum, _frame):
+        """Signal-Handler: nur das Ende anfordern; aufgeräumt wird im Hauptthread (Signal-Handler dürfen nicht
+        blockieren).
+        """
         log.info("Signal %s empfangen – beende.", signum)
         stop.set()
 
@@ -98,6 +103,7 @@ def run(config_path, demo=False):
                 log.error("Webserver konnte nicht gestartet werden: %s", e)
                 web = None
         last_report = time.monotonic()
+        # Hauptthread: nur warten. Gelesen und geschrieben wird in den Threads des Recorders bzw. des Webservers.
         while not stop.wait(0.5):
             # Alle 10 Minuten eine Lebenszeichen-Zeile mit Zeilenzahl und Verbindungszustand.
             if time.monotonic() - last_report >= 600:

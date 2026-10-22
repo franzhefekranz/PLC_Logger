@@ -185,6 +185,11 @@ class CaptureGate:
         self.captures = 0                             # Anzahl der Aufnahmen seit dem Start
 
     def check(self, ts, values):
+        """Startbedingung für eine Messzeile auswerten -> True, wenn erfüllt.
+
+        ``values`` ist {Variablenname: Wert}. Rechenfehler (z. B. Division durch null) und NaN gelten als „nicht
+        erfüllt“, damit eine fehlerhafte Bedingung keine Daueraufnahme auslöst.
+        """
         try:
             r = self.formula.evaluate(ts, values)
         except Exception:
@@ -192,6 +197,15 @@ class CaptureGate:
         return r == r and r != 0                      # NaN (kein Wert) gilt als „nicht erfüllt“
 
     def feed(self, ts, row, values):
+        """Eine Messzeile verarbeiten -> (zu speichernde Zeilen, Ereignis).
+
+        Ohne laufende Aufnahme wandert die Zeile nur in den Ringspeicher (älter als der Vorlauf wird verworfen). Wird
+        die Bedingung wahr und ist das Gate „scharf“ (``armed``), beginnt die Aufnahme mit dem Ringspeicher als Vorlauf
+        (Ereignis "start"). Während der Aufnahme wird jede Zeile weitergegeben; sie endet, wenn die Bedingung länger als
+        der Nachlauf falsch ist oder die Höchstdauer erreicht ist (Ereignis "stop"). Nach einem Abbruch wegen
+        Höchstdauer bleibt das Gate unscharf, bis die Bedingung einmal falsch war – sonst begänne sofort die nächste
+        Aufnahme.
+        """
         cond = self.check(ts, values)
         if not self.active:
             self.ring.append((ts, row))
@@ -238,16 +252,22 @@ class PlcSampler(threading.Thread):
             time.sleep(min(0.05, max(0.0, end - time.perf_counter())))
 
     def run(self):
+        """Thread-Hauptfunktion: simulierte Werte (Demo) oder echte Steuerung lesen, bis der Recorder stoppt."""
         if self.rec.demo:
             self._run_demo()
         else:
             self._run_plc()
 
     def _put(self, ts, values):
+        """Einen Messzyklus (Zeitstempel, Werte in der Reihenfolge von ``var_idx``) an den Sammler übergeben."""
         self.rec.put_sample(self.idx, ts, values)
 
     # Simulation: Werte werden berechnet statt gelesen.
     def _run_demo(self):
+        """Demo-Betrieb: statt zu lesen werden Testwerte berechnet (siehe ``demo_value`` und ``DemoLoop``).
+
+        Der Takt wird wie beim echten Lesen mit einem fortlaufenden Sollzeitpunkt ``nxt`` gehalten.
+        """
         r, interval = self.rec, self.plc.intervall_ms / 1000.0
         r.set_status(self.idx, ST_OK, tr("Demo-Modus (simulierte Werte)"))
         t0, nxt = time.time(), time.perf_counter()
@@ -269,6 +289,17 @@ class PlcSampler(threading.Thread):
 
     # Echte Steuerung: Tags anlegen -> lesen -> melden -> warten; bei Verbindungsfehlern neu verbinden.
     def _run_plc(self):
+        """Lese-Schleife einer echten Steuerung: verbinden, zyklisch lesen, Werte melden.
+
+        Ablauf je Durchlauf:
+
+        1. Nicht verbunden: ``reader.connect()``; bei Fehler Status „Fehler“ und nach 2 s neuer Versuch.
+        2. Zeitstempel nehmen und ``reader.read()`` aufrufen (eine Liste mit einem Wert je Variable, NaN = kein Wert).
+        3. Fehler einzelner Variablen (``reader.errors``) je Variable nur einmal melden.
+        4. Werte an den Sammler übergeben und bis zum nächsten Takt warten.
+
+        Ein Lesefehler (Verbindung weg) schließt den Leser und führt zurück zu Schritt 1.
+        """
         r, plc = self.rec, self.plc
         interval = plc.intervall_ms / 1000.0
         # Leser des Treibers dieser Steuerung (siehe plc_treiber); Tests können eine Ersatzfabrik setzen.
@@ -338,11 +369,18 @@ class Recorder:
     FLUSH_S = 0.5                 # CSV spätestens alle 0,5 s auf den Datenträger schreiben (flush)
 
     def __init__(self, conn, plcs, charts, variables, demo=False, log=None, config_path=""):
+        """Recorder für eine Konfiguration anlegen (noch ohne zu lesen; das beginnt mit ``start``).
+
+        Hier werden die Variablen den Steuerungen zugeordnet, die Formeln übersetzt, die Messwertpuffer angelegt und die
+        Einstellungen für CSV, Datenbank, Trigger, Aufzeichnung per Trigger und Berichte gelesen.
+        """
         self.conn, self.plcs, self.charts, self.vars = conn, plcs, charts, variables
         self.demo, self.log, self.config_path = demo, log, config_path
         n = len(variables)
         self.names = [v.name for v in variables]
         # Variablen je Steuerung (nur gelesene, keine berechneten) und berechnete Variablen.
+        # Indizes in self.vars: computed_idx = berechnete Variablen, plc_vars[k] = die von Steuerung k gelesenen.
+        # Die Werte einer Zeile stehen immer in der Reihenfolge von self.vars (CSV-Spalten, Puffer, Diagramme).
         self.computed_idx = [i for i, v in enumerate(variables) if v.formula]
         self.plc_vars = [[i for i, v in enumerate(variables) if not v.formula and v.plc == k]
                          for k in range(len(plcs))]
@@ -362,6 +400,8 @@ class Recorder:
         self.dropped = 0                         # verworfene Messzyklen (Warteschlange voll)
         # Messwertpuffer: Zeit und Werte in vorab angelegten numpy-Feldern (schnelle Ausschnitte ohne Umrechnung).
         self._cap = 4096
+        # tbuf[i] = Zeit der Zeile i, ybuf[v, i] = Wert der Variable v in Zeile i; gültig sind die ersten self.n Zeilen.
+        # Der Puffer wächst durch Verdoppeln bis MAX_POINTS (siehe _append).
         self.tbuf = np.empty(self._cap)
         self.ybuf = np.full((n, self._cap), np.nan)
         self.n = 0
@@ -402,6 +442,7 @@ class Recorder:
 
     # ------------------------------------------------------------------ Ordner
     def csv_dir(self):
+        """Ordner der CSV-Dateien (relativer Pfad bezogen auf den Datenordner BASE_DIR)."""
         d = self.conn["csv_ordner"]
         return d if os.path.isabs(d) else os.path.join(BASE_DIR, d)
 
@@ -470,7 +511,13 @@ class Recorder:
         self._csv_pending = True
 
     def start(self):
-        """CSV-Datei öffnen, Sammler und je Steuerung einen Lese-Thread starten."""
+        """CSV-Datei öffnen, Sammler und je Steuerung einen Lese-Thread starten.
+
+        Außerdem werden gestartet bzw. angelegt: der Datenbank-Schreiber, die Benachrichtigungen, der OPC-UA-Server und
+        die Trigger-Auswertung (``TriggerEngine``). Deren Ereignisse gehen über ``notify`` sowohl an die
+        Benachrichtigungen als auch an den OPC-UA-Server. Bei „Aufzeichnung per Trigger“ wird die CSV-Datei erst mit der
+        ersten Aufnahme geöffnet.
+        """
         if self.running:
             return
         self.stop_evt.clear()
@@ -530,7 +577,12 @@ class Recorder:
             self.emit(tr("{0} Trigger aktiv → Ereignisprotokoll {1}").format(len(self.trigger_engine.states), self.events.path))
 
     def stop(self):
-        """Lese-Threads und Sammler beenden, CSV-Datei schließen (bleibt ungepackt im CSV-Ordner)."""
+        """Lese-Threads und Sammler beenden, CSV-Datei schließen (bleibt ungepackt im CSV-Ordner).
+
+        Reihenfolge: zuerst die Lese-Threads (keine neuen Werte mehr), dann die Ende-Marke für den Sammler, der vorher
+        noch alle wartenden Messzyklen verarbeitet. Danach Teilbericht, offene Trigger-Aufnahme, Datenbank,
+        Benachrichtigungen und OPC-UA-Server abschließen.
+        """
         if not self.running:
             return
         self.stop_evt.set()
@@ -608,6 +660,7 @@ class Recorder:
             if item is None:
                 break
             idx, ts, values = item
+            # Werte dieser Steuerung in die Gesamtzeile eintragen; die anderen Steuerungen behalten ihren letzten Wert.
             for gi, val in zip(self.plc_vars[idx], values):
                 cur[gi] = val
             row = cur.copy()
@@ -756,6 +809,11 @@ class Recorder:
             self.dirty = True
 
     def _write_csv(self, ts, row):
+        """Eine Zeile in die CSV-Datei schreiben (Zeit lesbar und als Unix-Zeit, Werte je Datentyp formatiert).
+
+        Ist die maximale Zeilenzahl je Datei erreicht (``max_records``), wird die Datei gewechselt und die alte
+        archiviert.
+        """
         if not self.csv_w:
             return
         # 'Zeit' (lesbar) und 'Epoch' (Unix-Zeit) werden aus derselben ganzzahligen Millisekunde gebildet.
@@ -794,6 +852,7 @@ class Recorder:
 
     # ------------------------------------------------------------------ Zugriff auf die Daten
     def count(self):
+        """Anzahl der Zeilen im Speicher."""
         with self.lock:
             return self.n
 

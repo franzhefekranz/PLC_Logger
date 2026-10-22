@@ -42,15 +42,20 @@ class FormulaError(Exception):
 
 # Vorzeichen: -1, 0 oder 1 (NaN bleibt NaN).
 def _sign(x):
+    """Vorzeichen von x: -1, 0 oder 1 (NaN bleibt NaN)."""
     return NAN if x != x else float((x > 0) - (x < 0))
 
 
 # Begrenzt x auf den Bereich lo..hi.
 def _clamp(x, lo, hi):
+    """x auf den Bereich lo … hi begrenzen."""
     return max(lo, min(hi, x))
 
 
 def _pow(a, b):
+    """Sichere Potenz für den Operator ``**``: rechnet mit Gleitkommazahlen, zu große Ergebnisse lösen OverflowError
+    aus.
+    """
     return math.pow(float(a), float(b))   # Überlauf -> OverflowError statt riesiger Zahlen
 
 
@@ -115,21 +120,25 @@ class _Checker(ast.NodeTransformer):
     """Prüft den Syntaxbaum und ergänzt Zustands-Indizes für ddt/integ/avg."""
 
     def __init__(self):
+        """``k`` zählt die zustandsbehafteten Aufrufe (ddt/integ/avg) der Formel durch."""
         self.k = 0
 
     # Wird für jeden Knoten aufgerufen, für den es keine eigene visit_-Methode gibt: nur Whitelist-Knoten durchlassen.
     def generic_visit(self, node):
+        """Alle Knoten ohne eigene ``visit_``-Methode: nur die Knotentypen aus ``_ALLOWED`` sind erlaubt."""
         if not isinstance(node, _ALLOWED):
             raise FormulaError(tr("Nicht erlaubtes Element in der Formel: {0}").format(type(node).__name__))
         return super().generic_visit(node)
 
     def visit_Constant(self, node):
+        """Konstanten: nur Zahlen und Wahrheitswerte (keine Zeichenketten, Bytes, ``...``)."""
         # Zahlen und Wahrheitswerte sind erlaubt, Zeichenketten und andere Konstanten nicht.
         if isinstance(node.value, (int, float, bool)):
             return node
         raise FormulaError(tr("Nur Zahlen sind als Konstanten erlaubt"))
 
     def visit_Name(self, node):
+        """Namen: nur die Platzhalter ``_v0``, ``_v1`` … der Variablen und die Konstanten pi, e, tau."""
         n = node.id
         # Erlaubt sind nur unsere Platzhalter _v0, _v1 ... und die Konstanten (pi, e, tau).
         if re.fullmatch(r"_v\d+", n) or n in CONSTANTS:
@@ -140,6 +149,9 @@ class _Checker(ast.NodeTransformer):
         raise FormulaError(tr("Unbekannter Name „{0}“ – Variablen in {{geschweiften Klammern}} angeben").format(n))
 
     def visit_Call(self, node):
+        """Funktionsaufrufe prüfen (bekannte Funktion, Anzahl der Argumente) und bei ddt/integ/avg den Zustandsindex
+        anhängen.
+        """
         # Nur Aufrufe einfacher Namen aus der Funktionstabelle (kein x.y() oder (lambda)()).
         if not isinstance(node.func, ast.Name) or node.func.id not in FUNCTIONS:
             raise FormulaError(tr("Unbekannte Funktion in der Formel"))
@@ -160,6 +172,7 @@ class _Checker(ast.NodeTransformer):
         return node
 
     def visit_BinOp(self, node):
+        """Rechenoperationen: Operanden prüfen, ``a ** b`` durch ``_pow(a, b)`` ersetzen."""
         # Zuerst die Operanden prüfen ...
         self.generic_visit(node)
         # ... dann den Operator ** durch den Aufruf _pow(a, b) ersetzen: so ist 9**9**9 kein Problem
@@ -175,6 +188,7 @@ class Formula:
     """Kompilierte Formel. refs = Namen der referenzierten Variablen (in Reihenfolge)."""
 
     def __init__(self, text: str):
+        """Formeltext übersetzen (siehe Modulbeschreibung); bei Fehlern FormulaError mit verständlicher Meldung."""
         # Mehrzeilige Eingaben zu einer Zeile zusammenfassen (Leerräume vereinheitlichen).
         text = " ".join(str(text).split())
         if not text:
@@ -222,6 +236,7 @@ class Formula:
     # Zustandsbehaftete Funktionen. Der letzte Parameter k ist der vom _Checker eingefügte Zustandsindex.
     # --- Zustandsbehaftete Funktionen
     def _ddt(self, x, k):
+        """Ableitung nach der Zeit: (x − x_vorher) / (t − t_vorher) in Einheiten pro Sekunde; erste Messung NaN."""
         # Ungültiger Eingangswert: kein Ergebnis, Zustand bleibt unverändert (z. B. kurze Lücke).
         if x != x:
             return NAN
@@ -235,6 +250,7 @@ class Formula:
         return (x - prev[1]) / dt if dt > 0 else NAN
 
     def _integ(self, x, k):
+        """Integral über die Zeit nach der Trapezregel (Summe seit dem Start bzw. ``reset``); Lücken überbrücken."""
         prev = self._state.get(k)           # (t, x, summe)
         # Bei fehlendem Messwert die bisherige Summe unverändert weitergeben.
         if x != x:
@@ -250,6 +266,7 @@ class Formula:
         return acc
 
     def _avg(self, x, n, k):
+        """Gleitender Mittelwert der letzten n gültigen Messwerte (NaN wird nicht mitgezählt)."""
         # Fenstergröße mindestens 1; als ganze Zahl (die Formel liefert evtl. eine Kommazahl).
         n = max(1, int(n))
         dq = self._state.get(k)
@@ -263,6 +280,7 @@ class Formula:
 
     # Zustand löschen (bei jedem neuen Start der Aufzeichnung).
     def reset(self):
+        """Gedächtnis von ddt/integ/avg löschen (bei jedem neuen Start der Aufzeichnung)."""
         self._state.clear()
 
     def evaluate(self, ts: float, values: dict) -> float:
