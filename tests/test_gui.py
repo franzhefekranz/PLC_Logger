@@ -6,6 +6,7 @@ Die Fenster werden geöffnet, im Demo-Modus betrieben und ihre Dialoge aufgerufe
 (siehe conftest.qt_log). Ziel: Abstürze, fehlende Methoden und falsche Qt-Aufrufe finden, bevor ein Release entsteht."""
 import json
 import os
+import sys
 import time
 
 import pytest
@@ -67,6 +68,12 @@ def test_logger_demo_recording(qt_log, demo_config, tmp_path):
     # Ereignis außerhalb der geladenen Daten: passende CSV-Datei wird gesucht
     w.goto_time(float(w.t[0]) + 0.2)
     assert abs(w.ruler_t[0] - (float(w.t[0]) + 0.2)) < 1e-6
+    # Menüleiste im Fenster (nicht im globalen Menü der Arbeitsoberfläche); Konfig-Editor unter Linux im selben Prozess
+    assert not w.menuBar().isNativeMenuBar()
+    if sys.platform != "win32":
+        w.open_config()
+        assert w._config_win.isVisible() and not w._config_win.menuBar().isNativeMenuBar()
+        _close(w._config_win)
     # Ereignis von vorgestern: Werte kommen aus der Datenbank der Konfiguration (vor den CSV-Dateien)
     import datetime as dt
     import plc_db

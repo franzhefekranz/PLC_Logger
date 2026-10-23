@@ -338,6 +338,17 @@
 @ Blöcke prüfen
 > 
 
+# ---------------- plc_branding.py
+
+@ Programm starten
+> 
+
+@ Das Programm konnte nicht gestartet werden:\n{0}
+> 
+
+@ Das Programm wurde mit Fehler {0} beendet.
+> 
+
 # ---------------- plc_cleanup.py
 
 @ [Aufräumen] {0} alte Aufzeichnungsdateien gelöscht ({1})
@@ -1244,16 +1255,10 @@
 @ Logger starten
 > 
 
-@ Der Logger konnte nicht gestartet werden:\n{0}
-> 
-
 @ Logger gestartet.
 > 
 
 @ IO-Check
-> 
-
-@ Der IO-Check konnte nicht gestartet werden:\n{0}
 > 
 
 @ IO-Check gestartet.
@@ -2391,9 +2396,6 @@
 > 
 
 @ Konfigurationsprogramm
-> 
-
-@ Das Programm konnte nicht gestartet werden:\n{0}
 > 
 
 @ Beende … (Aufzeichnung stoppen, CSV archivieren)

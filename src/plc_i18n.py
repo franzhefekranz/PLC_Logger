@@ -236,7 +236,8 @@ def _switch(window, code, restart_cmd):
         try:
             cmd = restart_cmd()
             if cmd:
-                subprocess.Popen(cmd)
+                from plc_common import child_env
+                subprocess.Popen(cmd, env=child_env())
                 window.close()
         except OSError as e:
             QMessageBox.warning(window, tr("Sprache"), str(e))

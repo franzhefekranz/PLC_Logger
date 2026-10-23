@@ -136,6 +136,45 @@ def logos_pixmap(paths, height: int = 28, gap: int = 12) -> QPixmap:
     return out
 
 
+def launch(parent, kind: str, *args, title: str = ""):
+    """Anderes Programm des Datenloggers starten (``kind``: logger, config, iocheck; siehe plc_common.program_command).
+
+    Saubere Umgebung (plc_common.child_env); die Fehlerausgabe landet in einer temporären Datei. Bricht das Programm
+    in den ersten Sekunden mit einem Fehler ab, erscheint eine Meldung mit den letzten Zeilen statt stiller Untätigkeit.
+    Rückgabe: True, wenn der Start angestoßen wurde."""
+    import subprocess
+    import tempfile
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QMessageBox
+    from plc_common import child_env, program_command
+    from plc_i18n import tr
+    title = title or tr("Programm starten")
+    log = tempfile.NamedTemporaryFile(prefix="plc_start_", suffix=".log", delete=False)
+    try:
+        proc = subprocess.Popen(program_command(kind, *args), env=child_env(), stdout=log, stderr=log,
+                                stdin=subprocess.DEVNULL)
+    except OSError as e:
+        log.close()
+        QMessageBox.critical(parent, title, tr("Das Programm konnte nicht gestartet werden:\n{0}").format(e))
+        return False
+    log.close()
+
+    def check():
+        """Nach einigen Sekunden: abgestürzt? Dann Meldung mit der Fehlerausgabe."""
+        code = proc.poll()
+        if code is None or code == 0:
+            return
+        try:
+            with open(log.name, encoding="utf-8", errors="replace") as f:
+                tail = "".join(f.readlines()[-15:]).strip()
+        except OSError:
+            tail = ""
+        QMessageBox.warning(parent, title, tr("Das Programm wurde mit Fehler {0} beendet.").format(code)
+                            + ("\n\n" + tail if tail else ""))
+    QTimer.singleShot(5000, check)
+    return True
+
+
 def set_windows_app_id(app_id: str = "PLCDatenlogger"):
     """Unter Windows: eigene Taskleisten-Gruppe, damit das Programm-Icon angezeigt wird."""
     # Nur Windows kennt die 'AppUserModelID'; auf anderen Systemen ist nichts zu tun.

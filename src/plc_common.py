@@ -125,6 +125,29 @@ def program_command(kind: str, *args) -> list:
     return [sys.executable, os.path.join(here, "plc_logger.py")] + (switch if kind == "iocheck" else []) + args
 
 
+def child_env() -> dict:
+    """Umgebung für ein neu gestartetes Programm (Logger, Konfiguration, IO-Check aus einem anderen heraus).
+
+    Die PyInstaller-Programmdatei (auch im AppImage) setzt für den eigenen Prozess Variablen wie ``_PYI_…``,
+    ``LD_LIBRARY_PATH`` oder Qt-Pfade. Erbt ein zweites Programm sie, hält es sich für einen Teilprozess des ersten
+    bzw. lädt dessen Bibliotheken – unter Linux startet es dann oft gar nicht. Deshalb: ursprüngliche Werte
+    wiederherstellen und den Neustart als eigenständiges Programm anfordern (``PYINSTALLER_RESET_ENVIRONMENT``)."""
+    env = dict(os.environ)
+    if getattr(sys, "frozen", False):
+        env["PYINSTALLER_RESET_ENVIRONMENT"] = "1"
+        for key in [k for k in env if k.startswith("_PYI_") or k == "_MEIPASS2"]:
+            env.pop(key)
+        for key in ("LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"):
+            orig = env.pop(key + "_ORIG", None)
+            if orig is not None:
+                env[key] = orig
+            elif sys.platform != "win32":
+                env.pop(key, None)
+        for key in ("QT_PLUGIN_PATH", "QML2_IMPORT_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "PYTHONHOME", "PYTHONPATH"):
+            env.pop(key, None)
+    return env
+
+
 def recent_iochecks(limit: int = 10) -> list:
     """Zuletzt benutzte IO-Check-Prüfstände (*.iocheck.json, neueste zuerst, nur vorhandene)."""
     out = []

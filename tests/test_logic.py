@@ -359,6 +359,19 @@ def test_manual_html_builds_without_messages(tmp_path):
         assert 'class="system-message"' not in html, f"Fehlermeldung in {name}.html"
 
 
+def test_child_env_frozen(monkeypatch):
+    """Programmdatei (PyInstaller/AppImage): zweites Programm startet mit bereinigter Umgebung."""
+    import plc_common
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setenv("_PYI_APPLICATION_HOME_DIR", "/tmp/.mount_x/usr/lib/PLCDatenlogger")
+    monkeypatch.setenv("LD_LIBRARY_PATH", "/tmp/.mount_x/usr/lib/PLCDatenlogger/_internal")
+    monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", "/opt/lib")
+    monkeypatch.setenv("QT_PLUGIN_PATH", "/tmp/.mount_x/plugins")
+    env = plc_common.child_env()
+    assert env["PYINSTALLER_RESET_ENVIRONMENT"] == "1" and "_PYI_APPLICATION_HOME_DIR" not in env
+    assert env["LD_LIBRARY_PATH"] == "/opt/lib" and "LD_LIBRARY_PATH_ORIG" not in env and "QT_PLUGIN_PATH" not in env
+
+
 def test_program_command_iocheck():
     """Befehlszeilen für Logger, Konfiguration und IO-Check (Start aus dem Quelltext)."""
     from plc_common import program_command

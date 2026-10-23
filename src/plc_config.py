@@ -34,7 +34,6 @@ assignments()/set_assignments() gesichert und neu gesetzt.
 
 import os
 import re
-import subprocess
 import sys
 
 # Qt-Grundbausteine: Qt (Konstanten), QTimer (verzögerte Aktionen), Signal (eigene Ereignisse).
@@ -154,6 +153,7 @@ class ConfigWindow(QMainWindow):
         ``fill`` die Felder aus der Datei (Einstellungen, Diagramme, Variablen, Blöcke, Steuerungen, Trigger).
         """
         super().__init__()
+        self.menuBar().setNativeMenuBar(False)        # Menü im Fenster (Linux: sonst evtl. nur im globalen Menü)
         self.resize(1300, 820)
         # Pfad der aktuell bearbeiteten Konfigurationsdatei: Startparameter, sonst die zuletzt benutzte Datei ('' = neu, ungespeichert).
         self.path = os.path.abspath(path) if path else last_config_path()
@@ -2375,10 +2375,8 @@ class ConfigWindow(QMainWindow):
     def start_logger(self):
         if not self.save():
             return
-        try:
-            subprocess.Popen(program_command("logger", self.path))
-        except OSError as e:
-            QMessageBox.critical(self, tr("Logger starten"), tr("Der Logger konnte nicht gestartet werden:\n{0}").format(e))
+        from plc_branding import launch
+        if not launch(self, "logger", self.path, title=tr("Logger starten")):
             return
         self.statusBar().showMessage(tr("Logger gestartet."), 5000)
 
@@ -2386,10 +2384,8 @@ class ConfigWindow(QMainWindow):
         """IO-Check (eigenes Programm) mit den Steuerungen dieser Konfiguration starten (vorher speichern)."""
         if not self.save():
             return
-        try:
-            subprocess.Popen(program_command("iocheck", self.path))
-        except OSError as e:
-            QMessageBox.critical(self, tr("IO-Check"), tr("Der IO-Check konnte nicht gestartet werden:\n{0}").format(e))
+        from plc_branding import launch
+        if not launch(self, "iocheck", self.path, title=tr("IO-Check")):
             return
         self.statusBar().showMessage(tr("IO-Check gestartet."), 5000)
 

@@ -39,7 +39,6 @@ import html
 import math
 import os
 import re
-import subprocess
 import sys
 from datetime import datetime
 
@@ -1035,6 +1034,9 @@ class MainWindow(QMainWindow):
     # config_path: Konfigurationsdatei (JSON); demo: Demo-Modus vorwählen.
     def __init__(self, config_path, demo=False):
         super().__init__()
+        # Menüleiste immer im Fenster: Unter Linux (KDE Plasma, Ubuntu mit globalem Menü …) wandert sie sonst in die
+        # Leiste der Arbeitsoberfläche und fehlt im Fenster – samt Logo rechts oben.
+        self.menuBar().setNativeMenuBar(False)
         self.resize(1400, 800)
         self.config_path = config_path
         # Konfiguration laden; ohne Konfigurationsdatei erscheint eine leere Standardkonfiguration, bei einer fehlerhaften Datei
@@ -2729,11 +2731,26 @@ class MainWindow(QMainWindow):
             raise OSError(tr("Datei konnte nicht geschrieben werden:\n{0}").format(path))
 
     def open_config(self):
-        """Konfigurationsprogramm in eigenem Prozess starten (mit der aktuellen Konfigurationsdatei)."""
-        try:
-            subprocess.Popen(program_command("config", self.config_path))
-        except OSError as e:
-            QMessageBox.critical(self, tr("Konfigurationsprogramm"), tr("Das Programm konnte nicht gestartet werden:\n{0}").format(e))
+        """Konfigurationsprogramm mit der aktuellen Konfigurationsdatei öffnen.
+
+        Windows: eigener Prozess (``PLCKonfiguration.exe``). Linux/macOS: im selben Prozess als eigenes Fenster – ein
+        zweiter Start des AppImages (bzw. der Programmdatei) scheitert dort je nach System still."""
+        if sys.platform != "win32":
+            import plc_config
+            win = getattr(self, "_config_win", None)
+            if win is None or not win.isVisible():
+                try:
+                    self._config_win = win = plc_config.ConfigWindow(self.config_path)
+                except Exception as e:
+                    QMessageBox.critical(self, tr("Konfigurationsprogramm"),
+                                         tr("Das Programm konnte nicht gestartet werden:\n{0}").format(e))
+                    return
+            win.show()
+            win.raise_()
+            win.activateWindow()
+            return
+        from plc_branding import launch
+        launch(self, "config", self.config_path, title=tr("Konfigurationsprogramm"))
 
     def closeEvent(self, event):
         """Beim Schließen: Webserver beenden, Aufzeichnung stoppen und die aktuelle CSV-Datei archivieren

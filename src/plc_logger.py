@@ -103,7 +103,8 @@ def run_with_start_window(path, explicit, demo):
         from plc_common import Chart, default_connection, program_command, save_config
         try:
             save_config(default_connection(), [Chart()], [], path)
-            subprocess.Popen(program_command("config", path))
+            from plc_common import child_env
+            subprocess.Popen(program_command("config", path), env=child_env())
         except OSError as e:
             QMessageBox.warning(win, tr("Neue Konfiguration"), str(e))
     if os.path.exists(path):

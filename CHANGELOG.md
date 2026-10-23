@@ -14,6 +14,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* Linux: Die Menüleiste fehlte im Fenster von Logger und Konfigurationsprogramm (auf Arbeitsoberflächen mit globalem
+  Menü, z. B. KDE Plasma, landete sie in der oberen Leiste). Sie steht jetzt immer im Fenster.
+* Linux: **Konfig-Editor** im Logger öffnete das Konfigurationsprogramm nicht. Es öffnet sich jetzt im selben Prozess
+  als eigenes Fenster (Windows unverändert: `PLCKonfiguration.exe`).
+* Linux (AppImage): Programme, die aus einem anderen heraus gestartet werden (Logger bzw. IO-Check aus dem
+  Konfigurationsprogramm, Neustart nach Sprachwechsel), erben nicht mehr die Umgebung des laufenden Programms und
+  starten dadurch zuverlässig. Bricht ein so gestartetes Programm gleich wieder ab, erscheint eine Meldung mit der
+  Fehlerausgabe.
+
 ## [3.2.0] – 2026-10-22
 
 ### Neu
