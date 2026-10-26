@@ -117,7 +117,8 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
        ``modbus.py``, ``modbus_rtu.py``, ``opcua.py``/``opcua_browser.py``,
        ``slmp.py``, ``kvhostlink.py``, ``toyopuc.py``, ``fins.py`` (gemeinsame Grundlage
        ``word_common.py``), ``s5as511.py``, ``logo.py``, ``pccc.py``,
-       ``ads.py``/``ads_browser.py`` und ``_vorlage.py`` (Vorlage für eigene Treiber).
+       ``ads.py``/``ads_browser.py``, ``ringbuffer.py`` (Ringpuffer für die zyklussynchrone Aufzeichnung) und
+       ``_vorlage.py`` (Vorlage für eigene Treiber).
    * - ``plc_web.py``, ``plc_webauth.py``, ``plc_web_dialog.py``
      - Webserver (Flask) mit Chart.js-Seite zum Ansehen der Diagramme im Browser; HTTPS,
        Benutzer und Passwörter, Benutzerverwaltung im Konfigurationsprogramm.
@@ -132,8 +133,8 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
    * - ``plc_util.py``
      - Kleine Hilfsfunktionen (Formatierung, Achsenteilung, Datenreduktion).
    * - ``plc_db.py``
-     - Aufzeichnung in SQLite, MariaDB, TimescaleDB/PostgreSQL, QuestDB, InfluxDB 3 oder
-       VictoriaMetrics (eigener Schreib-Thread).
+     - Aufzeichnung in SQLite, MariaDB, TimescaleDB/PostgreSQL, QuestDB, InfluxDB 3,
+       VictoriaMetrics oder Prometheus (eigener Schreib-Thread).
    * - ``plc_db_dialog.py``
      - Lesemodus: Zeitraum aus der Datenbank wählen und im Logger anzeigen.
    * - ``plc_cleanup.py``
@@ -553,7 +554,7 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
 
 Auswahl und Zugangsdaten einer Datenbank, in die zusätzlich oder statt der
 CSV-Datei aufgezeichnet wird (SQLite, MariaDB/MySQL, TimescaleDB/PostgreSQL, QuestDB,
-InfluxDB 3, VictoriaMetrics), mit
+InfluxDB 3, VictoriaMetrics, Prometheus), mit
 dem Knopf **Datenbank testen**. Einzelheiten im Kapitel `Datenbank-Aufzeichnung <datenbank_>`__.
 
 **Reiter „Trigger & Ereignisse“**
@@ -956,6 +957,9 @@ Block mit folgenden Angaben:
      - Datentyp der Elemente (Auswahl des Treibers).
    * - Anzahl
      - Anzahl der Werte (1 bis 1000).
+   * - Ringpuffer
+     - Anzahl Datensätze eines Ringpuffers (siehe `Ringpuffer <ringpuffer_>`__); *aus* = normaler Block.
+       Nur bei den Treibern ``s7``, ``tia`` und ``clx``.
    * - Diagramm › Y-Achse
      - Zuordnung aller Elemente des Blocks (einzelne Elemente lassen sich im Baum
        abweichend zuordnen, siehe unten).
@@ -1007,6 +1011,122 @@ Hinweise:
   fehl; die übrigen Variablen werden weiter gelesen.
 * Viele Elemente bedeuten viele Kurven: Teilen Sie große Blöcke auf mehrere
   Diagramme bzw. Y-Achsen auf oder schalten Sie *Werteanzeige* ab.
+
+.. _ringpuffer:
+
+Ringpuffer (zyklussynchrone Aufzeichnung)
+----------------------------------------------------------------------
+
+Normalerweise fragt der Logger die Steuerung im eingestellten Leseintervall ab. Wie lange
+eine Anfrage dauert, schwankt mit dem Netzwerk und der Auslastung der Steuerung; Zyklen
+dazwischen fehlen, und der Zeitstempel ist der Zeitpunkt am PC. Für eine
+**zyklussynchrone, lückenlose** Aufzeichnung – z. B. alle 10 oder 50 ms – sammelt die
+Steuerung die Werte selbst: Ein kleiner Baustein schreibt in jedem Zyklus bzw. Weckalarm
+einen **Datensatz** (Nummer, Zeit, Werte) in einen **Ringpuffer**. Der Logger holt die
+neuen Datensätze im Leseintervall ab (z. B. alle 250 ms) und macht aus jedem Datensatz
+eine eigene Zeile mit dem **Zeitpunkt aus der Steuerung**. Die Abtastrate hängt so nur
+von der Steuerung ab, nicht vom Netzwerk.
+
+Möglich mit den Treibern ``s7`` (S7-300/400, S7-1200/1500 mit PUT/GET), ``tia``
+(S7-1200/1500 ohne PUT/GET) und ``clx`` (ControlLogix, CompactLogix).
+
+**1. Baustein in die Steuerung laden.** Der Knopf **SPS-Vorlagen …** im Blockeditor
+öffnet den Ordner ``vorlagen`` mit fertigen Bausteinen:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 40 25
+
+   * - Datei
+     - Steuerung
+     - Treiber
+   * - ``Ringpuffer_S7-300_400.scl``
+     - S7-300/400 (SCL-Quelle für STEP 7 V5.x)
+     - ``s7``
+   * - ``Ringpuffer_S7-1200_1500.scl``
+     - S7-1200/1500 (SCL-Quelle für TIA Portal: *Externe Quellen*)
+     - ``tia`` oder ``s7``
+   * - ``Ringpuffer_ControlLogix.st``
+     - ControlLogix/CompactLogix (Structured Text, Datentypen beschrieben)
+     - ``clx``
+
+Die Vorlagen schreiben 10 Werte vom Typ REAL in einen Puffer mit 100 Datensätzen; beide
+Zahlen lassen sich anpassen (Hinweise am Anfang jeder Datei). Aufgerufen wird der
+Baustein dort, wo die Werte gleichmäßig anfallen: im Weckalarm (S7-300/400: OB35,
+S7-1200/1500: *Cyclic interrupt* OB30, Logix: periodische Task) mit z. B. 10 ms oder 50 ms.
+
+**2. Ringpuffer im Blockeditor anlegen.** Ein Block wird zum Ringpuffer, sobald in der
+Spalte **Ringpuffer** die Anzahl der Datensätze steht (*aus* = normaler Block):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Feld
+     - Ringpuffer
+   * - Startadresse
+     - ``s7``, ``tia``: Adresse des Zählers am Anfang des Puffers in einem **nicht
+       optimierten** Datenbaustein, z. B. ``DB100.DBX0.0``. ``clx``: Tag des Puffers,
+       z. B. ``Puffer`` oder ``Program:Main.Puffer``.
+   * - Format
+     - Datentyp der Werte: ``INT``, ``DINT``, ``REAL`` (``s7``/``tia`` zusätzlich
+       ``WORD``, ``UINT``, ``DWORD``, ``UDINT``, ``LREAL``; ``clx`` zusätzlich ``UINT``,
+       ``UDINT``, ``LREAL``). Binärsignale als ``INT`` 0/1 ablegen.
+   * - Anzahl
+     - Werte je Datensatz (wie in der Steuerung).
+   * - Ringpuffer
+     - Datensätze im Puffer (wie in der Steuerung).
+
+Die Elemente heißen wie bei Blöcken ``Name[0]``, ``Name[1]`` … und lassen sich im Baum
+umbenennen und anderen Diagrammen zuordnen. **Markierten Block testen** holt den Puffer
+einmal ab und zeigt Zählerstand, Anzahl der Datensätze, ihren mittleren Abstand und die
+jüngsten Werte.
+
+**3. Leseintervall und Puffergröße.** Das **Intervall** der Steuerung (Tabelle der
+Steuerungen) ist hier das Leseintervall: Es bestimmt nur, wie oft abgeholt wird. Der Puffer muss die Datensätze von
+mindestens drei Leseintervallen fassen: *Datensätze ≥ 3 × Leseintervall ÷ Zykluszeit*.
+Beispiel: 10-ms-Weckalarm und 250 ms Leseintervall → mindestens 75 Datensätze (die
+Vorlagen haben 100); 50 ms und 500 ms → mindestens 30.
+
+**Aufbau des Puffers** (S7: nicht optimierter DB, Startadresse gerade; Logix: UDT mit
+genau diesen Namen):
+
+.. code-block:: text
+
+   Zaehler          DINT     Anzahl der bisher geschriebenen Datensätze (1, 2, 3 …)
+   Daten[0..N-1]             N Datensätze; Datensatz Nummer n steht in Daten[n MOD N]
+     Seq            DINT     Nummer des Datensatzes (= Zaehler beim Schreiben)
+     Zeit           DINT     Zeit in ms (siehe unten)
+     Werte[0..M-1]           M Werte im gewählten Format
+
+Die Steuerung schreibt in dieser Reihenfolge: Werte, Zeit, Seq, zuletzt den Zähler. Der
+Logger liest den Zähler, dann die neuen Datensätze und noch einmal den Zähler; ein
+Datensatz zählt nur, wenn *Seq* die erwartete Nummer hat und er während des Lesens nicht
+überschrieben werden konnte.
+
+**Zeit:** S7-300/400 ``TIME_TCK`` (ms seit dem Neustart der CPU), S7-1200/1500 und Logix
+ms seit Mitternacht aus der Uhr der Steuerung. Der Logger rechnet Überläufe (Mitternacht,
+2³¹) heraus und hängt die Zeit an die PC-Uhr: Der jüngste Datensatz der ersten Abholung
+erhält die aktuelle Zeit, alle anderen ihren Abstand dazu laut Steuerung. Die Abstände der
+Zeilen sind damit genau die der Steuerung; die absolute Zeit ist so genau wie die PC-Uhr
+(eine abweichende Uhr der Steuerung wird langsam nachgeführt).
+
+Hinweise:
+
+* Verlorene Datensätze (Puffer zu klein, Verbindung lange unterbrochen) meldet die
+  Statuszeile: „Ringpuffer …: n Datensätze verloren“. Nach einer kurzen Unterbrechung
+  werden die Datensätze aus dem Puffer nachgeholt, solange er sie noch enthält.
+* Ein Neustart der Steuerung setzt den Zähler zurück; der Logger erkennt das und beginnt
+  von vorn.
+* Weil die Datensätze erst beim Abholen eintreffen, zeigen Diagramme und Wertetabelle
+  mit Ringpuffern alle Werte um etwa zwei Leseintervalle verzögert (die Zeilen werden
+  nach ihrer Zeit sortiert). CSV-Datei und Datenbank enthalten jeden Datensatz mit seiner
+  Zeit.
+* Normale Variablen derselben oder anderer Steuerungen werden wie gewohnt gelesen; in
+  den Zeilen eines Ringpuffers behalten sie ihren letzten Wert.
+* Formeln, Trigger, Berichte und die Aufzeichnung per Trigger sehen jeden Datensatz – ein
+  Trigger löst also auch auf einen Impuls von nur einem Zyklus aus.
+* Im Demo-Modus liefern Ringpuffer-Elemente simulierte Werte wie normale Variablen.
 
 Variablen aus der Steuerung wählen
 ----------------------------------------------------------------------
@@ -2898,31 +3018,32 @@ Haken **CSV-Datei schreiben** im Reiter *Aufzeichnung* ein oder aus.
      - Bedeutung
    * - Datenbank
      - *Keine*, *SQLite (Datei)*, *MariaDB / MySQL*, *TimescaleDB / PostgreSQL*,
-       *QuestDB*, *InfluxDB 3 Core* oder *VictoriaMetrics*.
+       *QuestDB*, *InfluxDB 3 Core*, *VictoriaMetrics* oder *Prometheus (Remote Write)*.
    * - Server / Port
      - Rechnername oder IP-Adresse des Datenbankservers; Port *Standard* = 3306
        (MariaDB), 5432 (PostgreSQL/TimescaleDB), 9000 (QuestDB), 8181 (InfluxDB 3)
-       bzw. 8428 (VictoriaMetrics). Bei QuestDB, InfluxDB und VictoriaMetrics darf
+       8428 (VictoriaMetrics) bzw. 9090 (Prometheus). Bei QuestDB, InfluxDB,
+       VictoriaMetrics und Prometheus darf
        hier auch eine vollständige URL stehen, z. B. ``https://server:8181``
        (verschlüsselt; der Port im Feld gilt dann nicht).
    * - Datenbankname
      - Name der Datenbank auf dem Server. MariaDB/PostgreSQL: sie muss bereits
        existieren, die Tabelle legt das Programm selbst an. InfluxDB 3: wird bei
-       Bedarf angelegt. Bei QuestDB und VictoriaMetrics ohne Bedeutung (eine
-       Datenbank je Server).
+       Bedarf angelegt. Bei QuestDB, VictoriaMetrics und Prometheus ohne Bedeutung
+       (eine Datenbank je Server).
    * - Benutzer / Passwort
      - Zugangsdaten. Der Benutzer braucht die Rechte CREATE (beim ersten Start) und
        INSERT. Das Passwort steht im Klartext in der Konfigurationsdatei. QuestDB,
-       InfluxDB und VictoriaMetrics: Benutzer und Passwort werden per
+       InfluxDB, VictoriaMetrics und Prometheus: Benutzer und Passwort werden per
        HTTP-Basic-Anmeldung gesendet; **ohne Benutzer gilt das Passwort als Token**
        (InfluxDB 3: Token ``apiv3_…``, QuestDB Enterprise, VictoriaMetrics hinter
-       *vmauth*); beides leer = ohne Anmeldung.
+       *vmauth*, Prometheus hinter einem Proxy); beides leer = ohne Anmeldung.
    * - SQLite-Datei
      - Dateiname der SQLite-Datenbank; ein relativer Pfad gilt im Datenordner des
        Programms.
    * - Tabelle
      - Name der Tabelle (Standard ``messwerte``; Buchstaben, Ziffern, ``_``).
-       VictoriaMetrics: die Metrik heißt *Tabelle* + ``_wert``, also
+       VictoriaMetrics und Prometheus: die Metrik heißt *Tabelle* + ``_wert``, also
        ``messwerte_wert``.
    * - Nur Änderungen schreiben
      - Ein Wert wird nur geschrieben, wenn er sich geändert hat, spätestens aber
@@ -2987,6 +3108,21 @@ Prometheus-Schnittstelle (Lesemodus: Rohdaten über ``/api/v1/export``, Mittelwe
 ``/api/v1/query_range``). VictoriaMetrics speichert Zeitstempel mit Millisekunden und
 behält Daten standardmäßig nur einen Monat (Startparameter ``-retentionPeriod``).
 
+**Prometheus** speichert wie VictoriaMetrics Zeitreihen (Metrik ``messwerte_wert``,
+Labels ``projekt`` und ``variable``). Geschrieben wird per **Remote Write**
+(``/api/v1/write``, Protobuf mit Snappy-Kompression, ohne Zusatzbibliothek); Prometheus
+muss dafür mit ``--web.enable-remote-write-receiver`` gestartet sein, sonst meldet die
+Statuszeile „Remote Write ist nicht eingeschaltet“. Gelesen wird über die
+HTTP-Schnittstelle (Lesemodus: Rohdaten stundenweise über ``/api/v1/query``, Mittelwerte
+über ``/api/v1/query_range``; erster und letzter Zeitpunkt in der Übersicht sind auf etwa
+1/2000 des Aufbewahrungszeitraums genau). Prometheus nimmt Werte je Serie nur in
+zeitlicher Reihenfolge und höchstens etwa eine Stunde alt an. Ältere Werte (z. B. nach
+einem langen Ausfall nachgetragen) lehnt es ab; der Logger verwirft solche Stapel, meldet
+sie („… Werte abgelehnt“) und zählt sie im Tooltip der Datenbank-LED. Abhilfe: in der
+Prometheus-Konfiguration ``storage: tsdb: out_of_order_time_window: 1d``. Die
+Aufbewahrungsdauer stellt der Startparameter ``--storage.tsdb.retention.time`` ein
+(Standard 15 Tage).
+
 Beispielabfragen:
 
 .. code-block:: sql
@@ -3012,7 +3148,7 @@ Beispielabfragen:
    SELECT date_bin(INTERVAL '1 minute', time) AS minute, avg(wert) FROM messwerte
     WHERE variable = 'Temperatur' AND time > now() - INTERVAL '1 hour' GROUP BY 1 ORDER BY 1;
 
-Für VictoriaMetrics (MetricsQL/PromQL, z. B. in Grafana):
+Für VictoriaMetrics und Prometheus (PromQL, z. B. in Grafana):
 
 .. code-block:: text
 
@@ -3031,14 +3167,14 @@ Für VictoriaMetrics (MetricsQL/PromQL, z. B. in Grafana):
   Beenden noch nicht geschriebene Werte meldet die Statuszeile.
 * **Treiber:** SQLite ist in Python enthalten. MariaDB braucht ``PyMySQL``,
   TimescaleDB/PostgreSQL ``psycopg`` (``pip install PyMySQL "psycopg[binary]"``); in
-  der Installationsdatei sind beide enthalten. QuestDB, InfluxDB 3 und
-  VictoriaMetrics brauchen keine Bibliothek.
+  der Installationsdatei sind beide enthalten. QuestDB, InfluxDB 3, VictoriaMetrics
+  und Prometheus brauchen keine Bibliothek.
 * Für Grafana: Datenquelle *MySQL* bzw. *PostgreSQL* anlegen (QuestDB: Plugin
   *QuestDB* oder *PostgreSQL* auf Port 8812; InfluxDB 3: *InfluxDB* mit Abfragesprache
-  *SQL*; VictoriaMetrics: *Prometheus*); die Zeitspalte ist ``zeit`` (InfluxDB:
+  *SQL*; VictoriaMetrics und Prometheus: *Prometheus*); die Zeitspalte ist ``zeit`` (InfluxDB:
   ``time``, UTC).
 * **Testumgebung:** Im Ordner ``docker`` startet ``docker compose up -d`` TimescaleDB,
-  QuestDB, InfluxDB 3 Core, VictoriaMetrics und Grafana mit fertig eingerichteten
+  QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus und Grafana mit fertig eingerichteten
   Datenquellen (Zugangsdaten in ``docker/.env``). SQLite-Dateien lassen sich mit dem SQLite-Plugin von Grafana lesen.
 
 
@@ -4040,8 +4176,9 @@ Wunsch selbst – nach **Zeitraum** (*Löschen nach … Tagen*) und/oder nach
   (``drop_chunks``), bei QuestDB ganze Tagespartitionen. Die Speicherplatz-Grenze gibt
   es nur für SQLite: Belegen die Werte mehr als *n MB*, wird jeweils der älteste Tag
   gelöscht. Die Datei wird dabei nicht kleiner, der frei gewordene Platz wird für neue
-  Werte genutzt (verkleinern: ``VACUUM`` mit einem SQLite-Werkzeug). InfluxDB 3 und
-  VictoriaMetrics verwalten die Aufbewahrungsdauer selbst (Einstellung am Server).
+  Werte genutzt (verkleinern: ``VACUUM`` mit einem SQLite-Werkzeug). InfluxDB 3,
+  VictoriaMetrics und Prometheus verwalten die Aufbewahrungsdauer selbst (Einstellung
+  am Server).
 
 Geprüft wird beim Start der Aufzeichnung und danach stündlich, auch im Headless-Betrieb.
 Was gelöscht wurde, steht in der Statuszeile bzw. im Log („[Aufräumen] …“).

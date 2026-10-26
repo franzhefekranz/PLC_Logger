@@ -55,8 +55,8 @@ Headless-Betrieb und die Logik-Tests ohne PySide6.
 * `plc_recorder` – Kern: Lese-Threads je Steuerung, Sammler, Puffer, CSV mit Rotation/Archiv, Demo-Werte,
   Aufzeichnung per Trigger mit Vor-/Nachlauf (`CaptureGate`).
 * `plc_events` – Trigger (Bedingung, Priorität, Verzögerung), `TriggerEngine` und Ereignisprotokoll (CSV).
-* `plc_db` – Schreiben in Datenbanken (SQLite, MariaDB, PostgreSQL/TimescaleDB, QuestDB, InfluxDB …) in eigenem
-  Thread mit Puffer bei Verbindungsausfall.
+* `plc_db` – Schreiben in Datenbanken (SQLite, MariaDB, PostgreSQL/TimescaleDB, QuestDB, InfluxDB, VictoriaMetrics,
+  Prometheus) in eigenem Thread mit Puffer bei Verbindungsausfall; Lesemodus (`create_reader`).
 * `plc_headless` – Aufzeichnung ohne Oberfläche, Meldungen auf die Konsole/ins Log.
 * `plc_cleanup` – Aufräumen alter CSV-/Archivdateien nach Alter oder Gesamtgröße (Datenbank: `cleanup` der
   Backends in `plc_db`, ausgeführt vom Schreib-Thread).
@@ -98,6 +98,12 @@ Steuerung ──► PlcSampler (Thread je Steuerung)                       Treib
 Mehrere Steuerungen liefern zu eigenen Zeitpunkten; der Sammler schreibt bei jeder eintreffenden Messung eine
 vollständige Zeile, in der die übrigen Steuerungen ihren letzten Wert behalten.
 
+**Ringpuffer (zyklussynchron):** Blöcke mit `ring > 0` liest der Treiber nicht im Takt, sondern holt die von der
+Steuerung gesammelten Datensätze ab (`plc_treiber/ringbuffer.py`: `RingSupport.read_rings`, Folgenummern,
+Verlusterkennung, SPS-Zeit → PC-Zeit). Der `PlcSampler` stellt jeden Datensatz mit seinem Zeitstempel einzeln in die
+Warteschlange (`put_sample(..., gidx)`); der Sammler hält dann alle Messzyklen `reorder_s` Sekunden zurück und
+verarbeitet sie nach Zeit sortiert.
+
 ## Threads
 
 | Thread | Wo | Aufgabe |
@@ -135,6 +141,9 @@ liegen getrennt im Datenordner (`plc_common._app_dir`: beim Entwickeln der Proje
   `check_address`, `block_element_address`, `create_reader`, optional `browse` (Auswahldialog).
 * `Reader` – `connect()` → Anzahl lesbarer Variablen, `read()` → Liste von float (NaN = kein Wert), `close()`,
   `errors` für einzelne nicht lesbare Variablen. Verbindungsfehler als Ausnahme; der `PlcSampler` verbindet neu.
+
+Ringpuffer: Treiber mit `ring_types` (s7, tia, clx) mischen `RingSupport` in ihren Leser und setzen
+`_ring_counter` und `_ring_bytes` (bzw. `_ring_fetch`) um; SPS-Bausteine dazu liegen im Ordner `vorlagen`.
 
 `plc_treiber/__init__.py` sammelt die eingebauten Treiber und lädt eigene aus dem Ordner `treiber` im Datenordner.
 Vorlage für eigene Treiber: `plc_treiber/_vorlage.py`. Größere Treiber sind aufgeteilt in Protokoll

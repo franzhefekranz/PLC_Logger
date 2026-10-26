@@ -134,6 +134,8 @@ class Driver:
     block_hint = ""             # Tooltip für die Startadresse eines Blocks
     block_uses_index = False    # True: Block = Array-Name + erster Index (sonst: Startadresse + Elementgröße)
     browse_label = ""           # Text des Knopfs „Aus Steuerung wählen …“ (leer = kein Auswahldialog)
+    ring_types = None           # Datentypen der Werte im Ringpuffer (None = Treiber kann keine Ringpuffer lesen)
+    ring_hint = ""              # Tooltip für die Adresse eines Ringpuffers
     library = ""                # benötigte Bibliothek (für Hinweise, z. B. "python-snap7")
 
     # ------------------------------------------------------------------ Parameter
@@ -175,12 +177,23 @@ class Driver:
         return f"{block.address}+{i}"
 
     def check_block(self, block) -> str:
-        """Fehlertext für einen ungültigen Block oder ""."""
+        """Fehlertext für einen ungültigen Block oder "" (Ringpuffer: siehe ``check_ring``)."""
+        if getattr(block, "ring", 0):
+            return self.check_ring(block)
         if not block.address.strip():
             return tr("Startadresse fehlt")
         if block.dtype not in (self.block_types or self.types):
             return tr("Format {0} wird für Blöcke nicht unterstützt").format(block.dtype)
         return ""
+
+    def check_ring(self, block) -> str:
+        """Fehlertext für einen ungültigen Ringpuffer oder "" (Treiber mit Ringpuffern prüfen zusätzlich die Adresse)."""
+        if not self.ring_types:
+            return tr("Der Treiber {0} kann keine Ringpuffer lesen (nur s7, tia, clx).").format(self.name)
+        if not block.address.strip():
+            return tr("Adresse des Ringpuffers fehlt")
+        from plc_treiber.ringbuffer import check_ring_block
+        return check_ring_block(block, self.ring_types)
 
     def type_size(self, dtype: str) -> int:
         """Größe eines Datentyps in Bytes (nur für Anzeigen)."""
@@ -204,6 +217,23 @@ class Driver:
             r.connect()
             values = r.read()
             return values, dict(r.errors)
+        finally:
+            r.close()
+
+    def read_ring_once(self, plc, variables):
+        """Ringpuffer einmal abholen (Test im Blockeditor). Rückgabe: ([(Positionen, Zeit, Werte)], Fehler, Zähler je
+        Ringpuffer {Name: Zählerstand}). Löst eine Ausnahme aus, wenn die Steuerung nicht erreichbar ist."""
+        r = self.create_reader(plc, variables)
+        try:
+            r.connect()
+            rows = r.read_rings()
+            counters = {}
+            for ring in getattr(r, "rings", []):
+                try:
+                    counters[ring.name] = r._ring_counter(ring)
+                except Exception:
+                    pass
+            return rows, dict(r.errors), counters
         finally:
             r.close()
 

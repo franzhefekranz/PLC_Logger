@@ -1,5 +1,6 @@
 # Testumgebung für die Datenbank-Aufzeichnung des PLC-Datenloggers:
-# TimescaleDB (PostgreSQL), QuestDB, InfluxDB 3 Core, VictoriaMetrics und Grafana mit vorkonfigurierten Datenquellen.
+# TimescaleDB (PostgreSQL), QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus und Grafana mit vorkonfigurierten
+# Datenquellen.
 #
 # Einzelne Dienste starten:  docker compose up -d influxdb3 grafana
 #
@@ -70,6 +71,20 @@ services:
     volumes:
       - victoriametrics-data:/storage
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: plc-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROM_RETENTION:-1y}   # Aufbewahrungsdauer (Standard von Prometheus: 15 Tage)
+      - --web.enable-remote-write-receiver                  # Werte des PLC Loggers per Remote Write annehmen
+    ports:
+      - "9090:9090"            # PLC Logger: Datenbank „Prometheus (Remote Write)“, Port 9090; Oberfläche: http://localhost:9090
+    volumes:
+      - prometheus-data:/prometheus
+
   grafana:
     image: grafana/grafana-oss:latest
     container_name: plc-grafana
@@ -79,6 +94,7 @@ services:
       - questdb
       - influxdb3
       - victoriametrics
+      - prometheus
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD in .env setzen}
@@ -101,4 +117,5 @@ volumes:
   questdb-data:
   influxdb3-data:
   victoriametrics-data:
+  prometheus-data:
   grafana-data:

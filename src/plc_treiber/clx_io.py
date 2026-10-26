@@ -24,6 +24,13 @@ Ein Block ist ein Ausschnitt eines Array-Tags. Er wird als EIN libplctag-Tag mit
 Namen des ersten Elements (z. B. ``Messwerte[10]``) angelegt und mit einer Anfrage gelesen; die Werte stehen dann
 im Abstand der Elementgröße hintereinander im Puffer.
 
+Ringpuffer (zyklussynchrone Aufzeichnung)
+-----------------------------------------
+Ein Ringpuffer ist ein Tag eines UDT mit den Elementen ``Zaehler`` (DINT) und ``Daten`` (Array von Datensätzen mit
+``Seq``, ``Zeit``, ``Werte[]``, siehe ringbuffer.py und Vorlage im Ordner ``vorlagen``). Je Puffer gibt es zwei
+libplctag-Tags: ``<Puffer>.Zaehler`` und ``<Puffer>.Daten`` (elem_count = Anzahl Datensätze, die Größe eines
+Datensatzes meldet die Steuerung). Beim Abholen werden Zähler, ganzes Array und noch einmal der Zähler gelesen.
+
 Klassen
 -------
 * ``PlcTagLib``  – dünne ctypes-Hülle um die C-Funktionen (eine Instanz je Prozess, siehe ``get_lib``).
@@ -39,7 +46,8 @@ import sys
 import threading
 import time
 
-from plc_treiber.clx_common import BASE_DIR, TYPES, Plc
+from plc_treiber.clx_common import BASE_DIR, TYPES, Plc, check_tag_name
+from plc_treiber.ringbuffer import RECORD_HEAD, RingSupport
 from plc_i18n import tr
 
 # Statuscodes von libplctag (Auszug aus libplctag.h).
@@ -228,7 +236,7 @@ class _Entry:
         self.handle, self.esize, self.error = None, TYPES[dtype][0], ""
 
 
-class TagReader:
+class TagReader(RingSupport):
     """Liest die Variablen EINER Steuerung. Nicht thread-sicher: jeder Lese-Thread hat seinen eigenen Reader.
 
     variables: Liste von Variable (ohne berechnete). ``read()`` liefert die Werte in derselben Reihenfolge;
@@ -240,8 +248,16 @@ class TagReader:
         self.plc, self.vars = plc, list(variables)
         self.lib = lib
         self.entries = []
+        self.ring_order = "<"
+        ring_pos = self._setup_rings(self.vars)
+        for ring in self.rings:
+            ring.h_cnt = ring.h_data = None
+            if not check_tag_name(ring.address) or "[" in ring.address:
+                ring.error = tr("Ungültiger Tag-Name des Ringpuffers „{0}“ (Tag des UDT ohne Index)").format(ring.address)
         blocks = {}
         for pos, v in enumerate(self.vars):
+            if pos in ring_pos:
+                continue
             if v.block:
                 # Alle Elemente eines Blocks teilen sich einen Tag: Name des ersten Elements, elem_count = Anzahl.
                 e = blocks.get(v.block)
@@ -279,7 +295,8 @@ class TagReader:
                 e.handle, e.error = None, lib.decode(h)
             else:
                 e.handle = h
-        self._wait([e for e in self.entries if e.handle is not None])
+        self._create_ring_tags()
+        self._wait([e for e in self.entries if e.handle is not None] + self._ring_waits())
         ok = 0
         for e in self.entries:
             if e.handle is None:
@@ -294,18 +311,98 @@ class TagReader:
             else:
                 e.esize = lib.elem_size(e.handle, TYPES[e.dtype][0])
                 ok += 1
-        if self.entries and ok == 0:
+        ok_rings = self._finish_ring_tags()
+        if (self.entries or self.rings) and ok == 0 and ok_rings == 0:
             first = next(iter(self.errors.values()), tr("keine Antwort"))
             raise ConnectionError(f"{self.plc.ip}: {first}")
         # libplctag legt Tags teils ohne Rückfrage bei der Steuerung an. Erst ein erfolgreicher Lesezyklus beweist,
         # dass die Steuerung antwortet (sonst ConnectionError aus read()).
-        if ok:
-            try:
+        try:
+            if ok:
                 self.read()
-            except ConnectionError as e:
-                self.close()
-                raise ConnectionError(f"{self.plc.ip}: {e}") from None
-        return ok - sum(1 for e in self.entries if e.handle is not None and e.name in self.errors)
+            if ok_rings:
+                self.check_rings()
+        except ConnectionError as e:
+            self.close()
+            raise ConnectionError(f"{self.plc.ip}: {e}") from None
+        n_ring = sum(len(r.positions) for r in self.rings if r.h_data is not None and r.label not in self.errors)
+        return n_ring + ok - sum(1 for e in self.entries if e.handle is not None and e.name in self.errors)
+
+    # ------------------------------------------------------------------ Ringpuffer (siehe ringbuffer.py)
+    def _create_ring_tags(self):
+        """Je Ringpuffer die Tags ``<Puffer>.Zaehler`` und ``<Puffer>.Daten`` asynchron anlegen."""
+        lib = self.lib
+        for ring in self.rings:
+            ring.h_cnt = ring.h_data = None
+            if ring.error:
+                self.errors[ring.label] = ring.error
+                continue
+            hc = lib.create(tag_attrs(self.plc, f"{ring.address}.Zaehler", 1), 0)
+            hd = lib.create(tag_attrs(self.plc, f"{ring.address}.Daten", ring.records), 0)
+            if hc < 0 or hd < 0:
+                self.errors[ring.label] = lib.decode(hc if hc < 0 else hd)
+                for h in (hc, hd):
+                    if h >= 0:
+                        lib.destroy(h)
+                continue
+            ring.h_cnt, ring.h_data = hc, hd
+
+    def _ring_waits(self):
+        """Ringpuffer-Tags als Einträge für ``_wait`` (dort zählt nur das Attribut ``handle``)."""
+        out = []
+        for ring in self.rings:
+            for h in (ring.h_cnt, ring.h_data):
+                if h is not None:
+                    e = _Entry("", "DINT", 1, [], False)
+                    e.handle = h
+                    out.append(e)
+        return out
+
+    def _finish_ring_tags(self):
+        """Status der angelegten Ringpuffer-Tags prüfen, Datensatzgröße übernehmen -> Anzahl nutzbarer Puffer."""
+        lib, ok = self.lib, 0
+        for ring in self.rings:
+            if ring.h_data is None:
+                continue
+            bad = [lib.status(h) for h in (ring.h_cnt, ring.h_data) if lib.status(h) != PLCTAG_STATUS_OK]
+            if bad:
+                self.errors[ring.label] = self._text(bad[0])
+                for h in (ring.h_cnt, ring.h_data):
+                    lib.destroy(h)
+                ring.h_cnt = ring.h_data = None
+                continue
+            ring.esize = lib.elem_size(ring.h_data, ring.record_size)    # Größe eines Datensatzes (UDT)
+            ok += 1
+        return ok
+
+    def _ring_read(self, h):
+        """Einen Ringpuffer-Tag synchron lesen; Verbindungsfehler -> ConnectionError, sonst RuntimeError."""
+        rc = self.lib.read(h, self.timeout_ms)
+        if rc != PLCTAG_STATUS_OK:
+            rc = self.lib.status(h) if rc == PLCTAG_STATUS_PENDING else rc
+        if rc != PLCTAG_STATUS_OK:
+            if rc in CONNECTION_ERRORS or rc == PLCTAG_STATUS_PENDING:
+                raise ConnectionError(self._text(rc))
+            raise RuntimeError(self._text(rc))
+
+    def _ring_counter(self, ring):
+        """Zähler des Puffers (Tag ``<Puffer>.Zaehler``)."""
+        if ring.h_cnt is None:
+            raise RuntimeError(self.errors.get(ring.label) or tr("nicht verbunden"))
+        self._ring_read(ring.h_cnt)
+        return int(self.lib.get(ring.h_cnt, "DINT", 0))
+
+    def _ring_fetch(self, ring, lo, hi):
+        """Ganzes Array ``Daten`` lesen und die Datensätze ``lo … hi`` herausziehen -> [(Seq, Zeit, Werte)]."""
+        lib, h = self.lib, ring.h_data
+        self._ring_read(h)
+        es, vs, dt = getattr(ring, "esize", ring.record_size), ring.value_size, ring.dtype
+        out = []
+        for seq in range(lo, hi + 1):
+            off = (seq % ring.records) * es
+            out.append((int(lib.get(h, "DINT", off)), int(lib.get(h, "DINT", off + 4)),
+                        [lib.get(h, dt, off + RECORD_HEAD + i * vs) for i in range(ring.count)]))
+        return out
 
     def _text(self, status):
         """Fehlertext; eine nach Ablauf der Wartezeit noch laufende Anfrage heißt 'keine Antwort'."""
@@ -369,6 +466,15 @@ class TagReader:
                 except Exception:
                     pass
                 e.handle = None
+        for ring in self.rings:
+            for attr in ("h_cnt", "h_data"):
+                h = getattr(ring, attr, None)
+                if h is not None:
+                    try:
+                        self.lib.destroy(h)
+                    except Exception:
+                        pass
+                    setattr(ring, attr, None)
 
 
 def read_once(plc: Plc, variables, lib=None):

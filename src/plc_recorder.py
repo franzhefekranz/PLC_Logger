@@ -20,6 +20,15 @@ Jede Steuerung liefert zu eigenen Zeitpunkten. Der Sammler hält für jede Varia
 erzeugt bei JEDEM eintreffenden Messzyklus eine Zeile mit allen Variablen (Werte der anderen Steuerungen
 bleiben auf dem letzten bekannten Wert). Die Zeitstempel sind die der jeweiligen Messung.
 
+Ringpuffer (zyklussynchrone Aufzeichnung)
+-----------------------------------------
+Bei Ringpuffern (``Block.ring``, siehe ``plc_treiber/ringbuffer.py``) liefert der Lese-Thread bei jeder Abholung
+mehrere Datensätze mit Zeitstempeln aus der Vergangenheit (bis zu einem Leseintervall alt). Damit die Zeilen trotzdem
+in zeitlicher Reihenfolge entstehen, hält der Sammler dann alle Messzyklen ``reorder_s`` Sekunden zurück und
+verarbeitet sie nach Zeit sortiert (die Anzeige läuft entsprechend verzögert). Datensätze, die noch später eintreffen
+(z. B. nach einer Verbindungsunterbrechung aus dem Puffer nachgeholt), gehen mit ihrer echten Zeit in CSV und
+Datenbank; in der Anzeige werden sie an die letzte Zeile angehängt.
+
 Zugriff von außen (thread-sicher)
 ---------------------------------
 ``window``/``slice_time``/``snapshot`` liefern Kopien der Puffer; ``status_list`` die Verbindungszustände
@@ -27,6 +36,8 @@ Zugriff von außen (thread-sicher)
 """
 import collections
 import csv
+import heapq
+import itertools
 import math
 import os
 import queue
@@ -258,9 +269,10 @@ class PlcSampler(threading.Thread):
         else:
             self._run_plc()
 
-    def _put(self, ts, values):
-        """Einen Messzyklus (Zeitstempel, Werte in der Reihenfolge von ``var_idx``) an den Sammler übergeben."""
-        self.rec.put_sample(self.idx, ts, values)
+    def _put(self, ts, values, gidx=None):
+        """Einen Messzyklus an den Sammler übergeben: Werte in der Reihenfolge von ``var_idx`` bzw. – mit ``gidx`` – zu
+        den globalen Variablenindizes ``gidx`` (Teilmenge, z. B. die Elemente eines Ringpuffers)."""
+        self.rec.put_sample(self.idx, ts, values, gidx)
 
     # Simulation: Werte werden berechnet statt gelesen.
     def _run_demo(self):
@@ -302,15 +314,32 @@ class PlcSampler(threading.Thread):
         """
         r, plc = self.rec, self.plc
         interval = plc.intervall_ms / 1000.0
+        # Ringpuffer-Elemente werden nicht im Takt gelesen, sondern als Datensätze abgeholt (read_rings). Die übrigen
+        # Variablen gehen wie gewohnt mit dem Zeitpunkt des Lesens an den Sammler.
+        variables = self.vars
+        ring_pos = {p for p, v in enumerate(variables) if v.ring is not None}
+        if ring_pos and r.reader_factory is None and not get_driver(plc.driver).ring_types:
+            r.emit(tr("⚠ [{0}] Der Treiber {1} kann keine Ringpuffer lesen – Ringpuffer werden übersprungen").format(
+                plc.name, plc.driver))
+            keep = [p for p in range(len(variables)) if p not in ring_pos]
+            self.var_idx = [self.var_idx[p] for p in keep]
+            variables = self.vars = [variables[p] for p in keep]
+            ring_pos = set()
+            if not variables:
+                r.set_status(self.idx, ST_OFF, tr("keine lesbaren Variablen"))
+                return
+        normal_pos = [p for p in range(len(variables)) if p not in ring_pos]
+        normal_gidx = [self.var_idx[p] for p in normal_pos] if ring_pos else None
         # Leser des Treibers dieser Steuerung (siehe plc_treiber); Tests können eine Ersatzfabrik setzen.
         try:
             if r.reader_factory is not None:
-                reader = r.reader_factory(plc, self.vars)
+                reader = r.reader_factory(plc, variables)
             else:
-                reader = get_driver(plc.driver).create_reader(plc, self.vars)
+                reader = get_driver(plc.driver).create_reader(plc, variables)
         except Exception as e:
             r.set_status(self.idx, ST_ERROR, tr("Treiber {0}: {1}").format(plc.driver, e))
             return
+        has_rings = bool(ring_pos) and hasattr(reader, "read_rings")
         connected = False
         where = plc.summary()
         reported = {}                                 # bereits gemeldete Fehler einzelner Tags
@@ -329,8 +358,11 @@ class PlcSampler(threading.Thread):
                     continue
             # Zeitstempel unmittelbar vor dem Lesen: so gehört der Wert möglichst genau zu diesem Zeitpunkt.
             ts, t_start = time.time(), time.perf_counter()
+            records = []
             try:
                 values = reader.read()
+                if has_rings:
+                    records = reader.read_rings()           # [(Positionen, Zeitstempel, Werte)] aus den Ringpuffern
             except Exception as e:
                 connected = False
                 reader.close()
@@ -343,7 +375,15 @@ class PlcSampler(threading.Thread):
                     reported[name] = err
                     r.emit(tr("[{0}] Variable {1}: {2}").format(plc.name, name, err))
             r.note_read_time(self.idx, (time.perf_counter() - t_start) * 1000.0)
-            self._put(ts, values)
+            if normal_gidx is None:
+                self._put(ts, values)
+            elif normal_pos:
+                self._put(ts, [values[p] for p in normal_pos], normal_gidx)
+            if has_rings:
+                for positions, rts, vals in records:
+                    self._put(rts, vals, [self.var_idx[p] for p in positions])
+                for note in reader.take_ring_notes():
+                    r.emit(f"⚠ [{plc.name}] {note}")
             # Takt: das nächste Ziel wird um das Intervall weitergeschoben (konstante Abtastrate trotz schwankender
             # Lesezeit). Ist das Lesen langsamer als das Intervall, wird der Takt neu gestartet.
             nxt += interval
@@ -398,6 +438,13 @@ class Recorder:
         self.samplers, self.collector = [], None
         self.running = False
         self.dropped = 0                         # verworfene Messzyklen (Warteschlange voll)
+        # Ringpuffer: Messzyklen so lange zurückhalten, bis die Datensätze aller Steuerungen eingetroffen sind (siehe
+        # Modulbeschreibung). Etwa zwei Leseintervalle der langsamsten Steuerung mit Ringpuffer plus Reserve; 0 = sofort.
+        ring_plcs = {v.plc for v in variables if v.ring is not None and not v.formula}
+        self.reorder_s = 0.0 if demo else max(
+            [2.0 * plcs[k].intervall_ms / 1000.0 + 0.5 for k in ring_plcs if 0 <= k < len(plcs) and plcs[k].enabled]
+            or [0.0])
+        self._last_ts = float("-inf")            # Zeit der zuletzt angezeigten Zeile (Anzeige bleibt zeitlich geordnet)
         # Messwertpuffer: Zeit und Werte in vorab angelegten numpy-Feldern (schnelle Ausschnitte ohne Umrechnung).
         self._cap = 4096
         # tbuf[i] = Zeit der Zeile i, ybuf[v, i] = Wert der Variable v in Zeile i; gültig sind die ersten self.n Zeilen.
@@ -651,67 +698,97 @@ class Recorder:
             t.join(60.0)
 
     # ------------------------------------------------------------------ Datenfluss
-    def put_sample(self, idx, ts, values):
-        """Von den Lese-Threads: einen Messzyklus an den Sammler übergeben (bei voller Warteschlange verwerfen)."""
+    def put_sample(self, idx, ts, values, gidx=None):
+        """Von den Lese-Threads: einen Messzyklus an den Sammler übergeben (bei voller Warteschlange verwerfen).
+
+        ``values`` gehören zu den Variablen der Steuerung ``idx`` (Reihenfolge wie ``plc_vars[idx]``) bzw. – mit
+        ``gidx`` – zu diesen globalen Variablenindizes."""
         try:
-            self.q.put_nowait((idx, ts, values))
+            self.q.put_nowait((idx, ts, values, gidx))
         except queue.Full:
             self.dropped += 1
 
     def _collector(self):
-        """Sammler-Thread: Messzyklen zu Zeilen zusammenführen, Formeln rechnen, puffern, CSV schreiben."""
-        n = len(self.vars)
-        cur = np.full(n, np.nan)                 # zuletzt bekannter Wert jeder Variable
+        """Sammler-Thread: Messzyklen zu Zeilen zusammenführen, Formeln rechnen, puffern, CSV schreiben.
+
+        Mit Ringpuffern (``reorder_s`` > 0) werden die Messzyklen erst nach ``reorder_s`` Sekunden nach Zeit sortiert
+        verarbeitet; beim Beenden alle restlichen."""
+        cur = np.full(len(self.vars), np.nan)    # zuletzt bekannter Wert jeder Variable
+        delay = self.reorder_s
+        heap, order = [], itertools.count()      # zurückgehaltene Messzyklen: (Zeit, laufende Nummer, Messzyklus)
         while True:
+            if delay > 0 and heap:
+                wait = min(0.25, max(0.005, heap[0][0] + delay - time.time()))
+            else:
+                wait = 0.25
             try:
-                item = self.q.get(timeout=0.25)
+                item = self.q.get(timeout=wait)
             except queue.Empty:
-                self._flush_if_due()
-                continue
-            if item is None:
+                item = False
+            if item is None:                     # Ende-Marke: Zurückgehaltenes noch verarbeiten
+                while heap:
+                    self._process(heapq.heappop(heap)[2], cur)
                 break
-            idx, ts, values = item
-            # Werte dieser Steuerung in die Gesamtzeile eintragen; die anderen Steuerungen behalten ihren letzten Wert.
-            for gi, val in zip(self.plc_vars[idx], values):
-                cur[gi] = val
-            row = cur.copy()
-            engine = self.trigger_engine
-            gate = self.gate
-            byname = None
-            if self.computed_idx or engine or gate:
-                # Formeln in Tabellenreihenfolge: spätere dürfen frühere verwenden.
-                byname = {self.names[i]: row[i] for i in range(n) if i not in self.formulas}
-                for i in self.computed_idx:
-                    f = self.formulas.get(i)
-                    r = f.evaluate(ts, byname) if f else float("nan")
-                    row[i] = r
-                    byname[self.names[i]] = r
-                if engine:                       # Trigger prüfen (Ereignisse ins Protokoll schreiben)
-                    try:
-                        engine.evaluate(ts, {k: float(v) for k, v in byname.items()})
-                    except OSError as e:
-                        self.emit(tr("⚠ Ereignisprotokoll nicht beschreibbar: {0}").format(e))
-            self._append(ts, row)
-            if self.opcua is not None:
-                self.opcua.update(ts, row)
-            acc = self.report_acc
-            if acc is not None:
-                if ts >= acc.t1:                 # Zeitraum vorbei: Bericht schreiben, nächsten beginnen
-                    if acc.rows:
-                        self._write_report(acc, partial=False)
-                    acc = self.report_acc = self._new_report(ts)
-                acc.add(ts, row)
-            if gate is None:
-                self._store(ts, row)
-            else:                                # per Trigger: nur Vorlauf, Aufnahme und Nachlauf speichern
-                rows, event = gate.feed(ts, row, {k: float(v) for k, v in byname.items()})
-                if event == "start":
-                    self._capture_event("start", gate.t_trigger)
-                for t_, r_ in rows:
-                    self._store(t_, r_)
-                if event == "stop":
-                    self._capture_event("stop", ts)
+            if item is not False:
+                if delay > 0:
+                    heapq.heappush(heap, (item[1], next(order), item))
+                else:
+                    self._process(item, cur)
+            if delay > 0:
+                limit = time.time() - delay
+                while heap and heap[0][0] <= limit:
+                    self._process(heapq.heappop(heap)[2], cur)
+            if item is False:
+                self._flush_if_due()
         self._flush_if_due(force=True)
+
+    def _process(self, item, cur):
+        """Einen Messzyklus verarbeiten: in die Gesamtzeile ``cur`` eintragen, Formeln, Trigger, Puffer, CSV,
+        Datenbank, OPC UA, Bericht und Aufzeichnung per Trigger."""
+        n = len(self.vars)
+        idx, ts, values, gidx = item
+        # Werte dieser Steuerung in die Gesamtzeile eintragen; die anderen Steuerungen behalten ihren letzten Wert.
+        for gi, val in zip(self.plc_vars[idx] if gidx is None else gidx, values):
+            cur[gi] = val
+        row = cur.copy()
+        engine = self.trigger_engine
+        gate = self.gate
+        byname = None
+        if self.computed_idx or engine or gate:
+            # Formeln in Tabellenreihenfolge: spätere dürfen frühere verwenden.
+            byname = {self.names[i]: row[i] for i in range(n) if i not in self.formulas}
+            for i in self.computed_idx:
+                f = self.formulas.get(i)
+                r = f.evaluate(ts, byname) if f else float("nan")
+                row[i] = r
+                byname[self.names[i]] = r
+            if engine:                       # Trigger prüfen (Ereignisse ins Protokoll schreiben)
+                try:
+                    engine.evaluate(ts, {k: float(v) for k, v in byname.items()})
+                except OSError as e:
+                    self.emit(tr("⚠ Ereignisprotokoll nicht beschreibbar: {0}").format(e))
+        # Anzeige-Puffer zeitlich geordnet halten (verspätete Ringpuffer-Datensätze hinten anhängen).
+        self._last_ts = max(self._last_ts, ts)
+        self._append(self._last_ts, row)
+        if self.opcua is not None:
+            self.opcua.update(ts, row)
+        acc = self.report_acc
+        if acc is not None:
+            if ts >= acc.t1:                 # Zeitraum vorbei: Bericht schreiben, nächsten beginnen
+                if acc.rows:
+                    self._write_report(acc, partial=False)
+                acc = self.report_acc = self._new_report(ts)
+            acc.add(ts, row)
+        if gate is None:
+            self._store(ts, row)
+        else:                                # per Trigger: nur Vorlauf, Aufnahme und Nachlauf speichern
+            rows, event = gate.feed(ts, row, {k: float(v) for k, v in byname.items()})
+            if event == "start":
+                self._capture_event("start", gate.t_trigger)
+            for t_, r_ in rows:
+                self._store(t_, r_)
+            if event == "stop":
+                self._capture_event("stop", ts)
 
     def _store(self, ts, row):
         """Zeile in die CSV-Datei und die Datenbank schreiben."""

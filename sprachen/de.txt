@@ -236,6 +236,9 @@
 @ Anzahl
 > 
 
+@ Ringpuffer
+> 
+
 @ Diagramm › Y-Achse
 > 
 
@@ -251,7 +254,13 @@
 @ Bereich
 > 
 
+@ Ringpuffer für zyklussynchrone Aufzeichnung: Anzahl Datensätze im Puffer der Steuerung (aus = normaler Block). Die Steuerung schreibt je Zyklus einen Datensatz mit Anzahl Werten, der Logger holt sie im Leseintervall ab – lückenlos und mit dem Zeitpunkt aus der Steuerung. Puffer mindestens 3 × Leseintervall ÷ Zykluszeit groß wählen. Nur Treiber s7, tia und clx.
+> 
+
 @ Ein <b>Block</b> liest <i>Anzahl</i> zusammenhängende Werte gleichen <i>Formats</i> gemeinsam (meist mit einer einzigen Anfrage, schneller als einzelne Variablen). Je nach Treiber der Steuerung ist die <b>Startadresse</b> die Adresse des ersten Werts (z. B. <code>DB10.DBD0</code>, <code>40001</code>; die Elemente folgen lückenlos) oder der Name eines <b>Arrays</b> ohne Index (z. B. <code>Messwerte</code>, <code>Mess_DB.Werte</code>) mit dem <i>ersten Index</i>. Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>) und einzelne Elemente einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks).
+> 
+
+@ Ein <b>Ringpuffer</b> (Spalte <i>Ringpuffer</i> &gt; 0) zeichnet <b>zyklussynchron</b> auf: Die Steuerung sammelt je Zyklus einen Datensatz, der Logger holt die Datensätze ab (Bausteine unter <i>SPS-Vorlagen …</i>).
 > 
 
 @ Blöcke (Blocklesemodus)
@@ -278,6 +287,12 @@
 @ Liest den Block einmal aus der SPS und zeigt die ersten Werte und die Lesezeit
 > 
 
+@ SPS-Vorlagen …
+> 
+
+@ Ordner mit den Bausteinen für Ringpuffer öffnen (S7-300/400, S7-1200/1500, ControlLogix)
+> 
+
 @ <b>Elemente der Blöcke</b> – Namen und Ziel (Diagramm › Y-Achse) der einzelnen Werte bearbeiten
 > 
 
@@ -288,6 +303,12 @@
 > 
 
 @ Ziel:
+> 
+
+@ aus
+> 
+
+@ Der Treiber {0} kann keine Ringpuffer lesen.
 > 
 
 @ Erster Array-Index
@@ -318,6 +339,24 @@
 > 
 
 @ {0}: {1} Werte ({2} Bytes) in {3:.1f} ms gelesen (einschließlich Verbindungsaufbau).\n\nErste Werte: {4}
+> 
+
+@ {0}: Zähler {1}, {2} Datensätze gelesen in {3:.1f} ms (einschließlich Verbindungsaufbau).
+> 
+
+@ Zeitraum {0:.3f} s, mittlerer Abstand {1:.1f} ms.
+> 
+
+@ Jüngste Werte: {0}
+> 
+
+@ Der Puffer ist leer (Zähler 0) – schreibt die Steuerung schon Datensätze?
+> 
+
+@ SPS-Vorlagen
+> 
+
+@ Die Vorlagen liegen im Ordner:\n{0}
 > 
 
 @ „{0}“: Name darf nicht leer sein und keines der Zeichen ; {{ }} [ ] enthalten.
@@ -369,6 +408,9 @@
 > 
 
 @ Raster (Grid)
+> 
+
+@ {0}: Ringpuffer {1} × {2} Werte
 > 
 
 @ Dauernd
@@ -988,10 +1030,13 @@
 @ nie
 > 
 
-@ Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics hinter vmauth)
+@ Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics hinter vmauth, Prometheus hinter einem Proxy)
 > 
 
-@ VictoriaMetrics: Name der Metrik = Tabelle + _wert
+@ VictoriaMetrics/Prometheus: Name der Metrik = Tabelle + _wert
+> 
+
+@ Prometheus nimmt Werte per Remote Write an: den Server mit --web.enable-remote-write-receiver starten. Werte älter als etwa eine Stunde lehnt Prometheus ab (out_of_order_time_window).
 > 
 
 @ Standard ({0})
@@ -1043,9 +1088,6 @@
 > 
 
 @ {0} Benutzer: {1}
-> 
-
-@ aus
 > 
 
 @ ab {0} über {1}
@@ -1307,6 +1349,9 @@
 @ VictoriaMetrics
 > 
 
+@ Prometheus (Remote Write)
+> 
+
 @ Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)
 > 
 
@@ -1322,6 +1367,9 @@
 @ {0} alte Zeitabschnitte gelöscht
 > 
 
+@ Remote Write ist nicht eingeschaltet (Prometheus mit --web.enable-remote-write-receiver starten)
+> 
+
 @ ohne Deduplizierung: {0}
 > 
 
@@ -1332,6 +1380,9 @@
 > 
 
 @ Metrik {0}, Labels projekt und variable
+> 
+
+@ Metrik {0}, Labels projekt und variable (Remote Write: Prometheus mit --web.enable-remote-write-receiver starten)
 > 
 
 @ Keine Datenbank gewählt.
@@ -1349,10 +1400,16 @@
 @ , {0} verworfen (Puffer voll)
 > 
 
+@ , {0} vom Server abgelehnt
+> 
+
 @ Verbinde mit {0} …
 > 
 
 @ Verbindung fehlgeschlagen: {0}
+> 
+
+@ ⚠ [Datenbank] {0} Werte abgelehnt: {1}
 > 
 
 @ [Aufräumen] Datenbank: {0}
@@ -3428,6 +3485,12 @@
 @ ⚠ Archivierung von {0} fehlgeschlagen: {1} (CSV-Datei bleibt erhalten)
 > 
 
+@ ⚠ [{0}] Der Treiber {1} kann keine Ringpuffer lesen – Ringpuffer werden übersprungen
+> 
+
+@ keine lesbaren Variablen
+> 
+
 @ Verbunden mit {0} ({1} Variablen)
 > 
 
@@ -4153,6 +4216,12 @@
 @ Format {0} wird für Blöcke nicht unterstützt
 > 
 
+@ Der Treiber {0} kann keine Ringpuffer lesen (nur s7, tia, clx).
+> 
+
+@ Adresse des Ringpuffers fehlt
+> 
+
 # ---------------- plc_treiber/clx.py
 
 @ Allen-Bradley Logix (EtherNet/IP, libplctag)
@@ -4185,7 +4254,13 @@
 @ Aus Tag-Liste wählen…
 > 
 
+@ Tag des Ringpuffers (UDT mit Zaehler und Daten[]), z. B. Puffer oder Program:Main.Puffer
+> 
+
 @ Ungültiger Tag-Name „{0}“
+> 
+
+@ Tag des Ringpuffers „{0}“ ist leer oder ungültig (ohne Index angeben).
 > 
 
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
@@ -4309,6 +4384,9 @@
 # ---------------- plc_treiber/clx_io.py
 
 @ libplctag wurde nicht gefunden: plctag.dll (64 Bit, aus https://github.com/libplctag/libplctag/releases, Paket ..._windows_x64.zip) neben die Programmdateien legen oder ihren Pfad in CLX_PLCTAG_LIB angeben.
+> 
+
+@ Ungültiger Tag-Name des Ringpuffers „{0}“ (Tag des UDT ohne Index)
 > 
 
 @ keine Antwort
@@ -4897,6 +4975,23 @@
 @ Blöcke nur in N-, F-, L- und B-Dateien
 > 
 
+# ---------------- plc_treiber/ringbuffer.py
+
+@ Ringpuffer {0}
+> 
+
+@ Ringpuffer {0}: {1} Datensätze verloren (Puffer vergrößern oder Leseintervall verkleinern)
+> 
+
+@ Ringpuffer {0}: Zähler zurückgesetzt (Neustart der Steuerung?)
+> 
+
+@ Format {0} ist im Ringpuffer nicht möglich (erlaubt: {1})
+> 
+
+@ Ringpuffer: 2 bis {0} Datensätze
+> 
+
 # ---------------- plc_treiber/s5as511.py
 
 @ DB-Nummer 0–255 erwartet: {0}
@@ -5015,6 +5110,12 @@
 @ Ungültige S7-Adresse „{0}“ (z. B. DB10.DBD4, M5.0, EW64)
 > 
 
+@ Ringpuffer müssen in einem Datenbaustein liegen (z. B. DB100.DBX0.0)
+> 
+
+@ Ringpuffer: Startadresse muss gerade sein (Wortgrenze)
+> 
+
 @ Die installierte python-snap7-Version unterstützt keine Bausteinliste.
 > 
 
@@ -5040,6 +5141,9 @@
 > 
 
 @ Aus DB-Quelle wählen…
+> 
+
+@ Adresse des Zählers am Anfang des Ringpuffers im nicht optimierten DB, z. B. DB100.DBX0.0
 > 
 
 # ---------------- plc_treiber/s7_browser.py
@@ -5315,6 +5419,9 @@
 > 
 
 @ Aus Variablenliste wählen…
+> 
+
+@ Adresse des Zählers am Anfang des Ringpuffers in einem nicht optimierten DB, z. B. DB100.DBX0.0 (Bausteineigenschaft „Optimierter Bausteinzugriff“ aus)
 > 
 
 @ Ungültiger Variablenname „{0}“

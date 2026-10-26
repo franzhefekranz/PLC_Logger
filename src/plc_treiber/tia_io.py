@@ -20,12 +20,19 @@ Fehler einzelner Variablen (z. B. nach einer Programmänderung gelöschte Variab
 
 Blöcke (Ausschnitte eines Arrays) brauchen keine Sonderbehandlung: Ihre Elemente sind gewöhnliche Variablen, die mit
 den übrigen in derselben Anfrage gelesen werden.
+
+Ringpuffer (zyklussynchrone Aufzeichnung, siehe ringbuffer.py) liegen in einem *nicht optimierten* Datenbaustein und
+werden byteweise gelesen (``db_read``, ebenfalls ohne PUT/GET); Adresse wie beim Treiber s7, z. B. ``DB100.DBX0.0``.
 """
 import datetime
 import math
+import struct
 
 from plc_treiber.tia_common import Plc
+from plc_treiber.ringbuffer import HEADER_BYTES, RingSupport
 from plc_i18n import tr
+
+RING_CHUNK = 4000                                # höchstens so viele Bytes je db_read beim Abholen eines Ringpuffers
 
 # Werte, die als Zahl aufgezeichnet werden können: Wahrheitswerte, Ganz- und Gleitkommazahlen, Zeitdauern (in ms),
 # einzelne Zeichen (Zeichencode). Alles andere (Texte, Datum …) wird NaN.
@@ -67,7 +74,7 @@ def _is_connection_error(exc):
     return isinstance(exc, (OSError, ConnectionError, TimeoutError))
 
 
-class TagReader:
+class TagReader(RingSupport):
     """Liest die Variablen EINER Steuerung. Nicht thread-sicher: jeder Lese-Thread hat seinen eigenen Reader.
 
     variables: Liste von Variable (ohne berechnete); ``read()`` liefert die Werte in derselben Reihenfolge,
@@ -83,6 +90,13 @@ class TagReader:
         self.tags = [None] * len(self.vars)      # aufgelöste Kennungen (SymbolicTag) je Variable
         self.errors = {}                         # Variablenname (Tag) -> Fehlertext
         self.catalog_refreshed = False           # Variablenliste in dieser Sitzung schon neu gelesen?
+        self.ring_pos = self._setup_rings(self.vars)  # Elemente von Ringpuffern (werden nicht symbolisch gelesen)
+        from plc_treiber.s7 import parse_ring
+        for ring in self.rings:
+            try:
+                ring.db, ring.byte = parse_ring(ring.address)
+            except ValueError as e:
+                ring.error = str(e)
 
     # ------------------------------------------------------------------ Verbindung
     def _new_client(self):
@@ -104,11 +118,17 @@ class TagReader:
             raise ConnectionError(f"{self.plc.ip}: {e}") from None
         self.client = client
         self.errors = {}
-        self._resolve()
+        if len(self.ring_pos) < len(self.vars):
+            self._resolve()
         n_ok = sum(1 for t in self.tags if t is not None)
         if n_ok:
             self.read()                           # erst ein erfolgreicher Lesezyklus beweist die Verbindung
-        return n_ok - sum(1 for i, t in enumerate(self.tags) if t is not None and self.vars[i].tag in self.errors)
+        n_ring = 0
+        if self.rings:
+            self.check_rings()                    # Zähler einmal lesen (prüft auch die Verbindung)
+            n_ring = sum(len(r.positions) for r in self.rings if r.label not in self.errors)
+        return n_ring + n_ok - sum(1 for i, t in enumerate(self.tags)
+                                   if t is not None and self.vars[i].tag in self.errors)
 
     def _catalog(self, refresh=False):
         """Variablenkatalog (s7commplus.SymbolCatalog): aus dem Zwischenspeicher oder neu aus der Steuerung."""
@@ -153,6 +173,8 @@ class TagReader:
         """Jede Variable im Katalog nachschlagen und die Kennung merken -> Indizes der nicht gefundenen Variablen."""
         missing = []
         for i, v in enumerate(self.vars):
+            if i in self.ring_pos:
+                continue
             try:
                 self.tags[i] = catalog.resolve(v.tag)
             except KeyError:
@@ -193,6 +215,25 @@ class TagReader:
                 except Exception:
                     out[i] = math.nan
         return out
+
+    # ------------------------------------------------------------------ Ringpuffer (siehe ringbuffer.py)
+    def _ring_is_connection_error(self, exc):
+        """Verbindung neu aufbauen? (wie beim symbolischen Lesen)"""
+        return _is_connection_error(exc)
+
+    def _ring_counter(self, ring):
+        """Zähler (DINT) am Anfang des Puffers."""
+        return struct.unpack(">i", bytes(self.client.db_read(ring.db, ring.byte, HEADER_BYTES))[:4])[0]
+
+    def _ring_bytes(self, ring, slot, n):
+        """``n`` Datensätze ab Platz ``slot`` – in Stücken von höchstens ``RING_CHUNK`` Bytes (ganze Datensätze)."""
+        rs = ring.record_size
+        per = max(1, RING_CHUNK // rs)
+        out = bytearray()
+        for k in range(0, n, per):
+            m = min(per, n - k)
+            out += bytes(self.client.db_read(ring.db, ring.byte + HEADER_BYTES + (slot + k) * rs, m * rs))
+        return bytes(out)
 
     def _read_items(self, indices):
         """Eine GetMultiVariables-Anfrage für die Variablen mit diesen Indizes -> Rohwerte (None = Fehler)."""

@@ -244,3 +244,32 @@ def test_language_english(qt_log, demo_config):
         _close(w)
     finally:
         plc_i18n.load("de")
+
+
+def test_block_editor_ring(qt_log, monkeypatch):
+    """Blockeditor: Spalte Ringpuffer (Formate des Ringpuffers, gesperrt bei Treibern ohne Ringpuffer), Test eines
+    Ringpuffers, SPS-Vorlagen öffnen, Übernahme mit OK."""
+    from plc_block_dialog import BlockEditor, C_PLC, C_RING, C_START, C_TYPE
+    from plc_common import Block, Plc
+    from plc_treiber.s7 import S7Driver
+    plcs = [Plc(name="S7", driver="s7"), Plc(name="Modbus", driver="modbus")]
+    blk = Block(name="Puffer", address="DB100.DBX0.0", dtype="REAL", count=3, ring=100, driver="s7")
+    dlg = BlockEditor(None, [blk], [(0, 0)], ["Diagramm 1 › Achse 1"], lambda i: plcs[i], set(),
+                      plc_names=[p.name for p in plcs])
+    t = dlg.table
+    assert t.cellWidget(0, C_RING).value() == 100 and not t.cellWidget(0, C_START).isEnabled()
+    types = [t.cellWidget(0, C_TYPE).itemText(i) for i in range(t.cellWidget(0, C_TYPE).count())]
+    assert "BOOL" not in types and "REAL" in types
+    assert dlg.block_of_row(0).ring == 100
+    monkeypatch.setattr(S7Driver, "read_ring_once", lambda self, plc, v: (
+        [([0, 1, 2], 100.0, [1.0, 2.0, 3.0]), ([0, 1, 2], 100.05, [1.5, 2.5, 3.5])], {}, {"Puffer": 2}))
+    t.selectRow(0)
+    dlg.test_block()
+    assert "Zähler 2" in qt_log.last()[2] and "50.0 ms" in qt_log.last()[2], qt_log.messages
+    dlg.open_templates()
+    assert qt_log.opened and "vorlagen" in qt_log.opened[-1]
+    dlg.accept_checked()
+    assert dlg.result_blocks and dlg.result_blocks[0].ring == 100
+    t.cellWidget(0, C_PLC).setCurrentIndex(1)                 # Modbus: keine Ringpuffer
+    assert t.cellWidget(0, C_RING).value() == 0 and not t.cellWidget(0, C_RING).isEnabled()
+    dlg.close()

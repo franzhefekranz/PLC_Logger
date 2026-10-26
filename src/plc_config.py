@@ -60,7 +60,7 @@ from plc_common import (RECORD_MODES, CONFIG_EXT, ConfigFormatError, convert_ini
 from plc_formula import check as check_formula
 from plc_formula_dialog import FormulaEditor
 from plc_events import EventLog, check_trigger, event_log_path, load_triggers, save_triggers
-from plc_db import DB_TYPES, DEFAULT_PORTS, HTTP_TYPES, check_table_name, test_connection as test_db
+from plc_db import DB_TYPES, DEFAULT_PORTS, HTTP_TYPES, METRIC_TYPES, check_table_name, test_connection as test_db
 from plc_i18n import N_, tr
 from plc_treiber import drivers, get_driver, load_errors
 from plc_treiber.base import BrowseContext
@@ -1022,18 +1022,25 @@ class ConfigWindow(QMainWindow):
             wdg.setEnabled(bool(typ))
         for wdg in self._db_server_widgets:
             wdg.setEnabled(typ in ("mariadb", "timescale") + HTTP_TYPES)
-        # QuestDB und VictoriaMetrics: eine Datenbank je Server
+        # QuestDB, VictoriaMetrics und Prometheus: eine Datenbank je Server
         self.ed_db_name.setEnabled(typ in ("mariadb", "timescale", "influxdb3"))
         plain = tr("Wird im Klartext in der Konfigurationsdatei gespeichert")
         self.ed_db_pw.setToolTip(tr("Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, "
-                                    "VictoriaMetrics hinter vmauth)") + "\n" + plain if typ in HTTP_TYPES else plain)
-        self.ed_db_table.setToolTip(tr("VictoriaMetrics: Name der Metrik = Tabelle + _wert") + "\n"
+                                    "VictoriaMetrics hinter vmauth, Prometheus hinter einem Proxy)") + "\n" + plain
+                                 if typ in HTTP_TYPES else plain)
+        self.ed_db_table.setToolTip(tr("VictoriaMetrics/Prometheus: Name der Metrik = Tabelle + _wert") + "\n"
                                     + tr("Tabellenname (Buchstaben, Ziffern, _); wird bei Bedarf angelegt")
-                                    if typ == "victoriametrics"
+                                    if typ in METRIC_TYPES
                                     else tr("Tabellenname (Buchstaben, Ziffern, _); wird bei Bedarf angelegt"))
+        if typ == "prometheus":
+            self.cb_db.setToolTip(tr("Prometheus nimmt Werte per Remote Write an: den Server mit "
+                                     "--web.enable-remote-write-receiver starten. Werte älter als etwa eine Stunde "
+                                     "lehnt Prometheus ab (out_of_order_time_window)."))
+        else:
+            self.cb_db.setToolTip("")
         self.ed_db_file.setEnabled(typ == "sqlite")
         self.sp_db_clean_mb.setEnabled(typ == "sqlite")
-        self.sp_db_clean_days.setEnabled(typ not in ("", "influxdb3", "victoriametrics"))
+        self.sp_db_clean_days.setEnabled(typ not in ("", "influxdb3") + METRIC_TYPES)
         self.sp_db_port.setSpecialValueText(tr("Standard ({0})").format(DEFAULT_PORTS[typ]) if typ in DEFAULT_PORTS else tr("Standard"))
 
     def test_database(self):

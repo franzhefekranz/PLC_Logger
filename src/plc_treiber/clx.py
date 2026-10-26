@@ -8,10 +8,12 @@ Auswahldialog liefert pycomm3. Adressen sind Tag-Namen wie in Studio 5000:
     Temp_Kessel   Program:Main.Druck   Anlage.Motor[2].Drehzahl   Status.3 (Bit 3 eines Integers, Typ BOOL)
 
 Blöcke: Array-Tag ohne Index + erster Index + Anzahl, gelesen mit einer Anfrage.
+Ringpuffer (zyklussynchron): Tag eines UDT mit ``Zaehler`` und ``Daten[]`` (siehe Vorlage), z. B. ``Puffer``.
 """
 from plc_i18n import tr
 from plc_treiber.base import BrowseResult, Driver, Param
 from plc_treiber.clx_common import BLOCK_TYPES, CPUS, TYPES, check_tag_name
+from plc_treiber.ringbuffer import RING_TYPES
 
 
 class ClxDriver(Driver):
@@ -35,6 +37,8 @@ class ClxDriver(Driver):
     block_uses_index = True
     browse_label = tr("Aus Tag-Liste wählen…")
     library = "libplctag (plctag.dll / libplctag.so), pycomm3"
+    ring_types = [t for t in RING_TYPES if t in TYPES]
+    ring_hint = tr("Tag des Ringpuffers (UDT mit Zaehler und Daten[]), z. B. Puffer oder Program:Main.Puffer")
 
     def summary(self, plc):
         """„IP, Pfad 1,0, Steuerungstyp“."""
@@ -60,8 +64,16 @@ class ClxDriver(Driver):
             return tr("Typ {0} wird nicht unterstützt").format(dtype)
         return ""
 
+    def check_ring(self, block):
+        """Ringpuffer: Tag des UDT ohne Index."""
+        if not check_tag_name(block.address) or "[" in block.address:
+            return tr("Tag des Ringpuffers „{0}“ ist leer oder ungültig (ohne Index angeben).").format(block.address)
+        return super().check_ring(block)
+
     def check_block(self, block):
         """Blöcke: Array-Tag ohne Index."""
+        if block.ring:
+            return self.check_ring(block)
         if not check_tag_name(block.address) or "[" in block.address.rsplit(".", 1)[-1]:
             return tr("Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).").format(block.address)
         return super().check_block(block)

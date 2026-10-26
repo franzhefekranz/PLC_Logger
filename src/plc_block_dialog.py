@@ -16,6 +16,9 @@ Aufbau des Dialogs
   einzelner Elemente ändern.
   Die Elemente eines Blocks werden erst beim Aufklappen erzeugt (große Blöcke bleiben schnell).
 * Schaltfläche "Markierten Block testen": liest den Block einmal aus der Steuerung und zeigt die Lesezeit.
+* Spalte "Ringpuffer": > 0 macht aus dem Block einen Ringpuffer mit so vielen Datensätzen (zyklussynchrone
+  Aufzeichnung, Treiber s7, tia, clx; siehe plc_treiber/ringbuffer.py). "SPS-Vorlagen …" öffnet den Ordner mit den
+  Bausteinen für die Steuerung.
 
 Eigene Elementnamen werden je Zeile in ``names_of`` gesammelt (Zeilen-ID -> {Index: Name}), abweichende
 Ziele in ``targets_of`` (Zeilen-ID -> {Index: (Diagramm, Achse)}); beim Schließen landen sie in
@@ -25,8 +28,8 @@ Ziele in ``targets_of`` (Zeilen-ID -> {Index: (Diagramm, Achse)}); beim Schließ
 
 import time
 
-from PySide6.QtCore import QTimer, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QTimer, Qt, QUrl
+from PySide6.QtGui import QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout,
     QHeaderView, QLabel, QMessageBox, QPushButton, QSpinBox, QSplitter, QTableWidget,
@@ -34,13 +37,17 @@ from PySide6.QtWidgets import (
 )
 
 # Gemeinsames Datenmodell: Block (mit variables()); gelesen wird mit dem Treiber der Steuerung (plc_treiber).
-from plc_common import PALETTE, Block, get_driver
+from plc_common import PALETTE, Block, get_driver, templates_dir
 from plc_i18n import tr
 
 # Spaltenüberschriften der Blocktabelle und zugehörige Spaltennummern (C_...).
 COLS = [tr("Name"), tr("Steuerung"), tr("Startadresse / Array"), tr("Erster Index"), tr("Format"), tr("Anzahl"),
-        tr("Diagramm › Y-Achse"), tr("Farbe"), tr("Werteanzeige"), tr("Balken"), tr("Bereich")]
-(C_NAME, C_PLC, C_TAG, C_START, C_TYPE, C_COUNT, C_AXIS, C_COLOR, C_SHOW, C_BAR, C_INFO) = range(11)
+        tr("Ringpuffer"), tr("Diagramm › Y-Achse"), tr("Farbe"), tr("Werteanzeige"), tr("Balken"), tr("Bereich")]
+(C_NAME, C_PLC, C_TAG, C_START, C_TYPE, C_COUNT, C_RING, C_AXIS, C_COLOR, C_SHOW, C_BAR, C_INFO) = range(12)
+RING_TIP = tr("Ringpuffer für zyklussynchrone Aufzeichnung: Anzahl Datensätze im Puffer der Steuerung (aus = normaler "
+              "Block). Die Steuerung schreibt je Zyklus einen Datensatz mit Anzahl Werten, der Logger holt sie im "
+              "Leseintervall ab – lückenlos und mit dem Zeitpunkt aus der Steuerung. Puffer mindestens 3 × "
+              "Leseintervall ÷ Zykluszeit groß wählen. Nur Treiber s7, tia und clx.")
 # Spalten des Elementbaums: Nummer, Name, Adresse, Format, Ziel (Diagramm › Y-Achse; Auswahlliste).
 T_NAME, T_ADDR, T_TYPE, T_TARGET = 1, 2, 3, 4
 
@@ -54,6 +61,9 @@ HELP = (
        "Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick "
        "ändern (leer = Standardname <code>Name[i]</code>) und einzelne Elemente einem <b>anderen Diagramm bzw. einer "
        "anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks).")
+    + " " + tr("Ein <b>Ringpuffer</b> (Spalte <i>Ringpuffer</i> &gt; 0) zeichnet <b>zyklussynchron</b> auf: Die "
+               "Steuerung sammelt je Zyklus einen Datensatz, der Logger holt die Datensätze ab (Bausteine unter "
+               "<i>SPS-Vorlagen …</i>).")
 )
 
 
@@ -117,8 +127,11 @@ class BlockEditor(QDialog):
         b_test = QPushButton(tr("Markierten Block testen"))
         b_test.setToolTip(tr("Liest den Block einmal aus der SPS und zeigt die ersten Werte und die Lesezeit"))
         b_test.clicked.connect(self.test_block)
+        b_tpl = QPushButton(tr("SPS-Vorlagen …"))
+        b_tpl.setToolTip(tr("Ordner mit den Bausteinen für Ringpuffer öffnen (S7-300/400, S7-1200/1500, ControlLogix)"))
+        b_tpl.clicked.connect(self.open_templates)
         btns = QHBoxLayout()
-        for b in (b_add, b_del, b_test):
+        for b in (b_add, b_del, b_test, b_tpl):
             btns.addWidget(b)
         btns.addStretch(1)
 
@@ -196,6 +209,10 @@ class BlockEditor(QDialog):
         typ = QComboBox(); typ.setProperty("dtype", b.dtype)
         # Mindestens 1, höchstens 1000 Elemente je Block.
         count = QSpinBox(); count.setRange(1, 1000); count.setValue(b.count)
+        # Ringpuffer: Anzahl Datensätze (0 = normaler Block).
+        ring = QSpinBox(); ring.setRange(0, 100_000); ring.setSpecialValueText(tr("aus")); ring.setValue(b.ring)
+        ring.setToolTip(RING_TIP)
+        ring.valueChanged.connect(lambda _v, w=ring: self.update_row_driver(self._row_of(w)))
         axis = QComboBox(); axis.addItems(self.labels)
         axis.setCurrentIndex(self.flat.index((b.chart, b.axis)) if (b.chart, b.axis) in self.flat else 0)
         axis.currentIndexChanged.connect(lambda _i: self.schedule_tree())
@@ -210,8 +227,8 @@ class BlockEditor(QDialog):
             w.valueChanged.connect(lambda _v, x=w: self.update_info(self._row_of(x)))
 
         # Widgets in die Zellen setzen.
-        for col, w in [(C_PLC, plc), (C_START, start), (C_TYPE, typ), (C_COUNT, count), (C_AXIS, axis),
-                       (C_COLOR, btn)]:
+        for col, w in [(C_PLC, plc), (C_START, start), (C_TYPE, typ), (C_COUNT, count), (C_RING, ring),
+                       (C_AXIS, axis), (C_COLOR, btn)]:
             self.table.setCellWidget(r, col, w)
         # Werteanzeige/Balken: Kontrollkästchen als Tabellenelement.
         for col, state in ((C_SHOW, b.show_value), (C_BAR, b.bar)):
@@ -236,20 +253,30 @@ class BlockEditor(QDialog):
         if r < 0:
             return
         d = self.driver_of_row(r)
+        ring = self.table.cellWidget(r, C_RING)
+        ring.blockSignals(True)
+        if not d.ring_types:                     # Treiber ohne Ringpuffer: Spalte gesperrt
+            ring.setValue(0)
+        ring.setEnabled(bool(d.ring_types))
+        ring.setToolTip(RING_TIP if d.ring_types else tr("Der Treiber {0} kann keine Ringpuffer lesen.").format(d.name))
+        ring.blockSignals(False)
+        is_ring = ring.value() > 0
         typ = self.table.cellWidget(r, C_TYPE)
         cur = typ.currentText() or typ.property("dtype") or d.default_type
-        types = list(d.block_types or d.types)
+        types = list(d.ring_types) if is_ring else list(d.block_types or d.types)
         typ.blockSignals(True)
         typ.clear()
         typ.addItems(types)
         typ.setCurrentText(cur if cur in types else (d.default_type if d.default_type in types else types[0]))
         typ.blockSignals(False)
-        self.table.cellWidget(r, C_START).setEnabled(d.block_uses_index)
+        self.table.cellWidget(r, C_START).setEnabled(d.block_uses_index and not is_ring)
         self.table.cellWidget(r, C_START).setToolTip(
-            tr("Erster Array-Index") if d.block_uses_index else tr("Bei diesem Treiber ohne Bedeutung (Startadresse)"))
+            tr("Erster Array-Index") if d.block_uses_index and not is_ring
+            else tr("Bei diesem Treiber ohne Bedeutung (Startadresse)"))
         item = self.table.item(r, C_TAG)
         self.table.blockSignals(True)
-        item.setToolTip(f"{d.name}: {tr(d.block_hint)}" if d.block_hint else d.name)
+        hint = d.ring_hint if is_ring else d.block_hint
+        item.setToolTip(f"{d.name}: {tr(hint)}" if hint else d.name)
         self.table.blockSignals(False)
         self.update_info(r)
 
@@ -307,6 +334,7 @@ class BlockEditor(QDialog):
             driver=self.get_conn(t.cellWidget(r, C_PLC).currentIndex()).driver,
             dtype=t.cellWidget(r, C_TYPE).currentText(),
             count=t.cellWidget(r, C_COUNT).value(),
+            ring=t.cellWidget(r, C_RING).value() if t.cellWidget(r, C_RING) else 0,
             chart=ci, axis=ai,
             color=t.cellWidget(r, C_COLOR).property("color"),
             show_value=t.item(r, C_SHOW).checkState() == Qt.CheckState.Checked,
@@ -320,7 +348,7 @@ class BlockEditor(QDialog):
         if r < 0 or self.table.item(r, C_INFO) is None:
             return
         b = self.block_of_row(r)
-        size = b.count * get_driver(b.driver).type_size(b.dtype)
+        size = b.size_bytes() if b.ring else b.count * get_driver(b.driver).type_size(b.dtype)
         self.table.item(r, C_INFO).setText(tr("{0}   ({1} Bytes)").format(b.address_range(), size) if b.address else "")
         self.schedule_tree()
 
@@ -487,6 +515,9 @@ class BlockEditor(QDialog):
             QMessageBox.critical(self, tr("Block testen"), tr("Die Bibliothek des Treibers fehlt ({0}):\n{1}").format(drv.library, e))
             return
         variables = b.variables()
+        if b.ring:
+            self._test_ring(b, plc, drv, variables)
+            return
         # Sanduhr-Cursor, solange die Verbindung aufgebaut wird (kann einige Sekunden dauern).
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
@@ -506,6 +537,45 @@ class BlockEditor(QDialog):
         QMessageBox.information(
             self, tr("Block testen"),
             tr("{0}: {1} Werte ({2} Bytes) in {3:.1f} ms gelesen (einschließlich Verbindungsaufbau).\n\nErste Werte: {4}").format(b.name, len(vals), b.count * drv.type_size(b.dtype), ms, first))
+
+    def _test_ring(self, b, plc, drv, variables):
+        """Ringpuffer einmal abholen: Zählerstand, Anzahl Datensätze, Zeitraum und Abstand, jüngste Werte."""
+        err = drv.check_block(b)
+        if err:
+            QMessageBox.critical(self, tr("Block testen"), f"„{b.name}“: {err}")
+            return
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            t0 = time.perf_counter()
+            rows, errs, counters = drv.read_ring_once(plc, variables)
+            ms = (time.perf_counter() - t0) * 1000
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.critical(self, tr("Block testen"), tr("Lesen fehlgeschlagen:\n{0}").format(e))
+            return
+        QApplication.restoreOverrideCursor()
+        if errs:
+            QMessageBox.critical(self, tr("Block testen"), "\n".join(errs.values()))
+            return
+        text = tr("{0}: Zähler {1}, {2} Datensätze gelesen in {3:.1f} ms (einschließlich Verbindungsaufbau).").format(
+            b.name, counters.get(b.name, "?"), len(rows), ms)
+        if len(rows) >= 2:
+            span = rows[-1][1] - rows[0][1]
+            text += "\n" + tr("Zeitraum {0:.3f} s, mittlerer Abstand {1:.1f} ms.").format(
+                span, span / (len(rows) - 1) * 1000)
+        if rows:
+            vals = rows[-1][2]
+            text += "\n\n" + tr("Jüngste Werte: {0}").format(
+                ", ".join(f"{v:g}" for v in vals[:8]) + (" …" if len(vals) > 8 else ""))
+        else:
+            text += "\n\n" + tr("Der Puffer ist leer (Zähler 0) – schreibt die Steuerung schon Datensätze?")
+        QMessageBox.information(self, tr("Block testen"), text)
+
+    def open_templates(self):
+        """Ordner mit den SPS-Vorlagen für Ringpuffer im Dateimanager öffnen."""
+        path = templates_dir()
+        if not QDesktopServices.openUrl(QUrl.fromLocalFile(path)):
+            QMessageBox.information(self, tr("SPS-Vorlagen"), tr("Die Vorlagen liegen im Ordner:\n{0}").format(path))
 
     # ---------------- OK ----------------
     # OK gedrückt: Eingaben prüfen; bei Fehlern bleibt der Dialog offen.

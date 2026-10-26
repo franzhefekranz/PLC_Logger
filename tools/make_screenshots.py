@@ -481,7 +481,12 @@ def s_config_dialogs():
     _select_tree(cw, "Regelkreis")
     job("pid_einstellen", over=lambda: cw, margin=200)
     cw.edit_pid()
-    job("blockeditor", size=(1300, 790))
+    def blocks(d):
+        from plc_common import Block
+        d.add_row(Block(name="Puffer", address="DB100.DBX0.0", dtype="REAL", count=10, ring=100, plc=0,
+                        color="#ff7f0e", driver=d.get_conn(0).driver))      # Ringpuffer (zyklussynchron)
+        d.rebuild_tree()
+    job("blockeditor", prep=blocks, size=(1400, 790))
     cw.open_block_editor()
 
     def formula(d):

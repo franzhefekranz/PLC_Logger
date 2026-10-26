@@ -9,9 +9,11 @@ Auswahldialog direkt aus der Steuerung. Adressen:
     Anlage_DB.Motor[2].Drehzahl     Mess_DB.Temp     MArea.Start_Merker     IArea.Taster_1     QArea.Lampe
 
 Blöcke: Array ohne Index + erster Index (wie in TIA, z. B. 1 bei Array[1..100]) + Anzahl.
+Ringpuffer (zyklussynchron): in einem nicht optimierten DB, Adresse des Zählers wie beim Treiber s7 (``DB100.DBX0.0``).
 """
 from plc_i18n import tr
 from plc_treiber.base import BrowseResult, Driver, Param
+from plc_treiber.ringbuffer import RING_TYPES
 from plc_treiber.tia_common import BLOCK_TYPES, ROLES, TLS_MODES, TYPES, check_tag_name
 
 
@@ -43,6 +45,9 @@ class TiaDriver(Driver):
     block_uses_index = True
     browse_label = tr("Aus Variablenliste wählen…")
     library = "s7commplus"
+    ring_types = list(RING_TYPES)
+    ring_hint = tr("Adresse des Zählers am Anfang des Ringpuffers in einem nicht optimierten DB, z. B. DB100.DBX0.0 "
+                   "(Bausteineigenschaft „Optimierter Bausteinzugriff“ aus)")
 
     def summary(self, plc):
         """„IP:Port, TLS Modus“."""
@@ -55,8 +60,19 @@ class TiaDriver(Driver):
             return tr("Ungültiger Variablenname „{0}“").format(address)
         return ""
 
+    def check_ring(self, block):
+        """Ringpuffer: absolute Adresse im nicht optimierten Datenbaustein."""
+        from plc_treiber.s7 import parse_ring
+        try:
+            parse_ring(block.address)
+        except ValueError as e:
+            return str(e)
+        return super().check_ring(block)
+
     def check_block(self, block):
         """Blöcke: Array ohne Index."""
+        if block.ring:
+            return self.check_ring(block)
         if not check_tag_name(block.address) or block.address.endswith("]"):
             return tr("Array „{0}“ ist leer oder ungültig (ohne Index angeben).").format(block.address)
         return super().check_block(block)

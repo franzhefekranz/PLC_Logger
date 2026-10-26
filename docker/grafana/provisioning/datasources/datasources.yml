@@ -1,6 +1,6 @@
 # Grafana-Datenquellen für die Tabelle "messwerte" des PLC-Datenloggers (Werte aus der .env-Datei).
 # TimescaleDB und QuestDB über die eingebaute PostgreSQL-Datenquelle (QuestDB über Port 8812), InfluxDB 3 über die
-# InfluxDB-Datenquelle mit SQL, VictoriaMetrics über die Prometheus-Datenquelle (Metrik messwerte_wert).
+# InfluxDB-Datenquelle mit SQL, VictoriaMetrics und Prometheus über die Prometheus-Datenquelle (Metrik messwerte_wert).
 apiVersion: 1
 
 datasources:
@@ -50,6 +50,15 @@ datasources:
     type: prometheus
     access: proxy
     url: http://victoriametrics:8428
+    jsonData:
+      httpMethod: POST
+      timeInterval: 1s
+
+  - name: Prometheus
+    uid: plc-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
     jsonData:
       httpMethod: POST
       timeInterval: 1s

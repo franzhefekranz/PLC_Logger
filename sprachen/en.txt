@@ -236,6 +236,9 @@
 @ Anzahl
 > Count
 
+@ Ringpuffer
+> Ring buffer
+
 @ Diagramm › Y-Achse
 > Chart › Y axis
 
@@ -251,8 +254,14 @@
 @ Bereich
 > Area
 
+@ Ringpuffer für zyklussynchrone Aufzeichnung: Anzahl Datensätze im Puffer der Steuerung (aus = normaler Block). Die Steuerung schreibt je Zyklus einen Datensatz mit Anzahl Werten, der Logger holt sie im Leseintervall ab – lückenlos und mit dem Zeitpunkt aus der Steuerung. Puffer mindestens 3 × Leseintervall ÷ Zykluszeit groß wählen. Nur Treiber s7, tia und clx.
+> Ring buffer for cycle-synchronous recording: number of records in the PLC buffer (off = normal block). The PLC writes one record with Count values per cycle, the logger fetches them at the read interval – without gaps and with the PLC time stamp. Choose a buffer of at least 3 × read interval ÷ cycle time. Drivers s7, tia and clx only.
+
 @ Ein <b>Block</b> liest <i>Anzahl</i> zusammenhängende Werte gleichen <i>Formats</i> gemeinsam (meist mit einer einzigen Anfrage, schneller als einzelne Variablen). Je nach Treiber der Steuerung ist die <b>Startadresse</b> die Adresse des ersten Werts (z. B. <code>DB10.DBD0</code>, <code>40001</code>; die Elemente folgen lückenlos) oder der Name eines <b>Arrays</b> ohne Index (z. B. <code>Messwerte</code>, <code>Mess_DB.Werte</code>) mit dem <i>ersten Index</i>. Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>) und einzelne Elemente einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks).
 > A <b>block</b> reads <i>Count</i> contiguous values of the same <i>format</i> together (usually with a single request, faster than individual variables). Depending on the driver of the controller, the <b>start address</b> is the address of the first value (e.g. <code>DB10.DBD0</code>, <code>40001</code>; the elements follow without gaps) or the name of an <b>array</b> without index (e.g. <code>Messwerte</code>, <code>Mess_DB.Werte</code>) together with the <i>first index</i>. Each element becomes the variable <code>Name[0]</code>, <code>Name[1]</code>, … and can be used in formulas. In the <b>tree</b> below, the <b>names of the individual elements</b> can be changed by double-click (empty = default name <code>Name[i]</code>) and individual elements can be assigned to <b>another chart or another Y axis</b> (<i>as block</i> = target of the block).
+
+@ Ein <b>Ringpuffer</b> (Spalte <i>Ringpuffer</i> &gt; 0) zeichnet <b>zyklussynchron</b> auf: Die Steuerung sammelt je Zyklus einen Datensatz, der Logger holt die Datensätze ab (Bausteine unter <i>SPS-Vorlagen …</i>).
+> A <b>ring buffer</b> (column <i>Ring buffer</i> &gt; 0) records <b>cycle-synchronously</b>: the PLC collects one record per cycle, the logger fetches the records (blocks under <i>PLC templates …</i>).
 
 @ Blöcke (Blocklesemodus)
 > Blocks (block read mode)
@@ -278,6 +287,12 @@
 @ Liest den Block einmal aus der SPS und zeigt die ersten Werte und die Lesezeit
 > Reads the block once from the PLC and shows the first values and the read time
 
+@ SPS-Vorlagen …
+> PLC templates …
+
+@ Ordner mit den Bausteinen für Ringpuffer öffnen (S7-300/400, S7-1200/1500, ControlLogix)
+> Open the folder with the ring buffer blocks (S7-300/400, S7-1200/1500, ControlLogix)
+
 @ <b>Elemente der Blöcke</b> – Namen und Ziel (Diagramm › Y-Achse) der einzelnen Werte bearbeiten
 > <b>Block elements</b> – edit names and target (chart › Y axis) of the individual values
 
@@ -289,6 +304,12 @@
 
 @ Ziel:
 > Target:
+
+@ aus
+> off
+
+@ Der Treiber {0} kann keine Ringpuffer lesen.
+> The driver {0} cannot read ring buffers.
 
 @ Erster Array-Index
 > First array index
@@ -319,6 +340,24 @@
 
 @ {0}: {1} Werte ({2} Bytes) in {3:.1f} ms gelesen (einschließlich Verbindungsaufbau).\n\nErste Werte: {4}
 > {0}: {1} values ({2} bytes) read in {3:.1f} ms (including connection setup).\n\nFirst values: {4}
+
+@ {0}: Zähler {1}, {2} Datensätze gelesen in {3:.1f} ms (einschließlich Verbindungsaufbau).
+> {0}: counter {1}, {2} records read in {3:.1f} ms (including connection setup).
+
+@ Zeitraum {0:.3f} s, mittlerer Abstand {1:.1f} ms.
+> Period {0:.3f} s, mean interval {1:.1f} ms.
+
+@ Jüngste Werte: {0}
+> Latest values: {0}
+
+@ Der Puffer ist leer (Zähler 0) – schreibt die Steuerung schon Datensätze?
+> The buffer is empty (counter 0) – is the PLC writing records yet?
+
+@ SPS-Vorlagen
+> PLC templates
+
+@ Die Vorlagen liegen im Ordner:\n{0}
+> The templates are in the folder:\n{0}
 
 @ „{0}“: Name darf nicht leer sein und keines der Zeichen ; {{ }} [ ] enthalten.
 > “{0}”: name must not be empty and must not contain any of the characters ; {{ }} [ ].
@@ -370,6 +409,9 @@
 
 @ Raster (Grid)
 > Grid
+
+@ {0}: Ringpuffer {1} × {2} Werte
+> {0}: ring buffer {1} × {2} values
 
 @ Dauernd
 > Continuous
@@ -988,11 +1030,14 @@
 @ nie
 > never
 
-@ Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics hinter vmauth)
-> Without a user, the password is used as a token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics behind vmauth)
+@ Ohne Benutzer gilt das Passwort als Token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics hinter vmauth, Prometheus hinter einem Proxy)
+> Without a user the password is used as token (InfluxDB 3, QuestDB Enterprise, VictoriaMetrics behind vmauth, Prometheus behind a proxy)
 
-@ VictoriaMetrics: Name der Metrik = Tabelle + _wert
-> VictoriaMetrics: metric name = table + _wert
+@ VictoriaMetrics/Prometheus: Name der Metrik = Tabelle + _wert
+> VictoriaMetrics/Prometheus: metric name = table + _wert
+
+@ Prometheus nimmt Werte per Remote Write an: den Server mit --web.enable-remote-write-receiver starten. Werte älter als etwa eine Stunde lehnt Prometheus ab (out_of_order_time_window).
+> Prometheus accepts values via remote write: start the server with --web.enable-remote-write-receiver. Prometheus rejects values older than about one hour (out_of_order_time_window).
 
 @ Standard ({0})
 > Default ({0})
@@ -1044,9 +1089,6 @@
 
 @ {0} Benutzer: {1}
 > {0} users: {1}
-
-@ aus
-> off
 
 @ ab {0} über {1}
 > from {0} via {1}
@@ -1307,6 +1349,9 @@
 @ VictoriaMetrics
 > VictoriaMetrics
 
+@ Prometheus (Remote Write)
+> Prometheus (remote write)
+
 @ Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)
 > Invalid table name: {0!r} (letters, digits, _ only)
 
@@ -1322,6 +1367,9 @@
 @ {0} alte Zeitabschnitte gelöscht
 > {0} old chunks deleted
 
+@ Remote Write ist nicht eingeschaltet (Prometheus mit --web.enable-remote-write-receiver starten)
+> Remote write is not enabled (start Prometheus with --web.enable-remote-write-receiver)
+
 @ ohne Deduplizierung: {0}
 > without deduplication: {0}
 
@@ -1333,6 +1381,9 @@
 
 @ Metrik {0}, Labels projekt und variable
 > Metric {0}, labels projekt and variable
+
+@ Metrik {0}, Labels projekt und variable (Remote Write: Prometheus mit --web.enable-remote-write-receiver starten)
+> Metric {0}, labels projekt and variable (remote write: start Prometheus with --web.enable-remote-write-receiver)
 
 @ Keine Datenbank gewählt.
 > No database selected.
@@ -1349,11 +1400,17 @@
 @ , {0} verworfen (Puffer voll)
 > , {0} discarded (buffer full)
 
+@ , {0} vom Server abgelehnt
+> , {0} rejected by the server
+
 @ Verbinde mit {0} …
 > Connecting to {0} …
 
 @ Verbindung fehlgeschlagen: {0}
 > Connection failed: {0}
+
+@ ⚠ [Datenbank] {0} Werte abgelehnt: {1}
+> ⚠ [Database] {0} values rejected: {1}
 
 @ [Aufräumen] Datenbank: {0}
 > [Clean-up] Database: {0}
@@ -3428,6 +3485,12 @@
 @ ⚠ Archivierung von {0} fehlgeschlagen: {1} (CSV-Datei bleibt erhalten)
 > ⚠ Archiving of {0} failed: {1} (CSV file is kept)
 
+@ ⚠ [{0}] Der Treiber {1} kann keine Ringpuffer lesen – Ringpuffer werden übersprungen
+> ⚠ [{0}] The driver {1} cannot read ring buffers – ring buffers are skipped
+
+@ keine lesbaren Variablen
+> no readable variables
+
 @ Verbunden mit {0} ({1} Variablen)
 > Connected to {0} ({1} variables)
 
@@ -4153,6 +4216,12 @@
 @ Format {0} wird für Blöcke nicht unterstützt
 > Format {0} is not supported for blocks
 
+@ Der Treiber {0} kann keine Ringpuffer lesen (nur s7, tia, clx).
+> The driver {0} cannot read ring buffers (only s7, tia, clx).
+
+@ Adresse des Ringpuffers fehlt
+> Ring buffer address missing
+
 # ---------------- plc_treiber/clx.py
 
 @ Allen-Bradley Logix (EtherNet/IP, libplctag)
@@ -4185,8 +4254,14 @@
 @ Aus Tag-Liste wählen…
 > Select from tag list…
 
+@ Tag des Ringpuffers (UDT mit Zaehler und Daten[]), z. B. Puffer oder Program:Main.Puffer
+> Tag of the ring buffer (UDT with Zaehler and Daten[]), e.g. Puffer or Program:Main.Puffer
+
 @ Ungültiger Tag-Name „{0}“
 > Invalid tag name “{0}”
+
+@ Tag des Ringpuffers „{0}“ ist leer oder ungültig (ohne Index angeben).
+> Ring buffer tag "{0}" is empty or invalid (specify without index).
 
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
 > Array tag “{0}” is empty or invalid (specify without index).
@@ -4310,6 +4385,9 @@
 
 @ libplctag wurde nicht gefunden: plctag.dll (64 Bit, aus https://github.com/libplctag/libplctag/releases, Paket ..._windows_x64.zip) neben die Programmdateien legen oder ihren Pfad in CLX_PLCTAG_LIB angeben.
 > libplctag was not found: put plctag.dll (64 bit, from https://github.com/libplctag/libplctag/releases, package ..._windows_x64.zip) next to the program files or specify its path in CLX_PLCTAG_LIB.
+
+@ Ungültiger Tag-Name des Ringpuffers „{0}“ (Tag des UDT ohne Index)
+> Invalid ring buffer tag name "{0}" (tag of the UDT without index)
 
 @ keine Antwort
 > no response
@@ -4897,6 +4975,23 @@
 @ Blöcke nur in N-, F-, L- und B-Dateien
 > Blocks only in N, F, L and B files
 
+# ---------------- plc_treiber/ringbuffer.py
+
+@ Ringpuffer {0}
+> Ring buffer {0}
+
+@ Ringpuffer {0}: {1} Datensätze verloren (Puffer vergrößern oder Leseintervall verkleinern)
+> Ring buffer {0}: {1} records lost (enlarge the buffer or shorten the read interval)
+
+@ Ringpuffer {0}: Zähler zurückgesetzt (Neustart der Steuerung?)
+> Ring buffer {0}: counter reset (PLC restart?)
+
+@ Format {0} ist im Ringpuffer nicht möglich (erlaubt: {1})
+> Format {0} is not possible in a ring buffer (allowed: {1})
+
+@ Ringpuffer: 2 bis {0} Datensätze
+> Ring buffer: 2 to {0} records
+
 # ---------------- plc_treiber/s5as511.py
 
 @ DB-Nummer 0–255 erwartet: {0}
@@ -5015,6 +5110,12 @@
 @ Ungültige S7-Adresse „{0}“ (z. B. DB10.DBD4, M5.0, EW64)
 > Invalid S7 address “{0}” (e.g. DB10.DBD4, M5.0, IW64)
 
+@ Ringpuffer müssen in einem Datenbaustein liegen (z. B. DB100.DBX0.0)
+> Ring buffers must be located in a data block (e.g. DB100.DBX0.0)
+
+@ Ringpuffer: Startadresse muss gerade sein (Wortgrenze)
+> Ring buffer: start address must be even (word boundary)
+
 @ Die installierte python-snap7-Version unterstützt keine Bausteinliste.
 > The installed python-snap7 version does not support block lists.
 
@@ -5041,6 +5142,9 @@
 
 @ Aus DB-Quelle wählen…
 > Select from DB source…
+
+@ Adresse des Zählers am Anfang des Ringpuffers im nicht optimierten DB, z. B. DB100.DBX0.0
+> Address of the counter at the start of the ring buffer in a non-optimized DB, e.g. DB100.DBX0.0
 
 # ---------------- plc_treiber/s7_browser.py
 
@@ -5316,6 +5420,9 @@
 
 @ Aus Variablenliste wählen…
 > Select from variable list…
+
+@ Adresse des Zählers am Anfang des Ringpuffers in einem nicht optimierten DB, z. B. DB100.DBX0.0 (Bausteineigenschaft „Optimierter Bausteinzugriff“ aus)
+> Address of the counter at the start of the ring buffer in a non-optimized DB, e.g. DB100.DBX0.0 (block property "Optimized block access" off)
 
 @ Ungültiger Variablenname „{0}“
 > Invalid variable name “{0}”

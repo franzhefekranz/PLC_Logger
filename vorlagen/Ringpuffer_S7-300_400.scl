@@ -1,0 +1,58 @@
+// =====================================================================================================================
+//  PLC Datenlogger – Ringpuffer für zyklussynchrone Aufzeichnung
+//  S7-300 / S7-400, SCL-Quelle für STEP 7 V5.x (in TIA Portal für S7-300/400: Externe Quelle hinzufügen)
+//
+//  Die Steuerung schreibt bei jedem Aufruf einen Datensatz (Nummer, Zeit, Werte) in einen Ringpuffer. Der Logger holt
+//  die Datensätze ab und zeichnet sie lückenlos mit der Zeit aus der Steuerung auf.
+//
+//  Einstellungen im Logger (Konfigurationsprogramm › Blöcke): Steuerung mit Treiber "s7",
+//      Startadresse  DB100.DBX0.0     Format REAL     Anzahl 10     Ringpuffer 100
+//  Leseintervall der Steuerung z. B. 250 ms. Puffergröße: mindestens 3 × Leseintervall ÷ Zykluszeit
+//  (Beispiel: 10-ms-Weckalarm, 250 ms Leseintervall -> mindestens 75 Datensätze; 100 gewählt).
+//
+//  Anpassen: Anzahl Werte (hier 10: ARRAY[0..9]) in UDT100 UND im Eingang von FC100, Anzahl Datensätze (hier 100:
+//  ARRAY[0..99]) in DB100 UND in der Konstanten N_DATENSAETZE. DB-, UDT- und FC-Nummer frei wählbar.
+//  Aufruf: z. B. im Weckalarm OB35 (Takt in der Hardwarekonfiguration, z. B. 10 ms oder 50 ms) oder im OB1:
+//      FC100(Werte := DB10.Messwerte);        // DB10.Messwerte: ARRAY[0..9] OF REAL mit den aufzuzeichnenden Werten
+//  Zeit: TIME_TCK (SFC64, ms seit Neustart der CPU) – der Logger rechnet den Überlauf heraus.
+// =====================================================================================================================
+
+TYPE UDT100                                  // Datensatz
+  STRUCT
+    Seq   : DINT;                            // Nummer des Datensatzes (= Zaehler beim Schreiben)
+    Zeit  : DINT;                            // Zeit in ms (TIME_TCK)
+    Werte : ARRAY[0..9] OF REAL;             // aufgezeichnete Werte ("Anzahl" im Logger)
+  END_STRUCT
+END_TYPE
+
+DATA_BLOCK DB100                             // Ringpuffer (nicht optimiert, absolute Adressen)
+  STRUCT
+    Zaehler : DINT;                          // Anzahl geschriebener Datensätze – Adresse im Logger: DB100.DBX0.0
+    Daten   : ARRAY[0..99] OF UDT100;        // Datensätze ("Ringpuffer" im Logger)
+  END_STRUCT
+BEGIN
+END_DATA_BLOCK
+
+FUNCTION FC100 : VOID                        // einen Datensatz in den Ringpuffer schreiben
+VAR_INPUT
+  Werte : ARRAY[0..9] OF REAL;               // aufzuzeichnende Werte
+END_VAR
+VAR_TEMP
+  n    : DINT;
+  slot : INT;
+END_VAR
+CONST
+  N_DATENSAETZE := 100;                      // = Anzahl Elemente von DB100.Daten
+END_CONST
+BEGIN
+  // Reihenfolge nicht ändern: erst Werte und Zeit, dann Seq, zuletzt der Zähler.
+  n := DB100.Zaehler + 1;
+  IF n >= 2000000000 THEN                    // nach Jahren: von vorn zählen (der Logger erkennt das)
+    n := 1;
+  END_IF;
+  slot := DINT_TO_INT(n MOD N_DATENSAETZE);
+  DB100.Daten[slot].Werte := Werte;
+  DB100.Daten[slot].Zeit := TIME_TO_DINT(SFC64());   // SFC64 = TIME_TCK
+  DB100.Daten[slot].Seq := n;
+  DB100.Zaehler := n;
+END_FUNCTION

@@ -116,7 +116,8 @@ also the data folder (configuration, recordings, log file).
        ``modbus.py``, ``modbus_rtu.py``, ``opcua.py``/``opcua_browser.py``,
        ``slmp.py``, ``kvhostlink.py``, ``toyopuc.py``, ``fins.py`` (common basis
        ``word_common.py``), ``s5as511.py``, ``logo.py``, ``pccc.py``,
-       ``ads.py``/``ads_browser.py`` and ``_vorlage.py`` (template for own drivers).
+       ``ads.py``/``ads_browser.py``, ``ringbuffer.py`` (ring buffers for cycle-synchronous recording) and
+       ``_vorlage.py`` (template for own drivers).
    * - ``plc_web.py``, ``plc_webauth.py``, ``plc_web_dialog.py``
      - Web server (Flask) with a Chart.js page for viewing the charts in the browser;
        HTTPS, users and passwords, user management in the configuration program.
@@ -131,8 +132,8 @@ also the data folder (configuration, recordings, log file).
    * - ``plc_util.py``
      - Small helper functions (formatting, axis ticks, data reduction).
    * - ``plc_db.py``
-     - Recording to SQLite, MariaDB, TimescaleDB/PostgreSQL, QuestDB, InfluxDB 3 or
-       VictoriaMetrics (own writer thread).
+     - Recording to SQLite, MariaDB, TimescaleDB/PostgreSQL, QuestDB, InfluxDB 3,
+       VictoriaMetrics or Prometheus (own writer thread).
    * - ``plc_db_dialog.py``
      - Read mode: choose a time range from the database and show it in the logger.
    * - ``plc_cleanup.py``
@@ -546,7 +547,7 @@ CSV file (one column per variable).
 
 Choice and access data of a database that is recorded to in addition to or instead of
 the CSV file (SQLite, MariaDB/MySQL, TimescaleDB/PostgreSQL, QuestDB, InfluxDB 3,
-VictoriaMetrics), with the button **Test database**. Details in the chapter
+VictoriaMetrics, Prometheus), with the button **Test database**. Details in the chapter
 `Database recording <datenbank_>`__.
 
 **Tab “Triggers & events”**
@@ -933,6 +934,9 @@ following data:
      - Data type of the elements (choice of the driver).
    * - Count
      - Number of values (1 to 1000).
+   * - Ring buffer
+     - Number of records of a ring buffer (see `Ring buffer <ringpuffer_>`__); *off* = normal block.
+       Drivers ``s7``, ``tia`` and ``clx`` only.
    * - Chart › Y axis
      - Assignment of all elements of the block (single elements can be assigned
        differently in the tree, see below).
@@ -979,6 +983,120 @@ Notes:
   are still read.
 * Many elements mean many curves: split large blocks over several charts or Y axes or
   switch off *value display*.
+
+.. _ringpuffer:
+
+Ring buffer (cycle-synchronous recording)
+----------------------------------------------------------------------
+
+Normally the logger polls the controller at the configured read interval. How long a
+request takes varies with the network and the load of the controller; cycles in between
+are missing, and the time stamp is the time on the PC. For **cycle-synchronous,
+gap-free** recording – e.g. every 10 or 50 ms – the controller collects the values
+itself: a small block writes one **record** (number, time, values) per cycle or cyclic
+interrupt into a **ring buffer**. The logger fetches the new records at the read interval
+(e.g. every 250 ms) and turns each record into a row of its own with the **time stamp of
+the controller**. The sampling rate thus depends only on the controller, not on the
+network.
+
+Possible with the drivers ``s7`` (S7-300/400, S7-1200/1500 with PUT/GET), ``tia``
+(S7-1200/1500 without PUT/GET) and ``clx`` (ControlLogix, CompactLogix).
+
+**1. Load the block into the controller.** The button **PLC templates …** in the block
+editor opens the folder ``vorlagen`` with ready-made blocks:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 40 25
+
+   * - File
+     - Controller
+     - Driver
+   * - ``Ringpuffer_S7-300_400.scl``
+     - S7-300/400 (SCL source for STEP 7 V5.x)
+     - ``s7``
+   * - ``Ringpuffer_S7-1200_1500.scl``
+     - S7-1200/1500 (SCL source for TIA Portal: *External source files*)
+     - ``tia`` or ``s7``
+   * - ``Ringpuffer_ControlLogix.st``
+     - ControlLogix/CompactLogix (Structured Text, data types described)
+     - ``clx``
+
+The templates write 10 values of type REAL into a buffer with 100 records; both numbers
+can be adjusted (notes at the top of each file). Call the block where the values arise
+regularly: in a cyclic interrupt (S7-300/400: OB35, S7-1200/1500: *Cyclic interrupt*
+OB30, Logix: periodic task) with e.g. 10 ms or 50 ms.
+
+**2. Create the ring buffer in the block editor.** A block becomes a ring buffer as soon
+as the column **Ring buffer** contains the number of records (*off* = normal block):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Field
+     - Ring buffer
+   * - Start address
+     - ``s7``, ``tia``: address of the counter at the start of the buffer in a
+       **non-optimized** data block, e.g. ``DB100.DBX0.0``. ``clx``: tag of the buffer,
+       e.g. ``Puffer`` or ``Program:Main.Puffer``.
+   * - Format
+     - Data type of the values: ``INT``, ``DINT``, ``REAL`` (``s7``/``tia`` additionally
+       ``WORD``, ``UINT``, ``DWORD``, ``UDINT``, ``LREAL``; ``clx`` additionally ``UINT``,
+       ``UDINT``, ``LREAL``). Store binary signals as ``INT`` 0/1.
+   * - Count
+     - Values per record (as in the controller).
+   * - Ring buffer
+     - Records in the buffer (as in the controller).
+
+As with blocks, the elements are called ``Name[0]``, ``Name[1]`` … and can be renamed and
+assigned to other charts in the tree. **Test selected block** fetches the buffer once and
+shows the counter, the number of records, their mean interval and the latest values.
+
+**3. Read interval and buffer size.** The **Interval** of the controller (table of
+controllers) is the read interval here: it only determines how often the buffer is
+fetched. The buffer must hold the
+records of at least three read intervals: *records ≥ 3 × read interval ÷ cycle time*.
+Example: 10 ms cyclic interrupt and 250 ms read interval → at least 75 records (the
+templates have 100); 50 ms and 500 ms → at least 30.
+
+**Buffer layout** (S7: non-optimized DB, even start address; Logix: UDT with exactly
+these names):
+
+.. code-block:: text
+
+   Zaehler          DINT     number of records written so far (1, 2, 3 …)
+   Daten[0..N-1]             N records; record number n is stored in Daten[n MOD N]
+     Seq            DINT     number of the record (= Zaehler when written)
+     Zeit           DINT     time in ms (see below)
+     Werte[0..M-1]           M values in the chosen format
+
+The controller writes in this order: values, time, Seq, finally the counter. The logger
+reads the counter, then the new records and the counter once more; a record only counts
+if *Seq* has the expected number and it could not have been overwritten during reading.
+
+**Time:** S7-300/400 ``TIME_TCK`` (ms since the CPU restart), S7-1200/1500 and Logix ms
+since midnight from the controller's clock. The logger removes overflows (midnight, 2³¹)
+and attaches the time to the PC clock: the latest record of the first fetch gets the
+current time, all others their distance to it according to the controller. The intervals
+between rows are thus exactly those of the controller; the absolute time is as accurate
+as the PC clock (a deviating controller clock is followed slowly).
+
+Notes:
+
+* Lost records (buffer too small, connection interrupted for a long time) are reported in
+  the status line: “Ring buffer …: n records lost”. After a short interruption the
+  records are fetched from the buffer as long as it still contains them.
+* A restart of the controller resets the counter; the logger detects this and starts
+  again.
+* Because the records only arrive when they are fetched, charts and value table show all
+  values delayed by about two read intervals when ring buffers are used (the rows are
+  sorted by their time). CSV file and database contain every record with its time.
+* Normal variables of the same or other controllers are read as usual; in the rows of a
+  ring buffer they keep their last value.
+* Formulas, triggers, reports and triggered recording see every record – a trigger thus
+  also fires on a pulse of just one cycle.
+* In demo mode, ring buffer elements deliver simulated values like normal variables.
 
 Selecting variables from the controller
 ----------------------------------------------------------------------
@@ -2818,30 +2936,31 @@ the tick **Write CSV file** in the tab *Recording*.
      - Meaning
    * - Database
      - *None*, *SQLite (file)*, *MariaDB / MySQL*, *TimescaleDB / PostgreSQL*,
-       *QuestDB*, *InfluxDB 3 Core* or *VictoriaMetrics*.
+       *QuestDB*, *InfluxDB 3 Core*, *VictoriaMetrics* or *Prometheus (remote write)*.
    * - Server / port
      - Host name or IP address of the database server; port *default* = 3306
        (MariaDB), 5432 (PostgreSQL/TimescaleDB), 9000 (QuestDB), 8181 (InfluxDB 3) or
-       8428 (VictoriaMetrics). For QuestDB, InfluxDB and VictoriaMetrics a complete URL
-       may also be entered here, e.g. ``https://server:8181`` (encrypted; the port field
+       8428 (VictoriaMetrics) or 9090 (Prometheus). For QuestDB, InfluxDB, VictoriaMetrics
+       and Prometheus a complete URL may also be entered here, e.g. ``https://server:8181`` (encrypted; the port field
        then does not apply).
    * - Database name
      - Name of the database on the server. MariaDB/PostgreSQL: it must already exist,
        the program creates the table itself. InfluxDB 3: created if needed. Not relevant
-       for QuestDB and VictoriaMetrics (one database per server).
+       for QuestDB, VictoriaMetrics and Prometheus (one database per server).
    * - User / password
      - Access data. The user needs the rights CREATE (at the first start) and INSERT.
-       The password is stored in plain text in the configuration file. QuestDB, InfluxDB
-       and VictoriaMetrics: user and password are sent with HTTP basic authentication;
-       **without user the password is used as token** (InfluxDB 3: token ``apiv3_…``,
-       QuestDB Enterprise, VictoriaMetrics behind *vmauth*); both empty = no
-       authentication.
+       The password is stored in plain text in the configuration file. QuestDB, InfluxDB,
+       VictoriaMetrics and Prometheus: user and password are sent with HTTP basic
+       authentication; **without user the password is used as token** (InfluxDB 3: token
+       ``apiv3_…``, QuestDB Enterprise, VictoriaMetrics behind *vmauth*, Prometheus behind
+       a proxy); both empty = no authentication.
    * - SQLite file
      - File name of the SQLite database; a relative path refers to the data folder of
        the program.
    * - Table
      - Name of the table (default ``messwerte``; letters, digits, ``_``).
-       VictoriaMetrics: the metric is called *table* + ``_wert``, i.e. ``messwerte_wert``.
+       VictoriaMetrics and Prometheus: the metric is called *table* + ``_wert``, i.e.
+       ``messwerte_wert``.
    * - Write changes only
      - A value is only written if it has changed, but at least every minute. Saves a lot
        of space for slowly changing values.
@@ -2902,6 +3021,20 @@ via ``/api/v1/export``, averages via ``/api/v1/query_range``). VictoriaMetrics s
 timestamps with milliseconds and by default keeps data for one month only (command-line
 parameter ``-retentionPeriod``).
 
+**Prometheus** stores time series like VictoriaMetrics (metric ``messwerte_wert``, labels
+``projekt`` and ``variable``). Writing uses **remote write** (``/api/v1/write``, protobuf
+with snappy compression, no additional library); Prometheus must be started with
+``--web.enable-remote-write-receiver`` for this, otherwise the status line reports
+“Remote write is not enabled”. Reading uses the HTTP interface (read mode: raw data hour
+by hour via ``/api/v1/query``, averages via ``/api/v1/query_range``; first and last time
+in the overview are accurate to about 1/2000 of the retention period). Prometheus only
+accepts values per series in chronological order and at most about one hour old. It
+rejects older values (e.g. written after a long outage); the logger discards such
+batches, reports them (“… values rejected”) and counts them in the tooltip of the
+database LED. Remedy: ``storage: tsdb: out_of_order_time_window: 1d`` in the Prometheus
+configuration. The retention period is set with the command-line parameter
+``--storage.tsdb.retention.time`` (default 15 days).
+
 Example queries:
 
 .. code-block:: sql
@@ -2927,7 +3060,7 @@ Example queries:
    SELECT date_bin(INTERVAL '1 minute', time) AS minute, avg(wert) FROM messwerte
     WHERE variable = 'Temperatur' AND time > now() - INTERVAL '1 hour' GROUP BY 1 ORDER BY 1;
 
-For VictoriaMetrics (MetricsQL/PromQL, e.g. in Grafana):
+For VictoriaMetrics and Prometheus (PromQL, e.g. in Grafana):
 
 .. code-block:: text
 
@@ -2946,13 +3079,14 @@ For VictoriaMetrics (MetricsQL/PromQL, e.g. in Grafana):
   reported in the status line.
 * **Drivers:** SQLite is included in Python. MariaDB needs ``PyMySQL``,
   TimescaleDB/PostgreSQL ``psycopg`` (``pip install PyMySQL "psycopg[binary]"``); both
-  are included in the installer. QuestDB, InfluxDB 3 and VictoriaMetrics need no
-  library.
+  are included in the installer. QuestDB, InfluxDB 3, VictoriaMetrics and Prometheus
+  need no library.
 * For Grafana: create a data source *MySQL* or *PostgreSQL* (QuestDB: plugin *QuestDB*
   or *PostgreSQL* on port 8812; InfluxDB 3: *InfluxDB* with query language *SQL*;
-  VictoriaMetrics: *Prometheus*); the time column is ``zeit`` (InfluxDB: ``time``, UTC).
+  VictoriaMetrics and Prometheus: *Prometheus*); the time column is ``zeit`` (InfluxDB:
+  ``time``, UTC).
 * **Test environment:** in the folder ``docker``, ``docker compose up -d`` starts
-  TimescaleDB, QuestDB, InfluxDB 3 Core, VictoriaMetrics and Grafana with ready-made
+  TimescaleDB, QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus and Grafana with ready-made
   data sources (access data in ``docker/.env``). SQLite files can be read with Grafana's
   SQLite plugin.
 
@@ -3952,8 +4086,8 @@ most … MB*). Both limits are switched off by default (*never* or *unlimited*).
   whole daily partitions for QuestDB. The storage limit exists for SQLite only: if the
   values take up more than *n MB*, the oldest day is deleted at a time. The file does not
   get smaller, the freed space is reused for new values (to shrink it: ``VACUUM`` with a
-  SQLite tool). InfluxDB 3 and VictoriaMetrics manage the retention period themselves
-  (setting on the server).
+  SQLite tool). InfluxDB 3, VictoriaMetrics and Prometheus manage the retention period
+  themselves (setting on the server).
 
 The check runs when recording starts and then every hour, also in headless operation.
 What was deleted is shown in the status bar or the log (“[Clean-up] …”).

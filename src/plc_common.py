@@ -162,6 +162,20 @@ def remember_iocheck(path: str):
     p = os.path.abspath(path)
     save_settings(iocheck_zuletzt=([p] + [x for x in load_settings().get("iocheck_zuletzt", []) if x != p])[:15])
 
+
+def templates_dir() -> str:
+    """Ordner ``vorlagen`` mit den SPS-Bausteinen für Ringpuffer: beim Entwickeln im Projektordner, im installierten
+    Programm neben den Programmdateien (bzw. in den mitgelieferten Daten von PyInstaller)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    candidates = [os.path.join(os.path.dirname(sys.executable), "vorlagen")] if getattr(sys, "frozen", False) else []
+    if getattr(sys, "_MEIPASS", None):
+        candidates.append(os.path.join(sys._MEIPASS, "vorlagen"))
+    candidates += [os.path.join(os.path.dirname(here), "vorlagen"), os.path.join(here, "vorlagen")]
+    for c in candidates:
+        if os.path.isdir(c):
+            return c
+    return candidates[0]
+
 # Alle Datentypen, die der Logger kennt (Größe in Bytes). Welche davon eine Steuerung liefern kann, legt ihr Treiber
 # fest (Driver.types).
 TYPES = {
@@ -290,6 +304,9 @@ class Variable:
     block: str = ""           # Name des Blocks, zu dem die Variable gehört (Blocklesemodus)
     block_idx: int = 0        # Position innerhalb des Blocks
     plc: int = 0              # Index der Steuerung (0-basiert, siehe Plc)
+    # Element eines Ringpuffers: der Block (Block mit ring > 0). Solche Variablen liest der Treiber nicht im Takt,
+    # sondern holt die in der Steuerung gesammelten Datensätze ab (siehe plc_treiber/ringbuffer.py).
+    ring: object = field(default=None, repr=False, compare=False)
 
     @property
     def tag(self) -> str:
@@ -325,7 +342,12 @@ class Block:
     werden. Jedes Element wird zu einer Variable ``<Name>[i]``.
 
     address: Startadresse (adressbasierte Treiber, z. B. ``DB10.DBD0``, ``40001``) bzw. Name des Arrays ohne Index
-    (Tag-basierte Treiber, z. B. ``Messwerte``); start: erster Array-Index (nur Tag-basierte Treiber)."""
+    (Tag-basierte Treiber, z. B. ``Messwerte``); start: erster Array-Index (nur Tag-basierte Treiber).
+
+    ring > 0: **Ringpuffer** mit so vielen Datensätzen (zyklussynchrone Aufzeichnung, Treiber s7, tia, clx). Die
+    Steuerung sammelt je Zyklus einen Datensatz mit ``count`` Werten; ``address`` ist dann die Adresse des Zählers am
+    Anfang des Puffers (S7/TIA, z. B. ``DB100.DBX0.0``) bzw. der Tag des Puffers (Logix, z. B. ``Puffer``). Aufbau siehe
+    ``plc_treiber/ringbuffer.py``."""
     name: str = "Block1"
     address: str = ""
     start: int = 0
@@ -340,17 +362,23 @@ class Block:
     plc: int = 0                                # Steuerung, aus der der Block gelesen wird
     targets: dict = field(default_factory=dict)  # abweichendes Ziel einzelner Elemente {Index: (Diagramm, Achse)}
     driver: str = DEFAULT_DRIVER                # Treiber der Steuerung (bestimmt die Elementadressen)
+    ring: int = 0                               # > 0: Ringpuffer mit so vielen Datensätzen (0 = normaler Block)
 
     def size_bytes(self) -> int:
-        """Größe des Blocks in Bytes (Anzahl × Größe des Datentyps) – für die Prüfung der Anfragegröße."""
+        """Größe des Blocks in Bytes (Anzahl × Größe des Datentyps; Ringpuffer: Zähler + alle Datensätze)."""
+        if self.ring:
+            rec = 8 + self.count * TYPES.get(self.dtype, 4)
+            return 4 + self.ring * (rec + (rec & 1))
         return self.count * TYPES.get(self.dtype, 4)
 
     def element_address(self, i: int) -> str:
         """Adresse des i-ten Elements in der Schreibweise des Treibers (z. B. ``DB10.DBD8`` oder ``Messwerte[2]``).
 
         Die Berechnung übernimmt der Treiber (Byte-Abstände bzw. Array-Index); ist er nicht verfügbar, wird die
-        Tag-Schreibweise ``Adresse[Index]`` angenommen.
+        Tag-Schreibweise ``Adresse[Index]`` angenommen. Ringpuffer: ``<Adresse> › Werte[i]`` (nur zur Anzeige).
         """
+        if self.ring:
+            return f"{self.address} › Werte[{i}]"
         try:
             return get_driver(self.driver).block_element_address(self, i)
         except Exception:
@@ -371,11 +399,15 @@ class Block:
             out.append(Variable(
                 name=self.names.get(i) or f"{self.name}[{i}]", address=self.element_address(i),
                 dtype=self.dtype, color=_shade(self.color, i), show_value=self.show_value,
-                chart=chart, axis=axis, bar=self.bar, block=self.name, block_idx=i, plc=self.plc))
+                chart=chart, axis=axis, bar=self.bar, block=self.name, block_idx=i, plc=self.plc,
+                ring=self if self.ring else None))
         return out
 
     def address_range(self) -> str:
         """Bereich als Text, z. B. 'DB10.DBD0 … DB10.DBD36' oder 'Messwerte[0] … Messwerte[9]'."""
+        if self.ring:
+            from plc_i18n import tr
+            return tr("{0}: Ringpuffer {1} × {2} Werte").format(self.address, self.ring, self.count)
         if self.count <= 1:
             return self.element_address(0)
         return f"{self.element_address(0)} … {self.element_address(self.count - 1)}"
@@ -401,7 +433,7 @@ _BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "pid_aktiv",
               "web_aktiv", "web_https", "headless", "csv_aktiv", "bericht_aktiv", "archiv_beenden", "db_nur_aenderungen"}
 _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "start", "fenster_s", "max_records",
              "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
-             "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl"}
+             "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl", "puffer"}
 _FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude", "aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s"}
 _JSON_KEYS = {"treiberdaten", "web_benutzer", "benachrichtigung", "opcua_server"}                  # Text mit JSON-Inhalt -> verschachteltes Objekt
 
@@ -826,7 +858,9 @@ def _parse_blocks(cp, charts, n_plc=1, plc_drivers=()):
         plc = min(max(s.getint("steuerung", 1) - 1, 0), max(n_plc - 1, 0))
         drv = plc_drivers[plc] if plc < len(plc_drivers) else DEFAULT_DRIVER
         old_s7 = "bereich" in s and not s.get("adresse", "").strip()
+        ring = max(0, min(s.getint("puffer", 0), 100_000))           # Ringpuffer: Anzahl Datensätze (0 = Block)
         blocks.append(Block(
+            ring=ring,
             name=s.get("name", f"Block{i}"), address=_address_from(s, dtype),
             start=0 if old_s7 else max(0, s.getint("start", 0)), dtype=dtype, driver=drv,
             plc=plc, targets=targets,
@@ -1006,6 +1040,8 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
             "diagramm": str(b.chart + 1), "achse": str(b.axis + 1), "farbe": b.color,
             "wert_anzeigen": "1" if b.show_value else "0", "balken": "1" if b.bar else "0",
             "steuerung": str(b.plc + 1)}
+        if b.ring:
+            cp[f"Block{i}"]["puffer"] = str(b.ring)
         # Elemente, die in einem anderen Diagramm/auf einer anderen Y-Achse liegen als der Block.
         for idx, (tc, ta) in sorted(b.targets.items()):
             if 0 <= idx < b.count and (tc, ta) != (b.chart, b.axis):

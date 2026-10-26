@@ -14,6 +14,19 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Ringpuffer – zyklussynchrone Aufzeichnung** (Treiber `s7`, `tia`, `clx`): Die Steuerung schreibt je Zyklus bzw.
+  Weckalarm einen Datensatz (Nummer, Zeit, Werte) in einen Ringpuffer, der Logger holt die Datensätze im Leseintervall
+  ab – lückenlos, mit dem Zeitpunkt aus der Steuerung, z. B. 10 oder 50 ms Abtastung bei 250 ms Leseintervall.
+  Blockeditor: neue Spalte *Ringpuffer* (Anzahl Datensätze), Test zeigt Zähler, Abstand und jüngste Werte; verlorene
+  Datensätze und Neustarts der Steuerung werden gemeldet. Fertige Bausteine im Ordner `vorlagen` (S7-300/400 SCL,
+  S7-1200/1500 SCL-Quelle für TIA Portal, ControlLogix Structured Text), erreichbar über *SPS-Vorlagen …*.
+* **Prometheus als Datenbank**: Schreiben per Remote Write (Protobuf + Snappy ohne Zusatzbibliothek), Lesemodus über
+  die HTTP-Schnittstelle (Rohdaten und Mittelwerte). Vom Server abgelehnte Werte (zu alt, nicht in zeitlicher
+  Reihenfolge) werden gemeldet statt endlos wiederholt. Docker-Testumgebung um Prometheus mit Grafana-Datenquelle
+  ergänzt.
+
 ### Build
 
 * Linux: Zusätzlich zu den AppImages entstehen **Debian-Pakete** (`plc-datenlogger_<Version>_amd64.deb` für PCs,

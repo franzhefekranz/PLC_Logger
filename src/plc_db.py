@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (C) 2026 Michael Taxis
 """Aufzeichnung in eine Datenbank (zusätzlich oder statt CSV): SQLite, MariaDB/MySQL, TimescaleDB/PostgreSQL, QuestDB,
-InfluxDB 3 oder VictoriaMetrics.
+InfluxDB 3, VictoriaMetrics oder Prometheus.
 
 Ein eigener Schreib-Thread (``DbWriter``) nimmt die Messzeilen vom Sammler-Thread des Recorders entgegen und schreibt
 sie stapelweise (etwa einmal pro Sekunde) in die Datenbank. Netzwerk- oder Plattenwartezeiten der Datenbank bremsen
@@ -15,15 +15,21 @@ Tabellenaufbau ("schmal", eine Zeile je Wert – geeignet für Grafana und Times
     variable  Name der Variable
     wert      Messwert (Gleitkommazahl; BOOL = 0/1)
 
-InfluxDB 3: Zeitspalte ``time``, projekt/variable sind Tags. VictoriaMetrics: Metrik ``<tabelle>_wert`` mit den
-Labels projekt und variable.
+InfluxDB 3: Zeitspalte ``time``, projekt/variable sind Tags. VictoriaMetrics und Prometheus: Metrik
+``<tabelle>_wert`` mit den Labels projekt und variable.
+
+Prometheus wird über „Remote Write“ beschrieben (``/api/v1/write``, Protobuf + Snappy – beides hier ohne Bibliothek
+umgesetzt, siehe ``prom_write_request`` und ``snappy_compress``). Der Server muss Remote Write annehmen: Start mit
+``--web.enable-remote-write-receiver``. Prometheus nimmt Werte je Serie nur in zeitlicher Reihenfolge und nicht älter
+als etwa eine Stunde an (sonst ``out_of_order_time_window`` in der Prometheus-Konfiguration setzen); abgelehnte Stapel
+werden verworfen und gemeldet statt endlos wiederholt.
 
 Werte ohne Gültigkeit (NaN, z. B. Verbindungsausfall) werden nicht geschrieben. Mit "nur Änderungen" wird ein Wert
 nur geschrieben, wenn er sich geändert hat, spätestens aber alle ``HEARTBEAT_S`` Sekunden.
 
 Treiber (nur für den gewählten Typ nötig): SQLite ist in Python enthalten; MariaDB: ``PyMySQL``;
-TimescaleDB/PostgreSQL: ``psycopg`` (Version 3, ``pip install "psycopg[binary]"``); QuestDB, InfluxDB 3 und VictoriaMetrics:
-keine Bibliothek nötig (HTTP-Schnittstelle, Standardports 9000, 8181 bzw. 8428).
+TimescaleDB/PostgreSQL: ``psycopg`` (Version 3, ``pip install "psycopg[binary]"``); QuestDB, InfluxDB 3, VictoriaMetrics und
+Prometheus: keine Bibliothek nötig (HTTP-Schnittstelle, Standardports 9000, 8181, 8428 bzw. 9090).
 """
 import base64
 import collections
@@ -36,6 +42,7 @@ import math
 import os
 import re
 import sqlite3
+import struct
 import threading
 import time
 import urllib.error
@@ -48,10 +55,14 @@ from plc_i18n import N_, tr
 # Datenbanktypen: Schlüssel in der Konfigurationsdatei -> Anzeige.
 DB_TYPES = {"": N_("Keine"), "sqlite": N_("SQLite (Datei)"), "mariadb": N_("MariaDB / MySQL"),
             "timescale": N_("TimescaleDB / PostgreSQL"), "questdb": N_("QuestDB"),
-            "influxdb3": N_("InfluxDB 3 Core"), "victoriametrics": N_("VictoriaMetrics")}
-DEFAULT_PORTS = {"mariadb": 3306, "timescale": 5432, "questdb": 9000, "influxdb3": 8181, "victoriametrics": 8428}
+            "influxdb3": N_("InfluxDB 3 Core"), "victoriametrics": N_("VictoriaMetrics"),
+            "prometheus": N_("Prometheus (Remote Write)")}
+DEFAULT_PORTS = {"mariadb": 3306, "timescale": 5432, "questdb": 9000, "influxdb3": 8181, "victoriametrics": 8428,
+                 "prometheus": 9090}
 # Datenbanken, die über ihre HTTP-Schnittstelle angesprochen werden (Feld Server darf eine URL sein)
-HTTP_TYPES = ("questdb", "influxdb3", "victoriametrics")
+HTTP_TYPES = ("questdb", "influxdb3", "victoriametrics", "prometheus")
+# Datenbanken mit Metrik <tabelle>_wert und Labels statt einer Tabelle (Aufbewahrung stellt der Server selbst ein)
+METRIC_TYPES = ("victoriametrics", "prometheus")
 MAX_BUFFER = 2_000_000          # Höchstzahl gepufferter Werte bei Ausfall der Datenbank (älteste werden verworfen)
 BATCH = 5000                    # Werte je Einfüge-Anfrage
 HEARTBEAT_S = 60.0              # "nur Änderungen": unveränderte Werte spätestens nach dieser Zeit erneut schreiben
@@ -90,6 +101,8 @@ def describe(s):
         return f"InfluxDB 3 {who}{server_url(s)}/{s['name']} › {s['tabelle']}"
     if s["typ"] == "victoriametrics":
         return f"VictoriaMetrics {who}{server_url(s)} › {vm_metric(s['tabelle'])}"
+    if s["typ"] == "prometheus":
+        return f"Prometheus {who}{server_url(s)} › {vm_metric(s['tabelle'])}"
     return f"{DB_TYPES.get(s['typ'], s['typ'])} {s['user']}@{s['host']}:{s['port']}/{s['name']} › {s['tabelle']}"
 
 
@@ -281,6 +294,7 @@ class TimescaleBackend(_Backend):
 #   <tabelle>[,projekt=<Projekt>],variable=<Variable> wert=<Wert> <Zeit in ns>
 _EPOCH = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
 _US = datetime.timedelta(microseconds=1)
+_MS = datetime.timedelta(milliseconds=1)
 
 
 def server_url(s):
@@ -483,6 +497,116 @@ class VictoriaMetricsHttp(_HttpDb):
     label = "VictoriaMetrics"
 
 
+class RejectedBatch(RuntimeError):
+    """Der Server hat einen Stapel endgültig abgelehnt (z. B. Prometheus: Werte zu alt oder nicht in zeitlicher
+    Reihenfolge). Wiederholen hilft nicht – der Stapel wird verworfen."""
+
+
+# ---- Prometheus Remote Write: Protobuf und Snappy ohne Bibliothek
+def _uvarint(n):
+    """Zahl >= 0 als Varint (Protobuf, Snappy-Länge)."""
+    out = bytearray()
+    while True:
+        b = n & 0x7F
+        n >>= 7
+        if n:
+            out.append(b | 0x80)
+        else:
+            out.append(b)
+            return bytes(out)
+
+
+def _pb_bytes(field, data):
+    """Protobuf-Feld mit Länge (Wire-Typ 2): Text, Bytes oder eingebettete Nachricht."""
+    return _uvarint((field << 3) | 2) + _uvarint(len(data)) + data
+
+
+def prom_write_request(series):
+    """Prometheus ``WriteRequest`` (remote.proto) als Protobuf-Bytes.
+
+    ``series``: [(Labels, Werte)] mit Labels = [(Name, Wert)] (wird nach Namen sortiert, leere Werte entfallen) und
+    Werte = [(Zeit in ms, Wert)] in zeitlicher Reihenfolge."""
+    out = bytearray()
+    for labels, samples in series:
+        ts = bytearray()
+        for name, value in sorted(labels):
+            if value != "":
+                ts += _pb_bytes(1, _pb_bytes(1, name.encode("utf-8")) + _pb_bytes(2, str(value).encode("utf-8")))
+        for ms, value in samples:
+            # Sample: value (double, Feld 1, Wire-Typ 1) und timestamp (int64 als Varint, Feld 2)
+            ts += _pb_bytes(2, b"\x09" + struct.pack("<d", float(value)) + b"\x10" + _uvarint(int(ms)))
+        out += _pb_bytes(1, bytes(ts))
+    return bytes(out)
+
+
+def _snappy_literal(data):
+    """Snappy-Element „Literal“ (unkomprimierte Bytes)."""
+    n = len(data) - 1
+    if n < 60:
+        return bytes([n << 2]) + data
+    for k, code in ((1, 60), (2, 61), (3, 62), (4, 63)):
+        if n < 1 << (8 * k):
+            return bytes([code << 2]) + n.to_bytes(k, "little") + data
+    raise ValueError("Literal zu lang")
+
+
+def snappy_compress(data):
+    """Daten im Snappy-Blockformat komprimieren (einfaches Verfahren: Wiederholungen ab 4 Bytes werden als Kopie mit
+    2-Byte-Abstand kodiert; das Ergebnis ist mit jedem Snappy-Dekoder lesbar)."""
+    data = bytes(data)
+    n = len(data)
+    out = bytearray(_uvarint(n))
+    table, i, lit = {}, 0, 0
+    while i + 4 <= n:
+        key = data[i:i + 4]
+        cand = table.get(key)
+        table[key] = i
+        if cand is None or i - cand > 0xFFFF:
+            i += 1
+            continue
+        m = 4
+        while i + m < n and data[cand + m] == data[i + m]:
+            m += 1
+        if lit < i:
+            out += _snappy_literal(data[lit:i])
+        off, rest = i - cand, m
+        while rest > 0:                                  # Kopie mit 2-Byte-Abstand: 1 … 64 Bytes je Element
+            k = min(rest, 64)
+            out += bytes([((k - 1) << 2) | 2]) + off.to_bytes(2, "little")
+            rest -= k
+        i += m
+        lit = i
+    if lit < n:
+        out += _snappy_literal(data[lit:])
+    return bytes(out)
+
+
+class PrometheusHttp(_HttpDb):
+    """Prometheus (Standardport 9090): Schreiben über Remote Write (/api/v1/write), Lesen über /api/v1/…"""
+    label = "Prometheus"
+    write_path = "/api/v1/write"
+
+    def write_series(self, series):
+        """Serien [(Labels, Werte)] per Remote Write senden. HTTP 400 (Werte abgelehnt) -> RejectedBatch."""
+        body = snappy_compress(prom_write_request(series))
+        url = self.url + self.write_path
+        req = urllib.request.Request(url, data=body, headers=dict(self.headers), method="POST")
+        req.add_header("Content-Type", "application/x-protobuf")
+        req.add_header("Content-Encoding", "snappy")
+        req.add_header("X-Prometheus-Remote-Write-Version", "0.1.0")
+        try:
+            with urllib.request.urlopen(req, timeout=max(self.timeout, 30.0)) as resp:
+                resp.read()
+        except urllib.error.HTTPError as e:
+            text = _http_error_text(e)
+            if e.code == 404:
+                raise HttpDbError(self.label, e.code, tr("Remote Write ist nicht eingeschaltet (Prometheus mit "
+                                                         "--web.enable-remote-write-receiver starten)")) from None
+            if e.code == 400:
+                raise RejectedBatch(f"{self.label} HTTP 400: {text}") from None
+            raise HttpDbError(self.label, e.code, text) from None
+
+
 class _CsvCursor:
     """Abfrage mit CSV-Ergebnis (QuestDB /exp, InfluxDB /api/v3/query_sql): das Ergebnis kommt als Strom und wird
     stückweise gelesen (auch sehr große Ergebnisse). Alle Werte kommen als Text (die Aufrufer wandeln mit float/int
@@ -598,8 +722,32 @@ class VictoriaMetricsBackend(_Backend):
         self.con.write(_ilp_lines(self.t, rows))
 
 
+class PrometheusBackend(_Backend):
+    """Prometheus: nichts anzulegen (Metrik <tabelle>_wert entsteht beim Schreiben); Werte per Remote Write."""
+
+    def connect(self):
+        """Erreichbarkeit und Anmeldung prüfen (Versionsabfrage)."""
+        con = PrometheusHttp(self.s)
+        con.get_json("/api/v1/status/buildinfo")       # erreichbar und Anmeldung gültig?
+        self.note = tr("Metrik {0}, Labels projekt und variable (Remote Write: Prometheus mit "
+                       "--web.enable-remote-write-receiver starten)").format(vm_metric(self.t))
+        self.con = con
+
+    def insert(self, rows):
+        """Zeilen (zeit, projekt, variable, wert) je Serie gruppiert und zeitlich geordnet senden."""
+        groups = {}
+        for z, p, v, w in rows:
+            ms = (z - _EPOCH) // _MS
+            groups.setdefault((p, v), []).append((ms, w))
+        metric = vm_metric(self.t)
+        series = [([("__name__", metric), ("projekt", p or ""), ("variable", v or "_")], sorted(samples))
+                  for (p, v), samples in groups.items()]
+        self.con.write_series(series)
+
+
 BACKENDS = {"sqlite": SqliteBackend, "mariadb": MariaDbBackend, "timescale": TimescaleBackend,
-            "questdb": QuestDbBackend, "influxdb3": InfluxDb3Backend, "victoriametrics": VictoriaMetricsBackend}
+            "questdb": QuestDbBackend, "influxdb3": InfluxDb3Backend, "victoriametrics": VictoriaMetricsBackend,
+            "prometheus": PrometheusBackend}
 
 
 def test_connection(conn):
@@ -638,6 +786,8 @@ class DbWriter(threading.Thread):
         self.state = (ST_CONNECTING, "Starte …")
         self.written = 0
         self.dropped = 0
+        self.rejected = 0               # vom Server endgültig abgelehnte Werte (RejectedBatch)
+        self._rejected_note = 0.0       # Zeitpunkt der letzten Meldung darüber (höchstens einmal je Minute)
         self._last = {}                 # "nur Änderungen": Variable -> (Wert, Zeit) zuletzt geschrieben
         self.backend = None
         from plc_cleanup import settings as cleanup_settings
@@ -691,6 +841,8 @@ class DbWriter(threading.Thread):
         extra = tr(" – {0} Werte geschrieben").format(self.written) + (f", {queued} warten" if queued > BATCH else "")
         if self.dropped:
             extra += tr(", {0} verworfen (Puffer voll)").format(self.dropped)
+        if self.rejected:
+            extra += tr(", {0} vom Server abgelehnt").format(self.rejected)
         return st, text + extra
 
     # ---- Thread
@@ -736,6 +888,11 @@ class DbWriter(threading.Thread):
                 self.written += len(batch)
                 if self.state[0] != ST_OK:
                     self._set(ST_OK, f"Verbunden: {describe(self.s)}")
+            except RejectedBatch as e:                  # endgültig abgelehnt: verwerfen, nicht wiederholen
+                self.rejected += len(batch)
+                if time.monotonic() - self._rejected_note > 60.0:
+                    self._rejected_note = time.monotonic()
+                    self.emit(tr("⚠ [Datenbank] {0} Werte abgelehnt: {1}").format(len(batch), e))
             except Exception as e:
                 with self.lock:
                     self.buf.extendleft(reversed(batch))    # Reihenfolge erhalten, später erneut versuchen
@@ -1153,7 +1310,7 @@ class VmReader:
         """Prometheus-Anfrage senden und den Teil ``data`` der Antwort liefern (Fehlerstatus -> RuntimeError)."""
         res = self.con.get_json(path, params, timeout=120.0)
         if res.get("status") not in (None, "success"):
-            raise RuntimeError(f"VictoriaMetrics: {res.get('error') or res}")
+            raise RuntimeError(f"{self.con.label}: {res.get('error') or res}")
         return res.get("data")
 
     def _instant(self, query, at=None):
@@ -1264,10 +1421,132 @@ class VmReader:
         return t, names, cols
 
 
+_DURATION_S = {"y": 365 * 86400, "w": 7 * 86400, "d": 86400, "h": 3600, "m": 60, "s": 1}
+
+
+class PromReader(VmReader):
+    """Lesemodus für Prometheus: wie ``VmReader``, aber nur mit den Funktionen von Prometheus.
+
+    * Rohdaten: Bereichsabfragen ``<Selektor>[1h]`` (liefern die gespeicherten Werte unverändert), stundenweise.
+    * Mittelwerte je Raster: ``query_range`` in Stücken (Prometheus erlaubt höchstens 11 000 Punkte je Abfrage).
+    * Übersicht (erster/letzter Zeitpunkt, Anzahl): Anzahl je Zeitabschnitt über den ganzen Aufbewahrungszeitraum;
+      erster und letzter Zeitpunkt sind daher auf einen Abschnitt (etwa 1/2000 des Zeitraums) genau."""
+
+    RAW_CHUNK_S = 3600.0
+    MAX_POINTS = 10_000
+
+    def connect(self):
+        """Erreichbarkeit und Anmeldung prüfen -> self."""
+        self.con = PrometheusHttp(self.s)
+        self.con.get_json("/api/v1/status/buildinfo")
+        return self
+
+    def _retention_s(self):
+        """Aufbewahrungsdauer des Servers in Sekunden (aus runtimeinfo, z. B. "15d"; unbekannt: 400 Tage)."""
+        try:
+            text = str((self._data("/api/v1/status/runtimeinfo", None) or {}).get("storageRetention", ""))
+            total = sum(int(n) * _DURATION_S[u] for n, u in re.findall(r"(\d+)([ywdhms])", text.split(" or ")[0]))
+            if total > 0:
+                return float(total)
+        except Exception:
+            pass
+        return 400 * 86400.0
+
+    def variables(self, project=None):
+        """Je Variable erster/letzter Zeitpunkt (auf einen Zeitabschnitt genau) und Anzahl Werte."""
+        now = time.time()
+        span = self._retention_s() + 86400
+        step = max(1, int(math.ceil(span / 2000)))
+        q = f"sum by (variable) (count_over_time({self._sel(project)}[{step}s]))"
+        data = self._data("/api/v1/query_range", {"query": q, "start": f"{now - span:.3f}", "end": f"{now:.3f}",
+                                                  "step": f"{step}s"}) or {}
+        out = []
+        for res in data.get("result", []):
+            name = res.get("metric", {}).get("variable")
+            pts = [(float(t), float(v)) for t, v in res.get("values", []) if float(v) > 0]
+            if name is None or not pts:
+                continue
+            out.append((str(name), max(pts[0][0] - step, now - span), min(pts[-1][0], now), int(sum(v for _t, v in pts))))
+        return sorted(out)
+
+    def load(self, names, t0, t1, project=None, raster_s=0, hold=False, cancel=None, progress=None):
+        """Wie ``DbReader.load``: (Zeiten, Namen, Spalten); raster_s > 0 = Mittelwerte, Zeit = Mitte des Rasters."""
+        import numpy as np
+        names = list(dict.fromkeys(names))
+        if not names:
+            raise ValueError(tr("Keine Variable gewählt."))
+        col_of = {n: k for k, n in enumerate(names)}
+        series = {}                                     # Spalte -> [(Zeiten, Werte)]
+        n_total = 0
+
+        def check(n):
+            """Abbruch prüfen, Werte zählen (Speicherschutz) und Fortschritt melden."""
+            nonlocal n_total
+            if cancel is not None and cancel():
+                raise LoadCancelled()
+            n_total += n
+            if n_total > MAX_LOAD_VALUES:
+                raise MemoryError(tr("Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.")
+                                  .format(f"{MAX_LOAD_VALUES:,}".replace(",", ".")))
+            if progress is not None:
+                progress(n_total)
+
+        regex = "|".join(re.escape(n).replace("\\ ", " ") for n in names)
+        sel = self._sel(project)[:-1] + f",variable=~{_prom_str('^(?:' + regex + ')$')}}}"
+        if raster_s and raster_s > 0:
+            r = float(raster_s)
+            ms = max(int(round(r * 1000)), 1)
+            q = f"sum by (variable) (sum_over_time({sel}[{ms}ms])) / sum by (variable) (count_over_time({sel}[{ms}ms]))"
+            start = t0 + r
+            while start <= t1 + r:
+                end = min(t1 + r, start + r * (self.MAX_POINTS - 1))
+                data = self._data("/api/v1/query_range", {"query": q, "start": f"{start:.3f}", "end": f"{end:.3f}",
+                                                          "step": f"{ms}ms"}) or {}
+                for res in data.get("result", []):
+                    k = col_of.get(res.get("metric", {}).get("variable"))
+                    pts = res.get("values", [])
+                    if k is None or not pts:
+                        continue
+                    ts = np.fromiter((float(p[0]) - r / 2 for p in pts), dtype=float, count=len(pts))
+                    vs = np.fromiter((float(p[1]) for p in pts), dtype=float, count=len(pts))
+                    series.setdefault(k, []).append((ts, vs))
+                    check(len(pts))
+                start = end + r
+        else:
+            w = self.RAW_CHUNK_S
+            lo = t0 - 0.001                              # Bereich (lo, hi] – so ist t0 selbst enthalten
+            while lo < t1:
+                hi = min(t1, lo + w)
+                data = self._data("/api/v1/query", {"query": f"{sel}[{int(round((hi - lo) * 1000))}ms]",
+                                                    "time": f"{hi:.3f}"}) or {}
+                for res in data.get("result", []):
+                    k = col_of.get(res.get("metric", {}).get("variable"))
+                    pts = res.get("values", [])
+                    if k is None or not pts:
+                        continue
+                    ts = np.fromiter((float(p[0]) for p in pts), dtype=float, count=len(pts))
+                    vs = np.fromiter((float(p[1]) for p in pts), dtype=float, count=len(pts))
+                    series.setdefault(k, []).append((ts, vs))
+                    check(len(pts))
+                lo = hi
+        parts = [(k, ts, vs) for k, lst in series.items() for ts, vs in lst]
+        t = np.unique(np.round(np.concatenate([ts for _k, ts, _v in parts]), 3)) if parts else np.zeros(0)
+        cols = np.full((len(names), len(t)), np.nan)
+        for k, ts, vs in parts:
+            cols[k, np.searchsorted(t, np.round(ts, 3))] = vs
+        if hold and len(t):
+            cols = _hold(cols)
+        return t, names, cols
+
+
 def create_reader(conn, sqlite_file=None):
-    """Leser für die Datenbank der Konfiguration (bzw. eine SQLite-Datei): ``DbReader`` oder ``VmReader``."""
-    if not sqlite_file and db_settings(conn)["typ"] == "victoriametrics":
+    """Leser für die Datenbank der Konfiguration (bzw. eine SQLite-Datei): ``DbReader``, ``VmReader`` oder
+    ``PromReader``."""
+    typ = "" if sqlite_file else db_settings(conn)["typ"]
+    if typ == "victoriametrics":
         return VmReader(conn)
+    if typ == "prometheus":
+        return PromReader(conn)
     return DbReader(conn, sqlite_file)
 
 

@@ -12,6 +12,8 @@ Adressen in Siemens-Schreibweise (deutsch oder englisch), der Datentyp kommt aus
 
 S7-1200/1500: PUT/GET muss in der CPU erlaubt sein, gelesen werden nur nicht optimierte Datenbausteine. Für
 optimierte Bausteine den Treiber „tia“ verwenden. Blöcke (Startadresse + Anzahl) werden mit EINER Anfrage gelesen.
+Ringpuffer (zyklussynchrone Aufzeichnung, siehe ringbuffer.py): Adresse des Zählers im nicht optimierten DB, z. B.
+``DB100.DBX0.0``; die Datensätze folgen ab Byte +4.
 Der Auswahldialog übernimmt Variablen aus importierten DB-Quellen (TIA Portal/STEP 7), da die SPS über
 S7-Kommunikation keine Namen liefert.
 """
@@ -21,6 +23,7 @@ import struct
 from plc_common import s7_address
 from plc_i18n import tr
 from plc_treiber.base import NAN, BrowseResult, Driver, Param, Reader
+from plc_treiber.ringbuffer import HEADER_BYTES, RING_TYPES, RingSupport
 
 # Datentyp -> (Größe in Bytes, struct-Format; Big Endian wie in der S7)
 S7_TYPES = {
@@ -50,6 +53,16 @@ def parse(address: str):
         letter = m.group(1).upper()
         return _AREA_KEY[letter], 0, int(m.group(3)), int(m.group(4) or 0), letter
     raise ValueError(tr("Ungültige S7-Adresse „{0}“ (z. B. DB10.DBD4, M5.0, EW64)").format(address))
+
+
+def parse_ring(address: str):
+    """Adresse eines Ringpuffers (Zähler am Anfang, im Datenbaustein) -> (DB, Byte). ValueError sonst."""
+    area, db, byte, _bit, _letter = parse(address)
+    if area != "DB":
+        raise ValueError(tr("Ringpuffer müssen in einem Datenbaustein liegen (z. B. DB100.DBX0.0)"))
+    if byte % 2:
+        raise ValueError(tr("Ringpuffer: Startadresse muss gerade sein (Wortgrenze)"))
+    return db, byte
 
 
 def fmt(letter, db, byte, bit, dtype) -> str:
@@ -99,8 +112,8 @@ class _Item:
     __slots__ = ("pos", "area", "db", "byte", "bit", "dtype", "address")
 
 
-class S7Reader(Reader):
-    """Liest mit snap7: Blöcke mit einer Anfrage je Block, Einzelvariablen einzeln."""
+class S7Reader(Reader, RingSupport):
+    """Liest mit snap7: Blöcke mit einer Anfrage je Block, Einzelvariablen einzeln; Ringpuffer mit ``read_rings``."""
 
     def __init__(self, driver, plc, variables):
         """Leseplan aufstellen: Variablen eines Blocks werden zu EINER Anfrage über den ganzen Bytebereich
@@ -110,8 +123,16 @@ class S7Reader(Reader):
         self.client = None
         self.plan = []           # [("block", area, db, start, nbytes, [items]) | ("single", item)]
         self.bad = {}            # pos -> Fehlertext (ungültige Adresse)
+        ring_pos = self._setup_rings(self.vars)
+        for ring in self.rings:
+            try:
+                ring.db, ring.byte = parse_ring(ring.address)
+            except ValueError as e:
+                ring.error = str(e)
         blocks = {}
         for pos, v in enumerate(self.vars):
+            if pos in ring_pos:
+                continue
             it = _Item()
             it.pos, it.dtype, it.address = pos, v.dtype, v.address
             try:
@@ -145,6 +166,7 @@ class S7Reader(Reader):
             raise ConnectionError(f"{self.plc.ip}: {e}") from None
         self.client = c
         self.read()                      # erst ein Lesezyklus beweist die Verbindung
+        self.check_rings()
         return max(0, len(self.vars) - len(self.errors))
 
     @staticmethod
@@ -197,6 +219,24 @@ class S7Reader(Reader):
                 out[it.pos] = self._decode(raw, it, it.byte)
         return out
 
+    # ------------------------------------------------------------------ Ringpuffer (siehe ringbuffer.py)
+    def _ring_is_connection_error(self, exc):
+        """Verbindung weg? (snap7 meldet Fehler einer Anfrage und Verbindungsabbrüche gleichartig)"""
+        try:
+            return not bool(self.client.get_connected())
+        except Exception:
+            return True
+
+    def _ring_counter(self, ring):
+        """Zähler (DINT) am Anfang des Puffers."""
+        raw = bytes(self.client.read_area(self.areas["DB"], ring.db, ring.byte, HEADER_BYTES))
+        return struct.unpack(">i", raw[:4])[0]
+
+    def _ring_bytes(self, ring, slot, n):
+        """``n`` Datensätze ab Platz ``slot`` (snap7 teilt große Bereiche selbst in mehrere Anfragen auf)."""
+        rs = ring.record_size
+        return bytes(self.client.read_area(self.areas["DB"], ring.db, ring.byte + HEADER_BYTES + slot * rs, n * rs))
+
     def close(self):
         """Verbindung trennen."""
         if self.client is not None:
@@ -225,6 +265,8 @@ class S7Driver(Driver):
     block_uses_index = False
     browse_label = tr("Aus DB-Quelle wählen…")
     library = "python-snap7"
+    ring_types = list(RING_TYPES)
+    ring_hint = tr("Adresse des Zählers am Anfang des Ringpuffers im nicht optimierten DB, z. B. DB100.DBX0.0")
 
     def summary(self, plc):
         """„IP, Rack r/Slot s“."""
@@ -259,8 +301,18 @@ class S7Driver(Driver):
             return fmt(letter, db, byte + pos // 8, pos % 8, "BOOL")
         return fmt(letter, db, byte + i * S7_TYPES.get(block.dtype, (4,))[0], 0, block.dtype)
 
+    def check_ring(self, block):
+        """Ringpuffer: Adresse im Datenbaustein, Größe und Datentyp."""
+        try:
+            parse_ring(block.address)
+        except ValueError as e:
+            return str(e)
+        return super().check_ring(block)
+
     def check_block(self, block):
         """Startadresse gültig und Format für Blöcke erlaubt?"""
+        if block.ring:
+            return self.check_ring(block)
         try:
             parse(block.address)
         except ValueError as e:

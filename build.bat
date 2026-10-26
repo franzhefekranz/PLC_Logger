@@ -165,6 +165,9 @@ if not exist "dist\PLCDatenlogger\PLCKonfiguration.exe" goto :fail
 if not exist "dist\PLCDatenlogger\PLCIOCheck.exe" goto :fail
 rem  Lizenz (LGPL-3.0-or-later) und Lizenztexte in den Programmordner (gelangen so in Installer und portables ZIP)
 for %%F in (LICENSE COPYING THIRD_PARTY_LICENSES.md) do if exist "%%F" copy /y "%%F" "dist\PLCDatenlogger\" >nul
+rem  SPS-Vorlagen fuer Ringpuffer (Blockeditor: Knopf "SPS-Vorlagen ...") in den Programmordner
+robocopy "vorlagen" "dist\PLCDatenlogger\vorlagen" /E /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 goto :fail
 
 rem  Bedienungsanleitung (deutsch) und User Manual (englisch) als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
 for %%D in (bedienungsanleitung user_manual) do (
