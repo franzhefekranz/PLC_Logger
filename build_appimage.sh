@@ -8,6 +8,8 @@
 #      ./build_appimage.sh --docker amd64  in einem Docker-Container für x86_64 bauen
 #
 #  Ergebnis: dist/PLCDatenlogger-<Version>-x86_64.AppImage bzw. dist/PLCDatenlogger-<Version>-aarch64.AppImage
+#            und das Debian-Paket dist/plc-datenlogger_<Version>_amd64.deb bzw. _arm64.deb (nur mit dpkg-deb;
+#            abschalten mit SKIP_DEB=1)
 #
 #  Ein AppImage ist eine einzelne, ausführbare Datei: herunterladen, ausführbar machen (chmod +x) und starten.
 #  Es enthält Logger, Konfigurationsprogramm (Parameter --konfig) und Ereignis-Viewer (--ereignisse).
@@ -87,7 +89,7 @@ fi
 
 # ------------------------------------------------------------------ 1. Python-Umgebung
 if [[ ! -x "$B/venv/bin/python" ]]; then
-    echo "[1/6] Python-Umgebung anlegen ..."
+    echo "[1/7] Python-Umgebung anlegen ..."
     "$PY" -m venv "$B/venv"
 fi
 VPY="$B/venv/bin/python"
@@ -107,7 +109,7 @@ fi
 "$VPY" -m pip install -q "pyinstaller>=6.0"
 
 # ------------------------------------------------------------------ 2. Symbol und Zusatzdateien
-echo "[2/6] Symbol, Chart.js ..."
+echo "[2/7] Symbol, Chart.js ..."
 if [[ ! -f app.png ]]; then
     QT_QPA_PLATFORM=offscreen "$VPY" tools/make_icon.py || true
 fi
@@ -124,7 +126,7 @@ EXTRA=()
 if [[ ! -f "$LIB" && "${SKIP_PLCTAG:-0}" == "1" ]]; then
     echo "[HINWEIS] SKIP_PLCTAG=1: libplctag wird nicht gebaut – der Treiber clx funktioniert im AppImage nicht."
 elif [[ ! -f "$LIB" ]]; then
-    echo "[2/6] libplctag $PLCTAG_VER aus dem Quelltext bauen (cmake, gcc) ..."
+    echo "[2/7] libplctag $PLCTAG_VER aus dem Quelltext bauen (cmake, gcc) ..."
     rm -rf "$B/libplctag-src"
     if ! git clone -q --depth 1 --branch "v$PLCTAG_VER" https://github.com/libplctag/libplctag.git "$B/libplctag-src"; then
         mkdir -p "$B/libplctag-src"
@@ -138,7 +140,7 @@ fi
 [[ -f "$LIB" ]] && EXTRA+=(--add-binary "$PWD/$LIB:.")
 
 # ------------------------------------------------------------------ 3. PyInstaller (ein Programm für alles)
-echo "[3/6] PyInstaller ..."
+echo "[3/7] PyInstaller ..."
 "$VPY" -m PyInstaller --noconfirm --clean --windowed --onedir --name "$APP" \
     --distpath "$B/dist" --workpath "$B/work" --specpath "$B" --paths "$PWD/src" \
     --add-data "$PWD/sprachen:sprachen" \
@@ -160,7 +162,7 @@ echo "[3/6] PyInstaller ..."
     "$PWD/src/${PFX}_logger.py"
 
 # ------------------------------------------------------------------ 4. AppDir
-echo "[4/6] AppDir zusammenstellen ..."
+echo "[4/7] AppDir zusammenstellen ..."
 AD="$B/AppDir"
 rm -rf "$AD"
 mkdir -p "$AD/usr/lib/$APP" "$AD/usr/share/applications" "$AD/usr/share/icons/hicolor/256x256/apps" "$AD/usr/share/doc/$APP"
@@ -237,7 +239,7 @@ EOF
 cp "$AD/$APP.desktop" "$AD/usr/share/applications/"
 
 # ------------------------------------------------------------------ 5. appimagetool
-echo "[5/6] appimagetool ..."
+echo "[5/7] appimagetool ..."
 TOOL="$B/appimagetool-$ARCH.AppImage"
 if [[ ! -x "$TOOL" ]]; then
     URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
@@ -247,13 +249,90 @@ fi
 
 # ------------------------------------------------------------------ 6. AppImage erzeugen
 OUT="dist/$APP-$VERSION-$ARCH.AppImage"
-echo "[6/6] $OUT ..."
+echo "[6/7] $OUT ..."
 # --appimage-extract-and-run: funktioniert auch ohne FUSE (z. B. im Docker-Container)
 ARCH="$ARCH" "$TOOL" --appimage-extract-and-run --no-appstream "$AD" "$OUT"
 chmod +x "$OUT"
+
+# ------------------------------------------------------------------ 7. Debian-Paket (.deb) aus demselben AppDir
+# Für Debian, Ubuntu, Mint und Raspberry Pi OS: installiert das Programm nach /usr/lib/PLCDatenlogger (gleicher Aufbau
+# wie im AppImage, die Anleitung liegt damit unter /usr/share/doc/PLCDatenlogger), Startbefehle in /usr/bin und
+# Einträge im Startmenü. Ohne dpkg-deb (z. B. Fedora) wird das Paket übersprungen.
+DEB=""
+if command -v dpkg-deb >/dev/null && [[ "${SKIP_DEB:-0}" != "1" ]]; then
+    PKG="plc-datenlogger"
+    case "$ARCH" in x86_64) DARCH=amd64 ;; aarch64) DARCH=arm64 ;; esac
+    # Mindest-glibc = glibc des Build-Systems (PyInstaller-Programme laufen nur mit gleicher oder neuerer glibc)
+    GLIBC="$(ldd --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+$' || true)"
+    DEB="dist/${PKG}_${VERSION}_${DARCH}.deb"
+    echo "[7/7] $DEB ..."
+    DR="$B/deb"
+    rm -rf "$DR"
+    mkdir -p "$DR/DEBIAN" "$DR/usr/bin" "$DR/usr/share/doc/$PKG"
+    cp -a "$AD/usr/." "$DR/usr/"
+    # Startbefehle: Logger, Konfigurationsprogramm, IO-Check, Ereignis-Viewer
+    mkcmd() {
+        printf '#!/bin/sh\n# %s (Paket %s)\nexec /usr/lib/%s/%s %s"$@"\n' "$2" "$PKG" "$APP" "$APP" "$3" > "$DR/usr/bin/$1"
+        chmod 755 "$DR/usr/bin/$1"
+    }
+    mkcmd plc-datenlogger    "$NAME"                 ""
+    mkcmd plc-konfiguration  "Konfigurationsprogramm" "--konfig "
+    mkcmd plc-iocheck        "IO-Check"               "--iocheck "
+    mkcmd plc-ereignisse     "Ereignis-Viewer"        "--ereignisse "
+    # Startmenü: Logger (mit Aktionen wie im AppImage), dazu Konfiguration und IO-Check als eigene Einträge
+    sed -e 's#^Exec=AppRun --konfig#Exec=plc-konfiguration#' -e 's#^Exec=AppRun --ereignisse#Exec=plc-ereignisse#' \
+        -e 's#^Exec=AppRun#Exec=plc-datenlogger#' "$AD/$APP.desktop" > "$DR/usr/share/applications/$PKG.desktop"
+    rm -f "$DR/usr/share/applications/$APP.desktop"
+    desk() {
+        cat > "$DR/usr/share/applications/$1.desktop" <<DESK
+[Desktop Entry]
+Type=Application
+Name=$2
+Name[en]=$3
+Exec=$1 %f
+Icon=$APP
+Categories=Utility;Engineering;
+Terminal=false
+DESK
+    }
+    desk plc-konfiguration "PLC Konfiguration" "PLC Configuration"
+    desk plc-iocheck       "PLC IO-Check"      "PLC IO check"
+    cp "$DR/usr/share/doc/$APP/LICENSE" "$DR/usr/share/doc/$PKG/copyright" 2>/dev/null || true
+    SIZE="$(du -sk "$DR/usr" | cut -f1)"
+    cat > "$DR/DEBIAN/control" <<CTRL
+Package: $PKG
+Version: $VERSION
+Architecture: $DARCH
+Maintainer: Michael Taxis <mxtaxis@gmail.com>
+Installed-Size: $SIZE
+Depends: libc6 (>= ${GLIBC:-2.31}), libgl1, libegl1, libfontconfig1, libxkbcommon-x11-0, libxcb-cursor0, libdbus-1-3
+Section: misc
+Priority: optional
+Homepage: https://github.com/franzhefekranz/PLC_Logger
+Description: PLC Datenlogger - SPS-Daten aufzeichnen und anzeigen
+ Zeichnet Werte von Steuerungen (Siemens S7, Allen-Bradley, Modbus, OPC UA u. a.)
+ auf, zeigt sie als Diagramme, schreibt CSV-Dateien und Datenbanken und bietet
+ Webserver, Ereignisse, Berichte und IO-Check.
+ .
+ Records PLC values, shows them as charts, writes CSV files and databases.
+CTRL
+    # Startmenü und Symbole nach Installation/Entfernen auffrischen (falls die Werkzeuge vorhanden sind)
+    for S in postinst postrm; do
+        printf '#!/bin/sh\nset -e\ncommand -v update-desktop-database >/dev/null && update-desktop-database -q /usr/share/applications || true\ncommand -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q -t /usr/share/icons/hicolor || true\nexit 0\n' > "$DR/DEBIAN/$S"
+        chmod 755 "$DR/DEBIAN/$S"
+    done
+    find "$DR" -type d -exec chmod 755 {} +
+    dpkg-deb --root-owner-group -Zxz --build "$DR" "$DEB" >/dev/null
+fi
+
 echo
 echo "[OK] $OUT"
 echo "     Start:            ./$(basename "$OUT")"
 echo "     Konfiguration:    ./$(basename "$OUT") --konfig"
 echo "     Ereignis-Viewer:  ./$(basename "$OUT") --ereignisse"
 echo "     Daten liegen in ~/$APP (oder neben dem AppImage, wenn dort eine Datei portable.txt liegt)."
+if [[ -n "$DEB" ]]; then
+    echo "[OK] $DEB"
+    echo "     Installieren:     sudo apt install ./$(basename "$DEB")"
+    echo "     Start:            plc-datenlogger, plc-konfiguration, plc-iocheck, plc-ereignisse (oder Startmenü)"
+fi

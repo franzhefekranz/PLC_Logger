@@ -154,7 +154,7 @@ also the data folder (configuration, recordings, log file).
    * - ``plc_splash.py``
      - Start screen (choice of configuration, loading indicator).
    * - ``build_appimage.sh``, ``tools/extract_tr.py``
-     - Build the Linux AppImage; update the language files after program changes.
+     - Build the Linux AppImage and .deb package; update the language files after program changes.
    * - ``plc_common.py``
      - Data model and configuration file (JSON) (including import of the configurations
        of the single programs). Not started directly.
@@ -4455,11 +4455,13 @@ overwritten on the next run.
 
 .. _appimage:
 
-Linux: AppImage (x86_64 and arm64)
+Linux: AppImage and Debian package (x86_64 and arm64)
 ======================================================================
 
 For Linux the program is available as **AppImage**: a single file that runs without
-installation. It contains the logger, the configuration program and the event viewer.
+installation. It contains the logger, the configuration program, the IO check and the event
+viewer. Alternatively the same program is available as **Debian package** (``.deb``) for
+Debian, Ubuntu, Linux Mint and Raspberry Pi OS, see `Debian package <debpaket_>`_.
 
 Usage
 ----------------------------------------------------------------------
@@ -4482,6 +4484,41 @@ the AppImage, it stays in the folder of the AppImage. Some systems need the pack
 The library **libplctag** (``libplctag.so``) is compiled from source during the build and
 is contained in the AppImage.
 
+.. _debpaket:
+
+Debian package (.deb)
+----------------------------------------------------------------------
+
+The package installs the program permanently into the system, with start menu entries
+(*PLC Datenlogger*, *PLC Configuration*, *PLC IO check*) and terminal commands. ``apt``
+installs the required system libraries (Qt graphics) along with it:
+
+.. code-block:: console
+
+   sudo apt install ./plc-datenlogger_3.2.1_amd64.deb   # PC (x86_64)
+   sudo apt install ./plc-datenlogger_3.2.1_arm64.deb   # Raspberry Pi 4/5 (64-bit system), arm64
+   plc-datenlogger                     # logger (with start screen)
+   plc-konfiguration                   # configuration program
+   plc-iocheck                         # IO check
+   plc-ereignisse                      # event viewer
+   plc-datenlogger --headless plant.json    # recording only (e.g. as service)
+   sudo apt remove plc-datenlogger     # remove (the data in ~/PLCDatenlogger is kept)
+
+The program is installed in ``/usr/lib/PLCDatenlogger``, the manual in
+``/usr/share/doc/PLCDatenlogger``. As with the AppImage, the data is stored in
+``~/PLCDatenlogger`` (per user). An update is installed the same way with the newer ``.deb``
+file.
+
+Which systems are suitable? As with the AppImage, the program needs at least the glibc of
+the build system; ``apt`` checks this and refuses the package on systems that are too old:
+
+* **amd64** (from the GitHub release): Ubuntu 22.04 and newer, Debian 12 and newer, Linux
+  Mint 21 and newer.
+* **arm64** (from the GitHub release): Raspberry Pi OS from Trixie (Debian 13), Ubuntu 24.04
+  and newer. For Raspberry Pi OS Bookworm build the package yourself: ``./build_appimage.sh
+  --docker arm64`` (see below) builds in a Debian 12 container. A 32-bit Raspberry Pi OS is
+  not supported.
+
 Building
 ----------------------------------------------------------------------
 
@@ -4494,6 +4531,7 @@ the computer it runs on:
         libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libegl1 libfontconfig1 libdbus-1-3
    ./build_appimage.sh
    # result: dist/PLCDatenlogger-3.0.0-x86_64.AppImage (or -aarch64)
+   #     and dist/plc-datenlogger_3.0.0_amd64.deb (or _arm64)
 
 * Build **x86_64** on an x86_64 computer, **arm64** on an arm64 computer (Raspberry Pi
   4/5 with 64-bit system, Ubuntu arm64 …). PyInstaller cannot compile for another
@@ -4505,8 +4543,10 @@ the computer it runs on:
 * If there is no suitable PySide6 package for an older arm64 system, use the Qt packages
   of the system: ``sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtsvg`` and
   ``VENV_SYSTEM=1 ./build_appimage.sh``.
+* The ``.deb`` package is created in the same run from the same program files (needs
+  ``dpkg-deb``, always present on Debian/Ubuntu); ``SKIP_DEB=1`` switches it off.
 * **GitHub Actions**: The workflow ``.github/workflows/appimage.yml`` builds the
-  AppImages for x86_64 and arm64 automatically if the project is in a GitHub repository
+  AppImages and ``.deb`` packages for x86_64 and arm64 automatically if the project is in a GitHub repository
   (Actions › AppImages › Run workflow, or with a tag ``v*``).
 
 

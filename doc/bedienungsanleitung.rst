@@ -155,7 +155,7 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
    * - ``plc_splash.py``
      - Startbild (Auswahl der Konfiguration, Lade-Anzeige).
    * - ``build_appimage.sh``, ``tools/extract_tr.py``
-     - Linux-AppImage bauen; Sprachdateien nach Programmänderungen aktualisieren.
+     - Linux-AppImage und .deb-Paket bauen; Sprachdateien nach Programmänderungen aktualisieren.
    * - ``plc_common.py``
      - Datenmodell und Konfigurationsdatei (JSON) (inkl. Übernahme der Konfigurationen der
        Einzelprogramme). Wird nicht direkt gestartet.
@@ -4565,11 +4565,13 @@ Wiki-Seiten nicht von Hand bearbeiten – sie werden beim nächsten Lauf übersc
 
 .. _appimage:
 
-Linux: AppImage (x86_64 und arm64)
+Linux: AppImage und Debian-Paket (x86_64 und arm64)
 ======================================================================
 
 Für Linux gibt es das Programm als **AppImage**: eine einzelne Datei, die ohne Installation
-läuft. Sie enthält Logger, Konfigurationsprogramm und Ereignis-Viewer.
+läuft. Sie enthält Logger, Konfigurationsprogramm, IO-Check und Ereignis-Viewer. Alternativ
+gibt es dasselbe Programm als **Debian-Paket** (``.deb``) für Debian, Ubuntu, Linux Mint und
+Raspberry Pi OS, siehe `Debian-Paket <debpaket_>`_.
 
 Benutzen
 ----------------------------------------------------------------------
@@ -4591,6 +4593,40 @@ startet es auch mit ``--appimage-extract-and-run``.
 
 Die Bibliothek **libplctag** (``libplctag.so``) wird beim Bauen aus dem Quelltext übersetzt und ist im AppImage enthalten.
 
+.. _debpaket:
+
+Debian-Paket (.deb)
+----------------------------------------------------------------------
+
+Das Paket installiert das Programm fest ins System, mit Einträgen im Startmenü
+(*PLC Datenlogger*, *PLC Konfiguration*, *PLC IO-Check*) und Befehlen für das Terminal. Die
+benötigten Systembibliotheken (Qt-Grafik) installiert ``apt`` gleich mit:
+
+.. code-block:: console
+
+   sudo apt install ./plc-datenlogger_3.2.1_amd64.deb   # PC (x86_64)
+   sudo apt install ./plc-datenlogger_3.2.1_arm64.deb   # Raspberry Pi 4/5 (64-Bit-System), arm64
+   plc-datenlogger                     # Logger (mit Startbild)
+   plc-konfiguration                   # Konfigurationsprogramm
+   plc-iocheck                         # IO-Check
+   plc-ereignisse                      # Ereignis-Viewer
+   plc-datenlogger --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
+   sudo apt remove plc-datenlogger     # entfernen (die Daten in ~/PLCDatenlogger bleiben)
+
+Das Programm liegt unter ``/usr/lib/PLCDatenlogger``, die Anleitung unter
+``/usr/share/doc/PLCDatenlogger``. Die Daten liegen wie beim AppImage in ``~/PLCDatenlogger``
+(je Benutzer). Ein Update installiert man genauso mit der neueren ``.deb``-Datei.
+
+Welche Systeme passen? Wie beim AppImage braucht das Programm mindestens die glibc des
+Build-Systems; ``apt`` prüft das und lehnt das Paket auf zu alten Systemen ab:
+
+* **amd64** (aus dem GitHub-Release): Ubuntu 22.04 und neuer, Debian 12 und neuer, Linux Mint 21
+  und neuer.
+* **arm64** (aus dem GitHub-Release): Raspberry Pi OS ab Trixie (Debian 13), Ubuntu 24.04 und
+  neuer. Für Raspberry Pi OS Bookworm das Paket selbst bauen: ``./build_appimage.sh --docker
+  arm64`` (siehe unten) baut in einem Debian-12-Container. Ein 32-Bit-Raspberry-Pi-OS wird nicht
+  unterstützt.
+
 Bauen
 ----------------------------------------------------------------------
 
@@ -4603,6 +4639,7 @@ auf dem es läuft:
         libxcb-icccm4 libxcb-keysyms1 libxcb-shape0 libegl1 libfontconfig1 libdbus-1-3
    ./build_appimage.sh
    # Ergebnis: dist/PLCDatenlogger-3.0.0-x86_64.AppImage (bzw. -aarch64)
+   #      und dist/plc-datenlogger_3.0.0_amd64.deb (bzw. _arm64)
 
 * **x86_64** auf einem x86_64-Rechner bauen, **arm64** auf einem arm64-Rechner (Raspberry
   Pi 4/5 mit 64-Bit-System, Ubuntu arm64 …). PyInstaller kann nicht für eine andere
@@ -4614,8 +4651,10 @@ auf dem es läuft:
 * Gibt es für PySide6 auf einem älteren arm64-System kein passendes Paket, die Qt-Pakete des
   Systems verwenden: ``sudo apt install python3-pyside6.qtwidgets python3-pyside6.qtsvg`` und
   ``VENV_SYSTEM=1 ./build_appimage.sh``.
-* **GitHub Actions**: Der Workflow ``.github/workflows/appimage.yml`` baut die AppImages für x86_64
-  und arm64 automatisch, wenn das Projekt in einem GitHub-Repository liegt (Actions › AppImages ›
+* Das ``.deb``-Paket entsteht im selben Lauf aus denselben Programmdateien (benötigt
+  ``dpkg-deb``, auf Debian/Ubuntu immer vorhanden); ``SKIP_DEB=1`` schaltet es ab.
+* **GitHub Actions**: Der Workflow ``.github/workflows/appimage.yml`` baut die AppImages und
+  ``.deb``-Pakete für x86_64 und arm64 automatisch, wenn das Projekt in einem GitHub-Repository liegt (Actions › AppImages ›
   Run workflow, oder bei einem Tag ``v*``).
 
 

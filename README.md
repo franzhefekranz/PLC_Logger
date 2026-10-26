@@ -59,7 +59,7 @@ English: [User Manual](../../wiki/en-Home) ([`doc/user_manual.rst`](doc/user_man
 ## Bauen
 
 * **Windows:** `build.bat` → `.exe`, Installer (Inno Setup 7 oder 6) und portables ZIP.
-* **Linux:** `build_appimage.sh` → AppImage für x86_64 bzw. arm64.
+* **Linux:** `build_appimage.sh` → AppImage und Debian-Paket (`.deb`, auch für Raspberry Pi) für x86_64 bzw. arm64.
 * **Anleitung als PDF:** `pip install -r doc/requirements.txt`, dann `python tools/build_doc.py`
   → `dist/PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf` (Sphinx mit rinohtype, kein LaTeX nötig).
 * **GitHub Actions:** *Actions › Windows* bzw. *Actions › AppImages › Run workflow*, oder ein Tag `v*`
@@ -69,7 +69,7 @@ English: [User Manual](../../wiki/en-Home) ([`doc/user_manual.rst`](doc/user_man
 
 Aktuelle Version und Änderungen: [`CHANGELOG.md`](CHANGELOG.md). Die Nummer (`HAUPT.NEBEN.FEHLER`) steht nur in
 `APP_VERSION` in `src/plc_common.py`. Neue Version: `python tools/bump_version.py neben --tag`, dann
-`git push && git push origin v<Version>` – der Tag startet die Workflows, die Installer, ZIP und AppImages als
+`git push && git push origin v<Version>` – der Tag startet die Workflows, die Installer, ZIP, AppImages und .deb-Pakete als
 GitHub-Release veröffentlichen.
 
 Die früheren Einzelprogramme (S7, TIA und CLX Datenlogger) liegen im Branch

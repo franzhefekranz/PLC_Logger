@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Build
+
+* Linux: Zusätzlich zu den AppImages entstehen **Debian-Pakete** (`plc-datenlogger_<Version>_amd64.deb` für PCs,
+  `_arm64.deb` für Raspberry Pi 4/5 mit 64-Bit-System). Installation mit `sudo apt install ./….deb`; Startmenü-Einträge
+  für Logger, Konfiguration und IO-Check, Befehle `plc-datenlogger`, `plc-konfiguration`, `plc-iocheck`,
+  `plc-ereignisse`. Die Pakete hängen auch am GitHub-Release.
+
 ## [3.2.1] – 2026-10-23
 
 ### Behoben
