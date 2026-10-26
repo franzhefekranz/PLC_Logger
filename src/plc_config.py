@@ -1200,6 +1200,8 @@ class ConfigWindow(QMainWindow):
         for bi, b in enumerate(self.blocks):       # Blöcke (nur Anzeige)
             parent = axis_items.get((b.chart, b.axis)) or axis_items[(0, 0)]
             extra = tr(" ({0} in anderen Diagrammen)").format(len(b.targets)) if b.targets else ""
+            if b.ring:
+                extra = tr(", Ringpuffer {0} Datensätze").format(b.ring) + extra
             it = QTreeWidgetItem([f"▦ Block {b.name}: {b.count} × {b.dtype}{extra}"])
             it.setData(0, ROLE_KIND, "block")
             it.setData(0, ROLE_UID, bi)

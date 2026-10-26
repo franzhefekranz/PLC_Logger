@@ -1057,6 +1057,9 @@
 @  ({0} in anderen Diagrammen)
 >  ({0} in other charts)
 
+@ , Ringpuffer {0} Datensätze
+> , ring buffer {0} records
+
 @ {0}: Ist {1}, Stell {2}
 > {0}: PV {1}, CV {2}
 

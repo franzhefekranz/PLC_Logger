@@ -1057,6 +1057,9 @@
 @  ({0} in anderen Diagrammen)
 > 
 
+@ , Ringpuffer {0} Datensätze
+> 
+
 @ {0}: Ist {1}, Stell {2}
 > 
 
