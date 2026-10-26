@@ -1458,8 +1458,10 @@ class PromReader(VmReader):
         span = self._retention_s() + 86400
         step = max(1, int(math.ceil(span / 2000)))
         q = f"sum by (variable) (count_over_time({self._sel(project)}[{step}s]))"
-        data = self._data("/api/v1/query_range", {"query": q, "start": f"{now - span:.3f}", "end": f"{now:.3f}",
-                                                  "step": f"{step}s"}) or {}
+        # Ausgewertet wird an den Zeitpunkten start + k·step: das Ende eine Schrittweite hinter „jetzt“ legen, damit
+        # auch die jüngsten Werte in einen Abschnitt fallen.
+        data = self._data("/api/v1/query_range", {"query": q, "start": f"{now - span:.3f}",
+                                                  "end": f"{now + step:.3f}", "step": f"{step}s"}) or {}
         out = []
         for res in data.get("result", []):
             name = res.get("metric", {}).get("variable")
