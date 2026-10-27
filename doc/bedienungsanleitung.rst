@@ -1043,6 +1043,11 @@ Möglich mit den Treibern ``s7`` (S7-300/400, S7-1200/1500 mit PUT/GET), ``tia``
    * - ``Ringpuffer_S7-300_400.scl``
      - S7-300/400 (SCL-Quelle für STEP 7 V5.x)
      - ``s7``
+   * - ``Ringpuffer_S7-300_400_FB.scl``
+     - S7-300/400 als Funktionsbaustein mit 20 Eingängen: der Puffer liegt im Instanz-DB
+       (mehrere Instanzen = mehrere Ringpuffer). Startadresse ``DBX80.0``, weil die
+       Eingänge die Bytes 0 bis 79 belegen.
+     - ``s7``
    * - ``Ringpuffer_S7-1200_1500.scl``
      - S7-1200/1500 (SCL-Quelle für TIA Portal: *Externe Quellen*)
      - ``tia`` oder ``s7``

@@ -1,0 +1,97 @@
+// =====================================================================================================================
+//  PLC Datenlogger – Ringpuffer für zyklussynchrone Aufzeichnung
+//  S7-300 / S7-400, SCL-Quelle für STEP 7 V5.x (in TIA Portal für S7-300/400: Externe Quelle hinzufügen)
+//  Variante als Funktionsbaustein: Der Ringpuffer liegt im Instanz-DB. Mehrere Instanzen = mehrere unabhängige
+//  Ringpuffer (je Instanz-DB ein Block im Logger).
+//
+//  Die Steuerung schreibt bei jedem Aufruf einen Datensatz (Nummer, Zeit, Werte) in einen Ringpuffer. Der Logger holt
+//  die Datensätze ab und zeichnet sie lückenlos mit der Zeit aus der Steuerung auf.
+//
+//  Einstellungen im Logger (Konfigurationsprogramm › Blöcke): Steuerung mit Treiber "s7",
+//      Startadresse  DB<Instanz-DB>.DBX80.0     Format REAL     Anzahl 20     Ringpuffer 100
+//  Warum Byte 80: Im Instanz-DB stehen zuerst die Eingänge (Wert0 … Wert19 = 20 × 4 Bytes = Byte 0 … 79), danach der
+//  Zaehler. Bei anderer Anzahl Eingänge: Startadresse = 4 × Anzahl Werte (Kontrolle: Spalte „Adresse“ von Zaehler im
+//  Instanz-DB).
+//  Leseintervall der Steuerung z. B. 250 ms. Puffergröße: mindestens 3 × Leseintervall ÷ Zykluszeit
+//  (Beispiel: 10-ms-Weckalarm, 250 ms Leseintervall -> mindestens 75 Datensätze; 100 gewählt).
+//
+//  Anpassen: Anzahl Werte (hier 20: Eingänge Wert0 … Wert19 und ARRAY[0..19] in Daten), Anzahl Datensätze (hier 100:
+//  ARRAY[0..99] in Daten) UND die Konstante N_DATENSAETZE.
+//  Aufruf: z. B. im Weckalarm OB35 (Takt in der Hardwarekonfiguration, z. B. 10 ms oder 50 ms) oder im OB1:
+//      Cycl_Rec.DB100(Wert0 := "Temperatur", Wert1 := "Druck", …);
+//  Zeit: TIME_TCK (SFC64, ms seit Neustart der CPU) – der Logger rechnet den Überlauf heraus.
+// =====================================================================================================================
+
+FUNCTION_BLOCK Cycl_Rec                      // einen Datensatz in den Ringpuffer schreiben
+VAR_INPUT
+    Wert0 : REAL := 0.0;
+    Wert1 : REAL := 0.0;
+    Wert2 : REAL := 0.0;
+    Wert3 : REAL := 0.0;
+    Wert4 : REAL := 0.0;
+    Wert5 : REAL := 0.0;
+    Wert6 : REAL := 0.0;
+    Wert7 : REAL := 0.0;
+    Wert8 : REAL := 0.0;
+    Wert9 : REAL := 0.0;
+    Wert10 : REAL := 0.0;
+    Wert11 : REAL := 0.0;
+    Wert12 : REAL := 0.0;
+    Wert13 : REAL := 0.0;
+    Wert14 : REAL := 0.0;
+    Wert15 : REAL := 0.0;
+    Wert16 : REAL := 0.0;
+    Wert17 : REAL := 0.0;
+    Wert18 : REAL := 0.0;
+    Wert19 : REAL := 0.0;
+END_VAR
+
+VAR
+    Zaehler : DINT;                          // Anzahl geschriebener Datensätze – Adresse im Logger: DBX80.0
+    Daten : ARRAY [0..99] OF STRUCT          // Datensätze ("Ringpuffer" im Logger)
+        Seq   : DINT;                        // Nummer des Datensatzes (= Zaehler beim Schreiben)
+        Zeit  : DINT;                        // Zeit in ms (TIME_TCK)
+        Werte : ARRAY[0..19] OF REAL;        // aufgezeichnete Werte ("Anzahl" im Logger)
+    END_STRUCT;
+END_VAR
+
+VAR_TEMP
+  n    : DINT;
+  slot : INT;
+END_VAR
+
+CONST
+  N_DATENSAETZE := 100;                      // = Anzahl Elemente von Daten
+END_CONST
+
+BEGIN
+  // Reihenfolge nicht ändern: erst Werte und Zeit, dann Seq, zuletzt der Zähler.
+  n := Zaehler + 1;
+  IF n >= 2000000000 THEN                    // nach Jahren: von vorn zählen (der Logger erkennt das)
+    n := 1;
+  END_IF;
+  slot := DINT_TO_INT(n MOD N_DATENSAETZE);
+  Daten[slot].Werte[0]  := Wert0;
+  Daten[slot].Werte[1]  := Wert1;
+  Daten[slot].Werte[2]  := Wert2;
+  Daten[slot].Werte[3]  := Wert3;
+  Daten[slot].Werte[4]  := Wert4;
+  Daten[slot].Werte[5]  := Wert5;
+  Daten[slot].Werte[6]  := Wert6;
+  Daten[slot].Werte[7]  := Wert7;
+  Daten[slot].Werte[8]  := Wert8;
+  Daten[slot].Werte[9]  := Wert9;
+  Daten[slot].Werte[10] := Wert10;
+  Daten[slot].Werte[11] := Wert11;
+  Daten[slot].Werte[12] := Wert12;
+  Daten[slot].Werte[13] := Wert13;
+  Daten[slot].Werte[14] := Wert14;
+  Daten[slot].Werte[15] := Wert15;
+  Daten[slot].Werte[16] := Wert16;
+  Daten[slot].Werte[17] := Wert17;
+  Daten[slot].Werte[18] := Wert18;
+  Daten[slot].Werte[19] := Wert19;
+  Daten[slot].Zeit := TIME_TO_DINT(TIME_TCK());   // SFC64 = TIME_TCK
+  Daten[slot].Seq := n;
+  Zaehler := n;
+END_FUNCTION_BLOCK

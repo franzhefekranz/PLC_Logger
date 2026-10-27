@@ -1015,6 +1015,11 @@ editor opens the folder ``vorlagen`` with ready-made blocks:
    * - ``Ringpuffer_S7-300_400.scl``
      - S7-300/400 (SCL source for STEP 7 V5.x)
      - ``s7``
+   * - ``Ringpuffer_S7-300_400_FB.scl``
+     - S7-300/400 as function block with 20 inputs: the buffer is in the instance DB
+       (several instances = several ring buffers). Start address ``DBX80.0``, because the
+       inputs occupy bytes 0 to 79.
+     - ``s7``
    * - ``Ringpuffer_S7-1200_1500.scl``
      - S7-1200/1500 (SCL source for TIA Portal: *External source files*)
      - ``tia`` or ``s7``

@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* Vorlage `Ringpuffer_S7-300_400_FB.scl`: Ringpuffer für S7-300/400 als Funktionsbaustein (Puffer im Instanz-DB,
+  20 Eingänge, Startadresse `DBX80.0`); mehrere Instanzen ergeben mehrere Ringpuffer.
+
 ## [3.3.0] – 2026-10-27
 
 ### Neu
