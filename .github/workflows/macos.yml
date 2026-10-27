@@ -44,7 +44,16 @@ jobs:
           python tools/bump_version.py --check-tag "$(echo "$REL_TAG" | tr "[:upper:]" "[:lower:]")"
           python tools/bump_version.py --notes > release_notes.md
       - name: App und .dmg bauen
-        run: bash ./build_macos.sh
+        shell: bash
+        run: |
+          set -o pipefail
+          bash ./build_macos.sh 2>&1 | tee build.log
+      - name: Fehler als Hinweise
+        if: failure()
+        shell: bash
+        run: |
+          # die letzten Zeilen des Build-Protokolls als Hinweis (im Lauf und über die API lesbar)
+          tail -n 60 build.log | python3 -c "import sys; t=sys.stdin.read()[-3500:]; print('::error title=build_macos.sh::' + t.replace('%','%25').replace('\r','').replace('\n','%0A'))"
       - uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.runner }}
