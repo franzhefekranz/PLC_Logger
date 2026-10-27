@@ -153,7 +153,8 @@ class ConfigWindow(QMainWindow):
         ``fill`` die Felder aus der Datei (Einstellungen, Diagramme, Variablen, Blöcke, Steuerungen, Trigger).
         """
         super().__init__()
-        self.menuBar().setNativeMenuBar(False)        # Menü im Fenster (Linux: sonst evtl. nur im globalen Menü)
+        # Menü im Fenster (Linux: sonst evtl. nur im globalen Menü); macOS: wie üblich oben am Bildschirm
+        self.menuBar().setNativeMenuBar(sys.platform == "darwin")
         self.resize(1300, 820)
         # Pfad der aktuell bearbeiteten Konfigurationsdatei: Startparameter, sonst die zuletzt benutzte Datei ('' = neu, ungespeichert).
         self.path = os.path.abspath(path) if path else last_config_path()

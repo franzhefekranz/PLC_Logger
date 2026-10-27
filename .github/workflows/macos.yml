@@ -1,0 +1,58 @@
+# macOS-App des PLC Datenloggers bauen (Apple Silicon arm64 und Intel x86_64), verpackt als .dmg.
+# Start: bei einem Tag "v*" oder von Hand (Actions › macOS › Run workflow). Ergebnis: Artefakte je Architektur;
+# bei einem Tag zusätzlich als Dateien eines GitHub-Release.
+name: macOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Vorhandener Tag (z. B. v3.0.0): diesen Stand bauen und die Dateien an sein Release hängen; leer = nur Artefakte"
+        required: false
+        default: ""
+  push:
+    tags: ["v*", "V*"]
+
+# Schreibrecht für den Release-Schritt (Dateien an ein GitHub-Release hängen)
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        # arm64: Apple Silicon (M1 …); x86_64: Intel-Macs. Beide Apps laufen ab macOS 12.
+        runner: ["macos-15", "macos-15-intel"]
+    env:
+      # Tag, zu dem ein Release gehört: Tag-Push oder von Hand angegebener Tag (leer = nur Artefakte)
+      REL_TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Tag und Versionsnummer prüfen, Release-Text aus CHANGELOG.md
+        if: env.REL_TAG != ''
+        shell: bash
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python tools/bump_version.py --check-tag "$(echo "$REL_TAG" | tr "[:upper:]" "[:lower:]")"
+          python tools/bump_version.py --notes > release_notes.md
+      - name: App und .dmg bauen
+        run: bash ./build_macos.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.runner }}
+          path: dist/*.dmg
+      - name: Release
+        if: env.REL_TAG != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.REL_TAG }}
+          body_path: release_notes.md
+          files: dist/*.dmg

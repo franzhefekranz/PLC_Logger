@@ -1042,9 +1042,9 @@ class MainWindow(QMainWindow):
     # config_path: Konfigurationsdatei (JSON); demo: Demo-Modus vorwählen.
     def __init__(self, config_path, demo=False):
         super().__init__()
-        # Menüleiste immer im Fenster: Unter Linux (KDE Plasma, Ubuntu mit globalem Menü …) wandert sie sonst in die
-        # Leiste der Arbeitsoberfläche und fehlt im Fenster – samt Logo rechts oben.
-        self.menuBar().setNativeMenuBar(False)
+        # Menüleiste im Fenster: Unter Linux (KDE Plasma, Ubuntu mit globalem Menü …) wandert sie sonst in die
+        # Leiste der Arbeitsoberfläche und fehlt im Fenster – samt Logo rechts oben. macOS: wie üblich oben am Bildschirm.
+        self.menuBar().setNativeMenuBar(sys.platform == "darwin")
         self.resize(1400, 800)
         self.config_path = config_path
         # Konfiguration laden; ohne Konfigurationsdatei erscheint eine leere Standardkonfiguration, bei einer fehlerhaften Datei

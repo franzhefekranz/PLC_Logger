@@ -59,10 +59,12 @@ def _search_dirs():
     dirs = []
     if getattr(sys, "frozen", False):
         exe_dir = os.path.dirname(sys.executable)
-        # Installer und portable Version: Programmordner bzw. Unterordner Doku; AppImage: usr/share/doc/<Programm>.
+        # Installer und portable Version: Programmordner bzw. Unterordner Doku; AppImage: usr/share/doc/<Programm>;
+        # macOS-App: Doku in den Programmdaten (Contents/Resources, erreichbar über _MEIPASS).
+        meipass = getattr(sys, "_MEIPASS", "")
         dirs += [os.path.join(exe_dir, "Doku"), exe_dir,
                  os.path.join(exe_dir, "..", "..", "share", "doc", os.path.basename(exe_dir)),
-                 getattr(sys, "_MEIPASS", "")]
+                 os.path.join(meipass, "Doku") if meipass else "", meipass]
     # Quelltext: Projektordner (über src) mit build\doc (PDF aus tools/build_doc.py), doc und dist.
     here = os.path.dirname(os.path.abspath(__file__))
     root = os.path.dirname(here) if os.path.basename(here).lower() == "src" else here
