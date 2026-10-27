@@ -27,7 +27,13 @@ jobs:
     env:
       # Tag, zu dem ein Release gehört: Tag-Push oder von Hand angegebener Tag (leer = nur Artefakte)
       REL_TAG: ${{ inputs.tag || (startsWith(github.ref, 'refs/tags/') && github.ref_name) || '' }}
+      PYTHONUTF8: "1"
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
     runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,7 +59,7 @@ jobs:
         shell: bash
         run: |
           # die letzten Zeilen des Build-Protokolls als Hinweis (im Lauf und über die API lesbar)
-          tail -n 60 build.log | python3 -c "import sys; t=sys.stdin.read()[-3500:]; print('::error title=build_macos.sh::' + t.replace('%','%25').replace('\r','').replace('\n','%0A'))"
+          tail -n 60 build.log | python3 -c "import sys; t=sys.stdin.buffer.read().decode('utf-8','replace')[-3500:]; print('::error title=build_macos.sh::' + t.replace('%','%25').replace('\r','').replace('\n','%0A'))"
       - uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.runner }}
