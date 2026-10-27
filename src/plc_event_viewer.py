@@ -398,6 +398,8 @@ def run_viewer(arg=None):
     """Viewer allein starten (eigenes Fenster, ohne Logger)."""
     from plc_branding import app_icon, set_windows_app_id
     set_windows_app_id()
+    from plc_common import qt_platform_setup
+    qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     from plc_i18n import install_qt
     install_qt(app)

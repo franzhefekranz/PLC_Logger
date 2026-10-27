@@ -1030,6 +1030,14 @@ class PlcLed(QWidget):
 # ---------------------------------------------------------------------------------------
 # Hauptfenster
 # ---------------------------------------------------------------------------------------
+
+def dock_features(dock):
+    """Unter Wayland (ohne XWayland, siehe ``plc_common.qt_platform_setup``) Docks nicht verschieben oder abtrennen
+    lassen: Qt zieht sie dort über eine Drag-and-Drop-Schleife, die abstürzen kann. Anordnen geht weiter über das Menü
+    Ansicht (untereinander, nebeneinander, Tabs)."""
+    if QApplication.platformName() == "wayland":
+        dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable)
+
 class MainWindow(QMainWindow):
     # config_path: Konfigurationsdatei (JSON); demo: Demo-Modus vorwählen.
     def __init__(self, config_path, demo=False):
@@ -1161,6 +1169,7 @@ class MainWindow(QMainWindow):
         bl.addWidget(self.lbl_time)
         bl.addWidget(self.table)
         self.dock.setWidget(box)
+        dock_features(self.dock)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
 
         # ---- Aktionen (Werkzeugleiste und Menüs) ----
@@ -1470,6 +1479,7 @@ class MainWindow(QMainWindow):
             dock = QDockWidget(pname, self)
             dock.setObjectName(f"page{k}")
             dock.setWidget(page)
+            dock_features(dock)
             self.page_docks.append(dock)
             for ci in members:
                 self.dock_of_chart[ci] = dock
@@ -2772,6 +2782,8 @@ class MainWindow(QMainWindow):
 # Hauptfenster, Ereignisschleife. Rückgabe: Exit-Code.
 def run_gui(config_path, demo=False, splash=None):
     set_windows_app_id()
+    from plc_common import qt_platform_setup
+    qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     if splash is None:
         from plc_i18n import install_qt

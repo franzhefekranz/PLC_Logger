@@ -4738,6 +4738,13 @@ im Ordner des AppImage. Manche Systeme brauchen für AppImages das Paket ``libfu
 (Ubuntu 22.04: ``sudo apt install libfuse2``, Ubuntu 24.04: ``libfuse2t64``); ohne FUSE
 startet es auch mit ``--appimage-extract-and-run``.
 
+**Wayland:** Auf Arbeitsoberflächen mit Wayland (z. B. Ubuntu, Fedora, KDE Plasma) starten
+alle Programme über **XWayland**. Unter reinem Wayland stürzte Qt beim Ziehen eines
+Diagramm- oder Wertefensters (Dock) ab; über XWayland lassen sich die Fenster zudem frei
+verschieben und abtrennen. Ein eigenes ``QT_QPA_PLATFORM`` gilt weiter; mit
+``PLC_WAYLAND=1`` läuft das Programm unter Wayland, dann lassen sich die Docks nicht ziehen
+(Anordnung über das Menü *Ansicht*). Fehlt XWayland, gilt dasselbe automatisch.
+
 Die Bibliothek **libplctag** (``libplctag.so``) wird beim Bauen aus dem Quelltext übersetzt und ist im AppImage enthalten.
 
 .. _debpaket:

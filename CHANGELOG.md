@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* Linux (Wayland): Absturz beim Ziehen eines Diagramm- oder Wertefensters (Dock). Unter Wayland starten die Programme
+  jetzt über XWayland (eigenes `QT_QPA_PLATFORM` gilt weiter, `PLC_WAYLAND=1` erzwingt Wayland); ohne XWayland lassen
+  sich die Docks nicht mehr ziehen, die Anordnung geht über das Menü *Ansicht*.
+
 ## [3.3.1] – 2026-10-27
 
 ### Neu

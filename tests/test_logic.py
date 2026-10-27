@@ -600,3 +600,26 @@ def test_process_view_api(tmp_path):
     assert c.post("/api/prozess", json={"seiten": "x"}).status_code == 400
     page = c.get("/prozess").get_data(as_text=True)
     assert "Prozessbild" in page and "Diagramme" in page
+
+
+def test_qt_platform_setup_wayland(monkeypatch):
+    """Linux mit Wayland und XWayland: Qt über xcb; eigene Einstellung und PLC_WAYLAND=1 haben Vorrang."""
+    import plc_common
+    monkeypatch.setattr(plc_common.sys, "platform", "linux")
+    for k in ("QT_QPA_PLATFORM", "PLC_WAYLAND", "XDG_SESSION_TYPE"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("WAYLAND_DISPLAY", "wayland-0")
+    monkeypatch.setenv("DISPLAY", ":0")
+    plc_common.qt_platform_setup()
+    assert os.environ["QT_QPA_PLATFORM"] == "xcb"
+    monkeypatch.setenv("QT_QPA_PLATFORM", "wayland")
+    plc_common.qt_platform_setup()
+    assert os.environ["QT_QPA_PLATFORM"] == "wayland"
+    monkeypatch.delenv("QT_QPA_PLATFORM")
+    monkeypatch.setenv("PLC_WAYLAND", "1")
+    plc_common.qt_platform_setup()
+    assert "QT_QPA_PLATFORM" not in os.environ
+    monkeypatch.delenv("PLC_WAYLAND")
+    monkeypatch.delenv("DISPLAY")                       # kein XWayland: bei Wayland bleiben
+    plc_common.qt_platform_setup()
+    assert "QT_QPA_PLATFORM" not in os.environ

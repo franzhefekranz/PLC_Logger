@@ -1582,6 +1582,8 @@ def run_iocheck(arg=None, demo=False):
     from plc_common import last_config_path
     from plc_i18n import install_qt
     set_windows_app_id("PLCDatenlogger.IOCheck")
+    from plc_common import qt_platform_setup
+    qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     install_qt(app)
     app.setWindowIcon(app_icon())

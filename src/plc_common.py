@@ -125,6 +125,21 @@ def program_command(kind: str, *args) -> list:
     return [sys.executable, os.path.join(here, "plc_logger.py")] + (switch if kind == "iocheck" else []) + args
 
 
+def qt_platform_setup():
+    """Vor dem Anlegen der QApplication aufrufen: unter Linux mit Wayland Qt über XWayland (``xcb``) starten.
+
+    Unter Wayland verschiebt Qt angedockte Fenster (QDockWidget) über eine Drag-and-Drop-Schleife; beim Ziehen eines
+    Diagramm- oder Wertefensters stürzte das Programm dabei ab (Qt/Wayland, Speicherfehler beim Freigeben). Über
+    XWayland gibt es diesen Weg nicht, und Fenster lassen sich frei positionieren. Ein selbst gesetztes
+    ``QT_QPA_PLATFORM`` gilt weiter; ``PLC_WAYLAND=1`` erzwingt Wayland. Ohne XWayland (``DISPLAY`` leer) bleibt es bei
+    Wayland – dann sperrt ``dock_features`` das Verschieben der Docks."""
+    if not sys.platform.startswith("linux") or os.environ.get("QT_QPA_PLATFORM"):
+        return
+    wayland = bool(os.environ.get("WAYLAND_DISPLAY")) or os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
+    if wayland and os.environ.get("DISPLAY") and os.environ.get("PLC_WAYLAND", "") != "1":
+        os.environ["QT_QPA_PLATFORM"] = "xcb"
+
+
 def child_env() -> dict:
     """Umgebung für ein neu gestartetes Programm (Logger, Konfiguration, IO-Check aus einem anderen heraus).
 

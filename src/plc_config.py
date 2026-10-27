@@ -2439,6 +2439,8 @@ def main(argv=None):
     """Konfigurationsprogramm starten: Startbild (Auswahl der Datei), dann das Hauptfenster."""
     argv = sys.argv[1:] if argv is None else list(argv)
     set_windows_app_id("PLCDatenlogger.Konfiguration")
+    from plc_common import qt_platform_setup
+    qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     from plc_i18n import install_qt
     install_qt(app)

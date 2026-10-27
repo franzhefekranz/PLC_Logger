@@ -4625,6 +4625,13 @@ the AppImage, it stays in the folder of the AppImage. Some systems need the pack
 ``libfuse2`` for AppImages (Ubuntu 22.04: ``sudo apt install libfuse2``, Ubuntu 24.04:
 ``libfuse2t64``); without FUSE it also starts with ``--appimage-extract-and-run``.
 
+**Wayland:** On desktops with Wayland (e.g. Ubuntu, Fedora, KDE Plasma) all programs start
+via **XWayland**. Under pure Wayland, Qt crashed when dragging a chart or value window
+(dock); via XWayland the windows can also be moved and detached freely. An own
+``QT_QPA_PLATFORM`` still applies; with ``PLC_WAYLAND=1`` the program runs under Wayland,
+then the docks cannot be dragged (arrangement via the menu *View*). If XWayland is missing,
+the same applies automatically.
+
 The library **libplctag** (``libplctag.so``) is compiled from source during the build and
 is contained in the AppImage.
 

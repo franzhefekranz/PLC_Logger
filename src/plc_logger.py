@@ -90,6 +90,8 @@ def run_with_start_window(path, explicit, demo):
     from plc_branding import set_windows_app_id
     from plc_i18n import install_qt, tr
     set_windows_app_id()
+    from plc_common import qt_platform_setup
+    qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     install_qt(app)
     from plc_splash import choose
