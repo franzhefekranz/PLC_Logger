@@ -155,7 +155,7 @@ rm -f "$OUT"
 hdiutil create -volname "$NAME $VERSION" -srcfolder "$STAGE" -ov -format UDZO "$OUT" >/dev/null
 echo
 echo "[OK] $OUT"
-echo "     Installieren: DMG öffnen, „$NAME“ auf „Programme“ ziehen."
+echo "     Installieren: DMG öffnen, „${NAME}“ auf „Programme“ ziehen."
 echo "     Erster Start: Rechtsklick › Öffnen (nicht signiert) oder"
 echo "                   xattr -dr com.apple.quarantine \"/Applications/$NAME.app\""
 echo "     Konfiguration: \"/Applications/$NAME.app/Contents/MacOS/$NAME\" --konfig"
