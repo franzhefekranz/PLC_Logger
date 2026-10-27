@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* Konfigurationsprogramm: Absturz beim Start bzw. beim Aufbau des Variablenbaums („not enough values to unpack“),
+  wenn ein Block Elemente in einem anderen Diagramm hatte und eine Achse oder ein Diagramm gewählt war.
+
 ### Neu
 
 * Vorlagen `Ringpuffer_S7-300_400_FB.scl` und `Ringpuffer_S7-1200_1500_FB.scl` (TIA Portal, FB nicht optimiert):

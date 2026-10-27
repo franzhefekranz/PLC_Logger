@@ -123,6 +123,13 @@ def test_config_window(qt_log, demo_config):
     nd = NotifyDialog(w, {"aktiv": True, "email": {"aktiv": True}}, "Testanlage")
     assert nd.collect()["email"]["aktiv"] and nd.collect()["aktiv"]
     nd.send_test()                                           # Fehlermeldung (kein Server) statt Absturz
+    # Block mit Elementen in einem anderen Diagramm bei gewählter Achse (Fehler in 3.3.0: Auswahl überschrieben)
+    from plc_common import Block
+    w.blocks.append(Block(name="Ziele", address="DB9.DBD0", count=3, targets={1: (len(w.charts) - 1, 0)}))
+    w.prop_key = ("axis", 0, 0)
+    w.refresh_tree()
+    w.blocks.pop()
+    w.refresh_tree()
     w.sp_bar_w.setValue(8)
     w.ed_customer_logo.setText("kunde.png")
     assert w._write(demo_config), qt_log.messages

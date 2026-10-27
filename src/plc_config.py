@@ -1211,10 +1211,11 @@ class ConfigWindow(QMainWindow):
             parent.addChild(it)
             # Elemente mit eigenem Ziel erscheinen zusätzlich unter der Achse, in der sie dargestellt werden.
             groups = {}
-            for idx, key in sorted(b.targets.items()):
-                groups.setdefault(key, []).append(idx)
-            for key, idxs in groups.items():
-                p2 = axis_items.get(key)
+            # (eigene Namen – „key“ ist oben die gemerkte Auswahl und wird unten noch gebraucht)
+            for idx, target in sorted(b.targets.items()):
+                groups.setdefault(target, []).append(idx)
+            for target, idxs in groups.items():
+                p2 = axis_items.get(target)
                 if p2 is None:
                     continue
                 shown = ", ".join(f"[{i}]" for i in idxs[:8]) + (" …" if len(idxs) > 8 else "")
