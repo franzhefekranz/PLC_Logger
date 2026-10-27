@@ -154,8 +154,8 @@ also the data folder (configuration, recordings, log file).
      - Language switching and language files (``de.txt`` = template, ``en.txt`` = English).
    * - ``plc_splash.py``
      - Start screen (choice of configuration, loading indicator).
-   * - ``build_appimage.sh``, ``tools/extract_tr.py``
-     - Build the Linux AppImage and .deb package; update the language files after program changes.
+   * - ``build_appimage.sh``, ``build_macos.sh``, ``tools/extract_tr.py``
+     - Build the Linux AppImage and .deb package or the macOS app; update the language files after program changes.
    * - ``plc_common.py``
      - Data model and configuration file (JSON) (including import of the configurations
        of the single programs). Not started directly.
@@ -4699,6 +4699,46 @@ the computer it runs on:
 * **GitHub Actions**: The workflow ``.github/workflows/appimage.yml`` builds the
   AppImages and ``.deb`` packages for x86_64 and arm64 automatically if the project is in a GitHub repository
   (Actions › AppImages › Run workflow, or with a tag ``v*``).
+
+
+.. _macos:
+
+macOS (Apple Silicon and Intel)
+======================================================================
+
+For macOS the program is available as an **app** in a ``.dmg`` file:
+``PLCDatenlogger-<version>-macos-arm64.dmg`` for Macs with Apple Silicon (M1, M2 …) and
+``…-macos-x86_64.dmg`` for Intel Macs; both from macOS 12. The app contains the logger,
+configuration program, IO check and event viewer, plus the manual and the PLC templates.
+
+**Installing:** open the DMG and drag **PLC Datenlogger** onto **Programme**
+(Applications). The app is not signed and notarized by Apple; macOS therefore blocks it at
+the first start. Start it once in the Finder with **right-click › Open** and confirm (newer
+macOS versions: *System Settings › Privacy & Security › Open Anyway*) or in the terminal:
+
+.. code-block:: console
+
+   xattr -dr com.apple.quarantine "/Applications/PLC Datenlogger.app"
+
+**Usage:** the app starts the logger with the start screen. The configuration program
+opens from the logger (config editor); parameters as under Linux:
+
+.. code-block:: console
+
+   "/Applications/PLC Datenlogger.app/Contents/MacOS/PLC Datenlogger" --konfig
+   "/Applications/PLC Datenlogger.app/Contents/MacOS/PLC Datenlogger" --headless plant.json
+
+The data is stored in ``~/PLCDatenlogger``. As with Mac programs, the menu bar is at the top
+of the screen; shortcuts with ``Ctrl`` use ``⌘`` on the Mac. libplctag (driver ``clx``) is
+included.
+
+**Building:** ``build_macos.sh`` builds the app on a Mac for its architecture (needs Python
+3.10+, the Xcode Command Line Tools and ``cmake`` for libplctag, e.g. ``brew install
+cmake``); result ``dist/PLC Datenlogger.app`` and the ``.dmg``. The workflow
+``.github/workflows/macos.yml`` builds both variants on GitHub (Actions › macOS › Run
+workflow, or with a tag ``v*``) and attaches the ``.dmg`` files to the release. With an Apple
+developer account the script signs with ``MACOS_SIGN_ID="Developer ID Application: …"``;
+notarization then follows with ``xcrun notarytool``.
 
 
 Help and context help (F1)

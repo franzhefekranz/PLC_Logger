@@ -165,5 +165,5 @@ alles übersetzt ist und die Platzhalter stimmen.
   Benachrichtigungen mit lokalen Testservern, OPC-UA-Server, Prozessbild-API).
 * `tests/test_gui.py` – Fenster im Demo-Modus ohne Bildschirm (`QT_QPA_PLATFORM=offscreen`); modale Dialoge ersetzt
   `tests/conftest.py`.
-* `.github/workflows/` – *Tests* (jeder Push, Linux und Windows), *Windows* (Installer), *AppImage* (Linux: AppImages und .deb-Pakete),
+* `.github/workflows/` – *Tests* (jeder Push, Linux, Windows und macOS), *Windows* (Installer), *AppImage* (Linux: AppImages und .deb-Pakete), *macOS* (App als .dmg),
   *Anleitung* (PDF), *Wiki*, *Screenshots*.

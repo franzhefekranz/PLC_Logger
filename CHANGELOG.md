@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **macOS**: App „PLC Datenlogger“ als `.dmg` für Apple Silicon und Intel (ab macOS 12) mit Logger,
+  Konfigurationsprogramm, IO-Check, Ereignis-Viewer, Anleitung, SPS-Vorlagen und libplctag; Menüleiste oben am
+  Bildschirm. Ad hoc signiert (erster Start: Rechtsklick › Öffnen). Build: `build_macos.sh`, Workflow *macOS*; die
+  Tests laufen jetzt auch auf macOS.
+
 ## [3.3.2] – 2026-10-27
 
 ### Behoben
