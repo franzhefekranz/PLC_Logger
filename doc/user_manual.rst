@@ -1023,6 +1023,11 @@ editor opens the folder ``vorlagen`` with ready-made blocks:
    * - ``Ringpuffer_S7-1200_1500.scl``
      - S7-1200/1500 (SCL source for TIA Portal: *External source files*)
      - ``tia`` or ``s7``
+   * - ``Ringpuffer_S7-1200_1500_FB.scl``
+     - S7-1200/1500 as function block with 20 inputs, **not optimized**: the buffer is in
+       the instance DB ``Cycl_Rec_DB`` (several instances = several ring buffers). Start
+       address ``DBX80.0``.
+     - ``tia`` or ``s7``
    * - ``Ringpuffer_ControlLogix.st``
      - ControlLogix/CompactLogix (Structured Text, data types described)
      - ``clx``

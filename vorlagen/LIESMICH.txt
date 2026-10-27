@@ -9,6 +9,8 @@ Leseintervall).
   Ringpuffer_S7-300_400.scl      S7-300/400, SCL (STEP 7 V5.x)            Treiber s7
   Ringpuffer_S7-300_400_FB.scl   S7-300/400, SCL als FB (Puffer im Instanz-DB, Startadresse DBX80.0)   Treiber s7
   Ringpuffer_S7-1200_1500.scl    S7-1200/1500, SCL-Quelle für TIA Portal   Treiber tia oder s7
+  Ringpuffer_S7-1200_1500_FB.scl S7-1200/1500 als FB, nicht optimiert (Puffer im Instanz-DB, Startadresse DBX80.0)
+                                                                           Treiber tia oder s7
   Ringpuffer_ControlLogix.st     ControlLogix/CompactLogix, Structured Text  Treiber clx
 
 Aufbau des Puffers (in dieser Reihenfolge, S7: nicht optimierter DB):

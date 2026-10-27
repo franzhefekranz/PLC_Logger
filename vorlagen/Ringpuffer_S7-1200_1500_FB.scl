@@ -1,0 +1,115 @@
+// =====================================================================================================================
+//  PLC Datenlogger – Ringpuffer für zyklussynchrone Aufzeichnung
+//  S7-1200 / S7-1500, SCL-Quelle für TIA Portal (Projektnavigation › Externe Quellen › Neue externe Datei hinzufügen,
+//  dann „Bausteine aus Quelle generieren“)
+//  Variante als Funktionsbaustein: Der Ringpuffer liegt im Instanz-DB. Mehrere Instanzen = mehrere unabhängige
+//  Ringpuffer (je Instanz-DB ein Block im Logger).
+//
+//  Die Steuerung schreibt bei jedem Aufruf einen Datensatz (Nummer, Zeit, Werte) in einen Ringpuffer. Der Logger holt
+//  die Datensätze ab und zeichnet sie lückenlos mit der Zeit aus der Steuerung auf.
+//
+//  Wichtig: Der FB ist NICHT optimiert (S7_Optimized_Access := 'FALSE'). Nur dann hat sein Instanz-DB feste
+//  Byte-Adressen, die der Logger lesen kann. Die Nummer des Instanz-DB vergibt TIA Portal beim Generieren
+//  (Eigenschaften des DB, z. B. auf 100 stellen) – sie gehört in die Adresse im Logger.
+//
+//  Einstellungen im Logger (Konfigurationsprogramm › Blöcke):
+//      Treiber "tia" (S7CommPlus, ohne PUT/GET) oder "s7" (PUT/GET in der CPU erlauben)
+//      Startadresse  DB<Instanz-DB>.DBX80.0     Format REAL     Anzahl 20     Ringpuffer 100
+//  Warum Byte 80: Im Instanz-DB stehen zuerst die Eingänge (Wert0 … Wert19 = 20 × 4 Bytes = Byte 0 … 79), danach der
+//  Zaehler. Bei anderer Anzahl Eingänge: Startadresse = 4 × Anzahl Werte (Kontrolle: Spalte „Offset“ von Zaehler im
+//  Instanz-DB, nach dem Übersetzen).
+//  Leseintervall der Steuerung z. B. 250 ms. Puffergröße: mindestens 3 × Leseintervall ÷ Zykluszeit
+//  (Beispiel: 10-ms-Weckalarm, 250 ms Leseintervall -> mindestens 75 Datensätze; 100 gewählt).
+//
+//  Anpassen: Anzahl Werte (hier 20: Eingänge Wert0 … Wert19 und Array[0..19] in Daten), Anzahl Datensätze (hier 100:
+//  Array[0..99] in Daten) UND die Zahl 100 bei MOD.
+//  Aufruf: z. B. im Weckalarm-OB "Cyclic interrupt" (OB30, Zyklus 10 ms oder 50 ms) oder im Main (OB1):
+//      "Cycl_Rec_DB"(Wert0 := "Temperatur", Wert1 := "Druck", …);
+//  Zeit: Systemzeit der CPU (RD_SYS_T) als ms seit Mitternacht – der Logger rechnet den Tageswechsel heraus.
+// =====================================================================================================================
+
+FUNCTION_BLOCK "Cycl_Rec"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 0.1
+   VAR_INPUT
+      Wert0 : Real := 0.0;
+      Wert1 : Real := 0.0;
+      Wert2 : Real := 0.0;
+      Wert3 : Real := 0.0;
+      Wert4 : Real := 0.0;
+      Wert5 : Real := 0.0;
+      Wert6 : Real := 0.0;
+      Wert7 : Real := 0.0;
+      Wert8 : Real := 0.0;
+      Wert9 : Real := 0.0;
+      Wert10 : Real := 0.0;
+      Wert11 : Real := 0.0;
+      Wert12 : Real := 0.0;
+      Wert13 : Real := 0.0;
+      Wert14 : Real := 0.0;
+      Wert15 : Real := 0.0;
+      Wert16 : Real := 0.0;
+      Wert17 : Real := 0.0;
+      Wert18 : Real := 0.0;
+      Wert19 : Real := 0.0;
+   END_VAR
+
+   VAR
+      Zaehler : DInt;                        // Anzahl geschriebener Datensätze – Adresse im Logger: DBX80.0
+      Daten : Array[0..99] of Struct         // Datensätze ("Ringpuffer" im Logger)
+         Seq : DInt;                         // Nummer des Datensatzes (= Zaehler beim Schreiben)
+         Zeit : DInt;                        // Zeit in ms seit Mitternacht
+         Werte : Array[0..19] of Real;       // aufgezeichnete Werte ("Anzahl" im Logger)
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP
+      n : DInt;
+      slot : DInt;
+      ret : Int;
+      jetzt : DTL;
+   END_VAR
+
+BEGIN
+	// Reihenfolge nicht ändern: erst Werte und Zeit, dann Seq, zuletzt der Zähler.
+	#n := #Zaehler + 1;
+	IF #n >= 2000000000 THEN               // nach Jahren: von vorn zählen (der Logger erkennt das)
+	    #n := 1;
+	END_IF;
+	#slot := #n MOD 100;                   // 100 = Anzahl Elemente von Daten
+	#Daten[#slot].Werte[0] := #Wert0;
+	#Daten[#slot].Werte[1] := #Wert1;
+	#Daten[#slot].Werte[2] := #Wert2;
+	#Daten[#slot].Werte[3] := #Wert3;
+	#Daten[#slot].Werte[4] := #Wert4;
+	#Daten[#slot].Werte[5] := #Wert5;
+	#Daten[#slot].Werte[6] := #Wert6;
+	#Daten[#slot].Werte[7] := #Wert7;
+	#Daten[#slot].Werte[8] := #Wert8;
+	#Daten[#slot].Werte[9] := #Wert9;
+	#Daten[#slot].Werte[10] := #Wert10;
+	#Daten[#slot].Werte[11] := #Wert11;
+	#Daten[#slot].Werte[12] := #Wert12;
+	#Daten[#slot].Werte[13] := #Wert13;
+	#Daten[#slot].Werte[14] := #Wert14;
+	#Daten[#slot].Werte[15] := #Wert15;
+	#Daten[#slot].Werte[16] := #Wert16;
+	#Daten[#slot].Werte[17] := #Wert17;
+	#Daten[#slot].Werte[18] := #Wert18;
+	#Daten[#slot].Werte[19] := #Wert19;
+	#ret := RD_SYS_T(#jetzt);
+	#Daten[#slot].Zeit := ((USINT_TO_DINT(#jetzt.HOUR) * 60 + USINT_TO_DINT(#jetzt.MINUTE)) * 60
+	    + USINT_TO_DINT(#jetzt.SECOND)) * 1000 + UDINT_TO_DINT(#jetzt.NANOSECOND / 1000000);
+	#Daten[#slot].Seq := #n;
+	#Zaehler := #n;
+END_FUNCTION_BLOCK
+
+DATA_BLOCK "Cycl_Rec_DB"
+{ S7_Optimized_Access := 'FALSE' }
+VERSION : 0.1
+NON_RETAIN
+"Cycl_Rec"
+
+BEGIN
+
+END_DATA_BLOCK

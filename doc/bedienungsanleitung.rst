@@ -1051,6 +1051,11 @@ Möglich mit den Treibern ``s7`` (S7-300/400, S7-1200/1500 mit PUT/GET), ``tia``
    * - ``Ringpuffer_S7-1200_1500.scl``
      - S7-1200/1500 (SCL-Quelle für TIA Portal: *Externe Quellen*)
      - ``tia`` oder ``s7``
+   * - ``Ringpuffer_S7-1200_1500_FB.scl``
+     - S7-1200/1500 als Funktionsbaustein mit 20 Eingängen, **nicht optimiert**: der Puffer
+       liegt im Instanz-DB ``Cycl_Rec_DB`` (mehrere Instanzen = mehrere Ringpuffer).
+       Startadresse ``DBX80.0``.
+     - ``tia`` oder ``s7``
    * - ``Ringpuffer_ControlLogix.st``
      - ControlLogix/CompactLogix (Structured Text, Datentypen beschrieben)
      - ``clx``
