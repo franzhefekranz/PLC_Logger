@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.3.2] – 2026-10-27
+
 ### Behoben
 
 * Linux (Wayland): Absturz beim Ziehen eines Diagramm- oder Wertefensters (Dock). Unter Wayland starten die Programme
@@ -260,7 +262,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.3.1...HEAD
+[Unveröffentlicht]: ../../compare/v3.3.2...HEAD
+[3.3.2]: ../../releases/tag/v3.3.2
 [3.3.1]: ../../releases/tag/v3.3.1
 [3.3.0]: ../../releases/tag/v3.3.0
 [3.2.1]: ../../releases/tag/v3.2.1
