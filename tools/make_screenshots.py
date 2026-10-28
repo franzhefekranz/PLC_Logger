@@ -538,6 +538,30 @@ def s_plc_dialogs():
     wait(300)
     save("symbolbaum", tb)
     tb.close()
+    # Netzwerk durchsuchen: Ergebnis einer Suche (ohne Netzwerk nachgestellt)
+    import plc_netscan as ns
+    from plc_netscan_dialog import NetScanDialog
+    found = [
+        ns.suggest(ns.Found(ip="192.168.0.1", ports=[102]),
+                   s7={"device": "CPU 315-2 PN/DP", "order": "6ES7 315-2EH14-0AB0", "station": "Kesselhaus",
+                       "slot": 2}),
+        ns.suggest(ns.Found(ip="192.168.0.10", ports=[102, 4840]),
+                   s7={"device": "CPU 1516-3 PN/DP", "order": "6ES7 516-3AN02-0AB0", "station": "Linie 2",
+                       "slot": 1}),
+        ns.suggest(ns.Found(ip="192.168.0.20", ports=[44818]),
+                   enip={"name": "1756-L83E/B", "vendor": 1, "revision": "33.011", "serial": "60C2F1A5"}),
+        ns.suggest(ns.Found(ip="192.168.0.31", ports=[48898, 4840])),
+        ns.suggest(ns.Found(ip="192.168.0.40", ports=[502])),
+    ]
+    d = NetScanDialog(cw, known_ips={"192.168.0.1"})
+    d.ed_range.setText("192.168.0.0/24")
+    d.progress.setValue(100)
+    d.show_results(found)
+    d.resize(1100, 470)
+    d.show()
+    wait(400)
+    save("netzwerksuche", compose(cw, d, margin=40))
+    d.close()
 
 
 # ---------------------------------------------------------------------------------------------------------------------
