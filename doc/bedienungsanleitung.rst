@@ -3079,6 +3079,13 @@ eignet sich für Dauerbetrieb, z. B. als Autostart-Programm auf einem Industrie-
 * Die installierte Version enthält im Startmenü die Verknüpfung
   *PLC Datenlogger (Headless, nur Aufzeichnung)*.
 
+.. figure:: images/headless_beenden.png
+   :alt: Laufende Headless-Logger anzeigen und beenden
+   :width: 95%
+   :align: center
+
+   Laufende Headless-Logger im Konfigurationsprogramm.
+
 
 
 .. _datenbank:

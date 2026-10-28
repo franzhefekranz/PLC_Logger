@@ -2996,6 +2996,13 @@ an industrial PC.
 * The installed version contains the shortcut *PLC Datenlogger (Headless, nur
   Aufzeichnung)* in the start menu.
 
+.. figure:: images/en/headless_beenden.png
+   :alt: Showing and stopping running headless loggers
+   :width: 95%
+   :align: center
+
+   Running headless loggers in the configuration program.
+
 
 
 .. _datenbank:
