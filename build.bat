@@ -13,6 +13,8 @@ rem            build.bat exe          nur die .exe-Dateien (dist\PLCDatenlogger)
 rem            build.bat portable     .exe-Dateien und portables ZIP (ohne Installer):
 rem                                   dist\PLCDatenlogger_portable_<Version>.zip - entpacken, .exe starten
 rem            build.bat installer    nur den Installer (setzt vorhandenes dist\ voraus)
+rem            build.bat doc          nur die Anleitung: HTML (doc\*.html) und PDF deutsch/englisch
+rem                                   (build\doc\*.pdf und dist\PLC_Datenlogger_*_<Version>.pdf)
 rem
 rem  Ein Programm fuer alle Steuerungen: die Treiber (Paket plc_treiber: S7/snap7, TIA/s7commplus, Logix/libplctag,
 rem  Modbus TCP) werden komplett eingepackt. libplctag gibt es nicht als pip-Paket: plctag.dll (64 Bit) wird einmalig
@@ -47,28 +49,28 @@ if /I "%STEP%"=="installer" goto :installer
 if /I "%STEP%"=="all" goto :exe
 if /I "%STEP%"=="exe" goto :exe
 if /I "%STEP%"=="portable" goto :exe
-echo [FEHLER] Unbekannter Parameter "%STEP%". Erlaubt: all, exe, portable, installer
+if /I "%STEP%"=="doc" goto :doconly
+echo [FEHLER] Unbekannter Parameter "%STEP%". Erlaubt: all, exe, portable, installer, doc
 goto :fail
+
+rem ------------------------------------------------------------------ nur die Anleitung
+:doconly
+call :venv || goto :fail
+echo [2/6] Installiere die Werkzeuge der Anleitung (doc\requirements.txt, docutils) ...
+"%VPY%" -m pip install -q --upgrade pip >nul
+"%VPY%" -m pip install -q -r doc\requirements.txt docutils || goto :fail
+call :docs
+echo.
+if exist "%DOCPDF%" (echo [OK] %DOCPDF% und dist\PLC_Datenlogger_Bedienungsanleitung_%VERSION%.pdf) else (echo [HINWEIS] Das deutsche PDF fehlt.)
+if exist "%DOCPDF_EN%" (echo [OK] %DOCPDF_EN% und dist\PLC_Datenlogger_User_Manual_%VERSION%.pdf) else (echo [HINWEIS] Das englische PDF fehlt.)
+if exist "doc\bedienungsanleitung.html" echo [OK] doc\bedienungsanleitung.html und doc\user_manual.html
+if not exist "%DOCPDF%" goto :fail
+if not exist "%DOCPDF_EN%" goto :fail
+goto :done
 
 rem ------------------------------------------------------------------ 1. Python-Umgebung
 :exe
-set "PY="
-rem  BUILD_PYTHON: Python fest vorgeben (z. B. im GitHub-Workflow), sonst py-Launcher bzw. python aus dem PATH
-if defined BUILD_PYTHON set "PY=%BUILD_PYTHON%"
-if not defined PY where py >nul 2>nul && set "PY=py -3"
-if not defined PY where python >nul 2>nul && set "PY=python"
-if not defined PY (
-    echo [FEHLER] Python wurde nicht gefunden. Bitte Python 3.9 oder neuer installieren.
-    goto :fail
-)
-
-if not exist ".venv\Scripts\python.exe" (
-    echo [1/6] Erzeuge virtuelle Umgebung .venv ...
-    %PY% -m venv .venv || goto :fail
-) else (
-    echo [1/6] Virtuelle Umgebung .venv vorhanden.
-)
-set "VPY=.venv\Scripts\python.exe"
+call :venv || goto :fail
 
 echo [2/6] Installiere Abhaengigkeiten aus requirements.txt ...
 "%VPY%" -m pip install --upgrade pip >nul
@@ -169,36 +171,7 @@ rem  SPS-Vorlagen fuer Ringpuffer (Blockeditor: Knopf "SPS-Vorlagen ...") in den
 robocopy "vorlagen" "dist\PLCDatenlogger\vorlagen" /E /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 goto :fail
 
-rem  Bedienungsanleitung (deutsch) und User Manual (englisch) als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
-for %%D in (bedienungsanleitung user_manual) do (
-  "%VPY%" -c "import docutils.core as d; d.publish_file(source_path='doc/%%D.rst', destination_path='doc/%%D.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8','syntax_highlight':'none'})" >nul 2>nul
-  if errorlevel 1 echo [HINWEIS] doc\%%D.html konnte nicht erzeugt werden ^(der Installer enthaelt dann die .rst^).
-)
-
-rem  Bedienungsanleitung als PDF (Sphinx + rinohtype, ohne LaTeX; optional: fehlt es, bleibt es bei HTML bzw. .rst)
-rem  Feste Namen build\doc\Bedienungsanleitung.pdf und build\doc\User_Manual.pdf fuer installer.iss und das portable ZIP.
-set "DOCPDF=build\doc\Bedienungsanleitung.pdf"
-set "DOCPDF_EN=build\doc\User_Manual.pdf"
-if exist "%DOCPDF%" del "%DOCPDF%"
-if exist "%DOCPDF_EN%" del "%DOCPDF_EN%"
-echo [5/6] Bedienungsanleitung als PDF ...
-if not exist "build\doc" mkdir "build\doc"
-"%VPY%" -m pip install -q -r doc\requirements.txt
-rem  Meldungen in build\doc\pdf_de.log bzw. pdf_en.log; bei einem Fehler werden die letzten Zeilen angezeigt.
-"%VPY%" tools\build_doc.py --copy-to "%DOCPDF%" > "build\doc\pdf_de.log" 2>&1
-if not exist "%DOCPDF%" (
-    echo [HINWEIS] Das PDF der Anleitung konnte nicht erzeugt werden. Letzte Meldungen ^(vollstaendig: build\doc\pdf_de.log^):
-    powershell -NoProfile -Command "Get-Content -Encoding UTF8 'build\doc\pdf_de.log' -Tail 12"
-)
-"%VPY%" tools\build_doc.py --lang en --copy-to "%DOCPDF_EN%" > "build\doc\pdf_en.log" 2>&1
-if not exist "%DOCPDF_EN%" (
-    echo [HINWEIS] Das englische PDF konnte nicht erzeugt werden. Letzte Meldungen ^(vollstaendig: build\doc\pdf_en.log^):
-    powershell -NoProfile -Command "Get-Content -Encoding UTF8 'build\doc\pdf_en.log' -Tail 12"
-)
-rem  Kopien mit Versionsnummer in dist\ (zum Weitergeben, Anhang des GitHub-Release)
-if not exist "dist" mkdir "dist"
-if exist "%DOCPDF%" copy /y "%DOCPDF%" "dist\PLC_Datenlogger_Bedienungsanleitung_%VERSION%.pdf" >nul
-if exist "%DOCPDF_EN%" copy /y "%DOCPDF_EN%" "dist\PLC_Datenlogger_User_Manual_%VERSION%.pdf" >nul
+call :docs
 
 echo.
 echo [OK] Programme erzeugt: dist\PLCDatenlogger\PLCLogger.exe, PLCKonfiguration.exe und PLCIOCheck.exe
@@ -237,6 +210,62 @@ echo.
 echo Fertig.
 if not defined NOPAUSE pause
 endlocal
+exit /b 0
+
+:venv
+rem  Python finden und die virtuelle Umgebung .venv anlegen (falls noch nicht vorhanden); setzt VPY.
+set "PY="
+rem  BUILD_PYTHON: Python fest vorgeben (z. B. im GitHub-Workflow), sonst py-Launcher bzw. python aus dem PATH
+if defined BUILD_PYTHON set "PY=%BUILD_PYTHON%"
+if not defined PY where py >nul 2>nul && set "PY=py -3"
+if not defined PY where python >nul 2>nul && set "PY=python"
+if not defined PY (
+    echo [FEHLER] Python wurde nicht gefunden. Bitte Python 3.9 oder neuer installieren.
+    exit /b 1
+)
+
+if not exist ".venv\Scripts\python.exe" (
+    echo [1/6] Erzeuge virtuelle Umgebung .venv ...
+    %PY% -m venv .venv || exit /b 1
+) else (
+    echo [1/6] Virtuelle Umgebung .venv vorhanden.
+)
+set "VPY=.venv\Scripts\python.exe"
+exit /b 0
+
+:docs
+rem  Anleitung als HTML (doc\*.html: F1-Hilfe, Installer, ZIP) und PDF deutsch/englisch (build\doc, Kopien in dist).
+rem  Ein fehlendes PDF ist beim Programm-Build nur ein Hinweis; "build.bat doc" bricht danach ab.
+rem  Bedienungsanleitung (deutsch) und User Manual (englisch) als HTML erzeugen (optional, nur wenn docutils vorhanden ist)
+for %%D in (bedienungsanleitung user_manual) do (
+  "%VPY%" -c "import docutils.core as d; d.publish_file(source_path='doc/%%D.rst', destination_path='doc/%%D.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8','syntax_highlight':'none'})" >nul 2>nul
+  if errorlevel 1 echo [HINWEIS] doc\%%D.html konnte nicht erzeugt werden ^(der Installer enthaelt dann die .rst^).
+)
+
+rem  Bedienungsanleitung als PDF (Sphinx + rinohtype, ohne LaTeX; optional: fehlt es, bleibt es bei HTML bzw. .rst)
+rem  Feste Namen build\doc\Bedienungsanleitung.pdf und build\doc\User_Manual.pdf fuer installer.iss und das portable ZIP.
+set "DOCPDF=build\doc\Bedienungsanleitung.pdf"
+set "DOCPDF_EN=build\doc\User_Manual.pdf"
+if exist "%DOCPDF%" del "%DOCPDF%"
+if exist "%DOCPDF_EN%" del "%DOCPDF_EN%"
+echo [5/6] Bedienungsanleitung als PDF ...
+if not exist "build\doc" mkdir "build\doc"
+"%VPY%" -m pip install -q -r doc\requirements.txt
+rem  Meldungen in build\doc\pdf_de.log bzw. pdf_en.log; bei einem Fehler werden die letzten Zeilen angezeigt.
+"%VPY%" tools\build_doc.py --copy-to "%DOCPDF%" > "build\doc\pdf_de.log" 2>&1
+if not exist "%DOCPDF%" (
+    echo [HINWEIS] Das PDF der Anleitung konnte nicht erzeugt werden. Letzte Meldungen ^(vollstaendig: build\doc\pdf_de.log^):
+    powershell -NoProfile -Command "Get-Content -Encoding UTF8 'build\doc\pdf_de.log' -Tail 12"
+)
+"%VPY%" tools\build_doc.py --lang en --copy-to "%DOCPDF_EN%" > "build\doc\pdf_en.log" 2>&1
+if not exist "%DOCPDF_EN%" (
+    echo [HINWEIS] Das englische PDF konnte nicht erzeugt werden. Letzte Meldungen ^(vollstaendig: build\doc\pdf_en.log^):
+    powershell -NoProfile -Command "Get-Content -Encoding UTF8 'build\doc\pdf_en.log' -Tail 12"
+)
+rem  Kopien mit Versionsnummer in dist\ (zum Weitergeben, Anhang des GitHub-Release)
+if not exist "dist" mkdir "dist"
+if exist "%DOCPDF%" copy /y "%DOCPDF%" "dist\PLC_Datenlogger_Bedienungsanleitung_%VERSION%.pdf" >nul
+if exist "%DOCPDF_EN%" copy /y "%DOCPDF_EN%" "dist\PLC_Datenlogger_User_Manual_%VERSION%.pdf" >nul
 exit /b 0
 
 :makezip

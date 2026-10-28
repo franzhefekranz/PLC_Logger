@@ -4631,6 +4631,7 @@ Lauf (pip) und für den Installer **Inno Setup 7 oder 6**
       build.bat              alles: Umgebung, Programme, Installer
       build.bat exe          nur die Programme (dist\PLCDatenlogger)
       build.bat installer    nur den Installer (benötigt vorhandenes dist\)
+      build.bat doc          nur die Anleitung (HTML und PDF, deutsch und englisch)
 
 #. Ergebnis: ``dist\PLCDatenlogger`` (lauffähig ohne Installation) und
    ``installer\PLCDatenlogger_Setup_<Version>.exe``.
@@ -4745,6 +4746,13 @@ LaTeX, über rinohtype:
    python tools/build_doc.py              # -> dist\PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf
    python tools/build_doc.py --lang en    # -> dist\PLC_Datenlogger_User_Manual_<Version>.pdf (englisch)
    python tools/build_doc.py --html       # zusätzlich HTML-Vorschau in build\doc\html_de
+
+Einfacher geht es mit ``build.bat doc`` (Windows) bzw. ``./build_appimage.sh doc`` oder
+``./build_macos.sh doc`` (Linux, macOS): Das Skript legt bei Bedarf eine Python-Umgebung mit den
+Werkzeugen an und erzeugt nur die Anleitung – HTML (``doc\*.html``) und PDF deutsch und
+englisch (``build\doc\Bedienungsanleitung.pdf``, ``User_Manual.pdf`` und Kopien mit
+Versionsnummer in ``dist``). Bei einem Fehler zeigt es die letzten Meldungen; vollständig
+stehen sie in ``build\doc\pdf_de.log`` bzw. ``pdf_en.log``.
 
 Die Einstellungen stehen in ``doc/conf.py``, das Layout in ``doc/pdf.rtt`` (Vorlage)
 und ``doc/pdf.rts`` (Schriften, Seitenumbrüche). Die deutsche Anleitung ist

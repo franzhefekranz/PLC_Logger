@@ -4,6 +4,7 @@
 #
 #  Aufruf (im Projektordner, auf einem Mac):
 #      ./build_macos.sh
+#      ./build_macos.sh doc      nur die Anleitung: doc/*.html und PDF deutsch/englisch (build/doc, dist)
 #
 #  Ergebnis: dist/PLC Datenlogger.app und dist/PLCDatenlogger-<Version>-macos-<arm64|x86_64>.dmg
 #
@@ -35,6 +36,38 @@ echo "== $NAME $VERSION – macOS-App für $ARCH"
 
 B="build/macos-$ARCH"
 mkdir -p "$B" dist
+
+# ------------------------------------------------------------------ nur die Anleitung (Parameter doc)
+# HTML (doc/*.html, für F1) und PDF deutsch/englisch (build/doc/Bedienungsanleitung.pdf, User_Manual.pdf und Kopien mit
+# Versionsnummer in dist/) – in einer eigenen, kleinen Python-Umgebung build/doc-venv (Sphinx, rinohtype, docutils).
+if [[ "${1:-}" == "doc" ]]; then
+    echo "== $NAME $VERSION – nur die Anleitung"
+    DV="build/doc-venv"
+    [[ -x "$DV/bin/python" ]] || "$PY" -m venv "$DV"
+    "$DV/bin/python" -m pip install -q --upgrade pip
+    "$DV/bin/python" -m pip install -q -r doc/requirements.txt docutils
+    mkdir -p build/doc dist
+    for DOCN in bedienungsanleitung user_manual; do
+        "$DV/bin/python" -c "import docutils.core as d; d.publish_file(source_path='doc/$DOCN.rst', destination_path='doc/$DOCN.html', writer_name='html5', settings_overrides={'input_encoding':'utf-8','output_encoding':'utf-8','syntax_highlight':'none'})" >/dev/null 2>&1 \
+            && echo "[OK] doc/$DOCN.html" || echo "[HINWEIS] doc/$DOCN.html konnte nicht erzeugt werden."
+    done
+    FAILED=0
+    for L in de en; do
+        PDF="build/doc/Bedienungsanleitung.pdf"; COPY="dist/PLC_Datenlogger_Bedienungsanleitung_$VERSION.pdf"
+        [[ "$L" == en ]] && PDF="build/doc/User_Manual.pdf" && COPY="dist/PLC_Datenlogger_User_Manual_$VERSION.pdf"
+        rm -f "$PDF"
+        echo "PDF ($L) …"
+        if "$DV/bin/python" tools/build_doc.py --lang "$L" --copy-to "$PDF" > "build/doc/pdf_$L.log" 2>&1 && [[ -f "$PDF" ]]; then
+            cp "$PDF" "$COPY"
+            echo "[OK] $PDF und $COPY"
+        else
+            FAILED=1
+            echo "[FEHLER] PDF ($L) nicht erzeugt. Letzte Meldungen (vollständig: build/doc/pdf_$L.log):"
+            tr '\r' '\n' < "build/doc/pdf_$L.log" | grep -v 'ETA' | tail -n 12
+        fi
+    done
+    exit $FAILED
+fi
 
 # ------------------------------------------------------------------ 1. Python-Umgebung
 if [[ ! -x "$B/venv/bin/python" ]]; then

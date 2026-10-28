@@ -21,6 +21,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Build
 
+* `build.bat doc`, `./build_appimage.sh doc` und `./build_macos.sh doc` erzeugen nur die Anleitung (HTML und PDF,
+  deutsch und englisch).
 * Automatische Tests der Treiber gegen Simulatoren fremder Bibliotheken: `s7` gegen den S7-Server von python-snap7
   (inkl. Ringpuffer), `tia` (Ringpuffer) gegen den S7CommPlus-Emulator, `modbus` gegen pymodbus, `opcua` gegen asyncua.
   Die Anleitung zeigt je Treiber, wie er geprüft ist.

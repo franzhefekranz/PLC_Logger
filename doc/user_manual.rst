@@ -4526,6 +4526,7 @@ and, for the installer, **Inno Setup 7 or 6** (``https://jrsoftware.org/isinfo.p
       build.bat              everything: environment, programs, installer
       build.bat exe          only the programs (dist\PLCDatenlogger)
       build.bat installer    only the installer (requires an existing dist\)
+      build.bat doc          only the manual (HTML and PDF, German and English)
 
 #. Result: ``dist\PLCDatenlogger`` (runs without installation) and
    ``installer\PLCDatenlogger_Setup_<version>.exe``.
@@ -4635,6 +4636,13 @@ rinohtype:
    python tools/build_doc.py              # -> dist\PLC_Datenlogger_Bedienungsanleitung_<version>.pdf
    python tools/build_doc.py --lang en    # -> dist\PLC_Datenlogger_User_Manual_<version>.pdf
    python tools/build_doc.py --html       # additionally HTML preview in build\doc\html
+
+It is easier with ``build.bat doc`` (Windows) or ``./build_appimage.sh doc`` or
+``./build_macos.sh doc`` (Linux, macOS): the script creates a Python environment with the tools
+if needed and builds only the manual – HTML (``doc\*.html``) and PDF in German and English
+(``build\doc\Bedienungsanleitung.pdf``, ``User_Manual.pdf`` and copies with version number
+in ``dist``). On an error it shows the last messages; the complete ones are in
+``build\doc\pdf_de.log`` or ``pdf_en.log``.
 
 The settings are in ``doc/conf.py``, the layout in ``doc/pdf.rtt`` (template) and
 ``doc/pdf.rts`` (fonts, page breaks). The German manual is

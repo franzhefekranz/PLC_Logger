@@ -61,7 +61,8 @@ English: [User Manual](../../wiki/en-Home) ([`doc/user_manual.rst`](doc/user_man
 * **Windows:** `build.bat` → `.exe`, Installer (Inno Setup 7 oder 6) und portables ZIP.
 * **macOS:** `build_macos.sh` → App als `.dmg` für Apple Silicon bzw. Intel.
 * **Linux:** `build_appimage.sh` → AppImage und Debian-Paket (`.deb`, auch für Raspberry Pi) für x86_64 bzw. arm64.
-* **Anleitung als PDF:** `pip install -r doc/requirements.txt`, dann `python tools/build_doc.py`
+* **Anleitung als PDF:** `build.bat doc` bzw. `./build_appimage.sh doc` (nur die Anleitung, HTML und PDF deutsch/englisch),
+  oder von Hand `pip install -r doc/requirements.txt`, dann `python tools/build_doc.py`
   → `dist/PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf` (Sphinx mit rinohtype, kein LaTeX nötig).
 * **GitHub Actions:** *Actions › Windows* bzw. *Actions › AppImages › Run workflow*, oder ein Tag `v*`
   (dann zusätzlich als GitHub-Release).
