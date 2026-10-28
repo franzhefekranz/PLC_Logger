@@ -637,6 +637,15 @@
 @ Aktualisierung im Browser:
 > Browser refresh:
 
+@ Laufende Logger …
+> Running loggers …
+
+@ Laufende Headless-Logger anzeigen und sauber beenden
+> Show running headless loggers and stop them cleanly
+
+@ Headless-Logger:
+> Headless loggers:
+
 @ OPC UA …
 > OPC UA …
 
@@ -834,6 +843,9 @@
 
 @ &IO-Check mit dieser Konfiguration starten
 > Start &IO check with this configuration
+
+@ &Headless-Logger anzeigen/beenden …
+> Show/stop &headless loggers …
 
 @ &Beenden
 > E&xit
@@ -1317,6 +1329,12 @@
 
 @ IO-Check gestartet.
 > IO check started.
+
+@ {0} laufen
+> {0} running
+
+@ keiner läuft
+> none running
 
 @ Fehler: keine Verbindung
 > Error: no connection
@@ -2469,6 +2487,56 @@
 
 @ Beende … (Aufzeichnung stoppen, CSV archivieren)
 > Closing … (stopping recording, archiving CSV)
+
+# ---------------- plc_headless_dialog.py
+
+@ Projekt
+> Project
+
+@ Gestartet
+> Started
+
+@ Rechner
+> Computer
+
+@ PID
+> PID
+
+@ Zustand
+> State
+
+@ Laufende Headless-Logger
+> Running headless loggers
+
+@ Headless-Logger, die mit dem Datenordner {0} laufen. „Logger beenden“ beendet den gewählten Logger sauber: die CSV-Datei wird geschlossen und – falls eingestellt – archiviert. Läuft der Logger als Dienst mit automatischem Neustart, startet der Dienst ihn wieder.
+> Headless loggers running with the data folder {0}. “Stop logger” ends the selected logger cleanly: the CSV file is closed and – if set – archived. If the logger runs as a service with automatic restart, the service starts it again.
+
+@ Logger beenden
+> Stop logger
+
+@ Gewählten Headless-Logger sauber beenden
+> Stop the selected headless logger cleanly
+
+@ Headless-Logger „{0}“ (PID {1}) wurde beendet.
+> Headless logger “{0}” (PID {1}) has stopped.
+
+@ wird beendet …
+> stopping …
+
+@ läuft
+> running
+
+@ Kein Headless-Logger läuft.
+> No headless logger is running.
+
+@ Headless-Logger beenden
+> Stop headless logger
+
+@ Headless-Logger „{0}“ (PID {1}) beenden?\nDie Aufzeichnung endet; die CSV-Datei wird geschlossen.
+> Stop headless logger “{0}” (PID {1})?\nRecording ends; the CSV file is closed.
+
+@ Headless-Logger „{0}“ wird beendet …
+> Stopping headless logger “{0}” …
 
 # ---------------- plc_iocheck.py
 

@@ -646,6 +646,9 @@ Einzelheiten im Kapitel `PDF-Berichte <pdf-berichte_>`__.
    * - Headless-Modus
      - Der Logger startet ohne Oberfläche und zeichnet nur auf (siehe
        `Headless-Betrieb (nur Aufzeichnung) <headless_>`__).
+   * - Headless-Logger
+     - **Laufende Logger …** zeigt die laufenden Headless-Logger an und beendet sie
+       auf Wunsch sauber; daneben steht, wie viele laufen.
    * - HTTPS (verschlüsselt)
      - Verschlüsselte Verbindung. Ohne eigenes Zertifikat erzeugt das Programm
        einmalig ein selbstsigniertes (Ordner ``web_tls``).
@@ -1267,6 +1270,8 @@ Das Menü **Datei** des Konfigurationsprogramms enthält:
   startet den Logger mit dieser Datei.
 * **IO-Check mit dieser Konfiguration starten** – speichert und startet den
   `IO-Check <io-check_>`__ mit den Steuerungen dieser Datei (eigenes Programm).
+* **Headless-Logger anzeigen/beenden …** – laufende Headless-Logger anzeigen und
+  sauber beenden (siehe `Headless-Betrieb (nur Aufzeichnung) <headless_>`__).
 
 Der Titel des Fensters zeigt Projektname und Dateiname. Die zuletzt benutzte
 Datei wird gemerkt (Datei ``plc_last.txt``); Logger und Konfigurationsprogramm
@@ -3060,6 +3065,17 @@ eignet sich für Dauerbetrieb, z. B. als Autostart-Programm auf einem Industrie-
 * **Beenden:** Mit ``Strg+C`` im Konsolenfenster bzw. durch das Signal SIGTERM
   (Dienst beenden, Windows: Fenster schließen) wird sauber beendet: Die
   CSV-Datei wird geschlossen und – bei gesetzter Option – archiviert.
+* **Beenden im Konfigurationsprogramm:** **Datei › Headless-Logger
+  anzeigen/beenden …** oder im Reiter *Webserver & Headless* **Laufende Logger …**
+  listet die laufenden Headless-Logger (Projekt, Konfiguration, Startzeit, Rechner,
+  Prozessnummer, Webserver). **Logger beenden** beendet den gewählten genauso sauber
+  wie SIGTERM, innerhalb von etwa einer Sekunde – auch unter Windows und wenn der
+  Logger ohne Konsole gestartet wurde. Dazu meldet sich jeder Headless-Logger im
+  Ordner ``laufend`` des Datenordners an; angezeigt werden also die Logger, die mit
+  demselben Datenordner laufen (gleicher Benutzer bzw. gleicher portabler Ordner).
+  Ein Logger, der als Dienst unter einem anderen Benutzer läuft, erscheint hier
+  nicht; startet ein Dienst den Logger automatisch neu, den Dienst selbst stoppen
+  (z. B. ``sudo systemctl stop <dienst>``).
 * Die installierte Version enthält im Startmenü die Verknüpfung
   *PLC Datenlogger (Headless, nur Aufzeichnung)*.
 

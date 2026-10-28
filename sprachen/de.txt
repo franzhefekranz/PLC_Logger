@@ -637,6 +637,15 @@
 @ Aktualisierung im Browser:
 > 
 
+@ Laufende Logger …
+> 
+
+@ Laufende Headless-Logger anzeigen und sauber beenden
+> 
+
+@ Headless-Logger:
+> 
+
 @ OPC UA …
 > 
 
@@ -833,6 +842,9 @@
 > 
 
 @ &IO-Check mit dieser Konfiguration starten
+> 
+
+@ &Headless-Logger anzeigen/beenden …
 > 
 
 @ &Beenden
@@ -1316,6 +1328,12 @@
 > 
 
 @ IO-Check gestartet.
+> 
+
+@ {0} laufen
+> 
+
+@ keiner läuft
 > 
 
 @ Fehler: keine Verbindung
@@ -2468,6 +2486,56 @@
 > 
 
 @ Beende … (Aufzeichnung stoppen, CSV archivieren)
+> 
+
+# ---------------- plc_headless_dialog.py
+
+@ Projekt
+> 
+
+@ Gestartet
+> 
+
+@ Rechner
+> 
+
+@ PID
+> 
+
+@ Zustand
+> 
+
+@ Laufende Headless-Logger
+> 
+
+@ Headless-Logger, die mit dem Datenordner {0} laufen. „Logger beenden“ beendet den gewählten Logger sauber: die CSV-Datei wird geschlossen und – falls eingestellt – archiviert. Läuft der Logger als Dienst mit automatischem Neustart, startet der Dienst ihn wieder.
+> 
+
+@ Logger beenden
+> 
+
+@ Gewählten Headless-Logger sauber beenden
+> 
+
+@ Headless-Logger „{0}“ (PID {1}) wurde beendet.
+> 
+
+@ wird beendet …
+> 
+
+@ läuft
+> 
+
+@ Kein Headless-Logger läuft.
+> 
+
+@ Headless-Logger beenden
+> 
+
+@ Headless-Logger „{0}“ (PID {1}) beenden?\nDie Aufzeichnung endet; die CSV-Datei wird geschlossen.
+> 
+
+@ Headless-Logger „{0}“ wird beendet …
 > 
 
 # ---------------- plc_iocheck.py

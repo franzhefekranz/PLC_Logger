@@ -282,6 +282,33 @@ def test_block_editor_ring(qt_log, monkeypatch):
     dlg.close()
 
 
+def test_headless_dialog(qt_log, demo_config, tmp_path, monkeypatch):
+    """Laufende Headless-Logger: anzeigen, beenden anfordern, Meldung nach dem Abmelden; Aufruf im Konfig-Programm."""
+    import plc_config
+    import plc_headless as hl
+    from plc_headless_dialog import C_STATE, HeadlessDialog
+    run_dir = str(tmp_path / "laufend")
+    monkeypatch.setattr(hl, "RUN_DIR", run_dir)
+    hl.write_status({"pid": 4711, "projekt": "Anlage", "config": "/x/anlage.json", "start": 1.0e9,
+                     "rechner": "pi", "web": "http://pi:8080/"}, run_dir)
+    d = HeadlessDialog(None, run_dir=run_dir)
+    assert d.table.rowCount() == 1 and d.selected()["pid"] == 4711 and d.btn_stop.isEnabled()
+    assert d.stop_selected(confirm=False)
+    assert hl.stop_requested(4711, run_dir)
+    assert d.table.item(0, C_STATE).text() == "wird beendet …" and not d.btn_stop.isEnabled()
+    hl.remove_status(4711, run_dir)                              # der Logger hat sich abgemeldet
+    d.refresh()
+    assert d.table.rowCount() == 0 and "wurde beendet" in d.lbl_status.text()
+    d.close()
+    w = plc_config.ConfigWindow(demo_config)
+    w.show_headless()
+    assert w.lbl_headless.text() == "keiner läuft"
+    hl.write_status({"pid": 4712, "projekt": "B", "start": 1.0e9}, run_dir)
+    w.update_headless_label()
+    assert w.lbl_headless.text() == "1 laufen"
+    w.close()
+
+
 def test_netscan_dialog_and_take(qt_log, demo_config, monkeypatch):
     """Netzwerksuche: Ergebnisse anzeigen (bekannte Adressen nicht vorgewählt), übernehmen als neue Steuerungen."""
     import plc_config

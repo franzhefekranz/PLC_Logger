@@ -638,3 +638,31 @@ def test_manual_no_figures_in_tables():
                 in_table = False
             elif in_table and re.match(r"\s+\.\. (figure|image)::", line):
                 raise AssertionError(f"{name}.rst Zeile {no}: Abbildung in einer Tabellenzelle")
+
+
+def test_headless_status_and_stop_request(tmp_path, demo_config, monkeypatch):
+    """Headless-Logger: Statusdatei beim Start, Beenden über eine Beenden-Datei (wie im Konfigurationsprogramm),
+    danach abgemeldet; Statusdateien ohne Lebenszeichen werden aufgeräumt."""
+    import threading
+    import time
+    import plc_headless as hl
+    run_dir = str(tmp_path / "laufend")
+    monkeypatch.setattr(hl, "RUN_DIR", run_dir)
+    hl.write_status({"pid": 99999, "projekt": "alt", "start": 0}, run_dir)
+    assert [i["pid"] for i in hl.running_loggers(run_dir)] == [99999]
+    assert hl.running_loggers(run_dir, now=time.time() + hl.STALE_S + 1) == []      # abgestürzt: aufgeräumt
+    assert not os.listdir(run_dir)
+    result = {}
+    th = threading.Thread(target=lambda: result.setdefault("rc", hl.run(demo_config, demo=True)), daemon=True)
+    th.start()
+    deadline = time.time() + 20
+    while time.time() < deadline and not hl.running_loggers(run_dir):
+        time.sleep(0.1)
+    found = hl.running_loggers(run_dir)
+    assert len(found) == 1 and found[0]["pid"] == os.getpid() and not found[0]["stop"]
+    assert found[0]["config"] == os.path.abspath(demo_config)
+    hl.request_stop(found[0]["pid"], run_dir)
+    assert hl.running_loggers(run_dir)[0]["stop"]
+    th.join(20)
+    assert not th.is_alive() and result.get("rc") == 0
+    assert hl.running_loggers(run_dir) == [] and not os.listdir(run_dir)

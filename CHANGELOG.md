@@ -14,6 +14,14 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* Headless-Logger aus dem Konfigurationsprogramm beenden: **Datei › Headless-Logger anzeigen/beenden …** bzw. im
+  Reiter *Webserver & Headless* **Laufende Logger …** zeigt die laufenden Headless-Logger (Projekt, Konfiguration,
+  Startzeit, Rechner, PID, Webserver) und beendet den gewählten sauber (CSV schließen, archivieren) – auf allen
+  Systemen, auch ohne Konsole. Die Logger melden sich dazu mit einer Statusdatei im Ordner `laufend` des Datenordners
+  an.
+
 ### Behoben
 
 * Linux arm64 (Raspberry Pi): AppImage und `.deb` werden jetzt auf Ubuntu 22.04 gebaut und laufen damit auch auf

@@ -639,6 +639,9 @@ Details in the chapter `PDF reports <pdf-berichte_>`__.
    * - Headless mode
      - The logger starts without user interface and only records (see
        `Headless operation (recording only) <headless_>`__).
+   * - Headless loggers
+     - **Running loggers …** shows the running headless loggers and stops them cleanly
+       on request; next to it is the number of running loggers.
    * - HTTPS (encrypted)
      - Encrypted connection. Without a certificate of your own, the program creates a
        self-signed one once (folder ``web_tls``).
@@ -1233,6 +1236,8 @@ The **File** menu of the configuration program contains:
   with this file.
 * **Start IO check with this configuration** – saves and starts the `IO check
   <io-check_>`__ with the controllers of this file (separate program).
+* **Show/stop headless loggers …** – show running headless loggers and stop them
+  cleanly (see `Headless operation (recording only) <headless_>`__).
 
 The window title shows project name and file name. The last used file is remembered
 (file ``plc_last.txt``); the logger and the configuration program open it again at the
@@ -2978,6 +2983,16 @@ an industrial PC.
 * **Exiting:** ``Ctrl+C`` in the console window or the signal SIGTERM (stop service,
   Windows: close the window) exits cleanly: the CSV file is closed and – if the option
   is set – archived.
+* **Stopping from the configuration program:** **File › Show/stop headless loggers …**
+  or **Running loggers …** in the tab *Web server & headless* lists the running
+  headless loggers (project, configuration, start time, computer, process ID, web
+  server). **Stop logger** ends the selected one as cleanly as SIGTERM, within about
+  one second – also on Windows and when the logger was started without a console.
+  For this, every headless logger registers in the folder ``laufend`` of the data
+  folder; so the loggers shown are those running with the same data folder (same user
+  or same portable folder). A logger running as a service under another user does not
+  appear here; if a service restarts the logger automatically, stop the service
+  itself (e.g. ``sudo systemctl stop <service>``).
 * The installed version contains the shortcut *PLC Datenlogger (Headless, nur
   Aufzeichnung)* in the start menu.
 

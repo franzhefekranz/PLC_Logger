@@ -330,6 +330,13 @@ class ConfigWindow(QMainWindow):
         form_web2.addRow(tr("Zugriffscode:"), self.ed_web_token)
         form_web2.addRow(tr("Aktualisierung im Browser:"), self.sp_web_int)
         form_web2.addRow("", self.chk_headless)
+        # Laufende Headless-Logger anzeigen und beenden (Statusdateien im Datenordner, plc_headless).
+        btn_hl = QPushButton(tr("Laufende Logger …"))
+        btn_hl.setToolTip(tr("Laufende Headless-Logger anzeigen und sauber beenden"))
+        btn_hl.clicked.connect(self.show_headless)
+        self.lbl_headless = QLabel("")
+        hl_row = QHBoxLayout(); hl_row.addWidget(btn_hl); hl_row.addWidget(self.lbl_headless, 1)
+        form_web2.addRow(tr("Headless-Logger:"), hl_row)
         # OPC-UA-Server im Logger (Einstellungen im eigenen Dialog).
         self.opcua_settings = {}
         btn_ua = QPushButton(tr("OPC UA …"))
@@ -375,6 +382,7 @@ class ConfigWindow(QMainWindow):
         self.tabs.addTab(self._build_trigger_tab(), tr("Trigger && Ereignisse"))
         self.tabs.addTab(self._build_report_tab(), tr("Berichte (PDF)"))
         self.tabs.setMaximumHeight(210)
+        self.tabs.currentChanged.connect(lambda i: self.update_headless_label() if self.tabs.widget(i) is tab_web else None)
         # Kontexthilfe (F1): Abschnitt der Bedienungsanleitung je Reiter; in der Steuerungstabelle der Abschnitt des
         # Treibers der aktuellen Zeile.
         for i, topic in enumerate(("Projekt, Steuerungen und Einstellungen", "Projekt, Steuerungen und Einstellungen",
@@ -542,6 +550,7 @@ class ConfigWindow(QMainWindow):
                    (N_("INI-Datei &umwandeln …"), QKeySequence(), self.convert_ini),
                    (N_("Logger mit dieser Konfiguration &starten"), QKeySequence("Ctrl+R"), self.start_logger),
                    (N_("&IO-Check mit dieser Konfiguration starten"), QKeySequence(), self.start_iocheck),
+                   (N_("&Headless-Logger anzeigen/beenden …"), QKeySequence(), self.show_headless),
                    None,
                    (N_("&Beenden"), QKeySequence("Ctrl+Q"), self.close)]
         for e in entries:
@@ -2441,6 +2450,21 @@ class ConfigWindow(QMainWindow):
         if not launch(self, "iocheck", self.path, title=tr("IO-Check")):
             return
         self.statusBar().showMessage(tr("IO-Check gestartet."), 5000)
+
+    def show_headless(self):
+        """Laufende Headless-Logger anzeigen und beenden (plc_headless_dialog)."""
+        from plc_headless_dialog import HeadlessDialog
+        HeadlessDialog(self).exec()
+        self.update_headless_label()
+
+    def update_headless_label(self):
+        """Anzahl laufender Headless-Logger im Reiter „Webserver & Headless“."""
+        try:
+            import plc_headless
+            n = len(plc_headless.running_loggers())
+        except Exception:
+            n = 0
+        self.lbl_headless.setText(tr("{0} laufen").format(n) if n else tr("keiner läuft"))
 
     # Verbindung zu jeder Steuerung aufbauen und deren Variablen einmal lesen; das Ergebnis (oder die Fehlermeldung)
     # steht in der Spalte 'Testwert'.

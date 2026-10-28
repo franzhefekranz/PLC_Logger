@@ -57,7 +57,8 @@ Headless-Betrieb und die Logik-Tests ohne PySide6.
 * `plc_events` – Trigger (Bedingung, Priorität, Verzögerung), `TriggerEngine` und Ereignisprotokoll (CSV).
 * `plc_db` – Schreiben in Datenbanken (SQLite, MariaDB, PostgreSQL/TimescaleDB, QuestDB, InfluxDB, VictoriaMetrics,
   Prometheus) in eigenem Thread mit Puffer bei Verbindungsausfall; Lesemodus (`create_reader`).
-* `plc_headless` – Aufzeichnung ohne Oberfläche, Meldungen auf die Konsole/ins Log.
+* `plc_headless` – Aufzeichnung ohne Oberfläche, Meldungen auf die Konsole/ins Log; Statusdatei im Ordner `laufend` des
+  Datenordners (Lebenszeichen, Beenden-Anforderung aus dem Konfigurationsprogramm über `plc_headless_dialog`).
 * `plc_cleanup` – Aufräumen alter CSV-/Archivdateien nach Alter oder Gesamtgröße (Datenbank: `cleanup` der
   Backends in `plc_db`, ausgeführt vom Schreib-Thread).
 
