@@ -156,7 +156,7 @@ echo "[3/7] PyInstaller ..."
     --hidden-import plc_pid_dialog --hidden-import plc_recorder --hidden-import plc_splash \
     --hidden-import plc_svg --hidden-import plc_trigger_dialog --hidden-import plc_util \
     --hidden-import plc_web --hidden-import plc_webauth --hidden-import plc_web_dialog --hidden-import plc_report \
-    --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog --hidden-import plc_iocheck_web --hidden-import plc_qr --hidden-import plc_notify --hidden-import plc_notify_dialog --hidden-import plc_opcua_server --hidden-import plc_opcua_dialog --hidden-import plc_web_prozess \
+    --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog --hidden-import plc_iocheck_web --hidden-import plc_qr --hidden-import plc_notify --hidden-import plc_notify_dialog --hidden-import plc_opcua_server --hidden-import plc_opcua_dialog --hidden-import plc_web_prozess --hidden-import plc_netscan --hidden-import plc_netscan_dialog \
     --hidden-import cryptography.x509 --hidden-import cryptography.hazmat.primitives.asymmetric.rsa \
     --collect-submodules plc_treiber --add-data "$PWD/src/plc_treiber/_vorlage.py:plc_treiber" \
     ${EXTRA[@]+"${EXTRA[@]}"} \

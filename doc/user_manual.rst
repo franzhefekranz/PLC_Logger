@@ -138,6 +138,8 @@ also the data folder (configuration, recordings, log file).
      - Read mode: choose a time range from the database and show it in the logger.
    * - ``plc_cleanup.py``
      - Clean-up of old recordings (CSV/archive) by period or storage space.
+   * - ``plc_netscan.py``, ``plc_netscan_dialog.py``
+     - Scanning the network for reachable controllers (configuration program).
    * - ``plc_iocheck_start.py``
      - Start program of the IO check as a program of its own (``PLCIOCheck.exe``).
    * - ``plc_events.py``
@@ -424,6 +426,20 @@ The upper part of the window is divided into several tabs.
 
        Change the list with **+ Controller** and **Remove controller**; when a
        controller is removed, its variables and blocks move to the first controller.
+
+       **Scan network …** finds reachable controllers: in the *range* (suggestion:
+       the own network, e.g. ``192.168.0.0/24``; also ``192.168.0.10-50`` or single
+       addresses, separated by commas) the scan asks for EtherNet/IP devices by
+       broadcast and tries connections on the ports of S7 (102), Modbus (502),
+       EtherNet/IP (44818), OPC UA (4840), ADS (48898), FINS (9600), SLMP (5007) and
+       Keyence (8501). With *Read device identity* it shows module, order number,
+       station and slot of S7 CPUs, and product name, vendor and serial number of
+       EtherNet/IP devices. Each hit gets a driver suggestion (S7-1200/1500: ``tia``,
+       other S7: ``s7`` with the slot found, Logix: ``clx``, OPC UA with endpoint, ADS
+       with AMS Net ID *IP*.1.1 …); **Add as controller** adds the ticked hits with
+       their address. Addresses already configured are marked and not preselected.
+       Devices behind routers are only found if their range is given; a firewall can
+       block ports.
 
 **Connection settings dialog.** The dialog is built from the driver's parameters
 (text fields, numbers, choice lists, password fields). Rarely needed parameters are in

@@ -139,6 +139,8 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
      - Lesemodus: Zeitraum aus der Datenbank wählen und im Logger anzeigen.
    * - ``plc_cleanup.py``
      - Aufräumen alter Aufzeichnungen (CSV/Archiv) nach Zeitraum oder Speicherplatz.
+   * - ``plc_netscan.py``, ``plc_netscan_dialog.py``
+     - Netzwerk nach erreichbaren Steuerungen durchsuchen (Konfigurationsprogramm).
    * - ``plc_iocheck_start.py``
      - Startprogramm des IO-Checks als eigenes Programm (``PLCIOCheck.exe``).
    * - ``plc_events.py``
@@ -428,6 +430,20 @@ Der obere Fensterbereich ist in mehrere Reiter gegliedert.
 
        Mit **+ Steuerung** und **Steuerung entfernen** ändern Sie die Liste; beim
        Entfernen wandern deren Variablen und Blöcke zur ersten Steuerung.
+
+       **Netzwerk durchsuchen …** findet erreichbare Steuerungen: Im *Bereich*
+       (Vorschlag: das eigene Netz, z. B. ``192.168.0.0/24``; auch ``192.168.0.10-50``
+       oder einzelne Adressen, durch Komma getrennt) fragt die Suche per Rundruf nach
+       EtherNet/IP-Geräten und versucht Verbindungen auf die Ports von S7 (102), Modbus
+       (502), EtherNet/IP (44818), OPC UA (4840), ADS (48898), FINS (9600), SLMP (5007)
+       und Keyence (8501). Mit *Gerätekennung lesen* zeigt sie bei S7-CPUs Baugruppe,
+       Bestellnummer, Station und Steckplatz, bei EtherNet/IP-Geräten Produktname,
+       Hersteller und Seriennummer. Jeder Treffer bekommt einen Treibervorschlag
+       (S7-1200/1500: ``tia``, übrige S7: ``s7`` mit dem gefundenen Steckplatz, Logix:
+       ``clx``, OPC UA mit Endpunkt, ADS mit AMS-Net-ID *IP*.1.1 …); angehakte Treffer
+       übernimmt **Als Steuerung übernehmen** mit ihrer Adresse. Schon konfigurierte
+       Adressen sind gekennzeichnet und nicht vorgewählt. Geräte hinter Routern werden
+       nur gefunden, wenn ihr Bereich angegeben ist; eine Firewall kann Ports sperren.
 
 **Einstellungsdialog der Verbindung.** Der Dialog wird aus den Parametern des
 Treibers aufgebaut (Textfelder, Zahlen, Auswahllisten, Passwortfelder).

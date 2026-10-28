@@ -183,8 +183,10 @@ class ConfigWindow(QMainWindow):
         self.plc_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.plc_table.itemChanged.connect(self.on_plc_item_changed)
         plc_btns = QHBoxLayout()
-        for text, fn in [(tr("+ Steuerung"), self.add_plc), (tr("Steuerung entfernen"), self.remove_plc)]:
+        for text, fn in [(tr("+ Steuerung"), self.add_plc), (tr("Steuerung entfernen"), self.remove_plc),
+                         (tr("Netzwerk durchsuchen …"), self.scan_network)]:
             bt = QPushButton(text); bt.clicked.connect(fn); plc_btns.addWidget(bt)
+        plc_btns.itemAt(2).widget().setToolTip(tr("Erreichbare Steuerungen im Netzwerk suchen und als Steuerung übernehmen"))
         plc_btns.addStretch(1)
         plc_box = QVBoxLayout(); plc_box.addWidget(self.plc_table, 1); plc_box.addLayout(plc_btns)
         proj_form = QFormLayout(); proj_form.addRow(tr("Projektname:"), self.ed_project)
@@ -775,6 +777,30 @@ class ConfigWindow(QMainWindow):
         drv = self.plc_table.cellWidget(r, P_DRV).currentData() if r >= 0 else "s7"
         self.add_plc_row(Plc(name=f"SPS {n + 1}", driver=drv))
         self.refresh_plc_combos()
+
+    def scan_network(self):
+        """Netzwerk nach Steuerungen durchsuchen (plc_netscan_dialog) und die gewählten als Steuerungen anhängen."""
+        from plc_netscan_dialog import NetScanDialog
+        plcs = self.collect_plcs()
+        known = {str(p.params.get("ip", "")) for p in plcs}
+        known |= {str(p.params.get("endpoint", "")).split("//")[-1].split(":")[0] for p in plcs}
+        dlg = NetScanDialog(self, known)
+        if not dlg.exec() or not dlg.result:
+            return
+        names = {p.name for p in plcs}
+        for f in dlg.result:
+            try:
+                drv = get_driver(f.driver)
+            except Exception:
+                continue
+            base = (f.device or f"{f.driver.upper()} {f.ip}").strip()
+            name, k = base, 2
+            while name in names:
+                name, k = f"{base} ({k})", k + 1
+            names.add(name)
+            self.add_plc_row(Plc(name=name, driver=f.driver, params=drv.normalize_params(f.params)))
+        self.refresh_plc_combos()
+        self.statusBar().showMessage(tr("{0} Steuerungen aus der Netzwerksuche übernommen").format(len(dlg.result)), 8000)
 
     def remove_plc(self):
         """Markierte Steuerung entfernen. Variablen und Blöcke, die zu ihr gehörten, wandern zur ersten Steuerung."""

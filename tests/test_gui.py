@@ -280,3 +280,30 @@ def test_block_editor_ring(qt_log, monkeypatch):
     t.cellWidget(0, C_PLC).setCurrentIndex(1)                 # Modbus: keine Ringpuffer
     assert t.cellWidget(0, C_RING).value() == 0 and not t.cellWidget(0, C_RING).isEnabled()
     dlg.close()
+
+
+def test_netscan_dialog_and_take(qt_log, demo_config, monkeypatch):
+    """Netzwerksuche: Ergebnisse anzeigen (bekannte Adressen nicht vorgewählt), übernehmen als neue Steuerungen."""
+    import plc_config
+    import plc_netscan as ns
+    from plc_netscan_dialog import NetScanDialog
+    found = [ns.suggest(ns.Found(ip="10.1.1.5", ports=[102]), s7={"device": "CPU 315-2 PN/DP", "slot": 2}),
+             ns.suggest(ns.Found(ip="10.1.1.6", ports=[502])),
+             ns.Found(ip="10.1.1.7", ports=[])]
+    d = NetScanDialog(None, known_ips={"10.1.1.6"})
+    d.show_results(found)
+    assert [f.ip for f in d.checked()] == ["10.1.1.5"]          # 10.1.1.6 schon konfiguriert, 10.1.1.7 ohne Treiber
+    d.close()
+    w = plc_config.ConfigWindow(demo_config)
+    n = w.plc_table.rowCount()
+
+    def fake_exec(self):
+        self.result = [found[0], found[1]]
+        return 1
+    monkeypatch.setattr(NetScanDialog, "exec", fake_exec)
+    w.scan_network()
+    plcs = w.collect_plcs()
+    assert len(plcs) == n + 2
+    assert plcs[-2].driver == "s7" and plcs[-2].params["slot"] == 2 and plcs[-2].name == "CPU 315-2 PN/DP"
+    assert plcs[-1].driver == "modbus" and plcs[-1].params["ip"] == "10.1.1.6"
+    w.close()

@@ -457,6 +457,12 @@
 @ Steuerung entfernen
 > 
 
+@ Netzwerk durchsuchen …
+> 
+
+@ Erreichbare Steuerungen im Netzwerk suchen und als Steuerung übernehmen
+> 
+
 @ Projektname:
 > 
 
@@ -872,6 +878,9 @@
 > 
 
 @ Verbindungsparameter bearbeiten
+> 
+
+@ {0} Steuerungen aus der Netzwerksuche übernommen
 > 
 
 @ Bitte eine Steuerung markieren; mindestens eine muss bleiben.
@@ -3063,6 +3072,88 @@
 @ Lade Oberfläche (Diagramme) …
 > 
 
+# ---------------- plc_netscan.py
+
+@ Bereich zu groß (höchstens {0} Adressen)
+> 
+
+@ Ungültiger Bereich „{0}“ (z. B. 192.168.0.0/24 oder 192.168.0.10-50)
+> 
+
+@ Rev. {0}
+> 
+
+@ Serien-Nr. {0}
+> 
+
+@ Station {0}
+> 
+
+@ Steckplatz {0}
+> 
+
+# ---------------- plc_netscan_dialog.py
+
+@ Gefunden
+> 
+
+@ Gerät
+> 
+
+@ Angaben
+> 
+
+@ Netzwerk durchsuchen
+> 
+
+@ Sucht im angegebenen Bereich nach Steuerungen: EtherNet/IP-Rundruf und Verbindungsversuche auf die Ports von S7 (102), Modbus (502), EtherNet/IP (44818), OPC UA (4840), ADS (48898), FINS (9600), SLMP (5007) und Keyence (8501). Bei S7-CPUs wird die Baugruppe ausgelesen. Geräte hinter Routern nur, wenn ihr Bereich angegeben ist.
+> 
+
+@ z. B. 192.168.0.0/24, 192.168.0.10-50 oder einzelne Adressen, durch Komma getrennt
+> 
+
+@ Wartezeit je Verbindungsversuch (länger bei langsamen oder fernen Netzen)
+> 
+
+@ Gerätekennung lesen
+> 
+
+@ S7: Baugruppe und Station, EtherNet/IP: Produktname
+> 
+
+@ Suchen
+> 
+
+@ Bereich:
+> 
+
+@ Zeitlimit:
+> 
+
+@ Als Steuerung übernehmen
+> 
+
+@ Wird abgebrochen …
+> 
+
+@ Durchsuche {0} Adressen …
+> 
+
+@ (schon konfiguriert)
+> 
+
+@ {0} Geräte gefunden
+> 
+
+@ (abgebrochen)
+> 
+
+@ Keine Steuerung gefunden – Bereich, Zeitlimit und Firewall prüfen.
+> 
+
+@ Bitte mindestens ein Gerät anhaken.
+> 
+
 # ---------------- plc_notify.py
 
 @ E-Mail
@@ -4589,9 +4680,6 @@
 > 
 
 @ Host-Link-Port, Standard 8501
-> 
-
-@ Gerät
 > 
 
 @ KV-Gerät: DM100, EM0, FM0, ZF10, W1A, TM0; Bits: R1000, MR500, LR0, CR3, B1F; Timer/Zähler-Istwert: T10, C5; Bit im Wort: DM100.3

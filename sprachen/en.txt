@@ -457,6 +457,12 @@
 @ Steuerung entfernen
 > Remove controller
 
+@ Netzwerk durchsuchen …
+> Scan network …
+
+@ Erreichbare Steuerungen im Netzwerk suchen und als Steuerung übernehmen
+> Search the network for reachable controllers and add them as controllers
+
 @ Projektname:
 > Project name:
 
@@ -873,6 +879,9 @@
 
 @ Verbindungsparameter bearbeiten
 > Edit connection parameters
+
+@ {0} Steuerungen aus der Netzwerksuche übernommen
+> {0} controllers added from the network scan
 
 @ Bitte eine Steuerung markieren; mindestens eine muss bleiben.
 > Please select a controller; at least one must remain.
@@ -3063,6 +3072,88 @@
 @ Lade Oberfläche (Diagramme) …
 > Loading user interface (charts) …
 
+# ---------------- plc_netscan.py
+
+@ Bereich zu groß (höchstens {0} Adressen)
+> Range too large (at most {0} addresses)
+
+@ Ungültiger Bereich „{0}“ (z. B. 192.168.0.0/24 oder 192.168.0.10-50)
+> Invalid range "{0}" (e.g. 192.168.0.0/24 or 192.168.0.10-50)
+
+@ Rev. {0}
+> Rev. {0}
+
+@ Serien-Nr. {0}
+> Serial no. {0}
+
+@ Station {0}
+> Station {0}
+
+@ Steckplatz {0}
+> Slot {0}
+
+# ---------------- plc_netscan_dialog.py
+
+@ Gefunden
+> Found
+
+@ Gerät
+> Device
+
+@ Angaben
+> Details
+
+@ Netzwerk durchsuchen
+> Scan network
+
+@ Sucht im angegebenen Bereich nach Steuerungen: EtherNet/IP-Rundruf und Verbindungsversuche auf die Ports von S7 (102), Modbus (502), EtherNet/IP (44818), OPC UA (4840), ADS (48898), FINS (9600), SLMP (5007) und Keyence (8501). Bei S7-CPUs wird die Baugruppe ausgelesen. Geräte hinter Routern nur, wenn ihr Bereich angegeben ist.
+> Searches the given range for controllers: EtherNet/IP broadcast and connection attempts on the ports of S7 (102), Modbus (502), EtherNet/IP (44818), OPC UA (4840), ADS (48898), FINS (9600), SLMP (5007) and Keyence (8501). For S7 CPUs the module is read. Devices behind routers only if their range is given.
+
+@ z. B. 192.168.0.0/24, 192.168.0.10-50 oder einzelne Adressen, durch Komma getrennt
+> e.g. 192.168.0.0/24, 192.168.0.10-50 or single addresses, separated by commas
+
+@ Wartezeit je Verbindungsversuch (länger bei langsamen oder fernen Netzen)
+> Waiting time per connection attempt (longer for slow or remote networks)
+
+@ Gerätekennung lesen
+> Read device identity
+
+@ S7: Baugruppe und Station, EtherNet/IP: Produktname
+> S7: module and station, EtherNet/IP: product name
+
+@ Suchen
+> Search
+
+@ Bereich:
+> Range:
+
+@ Zeitlimit:
+> Timeout:
+
+@ Als Steuerung übernehmen
+> Add as controller
+
+@ Wird abgebrochen …
+> Cancelling …
+
+@ Durchsuche {0} Adressen …
+> Scanning {0} addresses …
+
+@ (schon konfiguriert)
+> (already configured)
+
+@ {0} Geräte gefunden
+> {0} devices found
+
+@ (abgebrochen)
+> (cancelled)
+
+@ Keine Steuerung gefunden – Bereich, Zeitlimit und Firewall prüfen.
+> No controller found – check range, timeout and firewall.
+
+@ Bitte mindestens ein Gerät anhaken.
+> Please tick at least one device.
+
 # ---------------- plc_notify.py
 
 @ E-Mail
@@ -4590,9 +4681,6 @@
 
 @ Host-Link-Port, Standard 8501
 > Host Link port, default 8501
-
-@ Gerät
-> Device
 
 @ KV-Gerät: DM100, EM0, FM0, ZF10, W1A, TM0; Bits: R1000, MR500, LR0, CR3, B1F; Timer/Zähler-Istwert: T10, C5; Bit im Wort: DM100.3
 > KV device: DM100, EM0, FM0, ZF10, W1A, TM0; bits: R1000, MR500, LR0, CR3, B1F; timer/counter current value: T10, C5; bit in word: DM100.3
