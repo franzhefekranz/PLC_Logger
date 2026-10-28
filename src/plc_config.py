@@ -2454,7 +2454,10 @@ class ConfigWindow(QMainWindow):
     def show_headless(self):
         """Laufende Headless-Logger anzeigen und beenden (plc_headless_dialog)."""
         from plc_headless_dialog import HeadlessDialog
-        HeadlessDialog(self).exec()
+        dlg = HeadlessDialog(self)
+        dlg.exec()
+        dlg.timer.stop()
+        dlg.deleteLater()
         self.update_headless_label()
 
     def update_headless_label(self):

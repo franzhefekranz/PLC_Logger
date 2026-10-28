@@ -33,10 +33,10 @@ class HeadlessDialog(QDialog):
         self.loggers = []
         self._stopping = {}                       # PID -> Projekt der zum Beenden aufgeforderten Logger
 
-        info = QLabel(tr("Headless-Logger, die mit dem Datenordner {0} laufen. „Logger beenden“ beendet den gewählten "
+        self.lbl_info = info = QLabel(tr("Headless-Logger, die mit dem Datenordner {0} laufen. „Logger beenden“ beendet den gewählten "
                          "Logger sauber: die CSV-Datei wird geschlossen und – falls eingestellt – archiviert. "
                          "Läuft der Logger als Dienst mit automatischem Neustart, startet der Dienst ihn wieder.")
-                      .format(os.path.dirname(run_dir or plc_headless.RUN_DIR)))
+                           .format(os.path.dirname(run_dir or plc_headless.RUN_DIR)))
         info.setWordWrap(True)
         self.table = QTableWidget(0, len(COLS))
         self.table.setHorizontalHeaderLabels(COLS)

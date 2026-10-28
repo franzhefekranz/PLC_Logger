@@ -505,6 +505,27 @@ def s_config_dialogs():
     wait(300)
     job("web_benutzer", over=lambda: cw, size=(560, 380), margin=160)
     cw.edit_web_users()
+
+    # Laufende Headless-Logger: Statusdateien in einem eigenen Ordner, im Bild ein typischer Datenordner.
+    import plc_headless
+    run_dir, keep = tempfile.mkdtemp(), plc_headless.RUN_DIR
+    plc_headless.RUN_DIR = run_dir
+    now = time.time()
+    plc_headless.write_status({"pid": 1843, "projekt": "Linie 3", "config": "/home/pi/PLCDatenlogger/linie3.json",
+                               "start": now - 3 * 86400 - 5400, "rechner": "raspberrypi",
+                               "web": "http://192.168.0.20:8080/"}, run_dir)
+    plc_headless.write_status({"pid": 2210, "projekt": "Kesselhaus", "config": "/home/pi/PLCDatenlogger/kessel.json",
+                               "start": now - 7200, "rechner": "raspberrypi", "web": ""}, run_dir)
+
+    def headless(d):
+        d.lbl_info.setText(d.lbl_info.text().replace(os.path.dirname(run_dir), "/home/pi/PLCDatenlogger"))
+        d.table.selectRow(0)
+    try:
+        job("headless_beenden", prep=headless, size=(1000, 300))
+        cw.show_headless()
+    finally:
+        plc_headless.RUN_DIR = keep
+        shutil.rmtree(run_dir, ignore_errors=True)
     cw.tabs.setCurrentIndex(0)
 
 
