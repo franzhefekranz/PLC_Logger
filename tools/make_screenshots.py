@@ -557,10 +557,12 @@ def s_plc_dialogs():
     d.ed_range.setText("192.168.0.0/24")
     d.progress.setValue(100)
     d.show_results(found)
-    d.resize(1100, 470)
+    d.resize(1280, 470)
     d.show()
     wait(400)
-    save("netzwerksuche", compose(cw, d, margin=40))
+    d.show_results(found)                                # Spaltenbreiten bei sichtbarem Fenster
+    wait(200)
+    save("netzwerksuche", d)
     d.close()
 
 

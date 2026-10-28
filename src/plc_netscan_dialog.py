@@ -68,7 +68,6 @@ class NetScanDialog(QDialog):
         self.lbl_status = QLabel("")
         self.table = QTableWidget(0, len(COLS))
         self.table.setHorizontalHeaderLabels(COLS)
-        self.table.horizontalHeader().setSectionResizeMode(C_DEV, QHeaderView.ResizeMode.Stretch)
         self.table.horizontalHeader().setSectionResizeMode(C_INFO, QHeaderView.ResizeMode.Stretch)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -168,9 +167,8 @@ class NetScanDialog(QDialog):
                 except Exception:
                     drv = f.driver
             t.setItem(r, C_DRV, QTableWidgetItem(drv))
-        t.resizeColumnToContents(C_TAKE)
-        t.resizeColumnToContents(C_IP)
-        t.resizeColumnToContents(C_PROTO)
+        for col in (C_TAKE, C_IP, C_PROTO, C_DEV, C_DRV):          # „Angaben“ füllt den Rest
+            t.resizeColumnToContents(col)
         text = tr("{0} Geräte gefunden").format(len(self.found))
         if cancelled:
             text += " " + tr("(abgebrochen)")
