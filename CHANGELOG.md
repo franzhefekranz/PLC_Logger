@@ -16,6 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* Linux arm64 (Raspberry Pi): AppImage und `.deb` werden jetzt auf Ubuntu 22.04 gebaut und laufen damit auch auf
+  Ubuntu 22.04, Debian 12 und Raspberry Pi OS Bookworm (bisher: `libc6 (>= 2.39)`, nur Ubuntu 24.04 bzw. Trixie).
 * Konfigurationsprogramm: Spalte „Treiber“ der Steuerungen so breit, dass die Treibernamen lesbar sind; englische
   Oberfläche: „Path“ bzw. „Device“ statt „Pfad“/„Gerät“ in der Verbindungsbeschreibung (clx, modbus_rtu).
 

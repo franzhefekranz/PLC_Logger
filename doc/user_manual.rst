@@ -4726,10 +4726,10 @@ the build system; ``apt`` checks this and refuses the package on systems that ar
 
 * **amd64** (from the GitHub release): Ubuntu 22.04 and newer, Debian 12 and newer, Linux
   Mint 21 and newer.
-* **arm64** (from the GitHub release): Raspberry Pi OS from Trixie (Debian 13), Ubuntu 24.04
-  and newer. For Raspberry Pi OS Bookworm build the package yourself: ``./build_appimage.sh
-  --docker arm64`` (see below) builds in a Debian 12 container. A 32-bit Raspberry Pi OS is
-  not supported.
+* **arm64** (from the GitHub release): Raspberry Pi OS Bookworm and Trixie (64-bit), Ubuntu
+  22.04 and newer, Debian 12 and newer. A 32-bit Raspberry Pi OS is not supported
+  (``dpkg --print-architecture`` must show ``arm64``). Up to version 3.4.0 the arm64 package
+  needed Ubuntu 24.04 or Raspberry Pi OS Trixie.
 
 Building
 ----------------------------------------------------------------------
