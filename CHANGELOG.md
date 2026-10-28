@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.4.1] – 2026-10-28
+
 ### Neu
 
 * Headless-Logger aus dem Konfigurationsprogramm beenden: **Datei › Headless-Logger anzeigen/beenden …** bzw. im
@@ -299,7 +301,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.4.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.4.1...HEAD
+[3.4.1]: ../../releases/tag/v3.4.1
 [3.4.0]: ../../releases/tag/v3.4.0
 [3.3.2]: ../../releases/tag/v3.3.2
 [3.3.1]: ../../releases/tag/v3.3.1
