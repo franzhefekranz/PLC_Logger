@@ -4839,6 +4839,11 @@ Für macOS gibt es das Programm als **App** in einer ``.dmg``-Datei:
 Konfigurationsprogramm, IO-Check und Ereignis-Viewer, dazu die Anleitung und die
 SPS-Vorlagen.
 
+.. note::
+
+   Die macOS-Fassung ist eine **Vorschau**: Sie wird automatisch gebaut und getestet, wurde aber
+   noch nicht auf einem Mac bedient. Rückmeldungen (z. B. über GitHub) sind willkommen.
+
 **Installieren:** DMG öffnen und **PLC Datenlogger** auf **Programme** ziehen. Die App ist
 nicht bei Apple signiert und notarisiert; macOS blockiert sie deshalb beim ersten Start.
 Einmal im Finder mit **Rechtsklick › Öffnen** starten und bestätigen (neuere macOS-Versionen:

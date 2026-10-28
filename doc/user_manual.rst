@@ -4727,6 +4727,11 @@ For macOS the program is available as an **app** in a ``.dmg`` file:
 ``…-macos-x86_64.dmg`` for Intel Macs; both from macOS 12. The app contains the logger,
 configuration program, IO check and event viewer, plus the manual and the PLC templates.
 
+.. note::
+
+   The macOS version is a **preview**: it is built and tested automatically, but has not yet
+   been operated on a Mac. Feedback (e.g. via GitHub) is welcome.
+
 **Installing:** open the DMG and drag **PLC Datenlogger** onto **Programme**
 (Applications). The app is not signed and notarized by Apple; macOS therefore blocks it at
 the first start. Start it once in the Finder with **right-click › Open** and confirm (newer

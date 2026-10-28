@@ -21,7 +21,7 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   FINS, SLMP, Keyence), liest bei S7-CPUs Baugruppe und Steckplatz bzw. bei EtherNet/IP-Geräten den Produktnamen und
   übernimmt die angehakten Geräte mit passendem Treiber als Steuerungen.
 
-* **macOS**: App „PLC Datenlogger“ als `.dmg` für Apple Silicon und Intel (ab macOS 12) mit Logger,
+* **macOS (Vorschau, noch nicht auf einem Mac getestet)**: App „PLC Datenlogger“ als `.dmg` für Apple Silicon und Intel (ab macOS 12) mit Logger,
   Konfigurationsprogramm, IO-Check, Ereignis-Viewer, Anleitung, SPS-Vorlagen und libplctag; Menüleiste oben am
   Bildschirm. Ad hoc signiert (erster Start: Rechtsklick › Öffnen). Build: `build_macos.sh`, Workflow *macOS*; die
   Tests laufen jetzt auch auf macOS.
