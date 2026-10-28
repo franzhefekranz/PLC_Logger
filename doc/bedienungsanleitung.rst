@@ -1550,6 +1550,35 @@ Verbindungsparameter es gibt, wie Variablen adressiert werden, welche Datentypen
 lesbar sind, wie Blöcke aussehen und ob es einen Auswahldialog gibt. In einer
 Konfiguration lassen sich beliebige Treiber mischen.
 
+**Wie gut ist welcher Treiber geprüft?** Bei jedem Hochladen laufen automatische Tests; wo es
+eine fremde, verbreitete Gegenstelle gibt, prüfen sie den Treiber gegen deren Simulator.
+Mit echten Steuerungen erprobt sind bisher nur ``s7`` und ``clx``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Treiber
+     - Geprüft
+   * - ``s7``
+     - **Mit Steuerung** (S7-300/400, auch Ringpuffer); automatisch gegen den S7-Server von
+       python-snap7 (Einzelwerte, Bits, Blöcke, Ringpuffer).
+   * - ``clx``
+     - **Mit Steuerung** (normales Lesen und Blöcke); der Ringpuffer nur gegen eine
+       nachgebildete libplctag.
+   * - ``tia``
+     - Automatisch: Ringpuffer gegen den S7CommPlus-Emulator von s7commplus. Das
+       symbolische Lesen ist noch nicht mit einer Steuerung erprobt.
+   * - ``modbus``
+     - Automatisch gegen den Modbus-TCP-Server von pymodbus (alle vier Tabellen, Bits,
+       REAL/DINT, Wortfolge).
+   * - ``opcua``
+     - Automatisch gegen einen OPC-UA-Server von asyncua (Zahlen, BOOL, Array als Block).
+   * - ``logo``, ``pccc``, ``modbus_rtu``, ``ads``, ``slmp``, ``fins``, ``kvhostlink``,
+       ``toyopuc``, ``s5as511``
+     - Noch weder mit Steuerung noch mit Simulator erprobt. Erfahrungen und Fehlermeldungen
+       (z. B. über GitHub) sind willkommen.
+
 Treiber ``s7`` – Siemens S7 (PUT/GET, snap7)
 ----------------------------------------------------------------------
 

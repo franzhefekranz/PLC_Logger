@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Build
+
+* Automatische Tests der Treiber gegen Simulatoren fremder Bibliotheken: `s7` gegen den S7-Server von python-snap7
+  (inkl. Ringpuffer), `tia` (Ringpuffer) gegen den S7CommPlus-Emulator, `modbus` gegen pymodbus, `opcua` gegen asyncua.
+  Die Anleitung zeigt je Treiber, wie er geprüft ist.
+
 ## [3.4.0] – 2026-10-28
 
 ### Neu

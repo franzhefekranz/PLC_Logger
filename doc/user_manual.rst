@@ -1515,6 +1515,35 @@ connection parameters exist, how variables are addressed, which data types can b
 what blocks look like and whether there is a selection dialog. Any drivers can be mixed
 in one configuration.
 
+**How well is each driver tested?** Automatic tests run on every upload; where a
+third-party, widely used counterpart exists, they test the driver against its simulator.
+So far only ``s7`` and ``clx`` have been tried with real controllers:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Driver
+     - Tested
+   * - ``s7``
+     - **With a controller** (S7-300/400, also ring buffer); automatically against the S7
+       server of python-snap7 (single values, bits, blocks, ring buffer).
+   * - ``clx``
+     - **With a controller** (normal reading and blocks); the ring buffer only against a
+       simulated libplctag.
+   * - ``tia``
+     - Automatically: ring buffer against the S7CommPlus emulator of s7commplus. Symbolic
+       reading has not yet been tried with a controller.
+   * - ``modbus``
+     - Automatically against the Modbus TCP server of pymodbus (all four tables, bits,
+       REAL/DINT, word order).
+   * - ``opcua``
+     - Automatically against an OPC UA server of asyncua (numbers, BOOL, array as block).
+   * - ``logo``, ``pccc``, ``modbus_rtu``, ``ads``, ``slmp``, ``fins``, ``kvhostlink``,
+       ``toyopuc``, ``s5as511``
+     - Not yet tried with a controller or a simulator. Experience reports and error
+       reports (e.g. via GitHub) are welcome.
+
 Driver ``s7`` – Siemens S7 (PUT/GET, snap7)
 ----------------------------------------------------------------------
 
