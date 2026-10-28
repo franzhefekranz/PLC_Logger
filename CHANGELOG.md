@@ -22,6 +22,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   AppImage-Aktionen) und als macOS-Programmsymbol. `app.ico` enthält jetzt alle Größen von 16 bis 256 Pixeln.
   Erzeugt mit `tools/make_program_icons.py`.
 
+### Behoben
+
+* Datenbank (Prometheus): Die Meldung „Werte abgelehnt“ fehlte, wenn der Rechner erst weniger als eine Minute lief
+  (z. B. Raspberry Pi direkt nach dem Booten).
+
 ## [3.4.1] – 2026-10-28
 
 ### Neu

@@ -787,7 +787,7 @@ class DbWriter(threading.Thread):
         self.written = 0
         self.dropped = 0
         self.rejected = 0               # vom Server endgültig abgelehnte Werte (RejectedBatch)
-        self._rejected_note = 0.0       # Zeitpunkt der letzten Meldung darüber (höchstens einmal je Minute)
+        self._rejected_note = None      # Zeitpunkt der letzten Meldung darüber (höchstens einmal je Minute)
         self._last = {}                 # "nur Änderungen": Variable -> (Wert, Zeit) zuletzt geschrieben
         self.backend = None
         from plc_cleanup import settings as cleanup_settings
@@ -890,7 +890,8 @@ class DbWriter(threading.Thread):
                     self._set(ST_OK, f"Verbunden: {describe(self.s)}")
             except RejectedBatch as e:                  # endgültig abgelehnt: verwerfen, nicht wiederholen
                 self.rejected += len(batch)
-                if time.monotonic() - self._rejected_note > 60.0:
+                # None: noch keine Meldung (monotonic() beginnt beim Systemstart – kurz danach ist es < 60)
+                if self._rejected_note is None or time.monotonic() - self._rejected_note > 60.0:
                     self._rejected_note = time.monotonic()
                     self.emit(tr("⚠ [Datenbank] {0} Werte abgelehnt: {1}").format(len(batch), e))
             except Exception as e:
