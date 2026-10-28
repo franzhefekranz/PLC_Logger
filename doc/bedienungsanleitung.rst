@@ -167,6 +167,9 @@ auch der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
    * - ``app.ico``, ``logo.png``
      - Programm-Icon (Vorgabe, wenn in der Konfiguration nichts eingetragen ist; fließt auch in
        die ``.exe``-Dateien und den Installer ein) und Herstellerlogo (Startbild, „Über …“).
+   * - ``icons/``, ``tools/make_program_icons.py``
+     - Icons der einzelnen Programme (Logger, Konfiguration, IO-Check, Ereignisprotokoll,
+       Headless) als ``.ico`` und ``.png``; das Skript zeichnet sie neu (braucht Pillow).
    * - ``doc/``
      - Bedienungsanleitung (diese Datei) und ihre Bilder (``doc/images/``).
    * - ``plctag.dll``
@@ -295,6 +298,19 @@ Logger bzw. den IO-Check starten (**Datei › Logger mit dieser Konfiguration st
 **Datei › IO-Check mit dieser Konfiguration starten**). Der IO-Check hat außerdem ein
 eigenes Startprogramm: ``python src/plc_iocheck_start.py`` (installiert:
 ``PLCIOCheck.exe``).
+
+Jedes Programm hat ein eigenes Icon: das „Ti“ des Logos mit einem farbigen
+Abzeichen. So lassen sich Logger, Konfiguration, IO-Check, Ereignisprotokoll und
+Headless-Betrieb in Taskleiste, Startmenü und Dock auseinanderhalten. Ein in der
+Konfiguration eingetragenes eigenes Icon (Reiter *Anzeige*) gilt für Logger und
+Ereignisprotokoll.
+
+.. figure:: images/programm_icons.png
+   :alt: Icons der Programme
+   :width: 90%
+   :align: center
+
+   Icons der Programme (groß und in den Größen der Taskleiste).
 
 Vorbereitung der Steuerungen
 ----------------------------------------------------------------------
@@ -564,8 +580,9 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
      - Zweites Logo (z. B. des Kunden bzw. der Anlage), erscheint an denselben Stellen
        links neben dem Logo bzw. im PDF links oben. Leer = kein Kundenlogo.
    * - Programm-Icon
-     - Icon für Fenster und Taskleiste (PNG, ICO oder SVG). Ohne Angabe wird das
-       mitgelieferte ``app.ico`` verwendet, sonst das Logo bzw. das Standard-Symbol.
+     - Icon für Fenster und Taskleiste des Loggers und des Ereignisprotokolls (PNG, ICO
+       oder SVG). Ohne Angabe gilt das Icon des Programms (Ordner ``icons``, sonst
+       ``app.ico``). Das Konfigurationsprogramm und der IO-Check behalten ihr eigenes Icon.
 
 **Reiter „Datenbank“**
 

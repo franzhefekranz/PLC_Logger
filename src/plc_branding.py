@@ -75,10 +75,16 @@ def default_pixmap(size: int = 256) -> QPixmap:
     return pm
 
 
-def app_icon(*paths) -> QIcon:
-    """Erste vorhandene Bilddatei als Icon: konfiguriertes Icon, mitgeliefertes app.ico, weitere Pfade (z. B. das
-    Logo), sonst das Standard-Icon."""
-    candidates = list(paths[:1]) + [bundled("app.ico")] + list(paths[1:])
+# Programme mit eigenem Icon (Ordner icons, erzeugt mit tools/make_program_icons.py): das „Ti“ des Logos mit einem
+# farbigen Abzeichen, damit sich die Programme in Taskleiste, Startmenü und Dock unterscheiden lassen.
+PROGRAM_ICONS = ("logger", "konfiguration", "iocheck", "ereignisse", "headless")
+
+
+def app_icon(*paths, program: str = "logger") -> QIcon:
+    """Erste vorhandene Bilddatei als Icon: konfiguriertes Icon, Icon des Programms (``icons/<program>.ico``),
+    mitgeliefertes app.ico, weitere Pfade (z. B. das Logo), sonst das Standard-Icon."""
+    own = bundled(os.path.join("icons", program + ".ico")) if program in PROGRAM_ICONS else ""
+    candidates = list(paths[:1]) + [own, bundled("app.ico")] + list(paths[1:])
     for path in candidates:
         full = resolve(path)
         if full and os.path.exists(full):

@@ -666,3 +666,20 @@ def test_headless_status_and_stop_request(tmp_path, demo_config, monkeypatch):
     th.join(20)
     assert not th.is_alive() and result.get("rc") == 0
     assert hl.running_loggers(run_dir) == [] and not os.listdir(run_dir)
+
+
+def test_program_icons_present():
+    """Je Programm ein Icon (ICO mit 16 bis 256 Pixeln, PNG); Build-Skripte und Installer verwenden sie."""
+    import struct
+    for name in ("logger", "konfiguration", "iocheck", "ereignisse", "headless"):
+        data = open(os.path.join(ROOT, "icons", name + ".ico"), "rb").read()
+        count = struct.unpack("<HHH", data[:6])[2]
+        sizes = {data[6 + 16 * i] or 256 for i in range(count)}
+        assert {16, 24, 32, 48, 256} <= sizes, (name, sizes)
+        assert open(os.path.join(ROOT, "icons", name + ".png"), "rb").read(8) == b"\x89PNG\r\n\x1a\n"
+    bat = open(os.path.join(ROOT, "build.bat"), encoding="utf-8").read()
+    assert "--icon icons\\konfiguration.ico" in bat and "--icon icons\\iocheck.ico" in bat
+    iss = open(os.path.join(ROOT, "installer.iss"), encoding="utf-8").read()
+    assert "icons\\ereignisse.ico" in iss and "icons\\headless.ico" in iss
+    for script in ("build_appimage.sh", "build_macos.sh"):
+        assert "icons:icons" in open(os.path.join(ROOT, script), encoding="utf-8").read(), script

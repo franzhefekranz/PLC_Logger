@@ -107,6 +107,8 @@ class EventViewer(QDialog):
         Knopf und Kontextmenü „Im Diagramm zeigen“.
         """
         super().__init__(parent)
+        from plc_branding import app_icon
+        self.setWindowIcon(app_icon(program="ereignisse"))
         self.log, self.on_change, self.standalone = log, on_change, standalone
         self.on_goto = on_goto                # Rückruf (Beginn, Ende, Text): Ereignis im Diagramm zeigen (Logger)
         self._seen = None                     # (version, mtime) der zuletzt angezeigten Daten
@@ -397,14 +399,14 @@ def resolve(arg=None):
 def run_viewer(arg=None):
     """Viewer allein starten (eigenes Fenster, ohne Logger)."""
     from plc_branding import app_icon, set_windows_app_id
-    set_windows_app_id()
+    set_windows_app_id("PLCDatenlogger.Ereignisse")       # eigene Taskleisten-Gruppe und eigenes Icon
     from plc_common import qt_platform_setup
     qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     from plc_i18n import install_qt
     install_qt(app)
     path, conn = resolve(arg)
-    app.setWindowIcon(app_icon(conn.get("icon", ""), conn.get("logo", "")))
+    app.setWindowIcon(app_icon(conn.get("icon", ""), program="ereignisse"))
     from plc_about import install_help
     install_help()                                    # F1: Kontexthilfe
     w = EventViewer(EventLog(path), standalone=True)

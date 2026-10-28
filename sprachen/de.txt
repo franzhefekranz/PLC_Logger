@@ -556,7 +556,7 @@
 @ leer = kein Kundenlogo
 > 
 
-@ Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon
+@ Icon des Loggers und des Ereignisprotokolls (PNG/ICO/SVG); leer = mitgeliefertes Icon
 > 
 
 @ Logo wählen

@@ -85,12 +85,14 @@ if [[ ! -f app.png ]]; then
     QT_QPA_PLATFORM=offscreen "$VPY" tools/make_icon.py || true
 fi
 ICNS="$B/app.icns"
-if [[ -f app.png && ! -f "$ICNS" ]]; then
+SRC=app.png
+[[ -f icons/logger_1024.png ]] && SRC=icons/logger_1024.png     # Programm-Icon in voller Größe (für Retina)
+if [[ -f "$SRC" && ! -f "$ICNS" ]]; then
     SET="$B/app.iconset"
     rm -rf "$SET"; mkdir -p "$SET"
     for s in 16 32 128 256 512; do
-        sips -z $s $s app.png --out "$SET/icon_${s}x${s}.png" >/dev/null
-        sips -z $((s * 2)) $((s * 2)) app.png --out "$SET/icon_${s}x${s}@2x.png" >/dev/null
+        sips -z $s $s "$SRC" --out "$SET/icon_${s}x${s}.png" >/dev/null
+        sips -z $((s * 2)) $((s * 2)) "$SRC" --out "$SET/icon_${s}x${s}@2x.png" >/dev/null
     done
     iconutil -c icns "$SET" -o "$ICNS"
 fi
@@ -138,7 +140,7 @@ echo "[4/6] PyInstaller ..."
     --distpath "$B/dist" --workpath "$B/work" --specpath "$B" --paths "$ROOT/src" \
     --add-data "$ROOT/sprachen:sprachen" \
     --add-data "$ROOT/vorlagen:vorlagen" \
-    --add-data "$ROOT/logo.png:." --add-data "$ROOT/app.ico:." \
+    --add-data "$ROOT/logo.png:." --add-data "$ROOT/app.ico:." --add-data "$ROOT/icons:icons" \
     --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 \
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \

@@ -166,6 +166,9 @@ also the data folder (configuration, recordings, log file).
    * - ``app.ico``, ``logo.png``
      - Program icon (default if nothing is entered in the configuration; also used for the
        ``.exe`` files and the installer) and manufacturer logo (start screen, “About …”).
+   * - ``icons/``, ``tools/make_program_icons.py``
+     - Icons of the individual programs (logger, configuration, IO check, event log,
+       headless) as ``.ico`` and ``.png``; the script redraws them (needs Pillow).
    * - ``doc/``
      - User manual (German ``bedienungsanleitung.rst``, English ``user_manual.rst``) and
        its images (``doc/images/``).
@@ -291,6 +294,18 @@ toolbar), and the configuration program can start the logger or the IO check (**
 Start logger with this configuration**, **File › Start IO check with this
 configuration**). The IO check also has a start program of its own:
 ``python src/plc_iocheck_start.py`` (installed: ``PLCIOCheck.exe``).
+
+Every program has an icon of its own: the “Ti” of the logo with a coloured badge. This
+way logger, configuration, IO check, event log and headless operation can be told
+apart in the taskbar, start menu and dock. A custom icon entered in the configuration
+(tab *Display*) applies to the logger and the event log.
+
+.. figure:: images/en/programm_icons.png
+   :alt: Icons of the programs
+   :width: 90%
+   :align: center
+
+   Icons of the programs (large and in taskbar sizes).
 
 Preparing the controllers
 ----------------------------------------------------------------------
@@ -557,8 +572,9 @@ CSV file (one column per variable).
      - Second logo (e.g. of the customer or plant), shown in the same places to the left
        of the logo, in the PDF at the top left. Empty = no customer logo.
    * - Program icon
-     - Icon for windows and taskbar (PNG, ICO or SVG). Without an entry the supplied
-       ``app.ico`` is used, otherwise the logo or the default symbol.
+     - Icon for windows and taskbar of the logger and the event log (PNG, ICO or SVG).
+       Without an entry the program's own icon is used (folder ``icons``, otherwise
+       ``app.ico``). The configuration program and the IO check keep their own icons.
 
 **Tab “Database”**
 

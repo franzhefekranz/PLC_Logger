@@ -14,6 +14,14 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* Eigene Icons je Programm: das „Ti“ des Logos mit farbigem Abzeichen für Logger (blau, Kurve), Konfiguration
+  (orange, Zahnrad), IO-Check (grün, Haken), Ereignisprotokoll (rot, Liste) und Headless (grau, Aufnahme) – in
+  Fenstern, Taskleiste (eigene Gruppe auch für das Ereignisprotokoll), Windows-Startmenü, Linux-Startmenü (`.deb`,
+  AppImage-Aktionen) und als macOS-Programmsymbol. `app.ico` enthält jetzt alle Größen von 16 bis 256 Pixeln.
+  Erzeugt mit `tools/make_program_icons.py`.
+
 ## [3.4.1] – 2026-10-28
 
 ### Neu

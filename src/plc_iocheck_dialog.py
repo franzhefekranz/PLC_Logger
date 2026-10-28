@@ -1586,7 +1586,7 @@ def run_iocheck(arg=None, demo=False):
     qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
     app = QApplication.instance() or QApplication(sys.argv[:1])
     install_qt(app)
-    app.setWindowIcon(app_icon())
+    app.setWindowIcon(app_icon(program="iocheck"))
     if not arg:
         from plc_splash import choose
         start, res = choose("iocheck", last_config_path())

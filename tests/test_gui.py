@@ -282,6 +282,21 @@ def test_block_editor_ring(qt_log, monkeypatch):
     dlg.close()
 
 
+def test_program_icons(qapp):
+    """Jedes Programm bekommt sein eigenes Icon; ein konfiguriertes Icon geht vor."""
+    from plc_branding import PROGRAM_ICONS, app_icon
+    keys = set()
+    for name in PROGRAM_ICONS:
+        icon = app_icon(program=name)
+        assert not icon.isNull() and {s.width() for s in icon.availableSizes()} >= {16, 32, 256}, name
+        keys.add(bytes(icon.pixmap(32, 32).toImage().constBits()))
+    assert len(keys) == len(PROGRAM_ICONS)                      # alle verschieden
+    import os
+    from conftest import ROOT
+    custom = app_icon(os.path.join(ROOT, "logo.png"), program="ereignisse")
+    assert custom.pixmap(64, 64).toImage() != app_icon(program="ereignisse").pixmap(64, 64).toImage()
+
+
 def test_headless_dialog(qt_log, demo_config, tmp_path, monkeypatch):
     """Laufende Headless-Logger: anzeigen, beenden anfordern, Meldung nach dem Abmelden; Aufruf im Konfig-Programm."""
     import plc_config

@@ -278,7 +278,7 @@ class ConfigWindow(QMainWindow):
                                             "leer = kein Kundenlogo"))
         self.ed_customer_logo.setPlaceholderText(tr("leer = kein Kundenlogo"))
         self.ed_icon = QLineEdit()
-        self.ed_icon.setToolTip(tr("Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon"))
+        self.ed_icon.setToolTip(tr("Icon des Loggers und des Ereignisprotokolls (PNG/ICO/SVG); leer = mitgeliefertes Icon"))
         logo_row = self._file_row(self.ed_logo, tr("Logo wählen"))
         customer_row = self._file_row(self.ed_customer_logo, tr("Kundenlogo wählen"))
         icon_row = self._file_row(self.ed_icon, tr("Programm-Icon wählen"))
@@ -532,7 +532,7 @@ class ConfigWindow(QMainWindow):
         if load_errors():
             QTimer.singleShot(800, lambda: self.statusBar().showMessage(
                 tr("Nicht alle Treiber konnten geladen werden – Menü Treiber › Installierte Treiber"), 15000))
-        self.setWindowIcon(app_icon(self.ed_icon.text(), self.ed_logo.text()))
+        self.setWindowIcon(app_icon(program="konfiguration"))  # eigenes Icon (das konfigurierte gilt dem Logger)
         self.update_title()
 
     # ---------------------------------------------------------------------------------------
@@ -2376,7 +2376,7 @@ class ConfigWindow(QMainWindow):
             QMessageBox.warning(self, tr("Trigger"), tr("Die Trigger konnten nicht gelesen werden:\n{0}").format(e))
         self._update_trigger_summary()
         remember_config_path(self.path)
-        self.setWindowIcon(app_icon(self.ed_icon.text(), self.ed_logo.text()))
+        self.setWindowIcon(app_icon(program="konfiguration"))  # eigenes Icon (das konfigurierte gilt dem Logger)
         self.update_title()
         self.statusBar().showMessage(tr("Geladen: {0}").format(self.path), 5000)
         return True

@@ -178,7 +178,7 @@ echo "[3/7] PyInstaller ..."
     --distpath "$B/dist" --workpath "$B/work" --specpath "$B" --paths "$PWD/src" \
     --add-data "$PWD/sprachen:sprachen" \
     --add-data "$PWD/vorlagen:vorlagen" \
-    --add-data "$PWD/logo.png:." --add-data "$PWD/app.ico:." \
+    --add-data "$PWD/logo.png:." --add-data "$PWD/app.ico:." --add-data "$PWD/icons:icons" \
     --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 \
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
@@ -219,7 +219,9 @@ for f in LICENSE COPYING THIRD_PARTY_LICENSES.md; do
         cp "$f" "$AD/usr/share/doc/$APP/"
     fi
 done
-if [[ -f app.png ]]; then
+if [[ -f icons/logger.png ]]; then
+    cp icons/logger.png "$AD/$APP.png"          # Programm-Icons aus icons/ (tools/make_program_icons.py)
+elif [[ -f app.png ]]; then
     cp app.png "$AD/$APP.png"
 else
     "$VPY" - <<'EOF'
@@ -235,6 +237,10 @@ EOF
     cp app.png "$AD/$APP.png"
 fi
 cp "$AD/$APP.png" "$AD/usr/share/icons/hicolor/256x256/apps/$APP.png"
+# Eigene Icons für Konfiguration, IO-Check, Ereignisprotokoll (Startmenü-Einträge bzw. Aktionen)
+for k in konfiguration iocheck ereignisse headless; do
+    [[ -f "icons/$k.png" ]] && cp "icons/$k.png" "$AD/usr/share/icons/hicolor/256x256/apps/$APP-$k.png"
+done
 ln -sf "$APP.png" "$AD/.DirIcon"
 
 cat > "$AD/AppRun" <<EOF
@@ -264,11 +270,13 @@ Actions=Konfiguration;Ereignisse;
 Name=Konfiguration
 Name[en]=Configuration
 Exec=AppRun --konfig
+Icon=$APP-konfiguration
 
 [Desktop Action Ereignisse]
 Name=Ereignisprotokoll
 Name[en]=Event log
 Exec=AppRun --ereignisse
+Icon=$APP-ereignisse
 EOF
 cp "$AD/$APP.desktop" "$AD/usr/share/applications/"
 
@@ -324,13 +332,13 @@ Type=Application
 Name=$2
 Name[en]=$3
 Exec=$1 %f
-Icon=$APP
+Icon=$APP-$4
 Categories=Utility;Engineering;
 Terminal=false
 DESK
     }
-    desk plc-konfiguration "PLC Konfiguration" "PLC Configuration"
-    desk plc-iocheck       "PLC IO-Check"      "PLC IO check"
+    desk plc-konfiguration "PLC Konfiguration" "PLC Configuration" konfiguration
+    desk plc-iocheck       "PLC IO-Check"      "PLC IO check"      iocheck
     cp "$DR/usr/share/doc/$APP/LICENSE" "$DR/usr/share/doc/$PKG/copyright" 2>/dev/null || true
     SIZE="$(du -sk "$DR/usr" | cut -f1)"
     cat > "$DR/DEBIAN/control" <<CTRL

@@ -556,8 +556,8 @@
 @ leer = kein Kundenlogo
 > empty = no customer logo
 
-@ Programm-Icon (PNG/ICO/SVG); leer = Logo bzw. Standard-Icon
-> Program icon (PNG/ICO/SVG); empty = logo or default icon
+@ Icon des Loggers und des Ereignisprotokolls (PNG/ICO/SVG); leer = mitgeliefertes Icon
+> Icon of the logger and the event log (PNG/ICO/SVG); empty = supplied icon
 
 @ Logo wählen
 > Choose logo
