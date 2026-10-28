@@ -1569,10 +1569,12 @@ Mit echten Steuerungen erprobt sind bisher nur ``s7`` und ``clx``:
    * - Treiber
      - Geprüft
    * - ``s7``
-     - **Mit Steuerung** (S7-300/400, auch Ringpuffer); automatisch gegen den S7-Server von
+     - **Mit Steuerung** (S7-300/400, auch Ringpuffer; Windows und Raspberry Pi mit Ubuntu
+       24.04); automatisch gegen den S7-Server von
        python-snap7 (Einzelwerte, Bits, Blöcke, Ringpuffer).
    * - ``clx``
-     - **Mit Steuerung** (normales Lesen und Blöcke); der Ringpuffer nur gegen eine
+     - **Mit Steuerung** (normales Lesen und Blöcke; Windows und Raspberry Pi mit Ubuntu
+       24.04); der Ringpuffer nur gegen eine
        nachgebildete libplctag.
    * - ``tia``
      - Automatisch: Ringpuffer gegen den S7CommPlus-Emulator von s7commplus. Das
@@ -4841,6 +4843,10 @@ Build-Systems; ``apt`` prüft das und lehnt das Paket auf zu alten Systemen ab:
   und neuer, Debian 12 und neuer. Ein 32-Bit-Raspberry-Pi-OS wird nicht unterstützt
   (``dpkg --print-architecture`` muss ``arm64`` zeigen). Bis Version 3.4.0 brauchte das
   arm64-Paket Ubuntu 24.04 bzw. Raspberry Pi OS Trixie.
+
+**Erprobt:** Raspberry Pi mit Ubuntu 24.04 (arm64, ``.deb`` aus Version 3.4.0) – Steuerungen mit
+den Treibern ``s7`` und ``clx`` gleichzeitig, mit Webserver, mit Oberfläche und im
+Headless-Betrieb.
 
 Bauen
 ----------------------------------------------------------------------

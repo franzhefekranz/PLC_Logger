@@ -1534,10 +1534,12 @@ So far only ``s7`` and ``clx`` have been tried with real controllers:
    * - Driver
      - Tested
    * - ``s7``
-     - **With a controller** (S7-300/400, also ring buffer); automatically against the S7
+     - **With a controller** (S7-300/400, also ring buffer; Windows and Raspberry Pi with
+       Ubuntu 24.04); automatically against the S7
        server of python-snap7 (single values, bits, blocks, ring buffer).
    * - ``clx``
-     - **With a controller** (normal reading and blocks); the ring buffer only against a
+     - **With a controller** (normal reading and blocks; Windows and Raspberry Pi with Ubuntu
+       24.04); the ring buffer only against a
        simulated libplctag.
    * - ``tia``
      - Automatically: ring buffer against the S7CommPlus emulator of s7commplus. Symbolic
@@ -4730,6 +4732,10 @@ the build system; ``apt`` checks this and refuses the package on systems that ar
   22.04 and newer, Debian 12 and newer. A 32-bit Raspberry Pi OS is not supported
   (``dpkg --print-architecture`` must show ``arm64``). Up to version 3.4.0 the arm64 package
   needed Ubuntu 24.04 or Raspberry Pi OS Trixie.
+
+**Tried:** Raspberry Pi with Ubuntu 24.04 (arm64, ``.deb`` from version 3.4.0) – controllers
+with the drivers ``s7`` and ``clx`` at the same time, with web server, with user interface and
+in headless operation.
 
 Building
 ----------------------------------------------------------------------
