@@ -445,6 +445,14 @@ Der obere Fensterbereich ist in mehrere Reiter gegliedert.
        Adressen sind gekennzeichnet und nicht vorgewählt. Geräte hinter Routern werden
        nur gefunden, wenn ihr Bereich angegeben ist; eine Firewall kann Ports sperren.
 
+       .. figure:: images/netzwerksuche.png
+          :alt: Netzwerk durchsuchen
+          :width: 95%
+          :align: center
+
+          Netzwerk durchsuchen: gefundene Steuerungen mit Kennung und Treibervorschlag; die schon
+          konfigurierte Adresse ist nicht vorgewählt.
+
 **Einstellungsdialog der Verbindung.** Der Dialog wird aus den Parametern des
 Treibers aufgebaut (Textfelder, Zahlen, Auswahllisten, Passwortfelder).
 Selten benötigte Parameter stehen im Bereich *Erweitert*. Unten zeigt der Dialog,
