@@ -44,7 +44,7 @@ class ClxDriver(Driver):
         """„IP, Pfad 1,0, Steuerungstyp“."""
         p = plc.params
         cpu = tr(CPUS.get(p.get("cpu"), p.get("cpu", "")))
-        return f"{p.get('ip', '')}" + (f", Pfad {p.get('pfad')}" if p.get("pfad") else "") + f", {cpu}"
+        return f"{p.get('ip', '')}" + (", " + tr("Pfad {0}").format(p.get("pfad")) if p.get("pfad") else "") + f", {cpu}"
 
     def normalize_params(self, raw):
         """Parameter vereinheitlichen: CIP-Pfad ohne Leerzeichen, Steuerungstyp klein und bekannt (sonst ControlLogix).

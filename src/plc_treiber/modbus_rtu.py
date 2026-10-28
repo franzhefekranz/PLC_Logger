@@ -180,7 +180,7 @@ class ModbusRtuDriver(ModbusDriver):
         """„COM3 19200 E1, Gerät n“."""
         p = plc.params
         return f"{p.get('schnittstelle', '')} {p.get('baud', 19200)} {p.get('paritaet', 'E')}{p.get('stoppbits', 1)}, " \
-               f"Gerät {p.get('unit', 1)}"
+               + tr("Gerät {0}").format(p.get('unit', 1))
 
     def check_params(self, params):
         """Schnittstelle muss angegeben sein."""

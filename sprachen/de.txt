@@ -4351,6 +4351,9 @@
 @ Tag des Ringpuffers (UDT mit Zaehler und Daten[]), z. B. Puffer oder Program:Main.Puffer
 > 
 
+@ Pfad {0}
+> 
+
 @ Ungültiger Tag-Name „{0}“
 > 
 
@@ -4905,6 +4908,9 @@
 > 
 
 @ Erneute Versuche, wenn ein Gerät nicht antwortet
+> 
+
+@ Gerät {0}
 > 
 
 @ Schnittstelle fehlt

@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* Konfigurationsprogramm: Spalte „Treiber“ der Steuerungen so breit, dass die Treibernamen lesbar sind; englische
+  Oberfläche: „Path“ bzw. „Device“ statt „Pfad“/„Gerät“ in der Verbindungsbeschreibung (clx, modbus_rtu).
+
 ### Build
 
 * Automatische Tests der Treiber gegen Simulatoren fremder Bibliotheken: `s7` gegen den S7-Server von python-snap7

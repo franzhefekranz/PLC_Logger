@@ -659,6 +659,21 @@ class ConfigWindow(QMainWindow):
         t.setItem(r, P_ON, on)
         t.blockSignals(False)
         self._update_conn_text(r)
+        self._fit_driver_column()
+
+    def _fit_driver_column(self):
+        """Spalte „Treiber“ so breit, dass die gewählten Treibernamen ganz lesbar sind (höchstens 420 Pixel); die
+        Auswahlliste selbst zeigt alle Namen in voller Länge."""
+        t = self.plc_table
+        need = 160
+        for r in range(t.rowCount()):
+            combo = t.cellWidget(r, P_DRV)
+            if combo is None:
+                continue
+            fm = combo.fontMetrics()
+            need = max(need, fm.horizontalAdvance(combo.currentText()) + 48)
+            combo.view().setMinimumWidth(max(fm.horizontalAdvance(combo.itemText(i)) for i in range(combo.count())) + 32)
+        t.setColumnWidth(P_DRV, min(need, 420))
 
     def _plc_row_of(self, widget, col):
         """Zeile der Steuerungen-Tabelle, in der das Widget ``widget`` in Spalte ``col`` steckt (-1 = nicht gefunden).
@@ -701,6 +716,7 @@ class ConfigWindow(QMainWindow):
             new["ip"] = old["ip"]
         self.plc_table.item(r, P_CONN).setData(ROLE_PARAMS, new)
         self._update_conn_text(r)
+        self._fit_driver_column()
         self.refresh_plc_combos()
         self.sync_block_drivers()
         self.refresh_tree()

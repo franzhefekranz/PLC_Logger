@@ -4351,6 +4351,9 @@
 @ Tag des Ringpuffers (UDT mit Zaehler und Daten[]), z. B. Puffer oder Program:Main.Puffer
 > Tag of the ring buffer (UDT with Zaehler and Daten[]), e.g. Puffer or Program:Main.Puffer
 
+@ Pfad {0}
+> Path {0}
+
 @ Ungültiger Tag-Name „{0}“
 > Invalid tag name “{0}”
 
@@ -4906,6 +4909,9 @@
 
 @ Erneute Versuche, wenn ein Gerät nicht antwortet
 > Further attempts if a device does not respond
+
+@ Gerät {0}
+> Device {0}
 
 @ Schnittstelle fehlt
 > Serial port missing
