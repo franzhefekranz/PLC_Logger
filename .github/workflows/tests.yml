@@ -55,15 +55,19 @@ jobs:
               print("::error::Keine Testergebnisse (Abbruch vor den Tests?)"); raise SystemExit
           root = ET.parse("test-ergebnis.xml").getroot()
           n = f = 0
+          skipped = []
           for case in root.iter("testcase"):
               n += 1
+              if case.find("skipped") is not None:
+                  skipped.append(case.get("name"))
               for tag in ("failure", "error"):
                   for el in case.findall(tag):
                       f += 1
                       text = ((el.get("message") or "") + "\n" + (el.text or ""))[-3000:]
                       text = text.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
                       print(f"::error title={case.get('classname')}.{case.get('name')}::{text}")
-          print(f"::notice title=Tests ${{ matrix.os }}::{n} Tests, {f} fehlgeschlagen")
+          print(f"::notice title=Tests ${{ matrix.os }}::{n} Tests, {f} fehlgeschlagen, {len(skipped)} übersprungen"
+                + (": " + ", ".join(skipped) if skipped else ""))
       - uses: actions/upload-artifact@v4
         if: always()
         with:
