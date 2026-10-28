@@ -623,3 +623,18 @@ def test_qt_platform_setup_wayland(monkeypatch):
     monkeypatch.delenv("DISPLAY")                       # kein XWayland: bei Wayland bleiben
     plc_common.qt_platform_setup()
     assert "QT_QPA_PLATFORM" not in os.environ
+
+
+def test_manual_no_figures_in_tables():
+    """Keine Abbildungen in Tabellenzellen: rinohtype (PDF) kann Tabellenzeilen nicht umbrechen und bricht ab, wenn eine
+    Zeile mit Bild höher als eine Seite wird (AssertionError in flow_inner)."""
+    for name in ("bedienungsanleitung", "user_manual"):
+        lines = open(os.path.join(ROOT, "doc", f"{name}.rst"), encoding="utf-8").read().splitlines()
+        in_table = False
+        for no, line in enumerate(lines, 1):
+            if line.startswith(".. list-table::"):
+                in_table = True
+            elif line and not line[0].isspace():
+                in_table = False
+            elif in_table and re.match(r"\s+\.\. (figure|image)::", line):
+                raise AssertionError(f"{name}.rst Zeile {no}: Abbildung in einer Tabellenzelle")

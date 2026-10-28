@@ -441,13 +441,13 @@ The upper part of the window is divided into several tabs.
        Devices behind routers are only found if their range is given; a firewall can
        block ports.
 
-       .. figure:: images/en/netzwerksuche.png
-          :alt: Scan network
-          :width: 95%
-          :align: center
+.. figure:: images/en/netzwerksuche.png
+   :alt: Scan network
+   :width: 95%
+   :align: center
 
-          Scan network: controllers found with identity and driver suggestion; the address
-          already configured is not preselected.
+   Scan network: controllers found with identity and driver suggestion; the address
+   already configured is not preselected.
 
 **Connection settings dialog.** The dialog is built from the driver's parameters
 (text fields, numbers, choice lists, password fields). Rarely needed parameters are in
