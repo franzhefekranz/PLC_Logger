@@ -95,6 +95,55 @@ def test_logger_demo_recording(qt_log, demo_config, tmp_path):
     _close(w)
 
 
+def test_logger_separate_time_axes_and_zoom(qt_log, demo_config):
+    """Mausrad/Zoom wirken nur auf ein Diagramm (eigene Zeitachse), „Zeitachsen angleichen“ setzt alle gleich,
+    Zoom-Rechteck vergrößert Zeit und Y-Achsen, „Zoom zurücksetzen“ stellt die Skalierung wieder her."""
+    import plc_gui
+    from PySide6.QtCore import QRectF
+    w = plc_gui.MainWindow(demo_config, demo=True)
+    w.show()
+    assert len(w.panels) >= 2, "Demo-Konfiguration braucht mindestens zwei Diagramme"
+    w.act_run.setChecked(True)
+    wait(2500)
+    a, b = w.panels[0], w.panels[1]
+    rng = lambda p: tuple(p.plot.getViewBox().viewRange()[0])
+    # online: Mausrad über Diagramm b (Bereich ändern + Signal wie bei pyqtgraph) -> nur b bekommt eine eigene Breite
+    t1 = rng(b)[1]
+    b.plot.getViewBox().setXRange(t1 - 3, t1, padding=0)
+    b.plot.getViewBox().sigRangeChangedManually.emit([True, False])
+    w.dirty = True
+    wait(400)
+    assert not w.synced and w.active is b and abs(b.win - 3) < 0.01
+    assert abs((rng(b)[1] - rng(b)[0]) - 3) < 0.05 and abs((rng(a)[1] - rng(a)[0]) - 3) > 0.5
+    w.sync_axes()
+    wait(400)
+    assert w.synced and all(p.win is None for p in w.panels) and w.win_spin.value() == 3
+    # offline: Zoom-Rechteck in a -> Zeit und Y nur in a; Scrollleiste verschiebt beide, Angleichen setzt gleich
+    w.act_online.setChecked(False)
+    wait(300)
+    w.act_zoomrect.setChecked(True)
+    assert all(p.plot.getViewBox().rect_zoom for p in w.panels)
+    x0, x1 = rng(a)
+    y0, y1 = a.axis_vbs[0].viewRange()[1]
+    rect = QRectF(x0 + (x1 - x0) * 0.25, y0 + (y1 - y0) * 0.25, (x1 - x0) * 0.5, (y1 - y0) * 0.5)
+    w.on_zoom_rect(a, rect)
+    assert a.y_zoomed and abs(rng(a)[0] - rect.left()) < 1e-6 and abs(rng(a)[1] - rect.right()) < 1e-6
+    assert abs(a.axis_vbs[0].viewRange()[1][0] - rect.top()) < 1e-6
+    assert rng(b) == (x0, x1) and not b.y_zoomed
+    width_a, width_b = rng(a)[1] - rng(a)[0], rng(b)[1] - rng(b)[0]
+    w.scroll.setValue(max(0, w.scroll.value() - 100))
+    assert abs((rng(a)[1] - rng(a)[0]) - width_a) < 1e-6 and abs((rng(b)[1] - rng(b)[0]) - width_b) < 1e-6
+    w.on_zoom_rect(a, QRectF(rect.left(), rect.top(), 1e-9, 1e-9))     # Klick statt Rechteck: nichts
+    w.reset_zoom()
+    assert w.synced and rng(a) == rng(b) and not a.y_zoomed
+    w.act_zoomrect.setChecked(False)
+    w.act_run.setChecked(False)
+    wait(300)
+    for kind, _title, text in qt_log.messages:
+        assert kind != "critical", text
+    _close(w)
+
+
 def test_config_window(qt_log, demo_config):
     """Konfigurationsprogramm: Variablentabelle und Filter, alle Unterdialoge öffnen, Dialoge für OPC-UA-Server und
     Benachrichtigungen auswerten, Konfiguration speichern.

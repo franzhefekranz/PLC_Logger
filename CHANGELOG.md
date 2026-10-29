@@ -14,6 +14,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* Logger: **Zoom-Rechteck** (Werkzeugleiste) – mit der linken Maustaste einen Bereich aufziehen, Zeit und alle
+  Y-Achsen des Diagramms werden vergrößert; **Zoom zurücksetzen** stellt die konfigurierte Skalierung wieder her.
+
+### Geändert
+
+* Logger: Mausrad, Ziehen und Zoom wirken nur auf das **Diagramm unter dem Mauszeiger** – jedes Diagramm kann eine eigene
+  Zeitachse haben (online mit eigener Fensterbreite). **Zeitachsen angleichen** setzt alle wieder auf den Ausschnitt des
+  zuletzt bedienten Diagramms; die Scrollleiste verschiebt alle gemeinsam.
+
 ## [3.4.3] – 2026-10-29
 
 ### Neu

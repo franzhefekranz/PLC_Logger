@@ -2440,6 +2440,13 @@ Werkzeugleiste (oben):
        sichtbaren Zeitbereichs.
    * - **Demo**
      - Simulierte Werte statt SPS (siehe `Demo-Modus <demo-modus_>`__).
+   * - **Zoom-Rechteck**
+     - Aktiv: Mit der linken Maustaste einen Bereich aufziehen; Zeit und Werte dieses
+       Diagramms werden darauf vergrößert (siehe `Zoomen und Zeitachsen <zoomen_>`__).
+   * - **Zeitachsen angleichen**
+     - Alle Diagramme zeigen wieder den Zeitausschnitt des zuletzt bedienten Diagramms.
+   * - **Zoom zurücksetzen**
+     - Y-Achsen wieder wie konfiguriert skalieren und die Zeitachsen angleichen.
    * - **Screenshot**
      - Öffnet eine Liste der Diagramme; das gewählte Diagramm wird als PNG
        oder SVG gespeichert (siehe `Screenshots von Diagrammen <screenshots_>`__).
@@ -2538,10 +2545,28 @@ das Diagramm, verschwindet die Anzeige. Abschalten: **Ansicht › Werte am
 Mauszeiger (online)** (die Einstellung bleibt gespeichert). Im Offline-Modus
 übernehmen die Lineale diese Aufgabe.
 
-**Zoomen mit der Maus (nur Zeitachse):** Auch online lässt sich die Zeitachse mit dem
-**Mausrad** (bzw. Ziehen mit der rechten Maustaste) zoomen; die Y-Achsen bleiben
-unverändert. Die neue Breite wird als **Fenster [s]** übernommen, das rechte Ende
-folgt weiter den neuesten Werten.
+**Zoomen mit der Maus:** Auch online lässt sich die Zeitachse eines Diagramms mit dem
+**Mausrad** (bzw. Ziehen mit der rechten Maustaste) zoomen; die neue Breite gilt nur
+für dieses Diagramm, das rechte Ende folgt weiter den neuesten Werten. Mehr dazu unter
+`Zoomen und Zeitachsen <zoomen_>`__.
+
+.. _zoomen:
+
+**Zoomen und Zeitachsen** (online und offline):
+
+* **Mausrad**, Ziehen mit der Maus und das Zoom-Rechteck wirken nur auf das
+  **Diagramm unter dem Mauszeiger**. So kann jedes Diagramm einen anderen
+  Zeitausschnitt zeigen, z. B. oben eine Stunde, darunter wenige Sekunden.
+* **Zoom-Rechteck** (Werkzeugleiste, umschaltbar): Mit der linken Maustaste einen
+  Bereich aufziehen – Zeitachse und alle Y-Achsen des Diagramms werden darauf
+  vergrößert. Ist es aus, verschiebt die linke Maustaste die Zeitachse.
+* **Zeitachsen angleichen:** Alle Diagramme übernehmen den Ausschnitt des zuletzt
+  bedienten Diagramms. Eine neue Eingabe bei **Fenster [s]** gleicht ebenfalls an.
+* **Zoom zurücksetzen:** Y-Achsen wieder wie konfiguriert (bzw. *Y-Auto*) und
+  Zeitachsen angleichen.
+* **Fenster [s]** und die Scrollleiste zeigen den Ausschnitt des zuletzt bedienten
+  Diagramms. Die Scrollleiste verschiebt alle Diagramme gemeinsam; jedes behält seine
+  Breite.
 
 Offline-Modus
 ----------------------------------------------------------------------
@@ -2558,8 +2583,9 @@ zurückblättern:
 
 * **Zeit-Scrollleiste** unten: durch die aufgezeichneten Daten blättern.
 * **Maus:** Im Diagramm mit gedrückter Maustaste ziehen, um die Zeitachse zu
-  verschieben, und mit dem Mausrad zoomen. Scrollleiste und
-  *Fenster [s]* folgen automatisch.
+  verschieben, und mit dem Mausrad zoomen – jeweils nur in diesem Diagramm (siehe
+  `Zoomen und Zeitachsen <zoomen_>`__). Scrollleiste und *Fenster [s]* folgen
+  automatisch.
 * **Fenster [s]:** Breite des sichtbaren Zeitbereichs.
 
 .. note::

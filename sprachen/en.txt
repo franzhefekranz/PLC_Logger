@@ -2146,6 +2146,24 @@
 @ Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)
 > Scale all Y axes automatically (overrides fixed ranges)
 
+@ Zoom-Rechteck
+> Zoom rectangle
+
+@ Mit der linken Maustaste einen Bereich aufziehen: Zeit und Werte dieses Diagramms vergrößern (aus: linke Maustaste verschiebt die Zeitachse)
+> Drag a region with the left mouse button: enlarge time and values of this chart (off: the left mouse button pans the time axis)
+
+@ Zeitachsen angleichen
+> Align time axes
+
+@ Alle Diagramme auf den Zeitausschnitt des zuletzt bedienten Diagramms setzen (Mausrad und Zoom wirken nur auf das Diagramm unter dem Mauszeiger)
+> Set all charts to the time range of the chart used last (mouse wheel and zoom only affect the chart under the mouse pointer)
+
+@ Zoom zurücksetzen
+> Reset zoom
+
+@ Y-Achsen wieder wie konfiguriert skalieren und die Zeitachsen angleichen
+> Scale the Y axes as configured again and align the time axes
+
 @ Werte am Mauszeiger (online)
 > Values at mouse pointer (online)
 

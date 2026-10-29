@@ -2146,6 +2146,24 @@
 @ Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)
 > 
 
+@ Zoom-Rechteck
+> 
+
+@ Mit der linken Maustaste einen Bereich aufziehen: Zeit und Werte dieses Diagramms vergrößern (aus: linke Maustaste verschiebt die Zeitachse)
+> 
+
+@ Zeitachsen angleichen
+> 
+
+@ Alle Diagramme auf den Zeitausschnitt des zuletzt bedienten Diagramms setzen (Mausrad und Zoom wirken nur auf das Diagramm unter dem Mauszeiger)
+> 
+
+@ Zoom zurücksetzen
+> 
+
+@ Y-Achsen wieder wie konfiguriert skalieren und die Zeitachsen angleichen
+> 
+
 @ Werte am Mauszeiger (online)
 > 
 

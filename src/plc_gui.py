@@ -365,6 +365,38 @@ class ChartTitle(QLabel):
 # ---------------------------------------------------------------------------------------
 # Diagramm
 # ---------------------------------------------------------------------------------------
+class ZoomViewBox(pg.ViewBox):
+    """Hauptfläche eines Diagramms mit umschaltbarem Zoom-Rechteck.
+
+    Ist ``rect_zoom`` gesetzt, zieht die linke Maustaste ein Rechteck auf (wie pyqtgraphs RectMode). Das fertige
+    Rechteck wird nicht selbst angewendet, sondern als ``sigZoomRect`` (QRectF in Datenkoordinaten der Achse 0)
+    gemeldet: Das Diagramm zoomt damit die Zeit und alle Y-Achsen gemeinsam (ChartPanel.zoom_y)."""
+    sigZoomRect = Signal(object)
+
+    def __init__(self, *a, **k):
+        super().__init__(*a, **k)
+        self.rect_zoom = False
+
+    def mouseDragEvent(self, ev, axis=None):
+        """Linke Maustaste im Zoom-Modus: Rechteck aufziehen; sonst wie gewohnt (Verschieben der Zeitachse)."""
+        if self.rect_zoom and axis is None and ev.button() == Qt.MouseButton.LeftButton:
+            old = self.state["mouseMode"]
+            self.state["mouseMode"] = pg.ViewBox.RectMode
+            try:
+                super().mouseDragEvent(ev, axis)
+            finally:
+                self.state["mouseMode"] = old
+            return
+        super().mouseDragEvent(ev, axis)
+
+    def showAxRect(self, ax, **kwargs):
+        """Fertiges Rechteck melden statt es nur auf diese Achse anzuwenden."""
+        if self.rect_zoom:
+            self.sigZoomRect.emit(ax.normalized())
+            return
+        super().showAxRect(ax, **kwargs)
+
+
 # ------------------------------------------------------------------ Diagramm-Panel
 class ChartPanel(QWidget):
     """Ein Diagramm mit beliebig vielen Y-Achsen (Achse 0 links, weitere rechts)."""
@@ -397,7 +429,9 @@ class ChartPanel(QWidget):
         self.var_axis = {vi: min(max(variables[vi].axis, 0), n_ax - 1) for vi in var_idx}
 
         # Diagrammfläche mit Datums-/Zeitachse unten (die x-Werte sind Unix-Zeitstempel in Sekunden).
-        self.plot = pg.PlotWidget(axisItems={"bottom": pg.DateAxisItem()})
+        self.plot = pg.PlotWidget(viewBox=ZoomViewBox(), axisItems={"bottom": pg.DateAxisItem()})
+        self.win = None                   # eigene Fensterbreite online (s); None = „Fenster [s]“ des Hauptfensters
+        self.y_zoomed = False             # Y-Achsen mit dem Zoom-Rechteck vergrößert (bis „Zoom zurücksetzen“)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
         # PlotItem = innere Hauptstruktur des PlotWidget (Achsen, Layout, ViewBox).
         pi = self.plot.plotItem
@@ -586,8 +620,24 @@ class ChartPanel(QWidget):
         br = self.plot.mapFromScene(r.bottomRight())
         self.bars.set_margins(max(tl.y(), 0), max(self.plot.height() - br.y(), 0))
 
+    def zoom_y(self, y0, y1):
+        """Y-Bereich (Datenkoordinaten der Achse 0) vergrößern; die übrigen Y-Achsen zoomen anteilig mit."""
+        m0, m1 = self.axis_vbs[0].viewRange()[1]
+        span = (m1 - m0) or 1.0
+        f0, f1 = (y0 - m0) / span, (y1 - m0) / span
+        if f1 - f0 < 1e-6:
+            return
+        new = []
+        for vb in self.axis_vbs:
+            a0, a1 = vb.viewRange()[1]
+            new.append((vb, a0 + f0 * (a1 - a0), a0 + f1 * (a1 - a0)))
+        for vb, a0, a1 in new:                      # erst alle Bereiche rechnen, dann setzen (Achse 0 ist die Bezugsachse)
+            vb.setYRange(a0, a1, padding=0)        # schaltet die Auto-Skalierung dieser Achse ab
+        self.y_zoomed = True
+
     def apply_scaling(self, force_auto):
         """Jede Y-Achse: Auto-Skalierung oder feste Grenzen. force_auto überschreibt alles."""
+        self.y_zoomed = False
         # Je Achse: automatisch an die sichtbaren Daten anpassen (setAutoVisible: nur der gezeigte Zeitausschnitt zählt)
         # oder feste Grenzen aus der Konfiguration setzen.
         for ai, a in enumerate(self.cfg.axes):
@@ -1087,6 +1137,10 @@ class MainWindow(QMainWindow):
         # master: erstes Diagramm (alle anderen sind mit seiner Zeitachse verknüpft); row_of: Variable -> Zeile der Wertetabelle.
         self.master = None
         self.row_of = {}
+        # Zeitachsen: Mausrad, Ziehen und Zoom-Rechteck wirken nur auf das Diagramm unter dem Mauszeiger (active = zuletzt
+        # bedientes Diagramm). synced: alle Diagramme zeigen denselben Ausschnitt („Zeitachsen angleichen“).
+        self.active = None
+        self.synced = True
         # Status-LEDs (eine je Steuerung) und der Textspeicher der letzten Meldungen.
         self.leds = []
         # Gemerkte Dock-Anordnungen (QMainWindow.saveState) je Seitenstruktur, damit sie beim Neuaufbau erhalten bleiben.
@@ -1235,6 +1289,20 @@ class MainWindow(QMainWindow):
         self.act_yauto.setToolTip(tr("Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)"))
         self.act_yauto.toggled.connect(
             lambda on: [p.apply_scaling(on) for p in self.panels])
+        # Zoom: Rechteck mit der linken Maustaste (umschaltbar), Zeitachsen angleichen, Zoom zurücksetzen.
+        self.act_zoomrect = QAction(tr("Zoom-Rechteck"), self)
+        self.act_zoomrect.setCheckable(True)
+        self.act_zoomrect.setToolTip(tr("Mit der linken Maustaste einen Bereich aufziehen: Zeit und Werte dieses Diagramms "
+                                        "vergrößern (aus: linke Maustaste verschiebt die Zeitachse)"))
+        self.act_zoomrect.toggled.connect(
+            lambda on: [setattr(p.plot.getViewBox(), "rect_zoom", on) for p in self.panels])
+        self.act_sync = QAction(tr("Zeitachsen angleichen"), self)
+        self.act_sync.setToolTip(tr("Alle Diagramme auf den Zeitausschnitt des zuletzt bedienten Diagramms setzen "
+                                    "(Mausrad und Zoom wirken nur auf das Diagramm unter dem Mauszeiger)"))
+        self.act_sync.triggered.connect(lambda: self.sync_axes())
+        self.act_zoomreset = QAction(tr("Zoom zurücksetzen"), self)
+        self.act_zoomreset.setToolTip(tr("Y-Achsen wieder wie konfiguriert skalieren und die Zeitachsen angleichen"))
+        self.act_zoomreset.triggered.connect(self.reset_zoom)
         # Werte am Mauszeiger (online): Linie am nächsten Messpunkt mit Uhrzeit und Werten; Einstellung bleibt gespeichert.
         self.act_mousevals = QAction(tr("Werte am Mauszeiger (online)"), self)
         self.act_mousevals.setCheckable(True)
@@ -1258,7 +1326,7 @@ class MainWindow(QMainWindow):
         tb.setMovable(False)
         for a in (self.act_run, self.act_online, act_load, act_cfg_load, act_cfg,
                   self.act_vals, self.act_bars, self.act_yauto, self.act_boolplot,
-                  act_rul, self.act_demo):
+                  act_rul, self.act_demo, self.act_zoomrect, self.act_sync, self.act_zoomreset):
             tb.addAction(a)
         # Breite des sichtbaren Zeitfensters in Sekunden (online: letzte N Sekunden, offline: Breite des Ausschnitts).
         tb.addWidget(QLabel(tr("  Fenster [s]: ")))
@@ -1437,6 +1505,8 @@ class MainWindow(QMainWindow):
         self.dock_of_chart, self.panel_of_var = {}, {}
         self.curves = [None] * len(self.vars)
         self.master = None
+        self.active = None
+        self.synced = True
         self.ruler_t = [None, None]
         self._marks_shown = None                 # neue Diagramme: Marken beim nächsten Anzeigen neu setzen
         show_bars = self.act_bars.isChecked()
@@ -1461,12 +1531,15 @@ class MainWindow(QMainWindow):
             panel.visibility_changed.connect(self.on_curve_visibility)
             # Werte am Mauszeiger lesen die angezeigten Daten des Hauptfensters (online: aktuelles Zeitfenster).
             panel.cursor_data = lambda: (self.t, self.y)
-            # Das erste Diagramm ist das Leitdiagramm: seine Zeitachse steuert alle anderen (setXLink) und löst die Anpassung der Scrollleiste aus.
+            # Jedes Diagramm hat seine eigene Zeitachse. Benutzeraktionen (Mausrad, Ziehen, Zoom-Rechteck) wirken nur dort;
+            # Scrollleiste, „Fenster [s]“ und „Zeitachsen angleichen“ führen alle gemeinsam (siehe set_view, on_user_x).
+            # Das erste Diagramm ist das Leitdiagramm (Bezug, solange noch keines bedient wurde).
             if self.master is None:
                 self.master = panel
-                panel.plot.getViewBox().sigXRangeChanged.connect(self.on_xrange)
-            else:
-                panel.plot.setXLink(self.master.plot)
+            vb = panel.plot.getViewBox()
+            vb.sigRangeChangedManually.connect(lambda *_a, p=panel: self.on_user_x(p))
+            vb.sigZoomRect.connect(lambda r, p=panel: self.on_zoom_rect(p, r))
+            vb.rect_zoom = self.act_zoomrect.isChecked()
             # Lineale aller Diagramme melden Verschiebungen an das Hauptfenster, das sie synchronisiert.
             for k, ln in enumerate(panel.rulers):
                 ln.sigPositionChanged.connect(lambda l, k=k: self.on_ruler(k, l.value()))
@@ -1809,7 +1882,7 @@ class MainWindow(QMainWindow):
         if x0 is None or x1 is None:
             if not self.master:
                 return
-            x0, x1 = self.master.plot.getViewBox().viewRange()[0]
+            x0, x1 = self._union_range()
         sel = []
         if self.act_marks.isChecked() and self._marks:
             i0 = bisect.bisect_left(self._mark_times, x0)
@@ -2130,8 +2203,8 @@ class MainWindow(QMainWindow):
     def _apply_mode(self):
         """Online/Offline: Mausbedienung, Lineale und Tabellenspalten umschalten."""
         for p in self.panels:
-            # Mausbedienung nur der Zeitachse: offline Verschieben und Zoomen, online Zoomen (Mausrad ändert das
-            # Anzeigefenster, siehe on_xrange); y bleibt unveränderlich (Skalierung über die Konfiguration).
+            # Mausbedienung nur der Zeitachse des Diagramms unter dem Mauszeiger: offline Verschieben und Zoomen, online
+            # Zoomen (Mausrad ändert sein Anzeigefenster, siehe on_user_x); y nur über das Zoom-Rechteck.
             p.plot.getViewBox().setMouseEnabled(x=True, y=False)
             # Lineale sind nur offline sichtbar, die Werte am Mauszeiger nur online.
             for ln in p.rulers:
@@ -2280,8 +2353,9 @@ class MainWindow(QMainWindow):
         if not (rec.dirty or self.dirty):
             return
         rec.dirty = self.dirty = False
-        w = self.win_spin.value()
-        tt, yy = rec.window(w)
+        widths = [p.win or self.win_spin.value() for p in self.panels]   # jedes Diagramm mit eigener Fensterbreite
+        w = max(widths)
+        tt, yy = rec.window(int(math.ceil(w)))
         if len(tt) == 0:
             return
         self.t, self.y = tt, yy
@@ -2290,10 +2364,9 @@ class MainWindow(QMainWindow):
             c = self.curves[i]
             if c is not None and c.isVisible():      # unsichtbare Kurven (z. B. BOOL nur in der Legende) nicht neu setzen
                 self.set_curve(i, tt, yy[i])
-        # Die Zeitachse des Leitdiagramms setzen; die anderen Diagramme folgen über die X-Kopplung.
-        self._block = True
-        self.master.plot.setXRange(t_end - w, t_end, padding=0)  # andere Diagramme sind X-verknüpft
-        self._block = False
+        # Zeitachse jedes Diagramms: seine Fensterbreite, rechts der neueste Wert.
+        for p, wp in zip(self.panels, widths):
+            self.set_view(p, t_end - wp, t_end)
         # BOOL-Streifen in den Legenden und Trigger-Marken für den sichtbaren Zeitbereich nachführen.
         self.update_bool_strips(t_end - w, t_end)
         self.show_marks(t_end - w, t_end)
@@ -2338,61 +2411,144 @@ class MainWindow(QMainWindow):
         span = max((self.snap_t1 - self.snap_t0) - w, 0.0)
         x0 = self.snap_t0 + span * self.scroll.value() / 1000.0
         self.view_x = (x0, x0 + w)
-        # _block verhindert, dass setXRange über on_xrange wieder Scrollleiste und Fensterbreite verändert (Rückkopplung).
-        self._block = True
-        self.master.plot.setXRange(x0, x0 + w, padding=0)
-        self._block = False
-        self.update_bool_strips(x0, x0 + w)
-        self.show_marks(x0, x0 + w)
+        ref = self.active or self.master
+        if self.synced or len(self.panels) < 2:
+            for p in self.panels:
+                self.set_view(p, x0, x0 + w)
+        else:
+            # Unterschiedliche Zeitachsen: die Scrollleiste verschiebt alle Diagramme gemeinsam (jedes behält seine Breite);
+            # Bezug ist das zuletzt bediente Diagramm mit seiner tatsächlichen Breite.
+            a0, a1 = ref.plot.getViewBox().viewRange()[0]
+            span = max((self.snap_t1 - self.snap_t0) - (a1 - a0), 0.0)
+            d = self.snap_t0 + span * self.scroll.value() / 1000.0 - a0
+            for p in self.panels:
+                b0, b1 = p.plot.getViewBox().viewRange()[0]
+                self.set_view(p, b0 + d, b1 + d)
+            self.view_x = (a0 + d, a1 + d)
+        self.update_bool_strips()
+        self.show_marks()
 
-    def update_bool_strips(self, x0, x1):
-        """Zeitverlauf der BOOL-Streifen in den Legenden für den sichtbaren Bereich x0..x1 setzen."""
+    def update_bool_strips(self, *_):
+        """Zeitverlauf der BOOL-Streifen in den Legenden für den sichtbaren Bereich ihres Diagramms setzen."""
         if len(self.t) == 0:
             return
-        # Ab einem Messpunkt vor dem Bereich beginnen, damit der Zustand am linken Rand bekannt ist.
-        i0 = max(int(np.searchsorted(self.t, x0, side="left")) - 1, 0)      # einen Wert davor: Zustand am Anfang
-        i1 = int(np.searchsorted(self.t, x1, side="right"))
-        tt = self.t[i0:i1]
         for vi, panel in self.panel_of_var.items():
-            if self.vars[vi].dtype == "BOOL":
-                panel.set_bool_history(vi, tt, self.y[vi][i0:i1], x0, x1)
+            if self.vars[vi].dtype != "BOOL":
+                continue
+            x0, x1 = panel.plot.getViewBox().viewRange()[0]
+            # Ab einem Messpunkt vor dem Bereich beginnen, damit der Zustand am linken Rand bekannt ist.
+            i0 = max(int(np.searchsorted(self.t, x0, side="left")) - 1, 0)      # einen Wert davor: Zustand am Anfang
+            i1 = int(np.searchsorted(self.t, x1, side="right"))
+            panel.set_bool_history(vi, self.t[i0:i1], self.y[vi][i0:i1], x0, x1)
+
+    # ---------------- Zeitachsen der einzelnen Diagramme ----------------
+    def set_view(self, panel, x0, x1):
+        """Zeitausschnitt eines Diagramms setzen (vom Programm, löst keine Benutzerreaktion aus)."""
+        self._block = True
+        try:
+            panel.plot.setXRange(x0, x1, padding=0)
+        finally:
+            self._block = False
+
+    def _union_range(self):
+        """Zeitbereich, den alle Diagramme zusammen zeigen."""
+        rs = [p.plot.getViewBox().viewRange()[0] for p in self.panels]
+        return (min(r[0] for r in rs), max(r[1] for r in rs)) if rs else (0.0, 1.0)
+
+    def _show_active(self):
+        """„Fenster [s]“ und Scrollleiste zeigen den Ausschnitt des zuletzt bedienten Diagramms."""
+        p = self.active or self.master
+        if p is None:
+            return
+        x0, x1 = p.plot.getViewBox().viewRange()[0]
+        self._block = True
+        try:
+            self.win_spin.setValue(max(1, min(int(round(x1 - x0)), self.win_spin.maximum())))
+            if not self.online and self.snap_t1 > self.snap_t0:
+                span = (self.snap_t1 - self.snap_t0) - (x1 - x0)
+                pos = 1000 if span <= 0 else int(round(1000 * (x0 - self.snap_t0) / span))
+                self.scroll.setValue(max(0, min(1000, pos)))
+        finally:
+            self._block = False
+        if not self.online:
+            self.view_x = (x0, x1)
+
+    def on_user_x(self, panel):
+        """Der Benutzer hat die Zeitachse EINES Diagramms geändert (Mausrad, Ziehen, Zoom-Rechteck): nur dieses Diagramm;
+        online wird die neue Breite zu seiner Fensterbreite (das rechte Ende folgt weiter den neuesten Werten)."""
+        if self._block:
+            return
+        self.active = panel
+        if len(self.panels) > 1:
+            self.synced = False
+        x0, x1 = panel.plot.getViewBox().viewRange()[0]
+        if self.online:
+            # Die übrigen Diagramme behalten ihre bisherige Breite fest („Fenster [s]“ zeigt ab jetzt die des aktiven).
+            for p in self.panels:
+                if p.win is None and p is not panel:
+                    p.win = float(self.win_spin.value())
+            panel.win = max(1.0, x1 - x0)
+            self._show_active()
+            self.dirty = True
+            return
+        if self.snap_t1 <= self.snap_t0:
+            return
+        self._show_active()
+        self.update_bool_strips()
+        self.show_marks()
+
+    def on_zoom_rect(self, panel, rect):
+        """Zoom-Rechteck: Zeit und Y-Achsen dieses Diagramms auf den Bereich setzen."""
+        x0, x1 = rect.left(), rect.right()
+        v0, v1 = panel.plot.getViewBox().viewRange()[0]
+        if x1 - x0 <= (v1 - v0) * 0.005:            # versehentlicher Klick statt Rechteck
+            return
+        panel.zoom_y(rect.top(), rect.bottom())
+        self.set_view(panel, x0, x1)
+        self.on_user_x(panel)
+
+    def sync_axes(self, panel=None):
+        """Alle Diagramme auf den Zeitausschnitt eines Diagramms setzen (Standard: das zuletzt bediente)."""
+        ref = panel or self.active or self.master
+        if ref is None:
+            return
+        x0, x1 = ref.plot.getViewBox().viewRange()[0]
+        if self.online:
+            w = ref.win or self.win_spin.value()
+            for p in self.panels:
+                p.win = None
+            self._block = True
+            self.win_spin.setValue(max(1, min(int(round(w)), self.win_spin.maximum())))
+            self._block = False
+            self.dirty = True
+        else:
+            for p in self.panels:
+                self.set_view(p, x0, x1)
+        self.synced = True
+        self.active = ref
+        if not self.online:
+            self._show_active()
+            self.update_bool_strips()
+            self.show_marks()
+
+    def reset_zoom(self):
+        """Y-Achsen wie konfiguriert skalieren und die Zeitachsen angleichen."""
+        for p in self.panels:
+            p.apply_scaling(self.act_yauto.isChecked())
+        self.sync_axes()
 
     # Fensterbreite geändert: online beim nächsten Takt neu zeichnen, offline den Ausschnitt neu berechnen.
     def on_window_changed(self, *_):
         if self._block:
             return
+        # Eine neue Fensterbreite gilt für alle Diagramme (gleicht die Zeitachsen an).
+        for p in self.panels:
+            p.win = None
+        self.synced = True
         if self.online:
             self.dirty = True
         else:
             self.apply_offline_view()
-
-    # Der Benutzer hat die Zeitachse mit der Maus verschoben/gezoomt: Scrollleiste und Fensterbreite nachführen.
-    def on_xrange(self, _vb, rng):
-        """Maus-Pan/Zoom im Offline-Modus -> Scrollbar und Fensterbreite nachführen."""
-        # Nicht reagieren, wenn das Programm selbst den Bereich gesetzt hat (_block) oder ohne Daten.
-        if self._block:
-            return
-        x0, x1 = rng
-        if self.online:
-            # Online: Mausrad bzw. Ziehen mit der rechten Maustaste zoomt nur die Zeitachse. Übernommen wird die neue
-            # Breite als Anzeigefenster; das rechte Ende folgt weiter den neuesten Werten (beim nächsten Takt).
-            w = max(1, int(round(x1 - x0)))
-            if w != self.win_spin.value():
-                self.win_spin.setValue(min(w, self.win_spin.maximum()))   # löst on_window_changed -> dirty aus
-            self.dirty = True
-            return
-        if self.snap_t1 <= self.snap_t0:
-            return
-        self.view_x = (x0, x1)
-        # Position der Scrollleiste aus dem neuen Ausschnitt: Anteil von x0 am verfügbaren Scrollbereich.
-        span = (self.snap_t1 - self.snap_t0) - (x1 - x0)
-        pos = 1000 if span <= 0 else int(round(1000 * (x0 - self.snap_t0) / span))
-        self._block = True
-        self.scroll.setValue(max(0, min(1000, pos)))
-        self.win_spin.setValue(max(1, int(round(x1 - x0))))
-        self._block = False
-        self.update_bool_strips(x0, x1)
-        self.show_marks(x0, x1)
 
     # ---------------------------------------------------------------------------------------
     # Lineale (nur offline)
@@ -2608,7 +2764,8 @@ class MainWindow(QMainWindow):
         if not self.online and None not in (r1, r2):
             k1, k2 = (int(np.abs(t - r).argmin()) for r in (r1, r2))
             rulers = (float(t[min(k1, k2)]), float(t[max(k1, k2)]))
-        view = tuple(self.master.plot.getViewBox().viewRange()[0]) if self.master else None
+        ref = self.active or self.master
+        view = tuple(ref.plot.getViewBox().viewRange()[0]) if ref else None
         span = (float(t[0]), float(t[-1]))
         ranges = [("lineale", tr("Zwischen Lineal 1 und Lineal 2") if rulers else
                    tr("Zwischen Lineal 1 und Lineal 2 (nur im Offline-Modus)"), rulers),

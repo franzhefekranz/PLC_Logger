@@ -2386,6 +2386,13 @@ Toolbar (top):
        range.
    * - **Demo**
      - Simulated values instead of a PLC (see `Demo mode <demo-modus_>`__).
+   * - **Zoom rectangle**
+     - Active: drag a region with the left mouse button; time and values of this chart
+       are enlarged to it (see `Zooming and time axes <zoomen_>`__).
+   * - **Align time axes**
+     - All charts show the time range of the chart used last again.
+   * - **Reset zoom**
+     - Scale the Y axes as configured again and align the time axes.
    * - **Screenshot**
      - Opens a list of the charts; the chosen chart is saved as PNG or SVG (see
        `Screenshots of charts <screenshots_>`__).
@@ -2482,10 +2489,26 @@ measurements. When the mouse leaves the chart, the display disappears. To switch
 **View › Values at mouse pointer (online)** (the setting is remembered). In offline mode
 the rulers take over this task.
 
-**Zooming with the mouse (time axis only):** In online mode, too, the time axis can be
-zoomed with the **mouse wheel** (or by dragging with the right mouse button); the Y axes
-stay unchanged. The new width is taken over as **Window [s]**, the right end keeps
-following the newest values.
+**Zooming with the mouse:** In online mode, too, the time axis of a chart can be zoomed
+with the **mouse wheel** (or by dragging with the right mouse button); the new width
+applies to this chart only, the right end keeps following the newest values. More under
+`Zooming and time axes <zoomen_>`__.
+
+.. _zoomen:
+
+**Zooming and time axes** (online and offline):
+
+* The **mouse wheel**, dragging with the mouse and the zoom rectangle only affect the
+  **chart under the mouse pointer**. So each chart can show a different time range,
+  e.g. one hour at the top and a few seconds below.
+* **Zoom rectangle** (toolbar, toggle): drag a region with the left mouse button – the
+  time axis and all Y axes of the chart are enlarged to it. When it is off, the left
+  mouse button moves the time axis.
+* **Align time axes:** all charts take over the range of the chart used last. A new
+  entry in **Window [s]** aligns them as well.
+* **Reset zoom:** Y axes as configured again (or *Y auto*) and time axes aligned.
+* **Window [s]** and the scroll bar show the range of the chart used last. The scroll
+  bar moves all charts together; each keeps its width.
 
 Offline mode
 ----------------------------------------------------------------------
@@ -2501,7 +2524,8 @@ In offline mode the display is frozen and you can go back in time:
 
 * **Time scroll bar** at the bottom: scroll through the recorded data.
 * **Mouse:** drag in the chart with the mouse button pressed to move the time axis, and
-  zoom with the mouse wheel. Scroll bar and *Window [s]* follow automatically.
+  zoom with the mouse wheel – each only in this chart (see `Zooming and time axes
+  <zoomen_>`__). Scroll bar and *Window [s]* follow automatically.
 * **Window [s]:** width of the visible time range.
 
 .. note::
