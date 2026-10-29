@@ -1601,9 +1601,10 @@ CPU von S7-PLCSIM Advanced:
        24.04); der Ringpuffer nur gegen eine
        nachgebildete libplctag.
    * - ``tia``
-     - **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt, mit einer
-       echten CPU noch nicht; automatisch: Ringpuffer gegen den S7CommPlus-Emulator von
-       s7commplus.
+     - **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt: ohne PUT/GET,
+       mit TLS, Variablenliste aus der CPU, Lesen aus zwei nicht optimierten DBs. Noch
+       nicht erprobt: optimierte Bausteine, Ringpuffer mit Steuerung, echte CPU.
+       Automatisch: Ringpuffer gegen den S7CommPlus-Emulator von s7commplus.
    * - ``modbus``
      - Automatisch gegen den Modbus-TCP-Server von pymodbus (alle vier Tabellen, Bits,
        REAL/DINT, Wortfolge).
