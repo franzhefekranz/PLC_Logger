@@ -31,9 +31,11 @@ Ringpuffer (zyklussynchrone Aufzeichnung, siehe ringbuffer.py), beides ohne PUT/
   übrigen Anfragen gebündelt). Die Untergrenzen der Arrays (0 oder 1) erkennt der Treiber selbst.
 """
 import re
+import contextlib
 import datetime
 import math
 import struct
+import threading
 
 from plc_treiber.tia_common import Plc
 from plc_treiber.ringbuffer import HEADER_BYTES, RingSupport
@@ -72,6 +74,51 @@ def _connect_args(plc: Plc):
     if plc.passwort:
         args["password"] = plc.passwort
     return args
+
+
+_KEYLOG = threading.local()                      # je Thread: TLS-Schlüsseldatei beim Verbindungsaufbau weglassen?
+
+
+def _install_keylog_switch():
+    """TLS-Schlüsseldatei von s7commplus abschaltbar machen (je Thread über ``_KEYLOG.skip``).
+
+    s7commplus lässt sich beim TLS-Aufbau die Sitzungsschlüssel in eine Datei schreiben (``keylog_filename``), weil es
+    daraus das Geheimnis für die Anmeldung mit Passwort ableitet. Python übergibt dafür ein Datei-Handle an OpenSSL –
+    unter Windows bricht OpenSSL dabei je nach Python-Build bzw. geladener OpenSSL-DLL mit „OPENSSL_Uplink: no
+    OPENSSL_Applink“ ab und beendet das Programm (z. B. in lokal gebauten .exe-Dateien). Ohne Passwort wird das
+    Geheimnis nicht gebraucht: Dann wird keine Datei geschrieben."""
+    try:
+        from s7commplus import connection as c
+    except ImportError:
+        return
+    if getattr(c, "_plc_keylog_switch", False) or not hasattr(c, "_tls_key_log"):
+        return
+    orig_log, orig_derive = c._tls_key_log, getattr(c, "_derive_oms_secret", None)
+
+    @contextlib.contextmanager
+    def key_log(ctx):
+        if getattr(_KEYLOG, "skip", False):
+            yield ""
+        else:
+            with orig_log(ctx) as path:
+                yield path
+
+    def derive(ssl_object, path):
+        if getattr(_KEYLOG, "skip", False) or orig_derive is None:
+            return None
+        return orig_derive(ssl_object, path)
+    c._tls_key_log, c._derive_oms_secret = key_log, derive
+    c._plc_keylog_switch = True
+
+
+def connect_client(client, plc: Plc):
+    """s7commplus-Client mit den Einstellungen der Steuerung verbinden (ohne Passwort ohne TLS-Schlüsseldatei)."""
+    _install_keylog_switch()
+    _KEYLOG.skip = not plc.passwort
+    try:
+        client.connect(plc.ip, **_connect_args(plc))
+    finally:
+        _KEYLOG.skip = False
 
 
 def _is_connection_error(exc):
@@ -133,7 +180,7 @@ class TagReader(RingSupport):
         self.close()
         client = self._new_client()
         try:
-            client.connect(self.plc.ip, **_connect_args(self.plc))
+            connect_client(client, self.plc)
         except Exception as e:
             raise ConnectionError(f"{self.plc.ip}: {e}") from None
         self.client = client

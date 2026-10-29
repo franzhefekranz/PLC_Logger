@@ -5039,6 +5039,11 @@ Fehlersuche
    * - ``tia``: Verbindung abgelehnt
      - TLS-Einstellung (*An* bzw. *Aus* probieren), Passwort der Zugriffsstufe,
        Zahl freier HMI-Verbindungen der CPU.
+   * - ``tia`` mit TLS und Passwort: Programm bricht ab mit „OPENSSL_Uplink: no
+       OPENSSL_Applink“ (Windows)
+     - Eine fremde bzw. unpassende OpenSSL-DLL wird geladen (z. B. bei selbst gebauten
+       Programmen mit einem anderen Python). Mit den Release-Dateien arbeiten oder mit
+       dem Python von python.org bauen; ohne Passwort tritt der Fehler nicht auf.
    * - ``logo``: keine Verbindung
      - In LOGO!Soft Comfort eine Verbindung als **Server** mit passendem TSAP
        einrichten (Vorgabe TSAP der LOGO! ``02.00``, des Loggers ``01.00``) und das

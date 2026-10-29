@@ -4920,6 +4920,11 @@ Troubleshooting
    * - ``tia``: connection refused
      - TLS setting (try *On* or *Off*), password of the access level, number of free HMI
        connections of the CPU.
+   * - ``tia`` with TLS and password: program aborts with “OPENSSL_Uplink: no
+       OPENSSL_Applink” (Windows)
+     - A foreign or unsuitable OpenSSL DLL is loaded (e.g. in self-built programs with a
+       different Python). Use the release files or build with the Python from
+       python.org; without a password the error does not occur.
    * - ``logo``: no connection
      - In LOGO!Soft Comfort set up a connection as **server** with the matching TSAP
        (default remote TSAP ``02.00``, local ``01.00``) and load the program into the

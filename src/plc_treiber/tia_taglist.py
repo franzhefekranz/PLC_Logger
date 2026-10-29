@@ -92,9 +92,9 @@ def fetch_tag_list(plc: Plc):
     """Variablenliste aus der Steuerung lesen (browse) und zwischenspeichern. Dauert je nach Projekt einige Sekunden
     bis Minuten. Rückgabe: {"items": [...], "info": {...}}."""
     from s7commplus import Client                    # erst hier importieren: das Programm läuft auch ohne s7commplus
-    from plc_treiber.tia_io import _connect_args
+    from plc_treiber.tia_io import connect_client
     client = Client()
-    client.connect(plc.ip, **_connect_args(plc))
+    connect_client(client, plc)
     try:
         items = client.browse()
         info = {"protokoll": str(getattr(client, "protocol_version", "")),

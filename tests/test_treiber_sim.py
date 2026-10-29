@@ -207,3 +207,43 @@ def test_opcua_driver_with_asyncua_server():
         assert values == [21.5, 42.0, 1.0, 2.0, 3.0, 4.0]
     finally:
         srv.stop()
+
+
+def test_tia_tls_without_password_writes_no_keylog(tmp_path, monkeypatch):
+    """tia mit TLS gegen den Emulator: Ohne Passwort wird keine TLS-Schlüsseldatei geschrieben (sie führt unter
+    Windows je nach OpenSSL-DLL zum Absturz „OPENSSL_Uplink: no OPENSSL_Applink“); mit Passwort wie bisher."""
+    pytest.importorskip("s7commplus")
+    pytest.importorskip("cryptography")
+    try:
+        from s7commplus.server import S7CommPlusServer
+        from s7commplus import connection as c
+    except Exception:
+        pytest.skip("s7commplus ohne Emulator")
+    if not hasattr(c, "_tls_key_log"):
+        pytest.skip("s7commplus ohne TLS-Schlüsseldatei")
+    import plc_treiber.tia_io as tio
+    from plc_web import ensure_self_signed
+    from plc_treiber import get_driver
+    cert, key = ensure_self_signed(str(tmp_path / "c.pem"), str(tmp_path / "k.pem"))
+    tio._install_keylog_switch()
+    calls = []
+    orig = c.ssl.SSLContext.keylog_filename
+
+    def spy_set(self, value):
+        calls.append(value)
+        orig.__set__(self, value)
+    monkeypatch.setattr(c.ssl.SSLContext, "keylog_filename", property(orig.__get__, spy_set))
+    port = _free_port()
+    srv = S7CommPlusServer()
+    db = srv.register_raw_db(100, bytearray(4 + 30 * 16))
+    srv.start(host="127.0.0.1", port=port, use_tls=True, tls_cert=cert, tls_key=key)
+    try:
+        _ring_writer(None, 0, 30, lambda n: (float(n), -float(n)), 4, write=db.write)
+        plc = Plc(name="1500", driver="tia", params={"ip": "127.0.0.1", "port": port, "tls": "an", "passwort": "",
+                                                     "rolle": "hmi", "tags_je_anfrage": 50})
+        ring = Block(name="P", address="DB100.DBX0.0", dtype="REAL", count=2, ring=30, driver="tia").variables()
+        rows, errors, counters = get_driver("tia").read_ring_once(plc, ring)
+        assert not errors and counters == {"P": 4}
+        assert not any(calls), calls                       # keine Schlüsseldatei gesetzt
+    finally:
+        srv.stop()
