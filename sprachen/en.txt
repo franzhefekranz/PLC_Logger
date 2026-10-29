@@ -544,11 +544,11 @@
 @ Startbedingung:
 > Start condition:
 
-@ Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = kein Logo
-> Image file (PNG/JPG, SVG also in the logger and on the web pages): logger top right, web pages (charts, process view, login) and PDF reports; empty = no logo
+@ Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = mitgeliefertes Herstellerlogo, - = kein Logo
+> Image file (PNG/JPG, in the logger and on the web pages also SVG): logger top right, web pages (charts, process view, login) and PDF reports; empty = supplied manufacturer logo, - = no logo
 
-@ leer = kein Logo
-> empty = no logo
+@ leer = Herstellerlogo, - = kein Logo
+> empty = manufacturer logo, - = no logo
 
 @ Zusätzliches Logo des Kunden (PNG/JPG), erscheint neben dem Logo; leer = kein Kundenlogo
 > Additional customer logo (PNG/JPG), shown next to the logo; empty = no customer logo

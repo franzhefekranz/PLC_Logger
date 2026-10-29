@@ -575,7 +575,8 @@ werden in einer gemeinsamen CSV-Datei zusammengeführt (eine Spalte je Variable)
        Menüleiste (28 Pixel hoch), auf den Webseiten (Diagramme, Prozessbild,
        Anmeldung) und im Kopf der PDF-Berichte und IO-Check-Protokolle. PNG und JPG
        gehen überall, SVG nur im Logger und auf den Webseiten. Ein relativer Pfad
-       bezieht sich auf den Programmordner. **Leer = kein Logo.**
+       bezieht sich auf den Programmordner. **Leer = mitgeliefertes Herstellerlogo**
+       (``logo.png``), **„-“ = kein Logo.**
    * - Kundenlogo
      - Zweites Logo (z. B. des Kunden bzw. der Anlage), erscheint an denselben Stellen
        links neben dem Logo bzw. im PDF links oben. Leer = kein Kundenlogo.
@@ -5128,7 +5129,7 @@ Fehlersuche
    * - Logo oder Icon erscheint nicht
      - Pfad in der Konfiguration prüfen (relative Pfade gelten vom
        Programmordner). Ersatzweise PNG statt SVG verwenden (im PDF gehen nur PNG und
-       JPG). Ein leeres Logo-Feld bedeutet „kein Logo“.
+       JPG). Ein leeres Logo-Feld zeigt das Herstellerlogo, „-“ bedeutet „kein Logo“.
    * - Installierte Version findet die Konfiguration nicht
      - Die Daten liegen unter ``%APPDATA%\\PLCDatenlogger`` (nicht im Programmordner).
        Mit ``portable.txt`` neben der ``.exe`` wird der Programmordner verwendet.

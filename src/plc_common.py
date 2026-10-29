@@ -645,14 +645,36 @@ def convert_ini(ini_path, json_path=None):
 # Konfiguration: Lesen und Schreiben (intern in Abschnitten, Datei als JSON – siehe oben)
 # ---------------------------------------------------------------------------------------
 # Abschnitte:  [Verbindung]  [Diagramme] [DiagrammN] [DiagrammN_AchseM]  [Variablen] [VarN]  [Bloecke] [BlockN]
+NO_LOGO = "-"          # Eintrag im Feld „Logo“: gar kein Logo (leer = mitgeliefertes Herstellerlogo)
+
+
+def bundled_file(name: str) -> str:
+    """Mitgelieferte Datei (Datenordner, Projektordner, Programmordner, PyInstaller-Archiv) oder ""."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for folder in (BASE_DIR, os.path.dirname(here), here, getattr(sys, "_MEIPASS", "")):
+        path = os.path.join(folder, name) if folder else ""
+        if path and os.path.isfile(path):
+            return path
+    return ""
+
+
+def logo_file(conn) -> str:
+    """Logo der Konfiguration: eingetragene Datei, ohne Eintrag das mitgelieferte Herstellerlogo ``logo.png``,
+    bei ``-`` keines ("")."""
+    p = str(conn.get("logo", "") or "").strip()
+    if p == NO_LOGO:
+        return ""
+    return p or bundled_file("logo.png")
+
+
 def logo_paths(conn) -> list:
-    """Kundenlogo und Logo aus der Konfiguration als Pfade (relativ = ab Datenordner); leere Angaben entfallen.
+    """Kundenlogo und Logo aus der Konfiguration als Pfade (relativ = ab Datenordner); leere Angaben entfallen, ohne
+    Logo-Eintrag gilt das Herstellerlogo (siehe ``logo_file``).
 
     Verwendet von Webseiten und PDF-Berichten (Reihenfolge: Kundenlogo links, Logo rechts)."""
     out = []
-    for key in ("kundenlogo", "logo"):
-        p = str(conn.get(key, "") or "").strip()
-        if p:
+    for p in (str(conn.get("kundenlogo", "") or "").strip(), logo_file(conn)):
+        if p and p != NO_LOGO:
             out.append(p if os.path.isabs(p) else os.path.join(BASE_DIR, p))
     return out
 

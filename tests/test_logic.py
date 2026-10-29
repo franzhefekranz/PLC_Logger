@@ -683,3 +683,12 @@ def test_program_icons_present():
     assert "icons\\ereignisse.ico" in iss and "icons\\headless.ico" in iss
     for script in ("build_appimage.sh", "build_macos.sh"):
         assert "icons:icons" in open(os.path.join(ROOT, script), encoding="utf-8").read(), script
+
+
+def test_logo_default_is_manufacturer_logo():
+    """Leeres Logo-Feld: Herstellerlogo logo.png; „-“: kein Logo; eingetragene Datei bleibt."""
+    from plc_common import logo_file, logo_paths
+    assert os.path.basename(logo_file({"logo": ""})) == "logo.png" and os.path.isfile(logo_file({}))
+    assert logo_file({"logo": "-"}) == "" and logo_paths({"logo": "-"}) == []
+    assert [os.path.basename(p) for p in logo_paths({"kundenlogo": "kunde.png"})] == ["kunde.png", "logo.png"]
+    assert logo_file({"logo": "firma.svg"}) == "firma.svg"

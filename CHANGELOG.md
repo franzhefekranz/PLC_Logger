@@ -21,6 +21,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   Fenstern, Taskleiste (eigene Gruppe auch für das Ereignisprotokoll), Windows-Startmenü, Linux-Startmenü (`.deb`,
   AppImage-Aktionen) und als macOS-Programmsymbol. `app.ico` enthält jetzt alle Größen von 16 bis 256 Pixeln.
   Erzeugt mit `tools/make_program_icons.py`.
+* Logo: Ohne Eintrag zeigen Logger, Webseiten, PDF-Berichte und IO-Check-Protokolle jetzt das mitgelieferte
+  Herstellerlogo (`logo.png`); `-` im Feld *Logo* schaltet das Logo ab (bisher: leer = kein Logo).
 
 ### Behoben
 

@@ -64,7 +64,7 @@ from pyqtgraph.graphicsItems.LegendItem import ItemSample
 # Eigene Module: Icon/Logo, Datenmodell, Aufzeichnungskern, Webserver, SVG-Export, Hilfsfunktionen.
 from plc_branding import app_icon, logos_pixmap, set_windows_app_id
 from plc_common import (BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE, Variable, load_config,
-                       load_plcs, remember_config_path,
+                       load_plcs, logo_file, remember_config_path,
                         load_settings, program_command, save_settings)
 from plc_events import EventLog, event_log_path
 from plc_export import stats
@@ -1386,7 +1386,7 @@ class MainWindow(QMainWindow):
         m_view.addAction(self.act_bars)
         # Kundenlogo und Logo rechts oben in der Menüleiste (Eckenwidget), 28 Pixel hoch; ohne Angabe kein Logo.
         self.logo_lbl = LogoLabel()                # Strg + Umschalt + Doppelklick: verstecktes Info-Fenster
-        self.logo_lbl.setPixmap(logos_pixmap((self.conn.get("kundenlogo", ""), self.conn.get("logo", "")), 28))
+        self.logo_lbl.setPixmap(logos_pixmap((self.conn.get("kundenlogo", ""), logo_file(self.conn)), 28))
         self.logo_lbl.setContentsMargins(8, 0, 8, 0)
         self.menuBar().setCornerWidget(self.logo_lbl, Qt.Corner.TopRightCorner)  # Logo rechts oben
         # Statusleiste: links die Meldungen, rechts die Webserver-Adresse und je Steuerung eine Status-LED.
@@ -2004,7 +2004,7 @@ class MainWindow(QMainWindow):
         self.act_bars.setChecked(bool(conn["balken"]))
         self.win_spin.setValue(conn["fenster_s"])
         self.setWindowIcon(app_icon(conn.get("icon", ""), conn.get("logo", "")))
-        self.logo_lbl.setPixmap(logos_pixmap((conn.get("kundenlogo", ""), conn.get("logo", "")), 28))
+        self.logo_lbl.setPixmap(logos_pixmap((conn.get("kundenlogo", ""), logo_file(conn)), 28))
         self.setWindowTitle(self._title())
         self._sync_menus()
         self._rebuild()

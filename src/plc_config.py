@@ -271,8 +271,9 @@ class ConfigWindow(QMainWindow):
         # Logo und Programm-Icon: Dateiauswahl mit Durchsuchen-Knopf (siehe _file_row).
         self.ed_logo = QLineEdit()
         self.ed_logo.setToolTip(tr("Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, "
-                                   "Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = kein Logo"))
-        self.ed_logo.setPlaceholderText(tr("leer = kein Logo"))
+                                   "Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = mitgeliefertes "
+                                   "Herstellerlogo, - = kein Logo"))
+        self.ed_logo.setPlaceholderText(tr("leer = Herstellerlogo, - = kein Logo"))
         self.ed_customer_logo = QLineEdit()
         self.ed_customer_logo.setToolTip(tr("Zusätzliches Logo des Kunden (PNG/JPG), erscheint neben dem Logo; "
                                             "leer = kein Kundenlogo"))

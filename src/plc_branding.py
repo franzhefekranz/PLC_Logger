@@ -12,8 +12,9 @@
 
 Die Bilddateien (PNG, SVG, ICO, JPG ...) werden in der Konfiguration angegeben; relative Pfade
 beziehen sich auf den Programm-/Datenordner (siehe plc_common.BASE_DIR). Ohne Angabe gilt für das Icon die
-mitgelieferte Datei ``app.ico``, sonst das gezeichnete Standard-Symbol. Logo und Kundenlogo (Logger, Webseiten,
-Berichte) entfallen ohne Angabe; nur das Startbild zeigt dann das mitgelieferte Herstellerlogo ``logo.png``.
+mitgelieferte Datei ``app.ico``, sonst das gezeichnete Standard-Symbol. Ohne Logo-Angabe zeigen Logger, Webseiten und
+Berichte das mitgelieferte Herstellerlogo ``logo.png`` (``-`` = kein Logo, siehe plc_common.logo_file); das
+Kundenlogo entfällt ohne Angabe.
 """
 import math
 import os

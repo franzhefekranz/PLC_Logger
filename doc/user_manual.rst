@@ -567,7 +567,8 @@ CSV file (one column per variable).
        the menu bar (28 pixels high), on the web pages (charts, process view, login) and
        in the header of PDF reports and IO check protocols. PNG and JPG work everywhere,
        SVG only in the logger and on the web pages. A relative path refers to the
-       program folder. **Empty = no logo.**
+       program folder. **Empty = supplied manufacturer logo** (``logo.png``), **“-” = no
+       logo.**
    * - Customer logo
      - Second logo (e.g. of the customer or plant), shown in the same places to the left
        of the logo, in the PDF at the top left. Empty = no customer logo.
@@ -5005,7 +5006,7 @@ Troubleshooting
    * - Logo or icon does not appear
      - Check the path in the configuration (relative paths refer to the program folder).
        Use PNG instead of SVG as an alternative (PDFs only support PNG and JPG). An empty
-       logo field means “no logo”.
+       logo field shows the manufacturer logo, “-” means “no logo”.
    * - Installed version does not find the configuration
      - The data is stored under ``%APPDATA%\\PLCDatenlogger`` (not in the program
        folder). With ``portable.txt`` next to the ``.exe`` the program folder is used.

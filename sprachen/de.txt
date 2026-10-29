@@ -544,10 +544,10 @@
 @ Startbedingung:
 > 
 
-@ Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = kein Logo
+@ Bilddatei (PNG/JPG, im Logger und auf den Webseiten auch SVG): Logger rechts oben, Webseiten (Diagramme, Prozessbild, Anmeldung) und PDF-Berichte; leer = mitgeliefertes Herstellerlogo, - = kein Logo
 > 
 
-@ leer = kein Logo
+@ leer = Herstellerlogo, - = kein Logo
 > 
 
 @ Zusätzliches Logo des Kunden (PNG/JPG), erscheint neben dem Logo; leer = kein Kundenlogo
