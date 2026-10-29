@@ -1547,7 +1547,8 @@ in one configuration.
 
 **How well is each driver tested?** Automatic tests run on every upload; where a
 third-party, widely used counterpart exists, they test the driver against its simulator.
-So far only ``s7`` and ``clx`` have been tried with real controllers:
+So far ``s7`` and ``clx`` have been tried with real controllers, ``tia`` with the simulated
+CPU of S7-PLCSIM Advanced:
 
 .. list-table::
    :header-rows: 1
@@ -1564,8 +1565,9 @@ So far only ``s7`` and ``clx`` have been tried with real controllers:
        24.04); the ring buffer only against a
        simulated libplctag.
    * - ``tia``
-     - Automatically: ring buffer against the S7CommPlus emulator of s7commplus. Symbolic
-       reading has not yet been tried with a controller.
+     - **With S7-PLCSIM Advanced** (simulated S7-1500) tried successfully, not yet with a
+       real CPU; automatically: ring buffer against the S7CommPlus emulator of
+       s7commplus.
    * - ``modbus``
      - Automatically against the Modbus TCP server of pymodbus (all four tables, bits,
        REAL/DINT, word order).

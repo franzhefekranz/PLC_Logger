@@ -1583,7 +1583,8 @@ Konfiguration lassen sich beliebige Treiber mischen.
 
 **Wie gut ist welcher Treiber geprüft?** Bei jedem Hochladen laufen automatische Tests; wo es
 eine fremde, verbreitete Gegenstelle gibt, prüfen sie den Treiber gegen deren Simulator.
-Mit echten Steuerungen erprobt sind bisher nur ``s7`` und ``clx``:
+Mit echten Steuerungen erprobt sind bisher ``s7`` und ``clx``, ``tia`` mit der simulierten
+CPU von S7-PLCSIM Advanced:
 
 .. list-table::
    :header-rows: 1
@@ -1600,8 +1601,9 @@ Mit echten Steuerungen erprobt sind bisher nur ``s7`` und ``clx``:
        24.04); der Ringpuffer nur gegen eine
        nachgebildete libplctag.
    * - ``tia``
-     - Automatisch: Ringpuffer gegen den S7CommPlus-Emulator von s7commplus. Das
-       symbolische Lesen ist noch nicht mit einer Steuerung erprobt.
+     - **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt, mit einer
+       echten CPU noch nicht; automatisch: Ringpuffer gegen den S7CommPlus-Emulator von
+       s7commplus.
    * - ``modbus``
      - Automatisch gegen den Modbus-TCP-Server von pymodbus (alle vier Tabellen, Bits,
        REAL/DINT, Wortfolge).
