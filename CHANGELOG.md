@@ -25,6 +25,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   Zeitachse haben (online mit eigener Fensterbreite). **Zeitachsen angleichen** setzt alle wieder auf den Ausschnitt des
   zuletzt bedienten Diagramms; die Scrollleiste verschiebt alle gemeinsam.
 
+### Behoben
+
+* Webserver mit HTTPS: Das selbstsignierte Zertifikat ließ sich auf Rechnern mit langem Namen (über 64 Zeichen, z. B.
+  manche Macs) nicht erzeugen.
+
 ## [3.4.3] – 2026-10-29
 
 ### Neu

@@ -125,7 +125,9 @@ def ensure_self_signed(cert_path=None, key_path=None):
             names.append(x509.IPAddress(ipaddress.ip_address(ip)))
         except ValueError:
             pass
-    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, host),
+    # Common Name höchstens 64 Zeichen (lange Rechnernamen, z. B. „…local“ auf Macs); der volle Name steht in den
+    # Alternativnamen (SAN), nach denen Browser prüfen.
+    subject = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, host[:64]),
                          x509.NameAttribute(NameOID.ORGANIZATION_NAME, "PLC Datenlogger")])
     now = _dt.datetime.now(_dt.timezone.utc)
     cert = (x509.CertificateBuilder().subject_name(subject).issuer_name(subject).public_key(key.public_key())

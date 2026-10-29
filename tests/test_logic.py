@@ -692,3 +692,17 @@ def test_logo_default_is_manufacturer_logo():
     assert logo_file({"logo": "-"}) == "" and logo_paths({"logo": "-"}) == []
     assert [os.path.basename(p) for p in logo_paths({"kundenlogo": "kunde.png"})] == ["kunde.png", "logo.png"]
     assert logo_file({"logo": "firma.svg"}) == "firma.svg"
+
+
+def test_self_signed_cert_long_hostname(tmp_path, monkeypatch):
+    """Selbstsigniertes Zertifikat auch bei Rechnernamen über 64 Zeichen (Common Name ist darauf begrenzt)."""
+    pytest.importorskip("cryptography")
+    import socket
+    import plc_web
+    long_name = "rechner-" + "x" * 70 + ".local"
+    monkeypatch.setattr(socket, "gethostname", lambda: long_name)
+    cert, key = plc_web.ensure_self_signed(str(tmp_path / "c.pem"), str(tmp_path / "k.pem"))
+    from cryptography import x509
+    c = x509.load_pem_x509_certificate(open(cert, "rb").read())
+    assert long_name in c.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(
+        x509.DNSName)
