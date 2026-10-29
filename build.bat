@@ -234,6 +234,13 @@ if not exist ".venv\Scripts\python.exe" (
     echo [1/6] Virtuelle Umgebung .venv vorhanden.
 )
 set "VPY=.venv\Scripts\python.exe"
+rem  Python 3.14 (z. B. WinPython 3.14 mit OpenSSL 3.5): Das gepackte Programm bricht beim Treiber tia mit TLS und
+rem  Passwort mit "OPENSSL_Uplink: no OPENSSL_Applink" ab. Die Release-Dateien werden mit Python 3.12 gebaut.
+"%VPY%" -c "import sys; sys.exit(sys.version_info[:2] >= (3, 14))" >nul 2>nul
+if errorlevel 1 (
+    echo [HINWEIS] Gebaut wird mit Python 3.14 oder neuer. Fuer den Treiber tia mit TLS und Passwort Python 3.12 verwenden
+    echo           ^(wie die Release-Dateien^): .venv loeschen, BUILD_PYTHON=Pfad\zu\python.exe setzen, neu bauen.
+)
 exit /b 0
 
 :docs

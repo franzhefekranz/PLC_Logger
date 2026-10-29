@@ -21,15 +21,21 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   symbolisch, ohne PUT/GET. Die absolute Adresse (`DB100.DBX0.0`, nicht optimiert) geht weiterhin. Vorlagen für
   S7-1200/1500 entsprechend beschrieben.
 
+### Geändert
+
+* Anleitung: Treiber `tia` mit S7-PLCSIM Advanced erprobt (ohne PUT/GET, TLS, Variablenliste, optimierte DBs,
+  Ringpuffer über den Namen, Zugriffsstufen ohne Passwort).
+
 ### Behoben
 
 * Treiber `tia` mit TLS unter Windows: Absturz „OPENSSL_Uplink: no OPENSSL_Applink“ beim Verbinden (je nach Python
   bzw. OpenSSL-DLL, z. B. in lokal gebauten Programmen). Ohne Passwort wird die TLS-Schlüsseldatei von s7commplus nicht
   mehr geschrieben; sie wird nur für die Anmeldung mit Passwort gebraucht.
 
-### Geändert
+### Build
 
-* Anleitung: Treiber `tia` mit S7-PLCSIM Advanced erprobt (ohne PUT/GET, TLS, Variablenliste, optimierte DBs).
+* `build.bat` weist darauf hin, wenn mit Python 3.14 oder neuer gebaut wird (Treiber `tia` mit TLS und Passwort bricht
+  dann ab); die Release-Dateien werden mit Python 3.12 gebaut.
 
 ## [3.4.2] – 2026-10-29
 

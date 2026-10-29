@@ -1608,8 +1608,9 @@ CPU von S7-PLCSIM Advanced:
        nachgebildete libplctag.
    * - ``tia``
      - **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt: ohne PUT/GET,
-       mit TLS, Variablenliste aus der CPU, Lesen aus zwei optimierten DBs. Noch nicht
-       erprobt: Ringpuffer mit Steuerung, echte CPU.
+       mit TLS, Variablenliste aus der CPU, Lesen aus zwei optimierten DBs, Ringpuffer
+       über seinen Namen, verschiedene Zugriffsstufen der CPU ohne Passwort (lesen bzw.
+       Meldung). Noch nicht erprobt: Anmeldung mit Passwort, echte CPU.
        Automatisch: Ringpuffer mit absoluter Adresse gegen den S7CommPlus-Emulator von
        s7commplus, mit Namen (optimiert) gegen eine nachgebildete Steuerung.
    * - ``modbus``
@@ -5041,9 +5042,10 @@ Fehlersuche
        Zahl freier HMI-Verbindungen der CPU.
    * - ``tia`` mit TLS und Passwort: Programm bricht ab mit „OPENSSL_Uplink: no
        OPENSSL_Applink“ (Windows)
-     - Eine fremde bzw. unpassende OpenSSL-DLL wird geladen (z. B. bei selbst gebauten
-       Programmen mit einem anderen Python). Mit den Release-Dateien arbeiten oder mit
-       dem Python von python.org bauen; ohne Passwort tritt der Fehler nicht auf.
+     - Selbst gebautes Programm mit Python 3.14 (z. B. WinPython 3.14, OpenSSL 3.5): Mit den
+       Release-Dateien arbeiten oder mit Python 3.12 bauen (``.venv`` löschen,
+       ``BUILD_PYTHON`` auf dessen ``python.exe`` setzen); ``build.bat`` weist darauf hin.
+       Ohne Passwort tritt der Fehler nicht auf.
    * - ``logo``: keine Verbindung
      - In LOGO!Soft Comfort eine Verbindung als **Server** mit passendem TSAP
        einrichten (Vorgabe TSAP der LOGO! ``02.00``, des Loggers ``01.00``) und das
