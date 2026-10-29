@@ -6,13 +6,15 @@
 //  Die Steuerung schreibt bei jedem Aufruf einen Datensatz (Nummer, Zeit, Werte) in einen Ringpuffer. Der Logger holt
 //  die Datensätze ab und zeichnet sie lückenlos mit der Zeit aus der Steuerung auf.
 //
-//  Wichtig: Der Datenbaustein "PLC_Ringpuffer" ist NICHT optimiert (S7_Optimized_Access := 'FALSE'), damit der Logger
-//  ihn byteweise lesen kann. Seine Nummer vergibt TIA Portal beim Generieren (Eigenschaften des DB, z. B. auf 100
-//  stellen) – sie gehört in die Adresse im Logger.
+//  Der Datenbaustein "PLC_Ringpuffer" ist hier NICHT optimiert (S7_Optimized_Access := 'FALSE'), damit der Logger
+//  ihn byteweise lesen kann (Treiber s7, oder tia mit absoluter Adresse). Seine Nummer vergibt TIA Portal beim
+//  Generieren (Eigenschaften des DB, z. B. auf 100 stellen) – sie gehört in die Adresse im Logger.
+//  Mit dem Treiber tia und dem NAMEN als Startadresse darf der DB auch optimiert sein ('TRUE').
 //
-//  Einstellungen im Logger (Konfigurationsprogramm › Blöcke):
-//      Treiber "tia" (S7CommPlus, ohne PUT/GET) oder "s7" (PUT/GET in der CPU erlauben)
-//      Startadresse  DB100.DBX0.0     Format REAL     Anzahl 10     Ringpuffer 100
+//  Einstellungen im Logger (Konfigurationsprogramm › Blöcke), Format REAL, Anzahl 10, Ringpuffer 100:
+//      Treiber "tia" (S7CommPlus, ohne PUT/GET):  Startadresse  PLC_Ringpuffer   (symbolisch, auch optimiert)
+//                                            oder Startadresse  DB100.DBX0.0     (nur nicht optimiert, schneller)
+//      Treiber "s7" (PUT/GET in der CPU erlauben): Startadresse  DB100.DBX0.0
 //  Leseintervall der Steuerung z. B. 250 ms. Puffergröße: mindestens 3 × Leseintervall ÷ Zykluszeit
 //  (Beispiel: 10-ms-Weckalarm, 250 ms Leseintervall -> mindestens 75 Datensätze; 100 gewählt).
 //

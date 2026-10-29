@@ -1068,9 +1068,10 @@ editor opens the folder ``vorlagen`` with ready-made blocks:
      - S7-1200/1500 (SCL source for TIA Portal: *External source files*)
      - ``tia`` or ``s7``
    * - ``Ringpuffer_S7-1200_1500_FB.scl``
-     - S7-1200/1500 as function block with 20 inputs, **not optimized**: the buffer is in
-       the instance DB ``Cycl_Rec_DB`` (several instances = several ring buffers). Start
-       address ``DBX80.0``.
+     - S7-1200/1500 as function block with 20 inputs: the buffer is in the instance DB
+       ``Cycl_Rec_DB`` (several instances = several ring buffers). ``tia``: start address
+       ``Cycl_Rec_DB`` (the FB may be optimized); absolute ``DBX80.0`` (FB not optimized,
+       as supplied).
      - ``tia`` or ``s7``
    * - ``Ringpuffer_ControlLogix.st``
      - ControlLogix/CompactLogix (Structured Text, data types described)
@@ -1091,9 +1092,13 @@ as the column **Ring buffer** contains the number of records (*off* = normal blo
    * - Field
      - Ring buffer
    * - Start address
-     - ``s7``, ``tia``: address of the counter at the start of the buffer in a
-       **non-optimized** data block, e.g. ``DB100.DBX0.0``. ``clx``: tag of the buffer,
-       e.g. ``Puffer`` or ``Program:Main.Puffer``.
+     - ``s7``: address of the counter at the start of the buffer in a **non-optimized**
+       data block, e.g. ``DB100.DBX0.0``. ``tia``: **name of the buffer** – the DB or the
+       structure with ``Zaehler`` and ``Daten``, e.g. ``PLC_Ringpuffer``,
+       ``Cycl_Rec_DB`` or ``Anlage_DB.Puffer``; the block may be **optimized**.
+       Alternatively, as with ``s7``, the absolute address (non-optimized only, faster
+       for large buffers). ``clx``: tag of the buffer, e.g. ``Puffer`` or
+       ``Program:Main.Puffer``.
    * - Format
      - Data type of the values: ``INT``, ``DINT``, ``REAL`` (``s7``/``tia`` additionally
        ``WORD``, ``UINT``, ``DWORD``, ``UDINT``, ``LREAL``; ``clx`` additionally ``UINT``,
@@ -1114,8 +1119,9 @@ records of at least three read intervals: *records ≥ 3 × read interval ÷ cyc
 Example: 10 ms cyclic interrupt and 250 ms read interval → at least 75 records (the
 templates have 100); 50 ms and 500 ms → at least 30.
 
-**Buffer layout** (S7: non-optimized DB, even start address; Logix: UDT with exactly
-these names):
+**Buffer layout** (S7 with absolute address: non-optimized DB, even start address;
+``tia`` with a name and Logix: exactly these names; with ``tia`` the arrays may also
+start at 1):
 
 .. code-block:: text
 
@@ -1568,7 +1574,8 @@ CPU of S7-PLCSIM Advanced:
      - **With S7-PLCSIM Advanced** (simulated S7-1500) tried successfully: without
        PUT/GET, with TLS, variable list from the CPU, reading from two optimized DBs.
        Not yet tried: ring buffer with a controller, real CPU.
-       Automatically: ring buffer against the S7CommPlus emulator of s7commplus.
+       Automatically: ring buffer with absolute address against the S7CommPlus emulator of
+       s7commplus, with a name (optimized) against a simulated controller.
    * - ``modbus``
      - Automatically against the Modbus TCP server of pymodbus (all four tables, bits,
        REAL/DINT, word order).

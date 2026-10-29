@@ -9,7 +9,8 @@ Auswahldialog direkt aus der Steuerung. Adressen:
     Anlage_DB.Motor[2].Drehzahl     Mess_DB.Temp     MArea.Start_Merker     IArea.Taster_1     QArea.Lampe
 
 Blöcke: Array ohne Index + erster Index (wie in TIA, z. B. 1 bei Array[1..100]) + Anzahl.
-Ringpuffer (zyklussynchron): in einem nicht optimierten DB, Adresse des Zählers wie beim Treiber s7 (``DB100.DBX0.0``).
+Ringpuffer (zyklussynchron): symbolischer Name des Puffers (z. B. ``PLC_Ringpuffer`` oder ``Cycl_Rec_DB``, auch in
+optimierten Bausteinen) oder absolute Adresse des Zählers in einem nicht optimierten DB (``DB100.DBX0.0``).
 """
 from plc_i18n import tr
 from plc_treiber.base import BrowseResult, Driver, Param
@@ -46,8 +47,9 @@ class TiaDriver(Driver):
     browse_label = tr("Aus Variablenliste wählen…")
     library = "s7commplus"
     ring_types = list(RING_TYPES)
-    ring_hint = tr("Adresse des Zählers am Anfang des Ringpuffers in einem nicht optimierten DB, z. B. DB100.DBX0.0 "
-                   "(Bausteineigenschaft „Optimierter Bausteinzugriff“ aus)")
+    ring_hint = tr("Name des Ringpuffers (DB oder Struktur mit Zaehler und Daten), z. B. PLC_Ringpuffer oder "
+                   "Cycl_Rec_DB – auch optimiert; oder Adresse des Zählers in einem nicht optimierten DB, z. B. "
+                   "DB100.DBX0.0 (schneller bei großen Puffern)")
 
     def summary(self, plc):
         """„IP:Port, TLS Modus“."""
@@ -61,7 +63,12 @@ class TiaDriver(Driver):
         return ""
 
     def check_ring(self, block):
-        """Ringpuffer: absolute Adresse im nicht optimierten Datenbaustein."""
+        """Ringpuffer: symbolischer Name oder absolute Adresse im nicht optimierten Datenbaustein."""
+        from plc_treiber.tia_io import ring_is_symbolic
+        if ring_is_symbolic(block.address):
+            if not check_tag_name(block.address.strip()) or block.address.strip().endswith("]"):
+                return tr("Ungültiger Variablenname „{0}“").format(block.address)
+            return super().check_ring(block)
         from plc_treiber.s7 import parse_ring
         try:
             parse_ring(block.address)

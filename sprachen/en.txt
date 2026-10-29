@@ -5586,8 +5586,8 @@
 @ Aus Variablenliste wählen…
 > Select from variable list…
 
-@ Adresse des Zählers am Anfang des Ringpuffers in einem nicht optimierten DB, z. B. DB100.DBX0.0 (Bausteineigenschaft „Optimierter Bausteinzugriff“ aus)
-> Address of the counter at the start of the ring buffer in a non-optimized DB, e.g. DB100.DBX0.0 (block property "Optimized block access" off)
+@ Name des Ringpuffers (DB oder Struktur mit Zaehler und Daten), z. B. PLC_Ringpuffer oder Cycl_Rec_DB – auch optimiert; oder Adresse des Zählers in einem nicht optimierten DB, z. B. DB100.DBX0.0 (schneller bei großen Puffern)
+> Name of the ring buffer (DB or structure with Zaehler and Daten), e.g. PLC_Ringpuffer or Cycl_Rec_DB – also optimized; or address of the counter in a non-optimized DB, e.g. DB100.DBX0.0 (faster for large buffers)
 
 @ Ungültiger Variablenname „{0}“
 > Invalid variable name “{0}”
@@ -5676,8 +5676,20 @@
 @ Variable in der Steuerung nicht gefunden
 > Variable not found in the controller
 
+@ Ringpuffer {0}: Variable „{1}“ nicht gefunden (Aufbau: Zaehler, Daten[0..N-1] mit Seq, Zeit und Werte[0..M-1])
+> Ring buffer {0}: variable “{1}” not found (layout: Zaehler, Daten[0..N-1] with Seq, Zeit and Werte[0..M-1])
+
+@ Ringpuffer {0}: „{1}“ fehlt – hat der Puffer in der Steuerung weniger als {2} Datensätze?
+> Ring buffer {0}: “{1}” is missing – does the buffer in the controller have fewer than {2} records?
+
+@ Ringpuffer {0}: „Werte“ hat in der Steuerung weniger als {1} Elemente
+> Ring buffer {0}: “Werte” has fewer than {1} elements in the controller
+
 @ Lesefehler (Variable nicht lesbar oder geändert)
 > Read error (variable not readable or changed)
+
+@ Ringpuffer {0}: Zähler nicht lesbar
+> Ring buffer {0}: counter not readable
 
 # ---------------- plc_treiber/tia_taglist.py
 

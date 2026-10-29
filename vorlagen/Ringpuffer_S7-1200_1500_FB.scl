@@ -8,13 +8,15 @@
 //  Die Steuerung schreibt bei jedem Aufruf einen Datensatz (Nummer, Zeit, Werte) in einen Ringpuffer. Der Logger holt
 //  die Datensätze ab und zeichnet sie lückenlos mit der Zeit aus der Steuerung auf.
 //
-//  Wichtig: Der FB ist NICHT optimiert (S7_Optimized_Access := 'FALSE'). Nur dann hat sein Instanz-DB feste
-//  Byte-Adressen, die der Logger lesen kann. Die Nummer des Instanz-DB vergibt TIA Portal beim Generieren
-//  (Eigenschaften des DB, z. B. auf 100 stellen) – sie gehört in die Adresse im Logger.
+//  Der FB ist hier NICHT optimiert (S7_Optimized_Access := 'FALSE'). Nur dann hat sein Instanz-DB feste Byte-Adressen
+//  (Treiber s7, oder tia mit absoluter Adresse). Die Nummer des Instanz-DB vergibt TIA Portal beim Generieren
+//  (Eigenschaften des DB, z. B. auf 100 stellen) – sie gehört in die absolute Adresse im Logger.
+//  Mit dem Treiber tia und dem NAMEN des Instanz-DB als Startadresse darf der FB auch optimiert sein ('TRUE').
 //
-//  Einstellungen im Logger (Konfigurationsprogramm › Blöcke):
-//      Treiber "tia" (S7CommPlus, ohne PUT/GET) oder "s7" (PUT/GET in der CPU erlauben)
-//      Startadresse  DB<Instanz-DB>.DBX80.0     Format REAL     Anzahl 20     Ringpuffer 100
+//  Einstellungen im Logger (Konfigurationsprogramm › Blöcke), Format REAL, Anzahl 20, Ringpuffer 100:
+//      Treiber "tia" (S7CommPlus, ohne PUT/GET):  Startadresse  Cycl_Rec_DB      (symbolisch, auch optimiert)
+//                                            oder Startadresse  DB<Instanz-DB>.DBX80.0  (nur nicht optimiert)
+//      Treiber "s7" (PUT/GET in der CPU erlauben): Startadresse  DB<Instanz-DB>.DBX80.0
 //  Warum Byte 80: Im Instanz-DB stehen zuerst die Eingänge (Wert0 … Wert19 = 20 × 4 Bytes = Byte 0 … 79), danach der
 //  Zaehler. Bei anderer Anzahl Eingänge: Startadresse = 4 × Anzahl Werte (Kontrolle: Spalte „Offset“ von Zaehler im
 //  Instanz-DB, nach dem Übersetzen).

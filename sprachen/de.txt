@@ -5586,7 +5586,7 @@
 @ Aus Variablenliste wählen…
 > 
 
-@ Adresse des Zählers am Anfang des Ringpuffers in einem nicht optimierten DB, z. B. DB100.DBX0.0 (Bausteineigenschaft „Optimierter Bausteinzugriff“ aus)
+@ Name des Ringpuffers (DB oder Struktur mit Zaehler und Daten), z. B. PLC_Ringpuffer oder Cycl_Rec_DB – auch optimiert; oder Adresse des Zählers in einem nicht optimierten DB, z. B. DB100.DBX0.0 (schneller bei großen Puffern)
 > 
 
 @ Ungültiger Variablenname „{0}“
@@ -5676,7 +5676,19 @@
 @ Variable in der Steuerung nicht gefunden
 > 
 
+@ Ringpuffer {0}: Variable „{1}“ nicht gefunden (Aufbau: Zaehler, Daten[0..N-1] mit Seq, Zeit und Werte[0..M-1])
+> 
+
+@ Ringpuffer {0}: „{1}“ fehlt – hat der Puffer in der Steuerung weniger als {2} Datensätze?
+> 
+
+@ Ringpuffer {0}: „Werte“ hat in der Steuerung weniger als {1} Elemente
+> 
+
 @ Lesefehler (Variable nicht lesbar oder geändert)
+> 
+
+@ Ringpuffer {0}: Zähler nicht lesbar
 > 
 
 # ---------------- plc_treiber/tia_taglist.py

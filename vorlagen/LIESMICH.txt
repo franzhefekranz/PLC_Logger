@@ -9,19 +9,20 @@ Leseintervall).
   Ringpuffer_S7-300_400.scl      S7-300/400, SCL (STEP 7 V5.x)            Treiber s7
   Ringpuffer_S7-300_400_FB.scl   S7-300/400, SCL als FB (Puffer im Instanz-DB, Startadresse DBX80.0)   Treiber s7
   Ringpuffer_S7-1200_1500.scl    S7-1200/1500, SCL-Quelle für TIA Portal   Treiber tia oder s7
-  Ringpuffer_S7-1200_1500_FB.scl S7-1200/1500 als FB, nicht optimiert (Puffer im Instanz-DB, Startadresse DBX80.0)
-                                                                           Treiber tia oder s7
+  Ringpuffer_S7-1200_1500_FB.scl S7-1200/1500 als FB (Puffer im Instanz-DB; tia: Name Cycl_Rec_DB, auch optimiert;
+                                 absolut: DBX80.0, nicht optimiert)        Treiber tia oder s7
   Ringpuffer_ControlLogix.st     ControlLogix/CompactLogix, Structured Text  Treiber clx
 
-Aufbau des Puffers (in dieser Reihenfolge, S7: nicht optimierter DB):
+Aufbau des Puffers (in dieser Reihenfolge; S7 mit absoluter Adresse: nicht optimierter DB):
   Zaehler   DINT                 Anzahl geschriebener Datensätze
   Daten[0..N-1]                  N Datensätze, Datensatz Nummer n steht in Daten[n MOD N]
     Seq     DINT                 Nummer des Datensatzes
     Zeit    DINT                 Zeit in ms (TIME_TCK bzw. ms seit Mitternacht)
     Werte[0..M-1]                M Werte: INT, DINT, REAL (S7 auch WORD, DWORD, LREAL)
 
-Im Logger (Konfigurationsprogramm › Blöcke): Startadresse = Adresse des Zählers (S7/TIA, z. B. DB100.DBX0.0) bzw.
-Tag des Puffers (Logix, z. B. Puffer); Format = Datentyp der Werte; Anzahl = M; Ringpuffer = N.
+Im Logger (Konfigurationsprogramm › Blöcke): Startadresse = Adresse des Zählers (S7/TIA, z. B. DB100.DBX0.0),
+Name des Puffers (TIA symbolisch, auch optimiert, z. B. PLC_Ringpuffer oder Cycl_Rec_DB) bzw. Tag des Puffers
+(Logix, z. B. Puffer); Format = Datentyp der Werte; Anzahl = M; Ringpuffer = N.
 Ausführlich: Bedienungsanleitung, Abschnitt „Ringpuffer (zyklussynchrone Aufzeichnung)“.
 
 

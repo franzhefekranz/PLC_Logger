@@ -291,3 +291,73 @@ def test_ring_block_config_roundtrip(tmp_path):
     assert len(variables) == 5 and all(v.ring is not None and v.ring.ring == 250 for v in variables)
     assert variables[2].address == "DB100.DBX0.0 › Werte[2]"
     assert b2.size_bytes() == 4 + 250 * (8 + 5 * 4)
+
+
+def test_tia_reader_symbolic_ring():
+    """tia: Ringpuffer über seinen symbolischen Namen (auch optimierter DB): Zaehler, Daten[i].Seq/.Zeit/.Werte[j]."""
+    pytest.importorskip("s7commplus")
+    from s7commplus import SymbolicTag
+    from plc_treiber.tia_io import TagReader
+    records, count = 20, 2
+    names = ["Puffer_DB.Zaehler"]
+    for k in range(1, records + 1):                              # Array[1..20], Werte Array[0..1] (Untergrenzen)
+        names += [f"Puffer_DB.Daten[{k}].Seq", f"Puffer_DB.Daten[{k}].Zeit"]
+        names += [f"Puffer_DB.Daten[{k}].Werte[{j}]" for j in range(count)]
+    items = [{"name": n, "access_sequence": f"8A0E0001.{i + 1:X}",
+              "data_type": "REAL" if ".Werte[" in n else "DINT"} for i, n in enumerate(names)]
+    tags = {n: SymbolicTag.from_browse(it) for n, it in zip(names, items)}
+    by_lid = {t.lids: n for n, t in tags.items()}
+    mem = {n: 0 for n in names}
+    state = {"n": 0, "requests": 0}
+
+    def plc_write(k):
+        for _ in range(k):
+            state["n"] += 1
+            n = state["n"]
+            d = f"Puffer_DB.Daten[{n % records + 1}]"
+            mem[d + ".Werte[0]"], mem[d + ".Werte[1]"] = float(n), 0.5 * n
+            mem[d + ".Zeit"], mem[d + ".Seq"] = 1000 + 10 * n, n
+            mem["Puffer_DB.Zaehler"] = n
+
+    class Client:
+        def connect(self, ip, **kw):
+            pass
+
+        def read_symbolic_multi(self, req):
+            state["requests"] += 1
+            out = []
+            for _area, lids, _x in req:
+                name = by_lid[tuple(lids)]
+                v = mem[name]
+                out.append(tags[name].encode_value(float(v) if ".Werte[" in name else int(v)))
+            return out
+
+        def db_read(self, *a):
+            raise AssertionError("symbolischer Puffer darf nicht byteweise gelesen werden")
+
+        def disconnect(self):
+            pass
+
+    from plc_common import get_driver
+    plc = Plc(name="S7-1500", driver="tia", params=get_driver("tia").normalize_params({"ip": "10.0.0.1"}))
+    blk = Block(name="P", address="Puffer_DB", dtype="REAL", count=count, ring=records, driver="tia")
+    assert get_driver("tia").check_block(blk) == ""
+    r = TagReader(plc, blk.variables(), client_factory=Client, catalog_items=items)
+    plc_write(5)
+    assert r.connect() == 2 and not r.errors
+    rows = r.read_rings(now=10.0)
+    assert [v for _p, _t, v in rows] == [[float(n), 0.5 * n] for n in range(1, 6)]
+    assert rows[1][1] - rows[0][1] == pytest.approx(0.010)
+    plc_write(25)                                                # mehr als der Puffer fasst
+    rows = r.read_rings(now=10.3)
+    assert [int(v[0]) for _p, _t, v in rows] == list(range(11, 31))
+    assert any("verloren" in n for n in r.take_ring_notes())
+    # zu klein eingestellter Puffer in der Steuerung bzw. falscher Name: verständlicher Fehler
+    big = Block(name="Q", address="Puffer_DB", dtype="REAL", count=count, ring=50, driver="tia")
+    r2 = TagReader(plc, big.variables(), client_factory=Client, catalog_items=items)
+    r2.connect()
+    assert "weniger als 50" in r2.errors[r2.rings[0].label]
+    wrong = Block(name="W", address="Anderer_DB", dtype="REAL", count=count, ring=records, driver="tia")
+    r3 = TagReader(plc, wrong.variables(), client_factory=Client, catalog_items=items)
+    r3.connect()
+    assert "Anderer_DB.Zaehler" in r3.errors[r3.rings[0].label]

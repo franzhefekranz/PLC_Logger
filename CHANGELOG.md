@@ -14,6 +14,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* Treiber `tia`: Ringpuffer auch in **optimierten** Bausteinen. Als Startadresse genügt der Name des Puffers (z. B.
+  `PLC_Ringpuffer`, `Cycl_Rec_DB` oder `Anlage_DB.Puffer`); gelesen werden `Zaehler` und `Daten[i].Seq/.Zeit/.Werte[j]`
+  symbolisch, ohne PUT/GET. Die absolute Adresse (`DB100.DBX0.0`, nicht optimiert) geht weiterhin. Vorlagen für
+  S7-1200/1500 entsprechend beschrieben.
+
+### Geändert
+
+* Anleitung: Treiber `tia` mit S7-PLCSIM Advanced erprobt (ohne PUT/GET, TLS, Variablenliste, optimierte DBs).
+
 ## [3.4.2] – 2026-10-29
 
 ### Geändert

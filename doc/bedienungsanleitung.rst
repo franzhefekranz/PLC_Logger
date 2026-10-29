@@ -1097,9 +1097,10 @@ Möglich mit den Treibern ``s7`` (S7-300/400, S7-1200/1500 mit PUT/GET), ``tia``
      - S7-1200/1500 (SCL-Quelle für TIA Portal: *Externe Quellen*)
      - ``tia`` oder ``s7``
    * - ``Ringpuffer_S7-1200_1500_FB.scl``
-     - S7-1200/1500 als Funktionsbaustein mit 20 Eingängen, **nicht optimiert**: der Puffer
-       liegt im Instanz-DB ``Cycl_Rec_DB`` (mehrere Instanzen = mehrere Ringpuffer).
-       Startadresse ``DBX80.0``.
+     - S7-1200/1500 als Funktionsbaustein mit 20 Eingängen: der Puffer liegt im
+       Instanz-DB ``Cycl_Rec_DB`` (mehrere Instanzen = mehrere Ringpuffer). ``tia``:
+       Startadresse ``Cycl_Rec_DB`` (FB darf optimiert sein); absolut ``DBX80.0`` (FB
+       nicht optimiert, wie geliefert).
      - ``tia`` oder ``s7``
    * - ``Ringpuffer_ControlLogix.st``
      - ControlLogix/CompactLogix (Structured Text, Datentypen beschrieben)
@@ -1120,9 +1121,13 @@ Spalte **Ringpuffer** die Anzahl der Datensätze steht (*aus* = normaler Block):
    * - Feld
      - Ringpuffer
    * - Startadresse
-     - ``s7``, ``tia``: Adresse des Zählers am Anfang des Puffers in einem **nicht
-       optimierten** Datenbaustein, z. B. ``DB100.DBX0.0``. ``clx``: Tag des Puffers,
-       z. B. ``Puffer`` oder ``Program:Main.Puffer``.
+     - ``s7``: Adresse des Zählers am Anfang des Puffers in einem **nicht optimierten**
+       Datenbaustein, z. B. ``DB100.DBX0.0``. ``tia``: **Name des Puffers** – des DB bzw.
+       der Struktur mit ``Zaehler`` und ``Daten``, z. B. ``PLC_Ringpuffer``,
+       ``Cycl_Rec_DB`` oder ``Anlage_DB.Puffer``; der Baustein darf **optimiert** sein.
+       Alternativ wie bei ``s7`` die absolute Adresse (nur nicht optimiert, bei großen
+       Puffern schneller). ``clx``: Tag des Puffers, z. B. ``Puffer`` oder
+       ``Program:Main.Puffer``.
    * - Format
      - Datentyp der Werte: ``INT``, ``DINT``, ``REAL`` (``s7``/``tia`` zusätzlich
        ``WORD``, ``UINT``, ``DWORD``, ``UDINT``, ``LREAL``; ``clx`` zusätzlich ``UINT``,
@@ -1143,8 +1148,9 @@ mindestens drei Leseintervallen fassen: *Datensätze ≥ 3 × Leseintervall ÷ Z
 Beispiel: 10-ms-Weckalarm und 250 ms Leseintervall → mindestens 75 Datensätze (die
 Vorlagen haben 100); 50 ms und 500 ms → mindestens 30.
 
-**Aufbau des Puffers** (S7: nicht optimierter DB, Startadresse gerade; Logix: UDT mit
-genau diesen Namen):
+**Aufbau des Puffers** (S7 mit absoluter Adresse: nicht optimierter DB, Startadresse
+gerade; ``tia`` mit Namen und Logix: genau diesen Namen; die Arrays dürfen bei ``tia``
+auch bei 1 beginnen):
 
 .. code-block:: text
 
@@ -1604,7 +1610,8 @@ CPU von S7-PLCSIM Advanced:
      - **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt: ohne PUT/GET,
        mit TLS, Variablenliste aus der CPU, Lesen aus zwei optimierten DBs. Noch nicht
        erprobt: Ringpuffer mit Steuerung, echte CPU.
-       Automatisch: Ringpuffer gegen den S7CommPlus-Emulator von s7commplus.
+       Automatisch: Ringpuffer mit absoluter Adresse gegen den S7CommPlus-Emulator von
+       s7commplus, mit Namen (optimiert) gegen eine nachgebildete Steuerung.
    * - ``modbus``
      - Automatisch gegen den Modbus-TCP-Server von pymodbus (alle vier Tabellen, Bits,
        REAL/DINT, Wortfolge).

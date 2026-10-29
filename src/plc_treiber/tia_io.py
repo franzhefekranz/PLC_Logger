@@ -21,9 +21,16 @@ Fehler einzelner Variablen (z. B. nach einer Programmänderung gelöschte Variab
 Blöcke (Ausschnitte eines Arrays) brauchen keine Sonderbehandlung: Ihre Elemente sind gewöhnliche Variablen, die mit
 den übrigen in derselben Anfrage gelesen werden.
 
-Ringpuffer (zyklussynchrone Aufzeichnung, siehe ringbuffer.py) liegen in einem *nicht optimierten* Datenbaustein und
-werden byteweise gelesen (``db_read``, ebenfalls ohne PUT/GET); Adresse wie beim Treiber s7, z. B. ``DB100.DBX0.0``.
+Ringpuffer (zyklussynchrone Aufzeichnung, siehe ringbuffer.py), beides ohne PUT/GET:
+
+* **absolute Adresse** wie beim Treiber s7, z. B. ``DB100.DBX0.0``: Puffer in einem *nicht optimierten* Datenbaustein,
+  byteweise gelesen (``db_read``) – wenige, große Anfragen.
+* **symbolischer Name** des Puffers, z. B. ``PLC_Ringpuffer`` (globaler DB), ``Cycl_Rec_DB`` (Instanz-DB) oder
+  ``Anlage_DB.Puffer`` (Struktur): auch in *optimierten* Bausteinen. Gelesen werden die Variablen ``<Name>.Zaehler``
+  und je Datensatz ``<Name>.Daten[i].Seq``, ``.Zeit`` und ``.Werte[0..M-1]`` (2 + M Variablen je Datensatz, mit den
+  übrigen Anfragen gebündelt). Die Untergrenzen der Arrays (0 oder 1) erkennt der Treiber selbst.
 """
+import re
 import datetime
 import math
 import struct
@@ -33,6 +40,12 @@ from plc_treiber.ringbuffer import HEADER_BYTES, RingSupport
 from plc_i18n import tr
 
 RING_CHUNK = 4000                                # höchstens so viele Bytes je db_read beim Abholen eines Ringpuffers
+ABSOLUTE_RING = re.compile(r"^\s*DB\d+\.DB[XBWD]", re.IGNORECASE)   # absolute Adresse (sonst symbolischer Name)
+
+
+def ring_is_symbolic(address: str) -> bool:
+    """True, wenn die Adresse eines Ringpuffers ein symbolischer Name ist (nicht ``DB100.DBX0.0``)."""
+    return not ABSOLUTE_RING.match(address or "")
 
 # Werte, die als Zahl aufgezeichnet werden können: Wahrheitswerte, Ganz- und Gleitkommazahlen, Zeitdauern (in ms),
 # einzelne Zeichen (Zeichencode). Alles andere (Texte, Datum …) wird NaN.
@@ -92,7 +105,14 @@ class TagReader(RingSupport):
         self.catalog_refreshed = False           # Variablenliste in dieser Sitzung schon neu gelesen?
         self.ring_pos = self._setup_rings(self.vars)  # Elemente von Ringpuffern (werden nicht symbolisch gelesen)
         from plc_treiber.s7 import parse_ring
+        from plc_treiber.tia_common import check_tag_name
         for ring in self.rings:
+            ring.symbolic = ring_is_symbolic(ring.address)
+            if ring.symbolic:
+                ring.base = ring.address.strip()
+                if not check_tag_name(ring.base) or ring.base.endswith("]"):
+                    ring.error = tr("Ungültiger Variablenname „{0}“").format(ring.address)
+                continue
             try:
                 ring.db, ring.byte = parse_ring(ring.address)
             except ValueError as e:
@@ -118,7 +138,7 @@ class TagReader(RingSupport):
             raise ConnectionError(f"{self.plc.ip}: {e}") from None
         self.client = client
         self.errors = {}
-        if len(self.ring_pos) < len(self.vars):
+        if len(self.ring_pos) < len(self.vars) or any(getattr(r, "symbolic", False) for r in self.rings):
             self._resolve()
         n_ok = sum(1 for t in self.tags if t is not None)
         if n_ok:
@@ -160,14 +180,69 @@ class TagReader(RingSupport):
         return SymbolCatalog(tags)
 
     def _resolve(self):
-        """Namen der Variablen in Kennungen übersetzen; fehlen Namen, die Liste einmal neu aus der Steuerung lesen."""
+        """Namen der Variablen (und symbolischer Ringpuffer) in Kennungen übersetzen; fehlen Namen, die Liste einmal
+        neu aus der Steuerung lesen."""
         catalog = self._catalog()
         missing = self._apply(catalog)
-        if missing and not self.catalog_refreshed:
+        ring_missing = self._apply_rings(catalog)
+        if (missing or ring_missing) and not self.catalog_refreshed:
             catalog = self._catalog(refresh=True)
             missing = self._apply(catalog)
+            self._apply_rings(catalog)
         for i in missing:
             self.errors[self.vars[i].tag] = tr("Variable in der Steuerung nicht gefunden")
+
+    def _apply_rings(self, catalog):
+        """Symbolische Ringpuffer im Katalog nachschlagen: Zähler und für jeden Platz Seq, Zeit, Werte -> True, wenn
+        bei einem Puffer etwas fehlt (der Fehler steht dann in ``ring.error``)."""
+        failed = False
+        for ring in self.rings:
+            if not getattr(ring, "symbolic", False) or (ring.error and not getattr(ring, "resolve_error", False)):
+                continue
+            ring.error, ring.resolve_error = "", False
+            try:
+                ring.tags = self._ring_tags(catalog, ring)
+            except KeyError as e:
+                ring.error, ring.resolve_error, ring.tags = str(e.args[0] if e.args else e), True, None
+                failed = True
+        return failed
+
+    @staticmethod
+    def _ring_tags(catalog, ring):
+        """Kennungen eines symbolischen Puffers -> {"zaehler": Tag, "slots": [[Seq, Zeit, Wert0 …] je Platz]}.
+
+        KeyError mit verständlichem Text, wenn eine Variable fehlt oder der Puffer kleiner ist als eingestellt."""
+        b = ring.base
+
+        def get(name):
+            try:
+                return catalog.resolve(name)
+            except KeyError:
+                return None
+
+        def need(name):
+            tag = get(name)
+            if tag is None:
+                raise KeyError(tr("Ringpuffer {0}: Variable „{1}“ nicht gefunden (Aufbau: Zaehler, "
+                                  "Daten[0..N-1] mit Seq, Zeit und Werte[0..M-1])").format(ring.name, name))
+            return tag
+        counter = need(f"{b}.Zaehler")
+        lo = 0 if get(f"{b}.Daten[0].Seq") is not None else 1          # Array[0..N-1] oder Array[1..N]
+        need(f"{b}.Daten[{lo}].Seq")
+        wlo = 0 if get(f"{b}.Daten[{lo}].Werte[0]") is not None else 1
+        last = f"{b}.Daten[{lo + ring.records - 1}].Seq"
+        if get(last) is None:
+            raise KeyError(tr("Ringpuffer {0}: „{1}“ fehlt – hat der Puffer in der Steuerung weniger als {2} "
+                              "Datensätze?").format(ring.name, last, ring.records))
+        if get(f"{b}.Daten[{lo}].Werte[{wlo + ring.count - 1}]") is None:
+            raise KeyError(tr("Ringpuffer {0}: „Werte“ hat in der Steuerung weniger als {1} Elemente").format(
+                ring.name, ring.count))
+        slots = []
+        for k in range(ring.records):
+            d = f"{b}.Daten[{lo + k}]"
+            slots.append([need(d + ".Seq"), need(d + ".Zeit")]
+                         + [need(f"{d}.Werte[{wlo + j}]") for j in range(ring.count)])
+        return {"zaehler": counter, "slots": slots}
 
     def _apply(self, catalog):
         """Jede Variable im Katalog nachschlagen und die Kennung merken -> Indizes der nicht gefundenen Variablen."""
@@ -223,7 +298,39 @@ class TagReader(RingSupport):
 
     def _ring_counter(self, ring):
         """Zähler (DINT) am Anfang des Puffers."""
+        if getattr(ring, "symbolic", False):
+            tag = ring.tags["zaehler"]
+            raw = self.client.read_symbolic_multi([(tag.access_area, list(tag.lids), 0)])[0]
+            if raw is None:
+                raise RuntimeError(tr("Ringpuffer {0}: Zähler nicht lesbar").format(ring.name))
+            return int(to_number(tag.decode_value(raw)))
         return struct.unpack(">i", bytes(self.client.db_read(ring.db, ring.byte, HEADER_BYTES))[:4])[0]
+
+    def _ring_fetch(self, ring, lo, hi):
+        """Datensätze ``lo … hi`` lesen; symbolisch: alle Variablen der Plätze, gebündelt zu Anfragen mit höchstens
+        ``tags_je_anfrage`` Variablen. Nicht lesbare Datensätze bekommen Seq -1 (zählen als verloren)."""
+        if not getattr(ring, "symbolic", False):
+            return super()._ring_fetch(ring, lo, hi)
+        tags = []
+        for seq in range(lo, hi + 1):
+            tags.extend(ring.tags["slots"][seq % ring.records])
+        raws = []
+        size = max(1, int(self.plc.tags_je_anfrage))
+        for k in range(0, len(tags), size):
+            part = tags[k:k + size]
+            raws.extend(self.client.read_symbolic_multi([(t.access_area, list(t.lids), 0) for t in part]))
+        per = 2 + ring.count
+        out = []
+        for i in range(hi - lo + 1):
+            chunk, raw = tags[i * per:(i + 1) * per], raws[i * per:(i + 1) * per]
+            try:
+                vals = [to_number(t.decode_value(r)) if r is not None else math.nan for t, r in zip(chunk, raw)]
+                if math.isnan(vals[0]) or math.isnan(vals[1]):
+                    raise ValueError
+                out.append((int(vals[0]), int(vals[1]), vals[2:]))
+            except (ValueError, TypeError):
+                out.append((-1, 0, [math.nan] * ring.count))
+        return out
 
     def _ring_bytes(self, ring, slot, n):
         """``n`` Datensätze ab Platz ``slot`` – in Stücken von höchstens ``RING_CHUNK`` Bytes (ganze Datensätze)."""
