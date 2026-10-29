@@ -1566,8 +1566,8 @@ CPU of S7-PLCSIM Advanced:
        simulated libplctag.
    * - ``tia``
      - **With S7-PLCSIM Advanced** (simulated S7-1500) tried successfully: without
-       PUT/GET, with TLS, variable list from the CPU, reading from two non-optimized DBs.
-       Not yet tried: optimized blocks, ring buffer with a controller, real CPU.
+       PUT/GET, with TLS, variable list from the CPU, reading from two optimized DBs.
+       Not yet tried: ring buffer with a controller, real CPU.
        Automatically: ring buffer against the S7CommPlus emulator of s7commplus.
    * - ``modbus``
      - Automatically against the Modbus TCP server of pymodbus (all four tables, bits,
