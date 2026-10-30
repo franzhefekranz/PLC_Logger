@@ -1296,6 +1296,8 @@ Das Menü **Datei** des Konfigurationsprogramms enthält:
   `IO-Check <io-check_>`__ mit den Steuerungen dieser Datei (eigenes Programm).
 * **Headless-Logger anzeigen/beenden …** – laufende Headless-Logger anzeigen und
   sauber beenden (siehe `Headless-Betrieb (nur Aufzeichnung) <headless_>`__).
+* **Grafana-Dashboard exportieren …** – Dashboard mit der Anordnung des Loggers als
+  JSON-Datei für Grafana (siehe `Datenbank-Aufzeichnung <datenbank_>`__).
 
 Der Titel des Fensters zeigt Projektname und Dateiname. Die zuletzt benutzte
 Datei wird gemerkt (Datei ``plc_last.txt``); Logger und Konfigurationsprogramm
@@ -3325,6 +3327,17 @@ Für VictoriaMetrics und Prometheus (PromQL, z. B. in Grafana):
   *QuestDB* oder *PostgreSQL* auf Port 8812; InfluxDB 3: *InfluxDB* mit Abfragesprache
   *SQL*; VictoriaMetrics und Prometheus: *Prometheus*); die Zeitspalte ist ``zeit`` (InfluxDB:
   ``time``, UTC).
+* **Grafana-Dashboard wie im Logger:** **Datei › Grafana-Dashboard exportieren …** im
+  Konfigurationsprogramm speichert ein Dashboard als JSON-Datei; in Grafana über
+  *Dashboards › New › Import* hochladen und die Datenquelle der Datenbank wählen.
+  Übernommen werden Seiten (als Zeilen; Anordnung *Tabs*: nur die erste aufgeklappt),
+  die Anordnung der Diagramme (untereinander, nebeneinander, Raster), je Diagramm die
+  Variablen mit Farben, Y-Achsen (links/rechts, feste Grenzen, Achsenname) und BOOL als
+  Treppenlinie, der Zeitbereich (*Fenster [s]*) und eine Auswahl **Projekt** oben im
+  Dashboard – so dient ein Dashboard mehreren Anlagen mit gleicher Konfiguration.
+  Möglich mit VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB und
+  InfluxDB 3 (nicht SQLite). Nach Änderungen an Diagrammen erneut exportieren und beim
+  Import überschreiben.
 * **Testumgebung:** Im Ordner ``docker`` startet ``docker compose up -d`` TimescaleDB,
   QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus und Grafana mit fertig eingerichteten
   Datenquellen (Zugangsdaten in ``docker/.env``). SQLite-Dateien lassen sich mit dem SQLite-Plugin von Grafana lesen.

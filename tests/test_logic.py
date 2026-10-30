@@ -764,3 +764,95 @@ def test_victoriametrics_real_server_storage():
     text = plc_db.storage_info(conn)
     assert "Aufbewahrung: 90d" in text and "Datenbank gesamt:" in text
     assert "Kunde A: 240 Werte, 2 Variablen" in text and "Kunde B: 120 Werte, 2 Variablen" in text, text
+
+
+def test_grafana_dashboard_layout():
+    """Grafana-Dashboard: Anordnung wie im Logger (Seiten -> Zeilen, Raster), Achsen, Farben, Abfragen je Datenbank."""
+    import plc_grafana
+    from plc_common import Axis, Chart, Variable
+    charts = [Chart("A", [Axis("Druck bar"), Axis("Temp", auto=False, y_min=0, y_max=200)], page="Seite 1"),
+              Chart("B", page="Seite 1"), Chart("C", page="Seite 1"), Chart("D", page="Seite 2"), Chart("leer")]
+    variables = [Variable("Druck", color="#ff0000", chart=0), Variable("Temp", chart=0, axis=1),
+                 Variable("Ein", dtype="BOOL", chart=1), Variable("Ven'til[0]", chart=2), Variable("X", chart=3)]
+    conn = {"db_typ": "victoriametrics", "db_tabelle": "anlage", "projekt": "Kunde A", "anordnung": "tabs",
+            "seite_anordnung": "raster", "raster_spalten": 2, "fenster_s": 60}
+    d = plc_grafana.dashboard(conn, charts, variables)
+    rows = [p for p in d["panels"] if p["type"] == "row"]
+    assert [r["title"] for r in rows] == ["Seite 1", "Seite 2"] and rows[1]["collapsed"]   # Tabs: nur die erste offen
+    top = [p for p in d["panels"] if p["type"] == "timeseries"]
+    assert [(p["title"], p["gridPos"]["x"], p["gridPos"]["w"]) for p in top] == [("A", 0, 12), ("B", 12, 12),
+                                                                                  ("C", 0, 24)]
+    assert [p["title"] for p in rows[1]["panels"]] == ["D"]                   # Diagramm ohne Variablen fehlt
+    a = top[0]
+    assert a["targets"][0]["expr"] == 'anlage_wert{projekt="$projekt",variable="Druck"}'
+    ov = {o["matcher"]["options"]: {p["id"]: p["value"] for p in o["properties"]} for o in a["fieldConfig"]["overrides"]}
+    assert ov["Druck"]["color"]["fixedColor"] == "#ff0000" and ov["Druck"]["custom.axisPlacement"] == "left"
+    assert ov["Temp"]["custom.axisPlacement"] == "right" and ov["Temp"]["max"] == 200 and "unit" in ov["Temp"]
+    assert d["time"]["from"] == "now-60s" and d["templating"]["list"][0]["current"]["value"] == "Kunde A"
+    ids = [p["id"] for p in d["panels"]] + [q["id"] for r in rows for q in r["panels"]]
+    assert len(ids) == len(set(ids))
+    sql = plc_grafana.dashboard(dict(conn, db_typ="timescale"), charts, variables)
+    q = [p for p in sql["panels"] if p["type"] == "timeseries"][2]["targets"][0]["rawSql"]
+    assert "variable = 'Ven''til[0]'" in q and "$__timeFilter(zeit)" in q
+    with pytest.raises(ValueError):
+        plc_grafana.dashboard(dict(conn, db_typ="sqlite"), charts, variables)
+
+
+@pytest.mark.skipif(not (os.environ.get("PLC_TEST_GRAFANA") and os.environ.get("PLC_TEST_VICTORIAMETRICS")),
+                    reason="kein Grafana/VictoriaMetrics (PLC_TEST_GRAFANA, PLC_TEST_VICTORIAMETRICS)")
+def test_grafana_dashboard_import_real(tmp_path):
+    """Echtes Grafana (Workflow „Tests“ unter Linux): Dashboard importieren, Datenquelle zuordnen, Abfragen ausführen."""
+    import base64
+    import json
+    import time
+    import urllib.parse
+    import urllib.request
+    import plc_db
+    import plc_grafana
+    from plc_recorder import demo_config
+    g = urllib.parse.urlparse(os.environ["PLC_TEST_GRAFANA"])
+    base = f"{g.scheme}://{g.hostname}:{g.port}"
+    auth = "Basic " + base64.b64encode(f"{g.username}:{g.password}".encode()).decode()
+
+    def api(path, body=None):
+        req = urllib.request.Request(base + path, data=json.dumps(body).encode() if body is not None else None,
+                                     headers={"Authorization": auth, "Content-Type": "application/json"},
+                                     method="POST" if body is not None else "GET")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode() or "{}")
+    vm = urllib.parse.urlparse(os.environ["PLC_TEST_VICTORIAMETRICS"])
+    table = f"grafana_{os.getpid()}"
+    charts, variables = demo_config()
+    conn = {"db_typ": "victoriametrics", "db_host": vm.hostname, "db_port": vm.port, "db_tabelle": table,
+            "projekt": "Kunde A", "seite_anordnung": "raster"}
+    w = plc_db.DbWriter(conn, [v.name for v in variables], interval_s=0.1)
+    w.start()
+    now = time.time()
+    for k in range(120):
+        w.put(now - 200 + k, [float(k % 2) if v.dtype == "BOOL" else 10.0 + k for v in variables])
+    time.sleep(1.0)
+    w.stop()
+    urllib.request.urlopen(os.environ["PLC_TEST_VICTORIAMETRICS"] + "/internal/force_flush").read()
+    ds = api("/api/datasources", {"name": f"VM {table}", "type": "prometheus", "access": "proxy",
+                                   "url": os.environ["PLC_TEST_VICTORIAMETRICS"]})["datasource"]
+    path = tmp_path / "dashboard.json"
+    plc_grafana.export(str(path), conn, charts, variables)
+    d = json.loads(path.read_text(encoding="utf-8"))
+    res = api("/api/dashboards/import", {"dashboard": d, "overwrite": True, "inputs": [
+        {"name": "DS_PLC", "type": "datasource", "pluginId": "prometheus", "value": ds["uid"]}]})
+    got = api(f"/api/dashboards/uid/{res.get('uid') or d['uid']}")["dashboard"]
+    panels = [p for p in got["panels"] if p["type"] == "timeseries"]
+    assert len(panels) == len(charts) and all(p["datasource"]["uid"] == ds["uid"] for p in panels)
+    found = set()
+    for p in panels:
+        queries = [{"refId": t["refId"], "datasource": {"uid": ds["uid"]}, "expr": t["expr"].replace("$projekt", "Kunde A"),
+                    "range": True} for t in p["targets"]]
+        r = api("/api/ds/query", {"queries": queries, "from": str(int((now - 600) * 1000)), "to": str(int(now * 1000))})
+        for ref in r["results"].values():
+            for frame in ref.get("frames", []):
+                for f in frame["schema"]["fields"]:
+                    if f.get("labels", {}).get("variable"):
+                        found.add(f["labels"]["variable"])
+    assert found == {v.name for v in variables}, found
+    values = api(f"/api/datasources/uid/{ds['uid']}/resources/api/v1/label/projekt/values")
+    assert "Kunde A" in values.get("data", []), values

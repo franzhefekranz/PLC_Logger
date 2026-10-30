@@ -20,6 +20,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   Datenbank sowie die Anzahl der Werte (je nach Datenbanktyp; Prometheus nur gesamt). Bei VictoriaMetrics zusätzlich
   je Projekt Werte, Variablen und ältester Wert, Byte je Wert, Aufbewahrung, freier Platz, Zuwachs der letzten
   24 Stunden und der geschätzte Platzbedarf bei voller Aufbewahrung.
+* Konfigurationsprogramm: **Datei › Grafana-Dashboard exportieren …** – Dashboard mit der Anordnung des Loggers
+  (Seiten als Zeilen, untereinander/nebeneinander/Raster, Farben, Y-Achsen, BOOL als Treppenlinie, Zeitbereich,
+  Auswahl Projekt) für VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB und InfluxDB 3.
 
 ## [3.5.0] – 2026-10-29
 

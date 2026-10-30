@@ -847,6 +847,9 @@
 @ &Headless-Logger anzeigen/beenden …
 > Show/stop &headless loggers …
 
+@ &Grafana-Dashboard exportieren …
+> Export &Grafana dashboard …
+
 @ &Beenden
 > E&xit
 
@@ -1341,6 +1344,21 @@
 
 @ IO-Check gestartet.
 > IO check started.
+
+@ Grafana-Dashboard
+> Grafana dashboard
+
+@ Bitte im Reiter „Datenbank“ VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB oder InfluxDB 3 wählen – das Dashboard liest die Werte aus dieser Datenbank.
+> Please choose VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB or InfluxDB 3 in the “Database” tab – the dashboard reads the values from this database.
+
+@ Grafana-Dashboard exportieren
+> Export Grafana dashboard
+
+@ Grafana-Dashboard (*.json)
+> Grafana dashboard (*.json)
+
+@ {0} Diagramme gespeichert:\n{1}\n\nIn Grafana: Dashboards › New › Import, Datei hochladen und die Datenquelle der Datenbank wählen.
+> {0} charts saved:\n{1}\n\nIn Grafana: Dashboards › New › Import, upload the file and choose the data source of the database.
 
 @ {0} laufen
 > {0} running
@@ -2141,6 +2159,29 @@
 @ Die Formel darf sich nicht auf sich selbst beziehen.
 > The formula must not refer to itself.
 
+# ---------------- plc_grafana.py
+
+@ Projekt
+> Project
+
+@ Für die Datenbank „{0}“ kann kein Grafana-Dashboard erzeugt werden (unterstützt: VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB, InfluxDB 3).
+> No Grafana dashboard can be created for the database “{0}” (supported: VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB, InfluxDB 3).
+
+@ keine
+> none
+
+@ Diagramme
+> Charts
+
+@ PLC Datenlogger
+> PLC data logger
+
+@ Datenquelle
+> Data source
+
+@ Datenbank des PLC-Datenloggers
+> Database of the PLC data logger
+
 # ---------------- plc_gui.py
 
 @ Zum Umordnen ziehen und auf die Titelzeile eines anderen Diagramms ablegen
@@ -2322,9 +2363,6 @@
 
 @ Bereit
 > Ready
-
-@ Diagramme
-> Charts
 
 @ IO-Check …
 > IO check …
@@ -2585,9 +2623,6 @@
 > Closing … (stopping recording, archiving CSV)
 
 # ---------------- plc_headless_dialog.py
-
-@ Projekt
-> Project
 
 @ Gestartet
 > Started

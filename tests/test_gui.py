@@ -144,6 +144,26 @@ def test_logger_separate_time_axes_and_zoom(qt_log, demo_config):
     _close(w)
 
 
+def test_config_export_grafana(qt_log, demo_config, tmp_path):
+    """Konfigurationsprogramm: Grafana-Dashboard exportieren (VictoriaMetrics), ohne passende Datenbank ein Hinweis."""
+    import json
+    import plc_config
+    from plc_common import load_config, load_plcs, save_config
+    w = plc_config.ConfigWindow(demo_config)
+    qt_log.file = str(tmp_path / "dash.json")
+    w.export_grafana()                                           # Demo-Konfiguration ohne Datenbank
+    assert not os.path.exists(qt_log.file) and "Datenbank" in qt_log.last()[2]
+    _close(w)
+    conn, charts, cvars = load_config(demo_config)
+    conn.update(db_typ="victoriametrics", db_tabelle="anlage")
+    save_config(conn, charts, cvars, demo_config, plcs=load_plcs(demo_config))
+    w = plc_config.ConfigWindow(demo_config)
+    w.export_grafana()
+    d = json.load(open(qt_log.file, encoding="utf-8"))
+    assert d["__inputs"][0]["pluginId"] == "prometheus" and any(p["type"] == "timeseries" for p in d["panels"])
+    _close(w)
+
+
 def test_config_window(qt_log, demo_config):
     """Konfigurationsprogramm: Variablentabelle und Filter, alle Unterdialoge öffnen, Dialoge für OPC-UA-Server und
     Benachrichtigungen auswerten, Konfiguration speichern.

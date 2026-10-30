@@ -552,6 +552,7 @@ class ConfigWindow(QMainWindow):
                    (N_("Logger mit dieser Konfiguration &starten"), QKeySequence("Ctrl+R"), self.start_logger),
                    (N_("&IO-Check mit dieser Konfiguration starten"), QKeySequence(), self.start_iocheck),
                    (N_("&Headless-Logger anzeigen/beenden …"), QKeySequence(), self.show_headless),
+                   (N_("&Grafana-Dashboard exportieren …"), QKeySequence(), self.export_grafana),
                    None,
                    (N_("&Beenden"), QKeySequence("Ctrl+Q"), self.close)]
         for e in entries:
@@ -2471,6 +2472,32 @@ class ConfigWindow(QMainWindow):
         if not launch(self, "iocheck", self.path, title=tr("IO-Check")):
             return
         self.statusBar().showMessage(tr("IO-Check gestartet."), 5000)
+
+    def export_grafana(self):
+        """Grafana-Dashboard mit der Anordnung des Loggers als JSON-Datei speichern (plc_grafana; vorher speichern)."""
+        if not self.save():
+            return
+        import plc_grafana
+        conn, charts, variables = load_config(self.path)
+        if not plc_grafana.supported(conn.get("db_typ") or ""):
+            QMessageBox.information(self, tr("Grafana-Dashboard"), tr(
+                "Bitte im Reiter „Datenbank“ VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB oder "
+                "InfluxDB 3 wählen – das Dashboard liest die Werte aus dieser Datenbank."))
+            return
+        stem = os.path.splitext(os.path.basename(self.path))[0]
+        path, _f = QFileDialog.getSaveFileName(self, tr("Grafana-Dashboard exportieren"),
+                                               os.path.join(os.path.dirname(self.path), f"{stem}_grafana.json"),
+                                               tr("Grafana-Dashboard (*.json)"))
+        if not path:
+            return
+        try:
+            n = plc_grafana.export(path, conn, charts, variables)
+        except (OSError, ValueError) as e:
+            QMessageBox.critical(self, tr("Grafana-Dashboard"), str(e))
+            return
+        QMessageBox.information(self, tr("Grafana-Dashboard"), tr(
+            "{0} Diagramme gespeichert:\n{1}\n\nIn Grafana: Dashboards › New › Import, Datei hochladen und die "
+            "Datenquelle der Datenbank wählen.").format(n, path))
 
     def show_headless(self):
         """Laufende Headless-Logger anzeigen und beenden (plc_headless_dialog)."""

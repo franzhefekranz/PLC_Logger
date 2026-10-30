@@ -1261,6 +1261,8 @@ The **File** menu of the configuration program contains:
   <io-check_>`__ with the controllers of this file (separate program).
 * **Show/stop headless loggers …** – show running headless loggers and stop them
   cleanly (see `Headless operation (recording only) <headless_>`__).
+* **Export Grafana dashboard …** – dashboard with the layout of the logger as a JSON
+  file for Grafana (see `Database recording <datenbank_>`__).
 
 The window title shows project name and file name. The last used file is remembered
 (file ``plc_last.txt``); the logger and the configuration program open it again at the
@@ -3233,6 +3235,16 @@ For VictoriaMetrics and Prometheus (PromQL, e.g. in Grafana):
   or *PostgreSQL* on port 8812; InfluxDB 3: *InfluxDB* with query language *SQL*;
   VictoriaMetrics and Prometheus: *Prometheus*); the time column is ``zeit`` (InfluxDB:
   ``time``, UTC).
+* **Grafana dashboard like in the logger:** **File › Export Grafana dashboard …** in the
+  configuration program saves a dashboard as a JSON file; upload it in Grafana via
+  *Dashboards › New › Import* and choose the data source of the database. Taken over
+  are the pages (as rows; layout *Tabs*: only the first one expanded), the arrangement of
+  the charts (one below the other, side by side, grid), per chart the variables with
+  colours, Y axes (left/right, fixed limits, axis name) and BOOL as a step line, the
+  time range (*Window [s]*) and a selection **Project** at the top of the dashboard – so
+  one dashboard serves several plants with the same configuration. Possible with
+  VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB and InfluxDB 3
+  (not SQLite). After changes to charts, export again and overwrite on import.
 * **Test environment:** in the folder ``docker``, ``docker compose up -d`` starts
   TimescaleDB, QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus and Grafana with ready-made
   data sources (access data in ``docker/.env``). SQLite files can be read with Grafana's
