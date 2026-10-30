@@ -3245,6 +3245,13 @@ For VictoriaMetrics and Prometheus (PromQL, e.g. in Grafana):
   one dashboard serves several plants with the same configuration. Possible with
   VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB and InfluxDB 3
   (not SQLite). After changes to charts, export again and overwrite on import.
+* **Up-to-dateness in Grafana:** the dashboard queries again every **5 s** (smallest
+  default of Grafana). VictoriaMetrics does not show the **last 30 s** in queries yet. The
+  logger's web server is meant for the live display; if you still want Grafana faster,
+  change it *optionally*: in Grafana ``min_refresh_interval = 1s`` (``grafana.ini`` or
+  ``GF_DASHBOARDS_MIN_REFRESH_INTERVAL``) and the refresh of the dashboard at the top
+  right, for VictoriaMetrics the start parameter ``-search.latencyOffset=2s``. Both lines
+  are ready (commented out) in ``docker/docker-compose.yml``.
 * **Test environment:** in the folder ``docker``, ``docker compose up -d`` starts
   TimescaleDB, QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus and Grafana with ready-made
   data sources (access data in ``docker/.env``). SQLite files can be read with Grafana's

@@ -66,6 +66,8 @@ services:
       - -storageDataPath=/storage
       - -retentionPeriod=${VM_RETENTION:-1y}     # Aufbewahrungsdauer (Standard von VictoriaMetrics: 1 Monat)
       - -httpListenAddr=:8428
+      # Optional für eine schnellere Anzeige in Grafana: Abfragen zeigen sonst die letzten 30 s noch nicht an.
+      # - -search.latencyOffset=2s
     ports:
       - "8428:8428"            # PLC Logger: Datenbank „VictoriaMetrics“, Port 8428; Oberfläche: http://localhost:8428/vmui
     volumes:
@@ -106,6 +108,8 @@ services:
       QDB_PG_PASSWORD: ${QDB_PG_PASSWORD}
       INFLUX_DB: ${INFLUX_DB:-datenlogger}
       INFLUX_TOKEN: ${INFLUX_TOKEN:-}
+      # Optional: kürzere Aktualisierung der Dashboards erlauben (Vorgabe von Grafana: höchstens alle 5 s)
+      # GF_DASHBOARDS_MIN_REFRESH_INTERVAL: 1s
     ports:
       - "3000:3000"            # http://localhost:3000
     volumes:

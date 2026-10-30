@@ -3338,6 +3338,14 @@ Für VictoriaMetrics und Prometheus (PromQL, z. B. in Grafana):
   Möglich mit VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB und
   InfluxDB 3 (nicht SQLite). Nach Änderungen an Diagrammen erneut exportieren und beim
   Import überschreiben.
+* **Aktualität in Grafana:** Das Dashboard fragt alle **5 s** neu ab (kleinste Vorgabe
+  von Grafana). VictoriaMetrics zeigt in Abfragen die **letzten 30 s** noch nicht an.
+  Für die laufende Anzeige ist der Webserver des Loggers gedacht; wer Grafana trotzdem
+  schneller will, stellt *optional* um: in Grafana ``min_refresh_interval = 1s``
+  (``grafana.ini`` bzw. ``GF_DASHBOARDS_MIN_REFRESH_INTERVAL``) und die Aktualisierung des
+  Dashboards oben rechts, bei VictoriaMetrics den Startparameter
+  ``-search.latencyOffset=2s``. In ``docker/docker-compose.yml`` stehen beide Zeilen
+  auskommentiert bereit.
 * **Testumgebung:** Im Ordner ``docker`` startet ``docker compose up -d`` TimescaleDB,
   QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus und Grafana mit fertig eingerichteten
   Datenquellen (Zugangsdaten in ``docker/.env``). SQLite-Dateien lassen sich mit dem SQLite-Plugin von Grafana lesen.
