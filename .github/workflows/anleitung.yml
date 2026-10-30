@@ -1,6 +1,8 @@
-# Bedienungsanleitung (deutsch) und User Manual (englisch) als PDF bauen und an ein vorhandenes Release hängen.
-# Start von Hand: Actions › Anleitung (PDF) › Run workflow, Tag angeben (z. B. v3.1.0). Gebaut wird der Stand dieses
-# Tags; die PDFs heißen PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf bzw. PLC_Datenlogger_User_Manual_<Version>.pdf.
+# Bedienungsanleitung (deutsch) und User Manual (englisch) als PDF bauen.
+# Start von Hand: Actions › Anleitung (PDF) › Run workflow.
+#   Tag leer:        aktueller Stand von main, PDFs nur zum Herunterladen (Artifact „anleitung-pdf“ im Lauf).
+#   Tag (v3.1.0):    Stand dieses Tags, PDFs zusätzlich an dessen Release hängen.
+# Die PDFs heißen PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf bzw. PLC_Datenlogger_User_Manual_<Version>.pdf.
 # (Bei einem neuen Tag hängt der Windows-Workflow die PDFs ohnehin an.)
 name: Anleitung (PDF)
 
@@ -8,8 +10,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag des Release, z. B. v3.1.0"
-        required: true
+        description: "Tag des Release, z. B. v3.6.0 (leer = aktueller Stand von main, nur Artifact)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -20,7 +23,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Stand wählen
+        if: inputs.tag != ''
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Tag „$TAG“ gibt es nicht (mit v, z. B. v3.6.0). Vorhandene Tags: $(git tag --sort=-v:refname | head -5 | tr '\n' ' ')"
+            exit 1
+          fi
+          git checkout -q "$TAG"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -37,6 +50,7 @@ jobs:
           name: anleitung-pdf
           path: dist/*.pdf
       - name: An das Release hängen
+        if: inputs.tag != ''
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.tag }}
