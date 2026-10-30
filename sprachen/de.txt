@@ -3271,6 +3271,104 @@
 @ Lade Oberfläche (Diagramme) …
 > 
 
+# ---------------- plc_netpanel.py
+
+@ Leeren
+> 
+
+@ Leertaste
+> 
+
+@ PLC Datenlogger – Netzwerk
+> 
+
+@ Ethernet
+> 
+
+@ WLAN
+> 
+
+@ DHCP (automatisch)
+> 
+
+@ Feste Adresse
+> 
+
+@ leer = keiner
+> 
+
+@ IP/Präfix
+> 
+
+@ Gateway
+> 
+
+@ DNS
+> 
+
+@ WLAN an
+> 
+
+@ Suchen
+> 
+
+@ IP-Einstellung
+> 
+
+@ Passwort
+> 
+
+@ Zeigen
+> 
+
+@ Verbinden
+> 
+
+@ keine Adresse
+> 
+
+@ DHCP
+> 
+
+@ fest
+> 
+
+@ Keine Netzwerkschnittstelle gefunden.
+> 
+
+@ gestoppt
+> 
+
+@ Logger
+> 
+
+@ Ohne NetworkManager nur Anzeige (Einstellen: NetworkManager einrichten, siehe Anleitung).
+> 
+
+@ Keine Schnittstelle vom Typ {0}
+> 
+
+@ IP-Einstellung {0}
+> 
+
+@ Wird übernommen …
+> 
+
+@ Übernommen.
+> 
+
+@ Suche Netze …
+> 
+
+@ {0} Netze gefunden
+> 
+
+@ Kein WLAN gefunden.
+> 
+
+@ WLAN „{0}“
+> 
+
 # ---------------- plc_netscan.py
 
 @ Bereich zu groß (höchstens {0} Adressen)
@@ -3320,9 +3418,6 @@
 @ S7: Baugruppe und Station, EtherNet/IP: Produktname
 > 
 
-@ Suchen
-> 
-
 @ Bereich:
 > 
 
@@ -3351,6 +3446,32 @@
 > 
 
 @ Bitte mindestens ein Gerät anhaken.
+> 
+
+# ---------------- plc_netz.py
+
+@ Ungültige IP-Adresse „{0}“ (z. B. 192.168.0.50/24)
+> 
+
+@ Bitte das Präfix angeben, z. B. 192.168.0.50/24
+> 
+
+@ Die Adresse {0} ist die Netz- bzw. Broadcast-Adresse
+> 
+
+@ Ungültiges Gateway „{0}“
+> 
+
+@ Das Gateway {0} liegt nicht im Netz {1}
+> 
+
+@ Ungültiger DNS-Server „{0}“
+> 
+
+@ {0}: keine aktive Verbindung – zuerst ein WLAN wählen
+> 
+
+@ Schnittstelle {0} nicht gefunden
 > 
 
 # ---------------- plc_notify.py
@@ -3469,9 +3590,6 @@
 > 
 
 @ Benutzer
-> 
-
-@ Passwort
 > 
 
 @ Absender
@@ -3818,9 +3936,6 @@
 > 
 
 @ ⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden
-> 
-
-@ gestoppt
 > 
 
 @ Gestoppt – {0} Trigger-Aufnahmen

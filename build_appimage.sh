@@ -189,7 +189,7 @@ echo "[3/7] PyInstaller ..."
     --hidden-import plc_pid_dialog --hidden-import plc_recorder --hidden-import plc_splash \
     --hidden-import plc_svg --hidden-import plc_trigger_dialog --hidden-import plc_util \
     --hidden-import plc_web --hidden-import plc_webauth --hidden-import plc_web_dialog --hidden-import plc_report \
-    --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog --hidden-import plc_iocheck_web --hidden-import plc_qr --hidden-import plc_notify --hidden-import plc_notify_dialog --hidden-import plc_opcua_server --hidden-import plc_opcua_dialog --hidden-import plc_web_prozess --hidden-import plc_netscan --hidden-import plc_netscan_dialog --hidden-import plc_headless --hidden-import plc_headless_dialog --hidden-import plc_grafana \
+    --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog --hidden-import plc_iocheck_web --hidden-import plc_qr --hidden-import plc_notify --hidden-import plc_notify_dialog --hidden-import plc_opcua_server --hidden-import plc_opcua_dialog --hidden-import plc_web_prozess --hidden-import plc_netscan --hidden-import plc_netscan_dialog --hidden-import plc_headless --hidden-import plc_headless_dialog --hidden-import plc_grafana --hidden-import plc_netz --hidden-import plc_netpanel \
     --hidden-import cryptography.x509 --hidden-import cryptography.hazmat.primitives.asymmetric.rsa \
     --collect-submodules plc_treiber --add-data "$PWD/src/plc_treiber/_vorlage.py:plc_treiber" \
     ${EXTRA[@]+"${EXTRA[@]}"} \
@@ -321,6 +321,7 @@ if command -v dpkg-deb >/dev/null && [[ "${SKIP_DEB:-0}" != "1" ]]; then
     mkcmd plc-konfiguration  "Konfigurationsprogramm" "--konfig "
     mkcmd plc-iocheck        "IO-Check"               "--iocheck "
     mkcmd plc-ereignisse     "Ereignis-Viewer"        "--ereignisse "
+    mkcmd plc-netzwerk       "Netzwerk-Panel"         "--netzwerk "
     # Startmenü: Logger (mit Aktionen wie im AppImage), dazu Konfiguration und IO-Check als eigene Einträge
     sed -e 's#^Exec=AppRun --konfig#Exec=plc-konfiguration#' -e 's#^Exec=AppRun --ereignisse#Exec=plc-ereignisse#' \
         -e 's#^Exec=AppRun#Exec=plc-datenlogger#' "$AD/$APP.desktop" > "$DR/usr/share/applications/$PKG.desktop"

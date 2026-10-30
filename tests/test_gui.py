@@ -164,6 +164,54 @@ def test_config_export_grafana(qt_log, demo_config, tmp_path):
     _close(w)
 
 
+def test_netpanel_touch(qapp, demo_config):
+    """Netzwerk-Panel: Übersicht mit IP und Webserver-QR, feste Adresse per Zifferntastatur, WLAN verbinden."""
+    import plc_netpanel
+    from test_logic import _FakeNm
+    from plc_common import load_config, load_plcs, save_config
+    conn, charts, cvars = load_config(demo_config)
+    conn.update(web_aktiv=1, web_port=8081)
+    save_config(conn, charts, cvars, demo_config, plcs=load_plcs(demo_config))
+    fake = _FakeNm()
+    w = plc_netpanel.NetPanel(plc_netz_fake(fake), config_path=demo_config, service="", background=False)
+    w.resize(800, 480)
+    w.show()
+    assert "192.168.0.50/24" in w.lbl_info.text() and w.web_url() == "http://192.168.0.50:8081/"
+    assert w.qr.matrix
+    w.show_ip("ethernet")
+    assert w.stack.currentWidget() is w.page_ip and w.btn_manual.isChecked() and w.ed_addr.text() == "192.168.0.50/24"
+    w.ed_addr.clear()
+    w.numpad.target = w.ed_addr
+    for ch in "10.1.2.3/24":
+        w.numpad.type(ch)
+    w.ed_gw.setText("10.1.2.1")
+    w.ed_dns.setText("")
+    w.apply_ip()
+    mod = next(c for c in fake.calls if c[:3] == ["nmcli", "connection", "modify"])
+    assert "10.1.2.3/24" in mod and "10.1.2.1" in mod
+    w.ed_gw.setText("192.168.9.1")                               # Gateway außerhalb des Netzes
+    w.apply_ip()
+    assert "Gateway" in w.lbl_ip_msg.text()
+    w.show_wifi()
+    assert w.list_wifi.count() == 3
+    w.choose_wifi(w.list_wifi.item(2))
+    assert w.chosen_wifi.ssid == "Gast"
+    w.keyboard.target = w.ed_pw
+    w.keyboard.toggle_shift()
+    for ch in "Ab1":
+        w.keyboard.type(ch)
+    assert w.ed_pw.text() == "Ab1"
+    w.connect_wifi()
+    assert fake.calls[-1][:6] == ["nmcli", "device", "wifi", "connect", "Gast", "password"]
+    assert w.stack.currentWidget() is w.page_home
+    w.close()
+
+
+def plc_netz_fake(fake):
+    import plc_netz
+    return plc_netz.Netz(run=fake)
+
+
 def test_config_window(qt_log, demo_config):
     """Konfigurationsprogramm: Variablentabelle und Filter, alle Unterdialoge öffnen, Dialoge für OPC-UA-Server und
     Benachrichtigungen auswerten, Konfiguration speichern.

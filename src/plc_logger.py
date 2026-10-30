@@ -14,6 +14,7 @@ Aufruf
     plc_logger.py [Konfigurationsdatei] [--config DATEI] [--headless | --gui] [--demo]
     plc_logger.py --ereignisse [Konfigurationsdatei | Ereignisdatei.csv]
     plc_logger.py --iocheck [Konfigurationsdatei | Prüfstand.iocheck.json] [--demo]
+    plc_logger.py --netzwerk [Konfigurationsdatei] [--dienst NAME] [--fenster]   (Touch-Panel: Netzwerk)
     plc_logger.py --konfig [Konfigurationsdatei]     (Konfigurationsprogramm, z. B. im Linux-AppImage)
 
 Ohne Dateiangabe wird die zuletzt benutzte Konfiguration geöffnet (Standard: plc_config.json). ``--gui`` öffnet die
@@ -42,6 +43,10 @@ def parse_args(argv):
                       help="nur den Ereignis-Viewer öffnen (Ereignisse anzeigen und quittieren)")
     mode.add_argument("--iocheck", action="store_true",
                       help="nur den IO-Check öffnen (Inbetriebnahme: Signalliste prüfen)")
+    mode.add_argument("--netzwerk", action="store_true",
+                      help="Netzwerk-Panel für einen Touchscreen (IP-Adressen anzeigen, Ethernet/WLAN einstellen)")
+    ap.add_argument("--dienst", default="plc-datenlogger", help="Netzwerk-Panel: angezeigter systemd-Dienst")
+    ap.add_argument("--fenster", action="store_true", help="Netzwerk-Panel im Fenster statt bildschirmfüllend")
     ap.add_argument("--demo", action="store_true", help="simulierte Werte statt SPS-Verbindung")
     return ap.parse_args(argv)
 
@@ -64,6 +69,9 @@ def main(argv=None):
     if args.iocheck:
         from plc_iocheck_dialog import run_iocheck
         return run_iocheck(explicit, demo=args.demo)
+    if args.netzwerk:
+        from plc_netpanel import run_panel
+        return run_panel(os.path.abspath(explicit) if explicit else "", args.dienst, windowed=args.fenster)
     path = os.path.abspath(explicit) if explicit else last_config_path()
     if explicit and os.path.exists(path):
         remember_config_path(path)                    # die nächste Sitzung öffnet dieselbe Datei

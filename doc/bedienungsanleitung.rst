@@ -4950,6 +4950,7 @@ benötigten Systembibliotheken (Qt-Grafik) installiert ``apt`` gleich mit:
    plc-konfiguration                   # Konfigurationsprogramm
    plc-iocheck                         # IO-Check
    plc-ereignisse                      # Ereignis-Viewer
+   plc-netzwerk                        # Netzwerk-Panel für einen Touchscreen (Raspberry Pi)
    plc-datenlogger --headless anlage.json   # nur Aufzeichnung (z. B. als Dienst)
    sudo apt remove plc-datenlogger     # entfernen (die Daten in ~/PLCDatenlogger bleiben)
 
@@ -4970,6 +4971,219 @@ Build-Systems; ``apt`` prüft das und lehnt das Paket auf zu alten Systemen ab:
 **Erprobt:** Raspberry Pi mit Ubuntu 24.04 (arm64, ``.deb`` aus Version 3.4.0) – Steuerungen mit
 den Treibern ``s7`` und ``clx`` gleichzeitig, mit Webserver, mit Oberfläche und im
 Headless-Betrieb.
+
+.. _raspberry:
+
+Raspberry Pi als Datenlogger einrichten
+----------------------------------------------------------------------
+
+Schritt für Schritt vom leeren Raspberry Pi 4 (oder 5) zum Dauerbetrieb: Logger ohne
+Oberfläche als Dienst, Werte in VictoriaMetrics, Anzeige im Browser (Webserver des Loggers,
+Grafana). Alles liegt auf einer **SSD am USB-3-Anschluss** – sie hält das ständige Schreiben
+viel besser aus als eine SD-Karte.
+
+**Welches System?** Empfohlen: **Ubuntu Server 24.04 LTS (64 Bit)** – darauf ist der Logger
+erprobt, Updates gibt es bis 2029. Der Pi startet **ohne Desktop**; ein Desktop (XFCE) läuft
+nur bei Bedarf über **Remotedesktop (xrdp)**. Auf einem angeschlossenen **Touchscreen** zeigt
+das **Netzwerk-Panel** die IP-Adressen und stellt Ethernet und WLAN ein (Schritt 5).
+Alternativen: Raspberry Pi OS Lite (64 Bit, bringt NetworkManager schon mit) oder DietPi
+(sehr schlank) – das ``.deb`` passt zu beiden, dort ist der Logger aber noch nicht erprobt.
+
+**Hardware:** Raspberry Pi 4 mit mindestens 4 GB (2 GB genügen ohne Remotedesktop und
+Grafana), Netzteil 5,1 V/3 A, Kühlkörper oder Lüfter, SSD im USB-3-Gehäuse an einem **blauen**
+USB-Anschluss, optional ein Touchscreen (z. B. Waveshare, HDMI mit USB-Touch oder DSI).
+
+**1. System direkt auf die SSD schreiben** (am PC, mit dem *Raspberry Pi Imager*):
+
+#. Gerät *Raspberry Pi 4*, Betriebssystem *Other general-purpose OS › Ubuntu › Ubuntu
+   Server 24.04.x LTS (64-bit)*, Speicher: die **SSD** (per USB am PC).
+#. In den Einstellungen des Imagers: Rechnername (z. B. ``logger-kessel``), Benutzer und
+   Passwort, Zeitzone *Europe/Berlin*, Tastatur *de*, **SSH einschalten**, bei Bedarf WLAN.
+#. Schreiben, SSD an den Pi, **ohne SD-Karte** einschalten. Ein Pi 4 mit Bootloader ab
+   September 2020 startet dann von USB. Startet er nicht: einmal Raspberry Pi OS von einer
+   SD-Karte starten und ``sudo rpi-eeprom-update -a`` sowie in ``sudo raspi-config`` unter
+   *Advanced Options › Boot Order* „USB Boot“ wählen.
+#. Anmelden: ``ssh benutzer@logger-kessel`` (oder die IP-Adresse aus dem Router).
+   Prüfen: ``findmnt -n -o SOURCE /`` zeigt ``/dev/sda2`` – das System läuft von der SSD.
+
+*Variante: System auf SD-Karte, Daten auf der SSD.* Dann die SSD beim Start einhängen
+(Achtung: ``mkfs`` löscht die SSD):
+
+.. code-block:: console
+
+   lsblk                                        # SSD finden, z. B. /dev/sda1
+   sudo mkfs.ext4 -L daten /dev/sda1            # nur bei einer neuen, leeren SSD
+   sudo mkdir -p /data
+   echo 'LABEL=daten /data ext4 defaults,noatime,nofail,x-systemd.device-timeout=30 0 2' | sudo tee -a /etc/fstab
+   sudo systemctl daemon-reload && sudo mount -a && df -h /data
+   mkdir -p /data/PLCDatenlogger && ln -s /data/PLCDatenlogger ~/PLCDatenlogger
+
+``nofail`` sorgt dafür, dass der Pi auch ohne SSD startet; Docker legt seine Daten mit
+``{"data-root": "/data/docker"}`` in ``/etc/docker/daemon.json`` ebenfalls auf die SSD.
+
+**2. Grundeinrichtung:**
+
+.. code-block:: console
+
+   sudo apt update && sudo apt full-upgrade -y && sudo reboot
+   timedatectl                                  # Zeitzone und „System clock synchronized: yes“?
+
+* **Uhrzeit:** Der Pi 4 hat keine batteriegepufferte Uhr. Ohne Zeitserver stimmt die Zeit
+  nach einem Stromausfall nicht – und damit die Zeitstempel. Im Anlagennetz ohne Internet
+  einen erreichbaren Zeitserver eintragen (``/etc/systemd/timesyncd.conf``, Zeile
+  ``NTP=192.168.0.1``, dann ``sudo systemctl restart systemd-timesyncd``) oder ein RTC-Modul
+  verwenden.
+* **Netzwerk über NetworkManager:** Das Netzwerk-Panel (Schritt 5) und ``nmcli`` stellen
+  Ethernet und WLAN ein. Ubuntu Server nutzt dafür zunächst systemd-networkd; umstellen
+  (am besten mit Tastatur und Bildschirm am Pi, die SSH-Verbindung kann dabei abbrechen):
+
+  .. code-block:: console
+
+     sudo apt install -y network-manager
+     echo 'network: {config: disabled}' | sudo tee /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+     printf 'network:\n  version: 2\n  renderer: NetworkManager\n' | sudo tee /etc/netplan/01-network-manager.yaml
+     sudo rm -f /etc/netplan/50-cloud-init.yaml
+     sudo touch /etc/NetworkManager/conf.d/10-globally-managed-devices.conf
+     sudo chmod 600 /etc/netplan/*.yaml && sudo netplan apply && sudo reboot
+
+  Danach bezieht Ethernet die Adresse per DHCP; eine feste Adresse im Steuerungsnetz stellt
+  man im Panel ein oder mit ``nmcli`` (WLAN aus dem Imager im Panel neu verbinden):
+
+  .. code-block:: console
+
+     nmcli device                                 # Schnittstellen und Verbindungen
+     sudo nmcli connection modify "Wired connection 1" ipv4.method manual \
+          ipv4.addresses 192.168.0.50/24 ipv4.gateway 192.168.0.1 ipv4.dns 192.168.0.1
+     sudo nmcli connection up "Wired connection 1"
+
+**3. Logger installieren** (Versionsnummer anpassen):
+
+.. code-block:: console
+
+   VER=3.6.0
+   wget https://github.com/franzhefekranz/PLC_Logger/releases/download/v$VER/plc-datenlogger_${VER}_arm64.deb
+   sudo apt install ./plc-datenlogger_${VER}_arm64.deb
+
+Die Konfiguration am PC mit dem Konfigurationsprogramm erstellen (Steuerungen, Variablen,
+Reiter *Webserver & Headless*: Webserver an, Reiter *Datenbank*: VictoriaMetrics, Server
+``127.0.0.1``, Port 8428) und auf den Pi kopieren:
+
+.. code-block:: console
+
+   scp anlage.json benutzer@logger-kessel:~/PLCDatenlogger/   # am PC
+   plc-datenlogger --headless ~/PLCDatenlogger/anlage.json     # am Pi: Probelauf, Strg+C beendet
+
+**4. Logger als Dienst** – startet beim Einschalten und nach einem Absturz neu. Datei
+``/etc/systemd/system/plc-datenlogger.service`` (Benutzername anpassen):
+
+.. code-block:: ini
+
+   [Unit]
+   Description=PLC Datenlogger (headless)
+   After=network-online.target docker.service
+   Wants=network-online.target
+
+   [Service]
+   User=benutzer
+   ExecStart=/usr/bin/plc-datenlogger --headless /home/benutzer/PLCDatenlogger/anlage.json
+   Restart=on-failure
+   RestartSec=10
+   TimeoutStopSec=60
+
+   [Install]
+   WantedBy=multi-user.target
+
+.. code-block:: console
+
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now plc-datenlogger
+   systemctl status plc-datenlogger                 # läuft?
+   tail -f ~/PLCDatenlogger/plc_logger.log          # Meldungen
+   sudo systemctl stop plc-datenlogger              # beenden (CSV wird sauber geschlossen)
+
+``Restart=on-failure`` startet nur nach einem Absturz neu – wird der Logger im
+Konfigurationsprogramm (`Headless-Betrieb <headless_>`__) oder mit ``systemctl stop``
+beendet, bleibt er aus.
+
+**5. VictoriaMetrics und Grafana** (Docker; die Programme laufen mit ``restart:
+unless-stopped`` nach jedem Neustart weiter):
+
+.. code-block:: console
+
+   sudo apt install -y docker.io docker-compose-v2 git
+   sudo usermod -aG docker $USER  # danach ab- und wieder anmelden (ssh)
+   git clone --depth 1 https://github.com/franzhefekranz/PLC_Logger.git ~/plc-docker
+   cd ~/plc-docker/docker && cp .env.example .env
+   nano .env                     # GRAFANA_PASSWORD setzen, VM_RETENTION (z. B. 1y)
+   docker compose up -d --no-deps victoriametrics grafana
+   docker compose ps
+
+``--no-deps`` startet nur diese beiden Dienste (ohne die übrigen Datenbanken der
+Testumgebung). Grafana: ``http://logger-kessel:3000``, Datenquelle *VictoriaMetrics* ist
+schon eingerichtet; das Dashboard aus **Datei › Grafana-Dashboard exportieren …** über
+*Dashboards › New › Import* hochladen. Der Webserver des Loggers: ``http://logger-kessel:8080``.
+
+**5. Netzwerk-Panel auf dem Touchscreen** (``plc-netzwerk``): bildschirmfüllend, ohne
+Desktop. Es zeigt Rechnername, Uhrzeit, Ethernet und WLAN mit IP-Adressen, den Zustand des
+Logger-Dienstes und die Adresse des Webservers mit QR-Code (zum Öffnen am Tablet). Die
+Schaltflächen **Ethernet** und **WLAN** stellen DHCP oder eine feste Adresse (IP/Präfix,
+Gateway, DNS) ein, suchen WLANs und verbinden mit Passwort – Eingabe über die
+Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten.
+
+* **Display:** Bei Waveshare-HDMI-Displays die Zeilen für das jeweilige Modell aus dem
+  Waveshare-Wiki in ``/boot/firmware/config.txt`` eintragen (Auflösung); der Touch läuft
+  über USB ohne Treiber. DSI-Displays brauchen das ``dtoverlay`` laut Wiki.
+* **Dienst** ``/etc/systemd/system/plc-netzwerk.service`` (läuft als root, weil es das
+  Netzwerk einstellt; die Konfigurationsdatei liefert nur die Webserver-Adresse):
+
+  .. code-block:: ini
+
+     [Unit]
+     Description=PLC Datenlogger – Netzwerk-Panel (Touchscreen)
+     After=NetworkManager.service
+     Conflicts=getty@tty1.service
+
+     [Service]
+     ExecStart=/usr/bin/plc-netzwerk /home/benutzer/PLCDatenlogger/anlage.json
+     Environment=QT_QPA_PLATFORM=eglfs
+     Restart=always
+     RestartSec=5
+
+     [Install]
+     WantedBy=multi-user.target
+
+  .. code-block:: console
+
+     sudo systemctl daemon-reload && sudo systemctl enable --now plc-netzwerk
+
+* Bild um 180° drehen: ``Environment=QT_QPA_EGLFS_ROTATION=180`` ergänzen. Startet das Panel
+  nicht (``journalctl -u plc-netzwerk``), statt ``eglfs`` ``QT_QPA_PLATFORM=linuxfb``
+  versuchen. Ausprobieren im Remotedesktop: ``plc-netzwerk --fenster``.
+
+**6. Remotedesktop (xrdp)** – ein Desktop nur bei Bedarf, der Pi selbst startet weiter ohne
+Oberfläche:
+
+.. code-block:: console
+
+   sudo apt install -y xfce4 xfce4-terminal xrdp dbus-x11
+   echo xfce4-session > ~/.xsession
+   sudo adduser xrdp ssl-cert
+   sudo systemctl set-default multi-user.target     # beim Start keinen Desktop
+   sudo systemctl enable --now xrdp
+
+Am PC mit *Remotedesktopverbindung* (Windows: ``mstsc``) zu ``logger-kessel`` verbinden und mit
+dem Benutzer des Pi anmelden. Dort laufen Konfigurationsprogramm, Logger-Oberfläche,
+IO-Check und Grafana im Browser; **Datei › Headless-Logger anzeigen/beenden …** sieht den
+Logger-Dienst, weil er unter demselben Benutzer läuft.
+
+**7. Betrieb:**
+
+* Updates: ``sudo apt update && sudo apt full-upgrade``, neuer Logger mit der neueren
+  ``.deb``-Datei, Docker: ``docker compose pull && docker compose up -d --no-deps
+  victoriametrics grafana``.
+* Platzbedarf nach einigen Stunden mit **Speicherplatz …** (Reiter *Datenbank*) prüfen.
+* Sichern: ``~/PLCDatenlogger`` (Konfiguration, CSV) und den Datenordner von VictoriaMetrics
+  (``docker compose stop victoriametrics``, Volume kopieren, wieder starten).
 
 Bauen
 ----------------------------------------------------------------------

@@ -3271,6 +3271,104 @@
 @ Lade Oberfläche (Diagramme) …
 > Loading user interface (charts) …
 
+# ---------------- plc_netpanel.py
+
+@ Leeren
+> Clear
+
+@ Leertaste
+> Space
+
+@ PLC Datenlogger – Netzwerk
+> PLC data logger – network
+
+@ Ethernet
+> Ethernet
+
+@ WLAN
+> WLAN
+
+@ DHCP (automatisch)
+> DHCP (automatic)
+
+@ Feste Adresse
+> Fixed address
+
+@ leer = keiner
+> empty = none
+
+@ IP/Präfix
+> IP/prefix
+
+@ Gateway
+> Gateway
+
+@ DNS
+> DNS
+
+@ WLAN an
+> WLAN on
+
+@ Suchen
+> Search
+
+@ IP-Einstellung
+> IP settings
+
+@ Passwort
+> Password
+
+@ Zeigen
+> Show
+
+@ Verbinden
+> Connect
+
+@ keine Adresse
+> no address
+
+@ DHCP
+> DHCP
+
+@ fest
+> fixed
+
+@ Keine Netzwerkschnittstelle gefunden.
+> No network interface found.
+
+@ gestoppt
+> stopped
+
+@ Logger
+> Logger
+
+@ Ohne NetworkManager nur Anzeige (Einstellen: NetworkManager einrichten, siehe Anleitung).
+> Without NetworkManager display only (to change settings: set up NetworkManager, see the manual).
+
+@ Keine Schnittstelle vom Typ {0}
+> No interface of type {0}
+
+@ IP-Einstellung {0}
+> IP settings {0}
+
+@ Wird übernommen …
+> Applying …
+
+@ Übernommen.
+> Applied.
+
+@ Suche Netze …
+> Searching networks …
+
+@ {0} Netze gefunden
+> {0} networks found
+
+@ Kein WLAN gefunden.
+> No WLAN found.
+
+@ WLAN „{0}“
+> WLAN “{0}”
+
 # ---------------- plc_netscan.py
 
 @ Bereich zu groß (höchstens {0} Adressen)
@@ -3320,9 +3418,6 @@
 @ S7: Baugruppe und Station, EtherNet/IP: Produktname
 > S7: module and station, EtherNet/IP: product name
 
-@ Suchen
-> Search
-
 @ Bereich:
 > Range:
 
@@ -3352,6 +3447,32 @@
 
 @ Bitte mindestens ein Gerät anhaken.
 > Please tick at least one device.
+
+# ---------------- plc_netz.py
+
+@ Ungültige IP-Adresse „{0}“ (z. B. 192.168.0.50/24)
+> Invalid IP address “{0}” (e.g. 192.168.0.50/24)
+
+@ Bitte das Präfix angeben, z. B. 192.168.0.50/24
+> Please give the prefix, e.g. 192.168.0.50/24
+
+@ Die Adresse {0} ist die Netz- bzw. Broadcast-Adresse
+> The address {0} is the network or broadcast address
+
+@ Ungültiges Gateway „{0}“
+> Invalid gateway “{0}”
+
+@ Das Gateway {0} liegt nicht im Netz {1}
+> The gateway {0} is not in the network {1}
+
+@ Ungültiger DNS-Server „{0}“
+> Invalid DNS server “{0}”
+
+@ {0}: keine aktive Verbindung – zuerst ein WLAN wählen
+> {0}: no active connection – choose a WLAN first
+
+@ Schnittstelle {0} nicht gefunden
+> Interface {0} not found
 
 # ---------------- plc_notify.py
 
@@ -3470,9 +3591,6 @@
 
 @ Benutzer
 > User
-
-@ Passwort
-> Password
 
 @ Absender
 > Sender
@@ -3819,9 +3937,6 @@
 
 @ ⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden
 > ⚠ Database: {0} values could no longer be written
-
-@ gestoppt
-> stopped
 
 @ Gestoppt – {0} Trigger-Aufnahmen
 > Stopped – {0} trigger captures

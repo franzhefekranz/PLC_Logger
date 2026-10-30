@@ -856,3 +856,75 @@ def test_grafana_dashboard_import_real(tmp_path):
     assert found == {v.name for v in variables}, found
     values = api(f"/api/datasources/uid/{ds['uid']}/resources/api/v1/label/projekt/values")
     assert "Kunde A" in values.get("data", []), values
+
+
+class _FakeNm:
+    """Ersatz für nmcli: feste Antworten, Befehle werden mitgeschrieben."""
+
+    def __init__(self):
+        self.calls = []
+
+    def __call__(self, args, timeout=30):
+        self.calls.append(args)
+        a = " ".join(args)
+        if a == "nmcli -t -f RUNNING general":
+            return "running\n"
+        if a == "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device":
+            return "eth0:ethernet:connected:Wired connection 1\nwlan0:wifi:connected:Büro\nlo:loopback:unmanaged:--\n"
+        if a.startswith("nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show eth0"):
+            return "IP4.ADDRESS[1]:192.168.0.50/24\nIP4.GATEWAY:192.168.0.1\nIP4.DNS[1]:192.168.0.1\n"
+        if a.startswith("nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show wlan0"):
+            return "IP4.ADDRESS[1]:10.0.0.23/24\nIP4.GATEWAY:10.0.0.1\n"
+        if a.startswith("nmcli -g ipv4.method connection show"):
+            return "manual\n" if "Wired" in a else "auto\n"
+        if a.startswith("nmcli -t -f ACTIVE,SSID,SIGNAL,SECURITY device wifi list"):
+            return "yes:Büro:70:WPA2\nno:Gast:40:\nno:Büro:30:WPA2\nno:Mit\\:Doppelpunkt:55:WPA2\nno::20:\n"
+        if a == "nmcli -t radio wifi":
+            return "enabled\n"
+        return ""
+
+
+def test_netz_nmcli_read_and_set():
+    """Netzwerk über nmcli: Schnittstellen, WLAN-Liste, feste Adresse/DHCP setzen, Eingaben prüfen."""
+    import plc_netz
+    fake = _FakeNm()
+    n = plc_netz.Netz(run=fake)
+    devs = n.devices()
+    assert [(d.name, d.typ, d.ipv4, d.dhcp) for d in devs] == [
+        ("eth0", "ethernet", ["192.168.0.50/24"], False), ("wlan0", "wifi", ["10.0.0.23/24"], True)]
+    assert devs[0].gateway == "192.168.0.1" and devs[0].dns == ["192.168.0.1"]
+    wl = n.wifi_list()
+    assert [w.ssid for w in wl] == ["Büro", "Mit:Doppelpunkt", "Gast"] and wl[0].active and wl[0].signal == 70
+    fake.calls.clear()
+    n.set_ipv4("eth0", dhcp=False, address="192.168.0.60/255.255.255.0", gateway="192.168.0.1",
+               dns="192.168.0.1, 8.8.8.8")
+    mod = next(c for c in fake.calls if c[:3] == ["nmcli", "connection", "modify"])
+    assert mod[3] == "Wired connection 1" and "192.168.0.60/24" in mod and "192.168.0.1 8.8.8.8" in mod
+    assert ["nmcli", "connection", "up", "Wired connection 1"] in fake.calls
+    fake.calls.clear()
+    n.set_ipv4("eth0", dhcp=True)
+    mod = next(c for c in fake.calls if c[:3] == ["nmcli", "connection", "modify"])
+    assert mod[mod.index("ipv4.method") + 1] == "auto"
+    n.wifi_connect("Gast", "", "wlan0")
+    assert fake.calls[-1] == ["nmcli", "device", "wifi", "connect", "Gast", "ifname", "wlan0"]
+    assert plc_netz.check_ipv4("192.168.0.50/24", "192.168.0.1", "1.1.1.1") == ""
+    assert plc_netz.check_ipv4("192.168.0.50") and plc_netz.check_ipv4("192.168.0.0/24")
+    assert plc_netz.check_ipv4("192.168.0.50/24", "10.0.0.1") and plc_netz.check_ipv4("1.2.3.4/8", "", "x")
+    with pytest.raises(ValueError):
+        n.set_ipv4("eth0", dhcp=False, address="300.1.1.1/24")
+
+
+def test_netz_without_networkmanager():
+    """Ohne NetworkManager: Adressen aus ``ip -j addr`` (nur Anzeige)."""
+    import json
+    import plc_netz
+
+    def run(args, timeout=30):
+        if args[0] == "nmcli":
+            raise RuntimeError("nicht installiert")
+        return json.dumps([{"ifname": "lo", "addr_info": [{"family": "inet", "local": "127.0.0.1", "prefixlen": 8}]},
+                           {"ifname": "eth0", "addr_info": [{"family": "inet", "local": "192.168.1.9", "prefixlen": 24}]},
+                           {"ifname": "docker0", "addr_info": []}, {"ifname": "wlan0", "addr_info": []}])
+    devs = plc_netz.Netz(run=run).devices()
+    assert [(d.name, d.typ, d.ipv4, d.state) for d in devs] == [("eth0", "ethernet", ["192.168.1.9/24"], "connected"),
+                                                               ("wlan0", "wifi", [], "disconnected")]
