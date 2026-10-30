@@ -17,7 +17,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 ### Neu
 
 * Konfigurationsprogramm, Reiter *Datenbank*: **Speicherplatz …** zeigt den belegten Platz der Tabelle und der
-  Datenbank sowie die Anzahl der Werte (je nach Datenbanktyp; VictoriaMetrics und Prometheus nur gesamt).
+  Datenbank sowie die Anzahl der Werte (je nach Datenbanktyp; Prometheus nur gesamt). Bei VictoriaMetrics zusätzlich
+  je Projekt Werte, Variablen und ältester Wert, Byte je Wert, Aufbewahrung, freier Platz, Zuwachs der letzten
+  24 Stunden und der geschätzte Platzbedarf bei voller Aufbewahrung.
 
 ## [3.5.0] – 2026-10-29
 

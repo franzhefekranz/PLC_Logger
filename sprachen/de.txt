@@ -1433,10 +1433,49 @@
 @ Metrik {0}, Labels projekt und variable
 > 
 
-@ nur die ganze Datenbank (alle Metriken)
+@ Alle Metriken: {0} Werte, etwa {1} Byte je Wert
+> 
+
+@ Aufbewahrung: {0}
+> 
+
+@ {0} Monate
+> 
+
+@ Frei auf dem Datenträger: {0}
+> 
+
+@ Metrik {0}: {1} Werte, etwa {2}
+> 
+
+@ {0}: {1} Werte, 1 Variable, seit {3}
+> 
+
+@ {0}: {1} Werte, {2} Variablen, seit {3}
+> 
+
+@ (ohne Projekt)
+> 
+
+@ Letzte 24 Stunden: {0} Werte, etwa {1}
+> 
+
+@ Bei gleichem Zuwachs und {0} Tagen Aufbewahrung braucht diese Metrik etwa {1}
+> 
+
+@ genug Platz frei
+> 
+
+@ mehr als frei ist!
+> 
+
+@ Werte der letzten etwa 30 Sekunden zählt VictoriaMetrics noch nicht mit; der Platz je Metrik ist aus ihrem Anteil an allen Werten geschätzt.
 > 
 
 @ Metrik {0}, Labels projekt und variable (Remote Write: Prometheus mit --web.enable-remote-write-receiver starten)
+> 
+
+@ nur die ganze Datenbank (alle Metriken)
 > 
 
 @ Keine Datenbank gewählt.

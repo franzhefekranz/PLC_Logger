@@ -729,3 +729,38 @@ def test_db_storage_info_sqlite_and_metrics(tmp_path):
     assert plc_db._metric_sum(metrics, {"fehlt"}) is None
     assert plc_db.fmt_bytes(512) == "512 B" and plc_db.fmt_bytes(3_400_000) == "3,4 MB"
     assert plc_db.fmt_bytes(None) == "–"
+
+
+def test_victoriametrics_storage_helpers():
+    """VictoriaMetrics: Aufbewahrung als Zeitraum, Tage, gespeicherte Werte aus /metrics."""
+    import plc_db
+    assert plc_db._vm_range("") == "31d" and plc_db._vm_range("3") == "93d" and plc_db._vm_range("90d") == "90d"
+    assert plc_db._range_days("90d") == 90 and plc_db._range_days("1y") == 365 and plc_db._range_days("x") == 0
+    text = 'vm_rows{type="storage/small"} 100\nvm_rows{type="storage/big"} 50\nvm_rows{type="indexdb/file"} 9\n'
+    assert plc_db._vm_rows(text) == 150 and plc_db._vm_rows("") is None
+
+
+@pytest.mark.skipif(not os.environ.get("PLC_TEST_VICTORIAMETRICS"), reason="kein VictoriaMetrics-Server")
+def test_victoriametrics_real_server_storage():
+    """Echter VictoriaMetrics-Server (Workflow „Tests“ unter Linux): schreiben, Speicherplatz je Projekt abfragen."""
+    import time
+    import urllib.parse
+    import urllib.request
+    import plc_db
+    url = urllib.parse.urlparse(os.environ["PLC_TEST_VICTORIAMETRICS"])
+    table = f"plc_test_{os.getpid()}"
+    now = time.time()
+    for proj, n in (("Kunde A", 120), ("Kunde B", 60)):
+        conn = {"db_typ": "victoriametrics", "db_host": url.hostname, "db_port": url.port or 8428,
+                "db_tabelle": table, "projekt": proj}
+        w = plc_db.DbWriter(conn, ["Druck", "Temp"], interval_s=0.1)
+        w.start()
+        for k in range(n):
+            w.put(now - 300 + k, [float(k), 20.0])
+        time.sleep(1.0)
+        w.stop()
+        assert w.written == 2 * n, w.status()
+    urllib.request.urlopen(os.environ["PLC_TEST_VICTORIAMETRICS"] + "/internal/force_flush").read()
+    text = plc_db.storage_info(conn)
+    assert "Aufbewahrung: 90d" in text and "Datenbank gesamt:" in text
+    assert "Kunde A: 240 Werte, 2 Variablen" in text and "Kunde B: 120 Werte, 2 Variablen" in text, text

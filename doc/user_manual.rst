@@ -3113,8 +3113,11 @@ the tick **Write CSV file** in the tab *Recording*.
      - Shows the space used by the table and the whole database and the number of
        values. SQLite: file size, table, exact count. MariaDB and PostgreSQL/TimescaleDB:
        table and database, count estimated. QuestDB (from 8.2) and InfluxDB 3: table and
-       count (InfluxDB without the values of the last minutes). VictoriaMetrics and
-       Prometheus: only the whole database.
+       count (InfluxDB without the values of the last minutes). Prometheus: only the whole
+       database. **VictoriaMetrics:** whole database (space, values, bytes per value,
+       retention, free space), the metric per project (values, variables, oldest value),
+       the growth of the last 24 hours and the space needed at full retention estimated
+       from it.
 
 **Table structure** (one row per value, “narrow” format):
 

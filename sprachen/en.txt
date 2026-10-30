@@ -1433,11 +1433,50 @@
 @ Metrik {0}, Labels projekt und variable
 > Metric {0}, labels projekt and variable
 
-@ nur die ganze Datenbank (alle Metriken)
-> only the whole database (all metrics)
+@ Alle Metriken: {0} Werte, etwa {1} Byte je Wert
+> All metrics: {0} values, about {1} bytes per value
+
+@ Aufbewahrung: {0}
+> Retention: {0}
+
+@ {0} Monate
+> {0} months
+
+@ Frei auf dem Datenträger: {0}
+> Free on the disk: {0}
+
+@ Metrik {0}: {1} Werte, etwa {2}
+> Metric {0}: {1} values, about {2}
+
+@ {0}: {1} Werte, 1 Variable, seit {3}
+> {0}: {1} values, 1 variable, since {3}
+
+@ {0}: {1} Werte, {2} Variablen, seit {3}
+> {0}: {1} values, {2} variables, since {3}
+
+@ (ohne Projekt)
+> (no project)
+
+@ Letzte 24 Stunden: {0} Werte, etwa {1}
+> Last 24 hours: {0} values, about {1}
+
+@ Bei gleichem Zuwachs und {0} Tagen Aufbewahrung braucht diese Metrik etwa {1}
+> With the same growth and {0} days of retention this metric needs about {1}
+
+@ genug Platz frei
+> enough space free
+
+@ mehr als frei ist!
+> more than is free!
+
+@ Werte der letzten etwa 30 Sekunden zählt VictoriaMetrics noch nicht mit; der Platz je Metrik ist aus ihrem Anteil an allen Werten geschätzt.
+> VictoriaMetrics does not count the values of the last 30 seconds or so yet; the space per metric is estimated from its share of all values.
 
 @ Metrik {0}, Labels projekt und variable (Remote Write: Prometheus mit --web.enable-remote-write-receiver starten)
 > Metric {0}, labels projekt and variable (remote write: start Prometheus with --web.enable-remote-write-receiver)
+
+@ nur die ganze Datenbank (alle Metriken)
+> only the whole database (all metrics)
 
 @ Keine Datenbank gewählt.
 > No database selected.

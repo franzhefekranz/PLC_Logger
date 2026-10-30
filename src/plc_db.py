@@ -114,8 +114,9 @@ class Storage:
     ganzen Datenbank bzw. Datei), ``zeilen`` (Anzahl Werte; ``geschaetzt`` = Schätzung der Datenbank) und ``hinweis``.
     None = von diesem Datenbanktyp nicht abfragbar."""
 
-    def __init__(self, tabelle=None, gesamt=None, zeilen=None, geschaetzt=False, hinweis=""):
+    def __init__(self, tabelle=None, gesamt=None, zeilen=None, geschaetzt=False, hinweis="", details=None):
         self.tabelle, self.gesamt, self.zeilen, self.geschaetzt, self.hinweis = tabelle, gesamt, zeilen, geschaetzt, hinweis
+        self.details = list(details or [])             # weitere Zeilen (z. B. je Projekt)
 
 
 def fmt_bytes(n):
@@ -830,10 +831,71 @@ class VictoriaMetricsBackend(_Backend):
         self.con.write(_ilp_lines(self.t, rows))
 
     def storage(self):
-        """Gesamtgröße der Datenbank aus den eigenen Kennzahlen (/metrics: vm_data_size_bytes)."""
+        """Ganze Datenbank aus den eigenen Kennzahlen (/metrics: Größe, Werte, freier Platz; /flags: Aufbewahrung),
+        dazu die Metrik dieser Aufzeichnung je Projekt (MetricsQL: Werte, Variablen, ältester Wert, Zuwachs 24 h).
+        Der Platz der Metrik ist geschätzt (Anteil ihrer Werte an allen Werten)."""
         with self.con.open("/metrics") as resp:
-            total = _metric_sum(resp.read().decode("utf-8", "replace"), {"vm_data_size_bytes"})
-        return Storage(None, total, None, hinweis=tr("nur die ganze Datenbank (alle Metriken)"))
+            text = resp.read().decode("utf-8", "replace")
+        total = _metric_sum(text, {"vm_data_size_bytes"})
+        all_rows = _vm_rows(text)
+        free = _metric_sum(text, {"vm_free_disk_space_bytes"})
+        retention = ""
+        try:
+            with self.con.open("/flags") as resp:
+                for line in resp.read().decode("utf-8", "replace").splitlines():
+                    if line.startswith("-retentionPeriod="):
+                        retention = line.split("=", 1)[1].strip().strip('"')
+        except Exception:
+            pass
+        rng = _vm_range(retention)
+        metric = vm_metric(self.t)
+        rows = self._by_project(f"sum by (projekt) (count_over_time({metric}[{rng}]))")
+        nvars = self._by_project(f"count by (projekt) (last_over_time({metric}[{rng}]))")
+        first = self._by_project(f"min by (projekt) (tfirst_over_time({metric}[{rng}]))")
+        day = sum(self._by_project(f"sum by (projekt) (count_over_time({metric}[1d]))").values())
+        mine = int(sum(rows.values()))
+        per = total / all_rows if total and all_rows else None        # Bytes je Wert (über alle Metriken)
+        details = []
+        if all_rows:
+            details.append(tr("Alle Metriken: {0} Werte, etwa {1} Byte je Wert").format(
+                _num(all_rows), f"{per:.2f}".replace(".", ",") if per else "–"))
+        if retention:
+            details.append(tr("Aufbewahrung: {0}").format(tr("{0} Monate").format(retention) if retention.isdigit()
+                                                           else retention))
+        if free is not None:
+            details.append(tr("Frei auf dem Datenträger: {0}").format(fmt_bytes(free)))
+        details.append(tr("Metrik {0}: {1} Werte, etwa {2}").format(metric, _num(mine), fmt_bytes(mine * per if per else None)))
+        for proj in sorted(rows, key=lambda p: -rows[p]):
+            since = datetime.datetime.fromtimestamp(first[proj]).strftime("%d.%m.%Y %H:%M") if proj in first else "–"
+            nv = int(nvars.get(proj, 0))
+            details.append("    " + (tr("{0}: {1} Werte, 1 Variable, seit {3}") if nv == 1 else
+                                     tr("{0}: {1} Werte, {2} Variablen, seit {3}")).format(
+                proj or tr("(ohne Projekt)"), _num(rows[proj]), nv, since))
+        if day:
+            details.append(tr("Letzte 24 Stunden: {0} Werte, etwa {1}").format(
+                _num(day), fmt_bytes(day * per if per else None)))
+            days = _range_days(rng)
+            if per and days:
+                need = day * per * days
+                line = tr("Bei gleichem Zuwachs und {0} Tagen Aufbewahrung braucht diese Metrik etwa {1}").format(
+                    _num(days), fmt_bytes(need))
+                if free is not None:
+                    line += " – " + (tr("genug Platz frei") if need < free else tr("mehr als frei ist!"))
+                details.append(line)
+        return Storage(None, total, None, details=details,
+                       hinweis=tr("Werte der letzten etwa 30 Sekunden zählt VictoriaMetrics noch nicht mit; der Platz "
+                                  "je Metrik ist aus ihrem Anteil an allen Werten geschätzt."))
+
+    def _by_project(self, query):
+        """MetricsQL-Abfrage mit einem Ergebnis je Projekt -> {Projekt: Zahl}."""
+        data = self.con.get_json("/api/v1/query", {"query": query}, timeout=60.0)
+        out = {}
+        for r in (data.get("data") or {}).get("result", []):
+            try:
+                out[r.get("metric", {}).get("projekt", "")] = float(r["value"][1])
+            except (KeyError, IndexError, TypeError, ValueError):
+                pass
+        return out
 
 
 class PrometheusBackend(_Backend):
@@ -865,6 +927,42 @@ class PrometheusBackend(_Backend):
                                 {"prometheus_tsdb_storage_blocks_bytes", "prometheus_tsdb_wal_storage_size_bytes",
                                  "prometheus_tsdb_head_chunks_storage_size_bytes"})
         return Storage(None, total, None, hinweis=tr("nur die ganze Datenbank (alle Metriken)"))
+
+
+def _vm_rows(text):
+    """Anzahl gespeicherter Werte aus /metrics von VictoriaMetrics (vm_rows der Typen storage/…), None ohne Angabe."""
+    total, found = 0, False
+    for line in text.splitlines():
+        if line.startswith('vm_rows{type="storage/'):
+            try:
+                total += int(float(line.rsplit(" ", 1)[1]))
+                found = True
+            except (IndexError, ValueError):
+                pass
+    return total if found else None
+
+
+def _vm_range(retention):
+    """Aufbewahrung von VictoriaMetrics (-retentionPeriod: „90d“, „1y“ oder Monate als Zahl) als Zeitraum für
+    MetricsQL; ohne Angabe 1 Monat (Vorgabe von VictoriaMetrics)."""
+    r = (retention or "1").strip()
+    if r.replace(".", "", 1).isdigit():
+        return f"{max(1, int(float(r) * 31))}d"
+    return r
+
+
+def _range_days(rng):
+    """Zeitraum wie „90d“, „12w“, „1y“, „720h“ in Tagen (0 = unbekannt)."""
+    units = {"d": 1, "w": 7, "y": 365, "h": 1 / 24}
+    try:
+        return float(rng[:-1]) * units[rng[-1]]
+    except (KeyError, ValueError, IndexError):
+        return 0
+
+
+def _num(n):
+    """Ganze Zahl mit Tausenderpunkten (12.345)."""
+    return f"{int(round(n)):,}".replace(",", ".")
 
 
 def _int(v):
@@ -909,10 +1007,11 @@ def storage_info(conn):
     if st.tabelle is not None:
         lines.append(tr("Tabelle {0}: {1}").format(s["tabelle"], fmt_bytes(st.tabelle)))
     if st.zeilen is not None:
-        n = f"{st.zeilen:,}".replace(",", ".")
+        n = _num(st.zeilen)
         lines.append((tr("Werte: etwa {0}") if st.geschaetzt else tr("Werte: {0}")).format(n))
     if st.gesamt is not None:
         lines.append(tr("Datenbank gesamt: {0}").format(fmt_bytes(st.gesamt)))
+    lines.extend(st.details)
     if st.hinweis:
         lines.append(st.hinweis)
     if st.tabelle is None and st.gesamt is None and st.zeilen is None:

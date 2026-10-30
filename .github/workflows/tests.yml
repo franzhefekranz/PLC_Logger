@@ -40,6 +40,15 @@ jobs:
             --web.listen-address=127.0.0.1:9090 > "$RUNNER_TEMP/prom.log" 2>&1 &
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:9090/-/ready >/dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:9090/-/ready && echo "PLC_TEST_PROMETHEUS=http://127.0.0.1:9090" >> "$GITHUB_ENV"
+      - name: VictoriaMetrics-Server (für den Datenbanktest, nur Linux)
+        if: runner.os == 'Linux'
+        run: |
+          V=v1.128.0
+          curl -sSfL "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/$V/victoria-metrics-linux-amd64-$V.tar.gz" | tar xz -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/victoria-metrics-prod" -storageDataPath="$RUNNER_TEMP/vmdata" -httpListenAddr=127.0.0.1:8428 \
+            -retentionPeriod=90d > "$RUNNER_TEMP/vm.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8428/health >/dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:8428/health && echo "PLC_TEST_VICTORIAMETRICS=http://127.0.0.1:8428" >> "$GITHUB_ENV"
       - name: Python-Pakete
         run: |
           python -m pip install -q --upgrade pip

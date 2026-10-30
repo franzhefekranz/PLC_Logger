@@ -3202,7 +3202,10 @@ Haken **CSV-Datei schreiben** im Reiter *Aufzeichnung* ein oder aus.
        der Werte. SQLite: Dateigröße, Tabelle, genaue Anzahl. MariaDB und
        PostgreSQL/TimescaleDB: Tabelle und Datenbank, Anzahl geschätzt. QuestDB (ab
        8.2) und InfluxDB 3: Tabelle und Anzahl (InfluxDB ohne die Werte der letzten
-       Minuten). VictoriaMetrics und Prometheus: nur die ganze Datenbank.
+       Minuten). Prometheus: nur die ganze Datenbank. **VictoriaMetrics:** ganze
+       Datenbank (Platz, Werte, Byte je Wert, Aufbewahrung, freier Platz), die Metrik
+       je Projekt (Werte, Variablen, ältester Wert), der Zuwachs der letzten 24 Stunden
+       und der daraus geschätzte Platzbedarf bei voller Aufbewahrung.
 
 **Tabellenaufbau** (eine Zeile je Wert, „schmales“ Format):
 
