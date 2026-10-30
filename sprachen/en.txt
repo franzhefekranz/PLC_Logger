@@ -1027,6 +1027,12 @@
 @ Verbindung prüfen und die Tabelle anlegen
 > Check the connection and create the table
 
+@ Speicherplatz …
+> Storage …
+
+@ Belegten Speicherplatz der Tabelle und der Datenbank sowie die Anzahl Werte abfragen
+> Query the storage used by the table and the database and the number of values
+
 @ Datenbank:
 > Database:
 
@@ -1068,6 +1074,12 @@
 
 @ Verbindung fehlgeschlagen:\n{0}
 > Connection failed:\n{0}
+
+@ Abfrage fehlgeschlagen:\n{0}
+> Query failed:\n{0}
+
+@ Speicherplatz
+> Storage
 
 @ Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)
 > Images (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;All files (*)
@@ -1388,6 +1400,9 @@
 @ {0}: Aufbewahrungsdauer bitte in der Datenbank selbst einstellen
 > {0}: please set the retention period in the database itself
 
+@ davon belegt: {0} (gelöschte Werte geben Platz frei, die Datei wird nicht kleiner)
+> of which in use: {0} (deleted values free space, the file does not shrink)
+
 @ {0} alte Werte gelöscht
 > {0} old values deleted
 
@@ -1403,14 +1418,23 @@
 @ ohne Deduplizierung: {0}
 > without deduplication: {0}
 
+@ Plattenplatz erst ab QuestDB 8.2 abfragbar
+> Disk space can only be queried from QuestDB 8.2
+
 @ alte Tagespartitionen gelöscht
 > old daily partitions deleted
 
 @ Tabelle wird beim ersten Schreiben angelegt ({0})
 > Table will be created on first write ({0})
 
+@ nur bereits als Parquet gespeicherte Werte (die letzten Minuten fehlen)
+> only values already stored as Parquet (the last minutes are missing)
+
 @ Metrik {0}, Labels projekt und variable
 > Metric {0}, labels projekt and variable
+
+@ nur die ganze Datenbank (alle Metriken)
+> only the whole database (all metrics)
 
 @ Metrik {0}, Labels projekt und variable (Remote Write: Prometheus mit --web.enable-remote-write-receiver starten)
 > Metric {0}, labels projekt and variable (remote write: start Prometheus with --web.enable-remote-write-receiver)
@@ -1420,6 +1444,21 @@
 
 @ Verbindung erfolgreich: {0}
 > Connection successful: {0}
+
+@ Tabelle {0}: {1}
+> Table {0}: {1}
+
+@ Werte: etwa {0}
+> Values: about {0}
+
+@ Werte: {0}
+> Values: {0}
+
+@ Datenbank gesamt: {0}
+> Database total: {0}
+
+@ Diese Datenbank meldet keinen Speicherplatz.
+> This database does not report its storage.
 
 @ [Datenbank] {0}
 > [Database] {0}

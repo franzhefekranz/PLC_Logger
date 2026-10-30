@@ -1027,6 +1027,12 @@
 @ Verbindung prüfen und die Tabelle anlegen
 > 
 
+@ Speicherplatz …
+> 
+
+@ Belegten Speicherplatz der Tabelle und der Datenbank sowie die Anzahl Werte abfragen
+> 
+
 @ Datenbank:
 > 
 
@@ -1067,6 +1073,12 @@
 > 
 
 @ Verbindung fehlgeschlagen:\n{0}
+> 
+
+@ Abfrage fehlgeschlagen:\n{0}
+> 
+
+@ Speicherplatz
 > 
 
 @ Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)
@@ -1388,6 +1400,9 @@
 @ {0}: Aufbewahrungsdauer bitte in der Datenbank selbst einstellen
 > 
 
+@ davon belegt: {0} (gelöschte Werte geben Platz frei, die Datei wird nicht kleiner)
+> 
+
 @ {0} alte Werte gelöscht
 > 
 
@@ -1403,13 +1418,22 @@
 @ ohne Deduplizierung: {0}
 > 
 
+@ Plattenplatz erst ab QuestDB 8.2 abfragbar
+> 
+
 @ alte Tagespartitionen gelöscht
 > 
 
 @ Tabelle wird beim ersten Schreiben angelegt ({0})
 > 
 
+@ nur bereits als Parquet gespeicherte Werte (die letzten Minuten fehlen)
+> 
+
 @ Metrik {0}, Labels projekt und variable
+> 
+
+@ nur die ganze Datenbank (alle Metriken)
 > 
 
 @ Metrik {0}, Labels projekt und variable (Remote Write: Prometheus mit --web.enable-remote-write-receiver starten)
@@ -1419,6 +1443,21 @@
 > 
 
 @ Verbindung erfolgreich: {0}
+> 
+
+@ Tabelle {0}: {1}
+> 
+
+@ Werte: etwa {0}
+> 
+
+@ Werte: {0}
+> 
+
+@ Datenbank gesamt: {0}
+> 
+
+@ Diese Datenbank meldet keinen Speicherplatz.
 > 
 
 @ [Datenbank] {0}

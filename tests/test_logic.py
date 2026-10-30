@@ -706,3 +706,26 @@ def test_self_signed_cert_long_hostname(tmp_path, monkeypatch):
     c = x509.load_pem_x509_certificate(open(cert, "rb").read())
     assert long_name in c.extensions.get_extension_for_class(x509.SubjectAlternativeName).value.get_values_for_type(
         x509.DNSName)
+
+
+def test_db_storage_info_sqlite_and_metrics(tmp_path):
+    """Speicherplatz: SQLite (Datei, Tabelle, Anzahl Werte), Kennzahlen aus /metrics, Größenangaben."""
+    import datetime as dt
+    import plc_db
+    conn = {"db_typ": "sqlite", "db_datei": str(tmp_path / "w.db"), "db_tabelle": "werte", "projekt": "A"}
+    b = plc_db.SqliteBackend(plc_db.db_settings(conn))
+    b.connect()
+    z = dt.datetime(2026, 10, 30, tzinfo=dt.timezone.utc)
+    b.insert([(z + dt.timedelta(seconds=k), "A", "Druck", float(k)) for k in range(1234)])
+    st = b.storage()
+    b.close()
+    assert st.zeilen == 1234 and st.gesamt > 0 and (st.tabelle is None or 0 < st.tabelle <= st.gesamt)
+    text = plc_db.storage_info(conn)
+    assert "Werte: 1.234" in text and "Datenbank gesamt:" in text
+    assert plc_db.storage_info({"db_typ": ""}) == "Keine Datenbank gewählt."
+    metrics = ('# HELP x\nvm_data_size_bytes{type="indexdb/file"} 1000\nvm_data_size_bytes{type="storage/small"} 2.5e3\n'
+               'other_metric 7\nprometheus_tsdb_wal_storage_size_bytes 300\n')
+    assert plc_db._metric_sum(metrics, {"vm_data_size_bytes"}) == 3500
+    assert plc_db._metric_sum(metrics, {"fehlt"}) is None
+    assert plc_db.fmt_bytes(512) == "512 B" and plc_db.fmt_bytes(3_400_000) == "3,4 MB"
+    assert plc_db.fmt_bytes(None) == "–"

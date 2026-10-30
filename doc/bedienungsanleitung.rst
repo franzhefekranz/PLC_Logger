@@ -3197,6 +3197,12 @@ Haken **CSV-Datei schreiben** im Reiter *Aufzeichnung* ein oder aus.
        QuestDB) bzw. wenn die Werte mehr als *n MB* belegen (nur SQLite).
    * - Datenbank testen
      - Verbindet sich, legt die Tabelle an und meldet das Ergebnis.
+   * - Speicherplatz …
+     - Zeigt den belegten Platz der Tabelle und der ganzen Datenbank sowie die Anzahl
+       der Werte. SQLite: Dateigröße, Tabelle, genaue Anzahl. MariaDB und
+       PostgreSQL/TimescaleDB: Tabelle und Datenbank, Anzahl geschätzt. QuestDB (ab
+       8.2) und InfluxDB 3: Tabelle und Anzahl (InfluxDB ohne die Werte der letzten
+       Minuten). VictoriaMetrics und Prometheus: nur die ganze Datenbank.
 
 **Tabellenaufbau** (eine Zeile je Wert, „schmales“ Format):
 

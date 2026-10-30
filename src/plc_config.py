@@ -1028,6 +1028,9 @@ class ConfigWindow(QMainWindow):
         btn_test = QPushButton(tr("Datenbank testen"))
         btn_test.setToolTip(tr("Verbindung prüfen und die Tabelle anlegen"))
         btn_test.clicked.connect(self.test_database)
+        btn_size = QPushButton(tr("Speicherplatz …"))
+        btn_size.setToolTip(tr("Belegten Speicherplatz der Tabelle und der Datenbank sowie die Anzahl Werte abfragen"))
+        btn_size.clicked.connect(self.database_storage)
         f1 = QFormLayout()
         f1.addRow(tr("Datenbank:"), self.cb_db)
         f1.addRow(tr("Server / Port:"), self._hbox(self.ed_db_host, self.sp_db_port))
@@ -1039,12 +1042,12 @@ class ConfigWindow(QMainWindow):
         f2.addRow("", self.chk_db_changes)
         f2.addRow(tr("Löschen nach:"), self.sp_db_clean_days)
         f2.addRow(tr("Höchstens belegen:"), self.sp_db_clean_mb)
-        f2.addRow("", btn_test)
+        f2.addRow("", self._hbox(btn_test, btn_size))
         w = QWidget()
         lay = QHBoxLayout(w); lay.addLayout(f1, 1); lay.addSpacing(30); lay.addLayout(f2, 1)
         self._db_server_widgets = [self.ed_db_host, self.sp_db_port, self.ed_db_name, self.ed_db_user, self.ed_db_pw]
         self._db_widgets = self._db_server_widgets + [self.ed_db_table, self.ed_db_file, btn_file,
-                                                      self.chk_db_changes, self.sp_db_clean_days, btn_test]
+                                                      self.chk_db_changes, self.sp_db_clean_days, btn_test, btn_size]
         return w
 
     @staticmethod
@@ -1111,6 +1114,23 @@ class ConfigWindow(QMainWindow):
             return
         QApplication.restoreOverrideCursor()
         QMessageBox.information(self, tr("Datenbank"), text)
+
+    def database_storage(self):
+        """Belegten Speicherplatz der gewählten Datenbank anzeigen (plc_db.storage_info)."""
+        from plc_db import storage_info
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            text = storage_info(self.collect_conn())
+        except ImportError as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.critical(self, tr("Datenbank"), tr('Der Datenbanktreiber fehlt:\n{0}\n\nMariaDB: pip install PyMySQL\nTimescaleDB/PostgreSQL: pip install "psycopg[binary]"').format(e))
+            return
+        except Exception as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.critical(self, tr("Datenbank"), tr("Abfrage fehlgeschlagen:\n{0}").format(e))
+            return
+        QApplication.restoreOverrideCursor()
+        QMessageBox.information(self, tr("Speicherplatz"), text)
 
     def _file_row(self, edit, title, filt=None):
         """Zeile mit Eingabefeld und '…'-Knopf zur Auswahl einer Datei (Standard: Bilddatei für Logo/Icon)."""

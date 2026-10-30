@@ -231,3 +231,5 @@ def test_prometheus_real_server():
     assert r.count(["Temp"], t0 - 1, now + 1, project="Test") == 121
     t, names, cols = r.load(["Temp"], t0, now, project="Test", raster_s=10)
     assert 10 <= len(t) <= 14 and np.nanmax(cols[0]) <= 32.1
+    from plc_db import storage_info
+    assert "Datenbank gesamt:" in storage_info(conn)          # Kennzahlen des Servers (/metrics)

@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* Konfigurationsprogramm, Reiter *Datenbank*: **Speicherplatz …** zeigt den belegten Platz der Tabelle und der
+  Datenbank sowie die Anzahl der Werte (je nach Datenbanktyp; VictoriaMetrics und Prometheus nur gesamt).
+
 ## [3.5.0] – 2026-10-29
 
 ### Neu

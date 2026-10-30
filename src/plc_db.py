@@ -109,6 +109,41 @@ def describe(s):
 # ---------------------------------------------------------------------------------------
 # Anbindungen je Datenbanktyp
 # ---------------------------------------------------------------------------------------
+class Storage:
+    """Belegter Platz einer Aufzeichnung: ``tabelle`` (Bytes der Tabelle bzw. Metrik samt Indizes), ``gesamt`` (Bytes der
+    ganzen Datenbank bzw. Datei), ``zeilen`` (Anzahl Werte; ``geschaetzt`` = Schätzung der Datenbank) und ``hinweis``.
+    None = von diesem Datenbanktyp nicht abfragbar."""
+
+    def __init__(self, tabelle=None, gesamt=None, zeilen=None, geschaetzt=False, hinweis=""):
+        self.tabelle, self.gesamt, self.zeilen, self.geschaetzt, self.hinweis = tabelle, gesamt, zeilen, geschaetzt, hinweis
+
+
+def fmt_bytes(n):
+    """Bytes lesbar: 512 B, 3,4 MB, 1,2 GB (Dezimaltrennzeichen der Oberfläche: Komma)."""
+    if n is None:
+        return "–"
+    for unit, f in (("GB", 1e9), ("MB", 1e6), ("kB", 1e3)):
+        if n >= f:
+            return f"{n / f:.1f} {unit}".replace(".", ",")
+    return f"{int(n)} B"
+
+
+def _metric_sum(text, names):
+    """Summe der Werte der Metriken ``names`` aus einer Prometheus-Textausgabe (/metrics), None ohne Treffer."""
+    total, found = 0.0, False
+    for line in text.splitlines():
+        if not line or line.startswith("#"):
+            continue
+        name = line.split("{", 1)[0].split(" ", 1)[0]
+        if name in names:
+            try:
+                total += float(line.rsplit(" ", 1)[1])
+                found = True
+            except (IndexError, ValueError):
+                pass
+    return int(total) if found else None
+
+
 class _Backend:
     """Gemeinsame Schnittstelle: connect() legt bei Bedarf die Tabelle an, insert() schreibt Zeilen
     (zeit als datetime in UTC, projekt, variable, wert), close() trennt."""
@@ -138,6 +173,10 @@ class _Backend:
         unterstützt. Rückgabe: Meldungstext oder "" (nichts gelöscht). Ohne Unterstützung: ``NotImplementedError``."""
         raise NotImplementedError(tr("{0}: Aufbewahrungsdauer bitte in der Datenbank selbst einstellen").format(
             DB_TYPES.get(self.s["typ"], self.s["typ"])))
+
+    def storage(self):
+        """Belegter Speicherplatz -> Storage (Felder None = von dieser Datenbank nicht abfragbar)."""
+        return Storage()
 
     @staticmethod
     def cutoff(days):
@@ -177,6 +216,22 @@ class SqliteBackend(_Backend):
         free = cur.execute("PRAGMA freelist_count").fetchone()[0]
         size = cur.execute("PRAGMA page_size").fetchone()[0]
         return (pages - free) * size
+
+    def storage(self):
+        """Datei (samt WAL), davon die Tabelle mit Index (dbstat, falls vorhanden), Anzahl Werte."""
+        f = self.s["datei"]
+        total = sum(os.path.getsize(x) for x in (f, f + "-wal") if os.path.exists(x))
+        cur = self.con.cursor()
+        table = None
+        try:
+            table = cur.execute("SELECT SUM(pgsize) FROM dbstat WHERE name IN (?, ?)",
+                                (self.t, f"{self.t}_variable_zeit")).fetchone()[0]
+        except sqlite3.Error:
+            pass                                        # SQLite ohne dbstat: nur die Datei
+        rows = cur.execute(f"SELECT COUNT(*) FROM {self.t}").fetchone()[0]
+        free = self.used_bytes()
+        return Storage(table, total, rows, hinweis=tr("davon belegt: {0} (gelöschte Werte geben Platz frei, die Datei "
+                                                     "wird nicht kleiner)").format(fmt_bytes(free)))
 
     def cleanup(self, days=0, max_mb=0):
         """Zeilen älter als ``days`` Tage löschen; über ``max_mb`` jeweils den ältesten Tag, bis die Grenze eingehalten
@@ -222,6 +277,18 @@ class MariaDbBackend(_Backend):
         with self.con.cursor() as cur:
             cur.executemany(f"INSERT INTO `{self.t}` (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)", data)
         self.con.commit()
+
+    def storage(self):
+        """Größe aus information_schema (Daten + Indizes); Zeilenzahl ist dort eine Schätzung von InnoDB."""
+        with self.con.cursor() as cur:
+            cur.execute("SELECT data_length + index_length, table_rows FROM information_schema.TABLES "
+                        "WHERE table_schema = DATABASE() AND table_name = %s", (self.t,))
+            row = cur.fetchone() or (None, None)
+            cur.execute("SELECT SUM(data_length + index_length) FROM information_schema.TABLES "
+                        "WHERE table_schema = DATABASE()")
+            total = (cur.fetchone() or (None,))[0]
+        self.con.commit()
+        return Storage(_int(row[0]), _int(total), _int(row[1]), geschaetzt=True)
 
     def cleanup(self, days=0, max_mb=0):
         """Zeilen älter als ``days`` Tage löschen – in Portionen, damit die Tabelle nicht lange gesperrt ist."""
@@ -271,6 +338,22 @@ class TimescaleBackend(_Backend):
         with self.con.cursor() as cur:
             cur.executemany(f'INSERT INTO "{self.t}" (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)', rows)
         self.con.commit()
+
+    def storage(self):
+        """Hypertable: hypertable_size/approximate_row_count; sonst pg_total_relation_size und Schätzung aus pg_class."""
+        hyper = self.note == "TimescaleDB-Hypertable"
+        with self.con.cursor() as cur:
+            if hyper:
+                cur.execute("SELECT hypertable_size(%s), approximate_row_count(%s)", (self.t, self.t))
+            else:
+                cur.execute("SELECT pg_total_relation_size(c.oid), c.reltuples::bigint FROM pg_class c "
+                            "WHERE c.oid = to_regclass(quote_ident(%s))", (self.t,))
+            row = cur.fetchone() or (None, None)
+            cur.execute("SELECT pg_database_size(current_database())")
+            total = cur.fetchone()[0]
+        self.con.commit()
+        rows = _int(row[1])
+        return Storage(_int(row[0]), _int(total), rows if rows is None or rows >= 0 else None, geschaetzt=True)
 
     def cleanup(self, days=0, max_mb=0):
         """Daten älter als ``days`` Tage löschen: als Hypertable ganze Zeitabschnitte (drop_chunks), sonst DELETE."""
@@ -670,6 +753,19 @@ class QuestDbBackend(_Backend):
         """Zeilen im Line Protocol über HTTP schreiben."""
         self.con.write(_ilp_lines(self.t, rows))
 
+    def storage(self):
+        """table_storage() (ab QuestDB 8.2): Plattenplatz und Zeilen der Tabelle; sonst nur die Zeilenzahl."""
+        try:
+            d = self.con.exec(f"SELECT diskSize, rowCount FROM table_storage() WHERE tableName = '{self.t}'")
+            ds = d.get("dataset") or []
+            if ds:
+                return Storage(_int(ds[0][0]), None, _int(ds[0][1]))
+        except (RuntimeError, HttpDbError):
+            pass
+        d = self.con.exec(f"SELECT count() FROM {self.t}")
+        ds = d.get("dataset") or [[None]]
+        return Storage(None, None, _int(ds[0][0]), hinweis=tr("Plattenplatz erst ab QuestDB 8.2 abfragbar"))
+
     def cleanup(self, days=0, max_mb=0):
         """Tagespartitionen löschen, die vollständig älter als ``days`` Tage sind (QuestDB löscht keine Einzelzeilen)."""
         if days <= 0:
@@ -706,6 +802,18 @@ class InfluxDb3Backend(_Backend):
         """Zeilen im Line Protocol schreiben."""
         self.con.write(_ilp_lines(self.t, rows))
 
+    def storage(self):
+        """Parquet-Dateien der Tabelle (system.parquet_files); noch nicht gespeicherte Werte (WAL) zählen nicht mit."""
+        cur = self.con.cursor()
+        try:
+            cur.execute("SELECT SUM(size_bytes), SUM(row_count) FROM system.parquet_files WHERE table_name = ?",
+                        (self.t,))
+            row = (cur.fetchall() or [(None, None)])[0]
+        finally:
+            cur.close()
+        return Storage(_int(row[0]), None, _int(row[1]),
+                       hinweis=tr("nur bereits als Parquet gespeicherte Werte (die letzten Minuten fehlen)"))
+
 
 class VictoriaMetricsBackend(_Backend):
     """VictoriaMetrics: nichts anzulegen (Metrik <tabelle>_wert entsteht beim Schreiben); Werte im Line Protocol."""
@@ -720,6 +828,12 @@ class VictoriaMetricsBackend(_Backend):
     def insert(self, rows):
         """Zeilen im Line Protocol schreiben (Metrik ``<tabelle>_wert``)."""
         self.con.write(_ilp_lines(self.t, rows))
+
+    def storage(self):
+        """Gesamtgröße der Datenbank aus den eigenen Kennzahlen (/metrics: vm_data_size_bytes)."""
+        with self.con.open("/metrics") as resp:
+            total = _metric_sum(resp.read().decode("utf-8", "replace"), {"vm_data_size_bytes"})
+        return Storage(None, total, None, hinweis=tr("nur die ganze Datenbank (alle Metriken)"))
 
 
 class PrometheusBackend(_Backend):
@@ -744,6 +858,22 @@ class PrometheusBackend(_Backend):
                   for (p, v), samples in groups.items()]
         self.con.write_series(series)
 
+    def storage(self):
+        """Gesamtgröße aus den eigenen Kennzahlen von Prometheus (/metrics: Blöcke, WAL, Head-Chunks)."""
+        with self.con.open("/metrics") as resp:
+            total = _metric_sum(resp.read().decode("utf-8", "replace"),
+                                {"prometheus_tsdb_storage_blocks_bytes", "prometheus_tsdb_wal_storage_size_bytes",
+                                 "prometheus_tsdb_head_chunks_storage_size_bytes"})
+        return Storage(None, total, None, hinweis=tr("nur die ganze Datenbank (alle Metriken)"))
+
+
+def _int(v):
+    """Zahl aus einer Datenbankantwort (auch Text oder Decimal) -> int oder None."""
+    try:
+        return None if v is None or v == "" else int(float(v))
+    except (TypeError, ValueError):
+        return None
+
 
 BACKENDS = {"sqlite": SqliteBackend, "mariadb": MariaDbBackend, "timescale": TimescaleBackend,
             "questdb": QuestDbBackend, "influxdb3": InfluxDb3Backend, "victoriametrics": VictoriaMetricsBackend,
@@ -761,6 +891,33 @@ def test_connection(conn):
     finally:
         b.close()
     return tr("Verbindung erfolgreich: {0}").format(describe(s)) + (f"\n{b.note}" if b.note else "")
+
+
+def storage_info(conn):
+    """Belegten Speicherplatz der eingestellten Datenbank abfragen (Konfigurationsprogramm) -> Meldungstext.
+    Fehler als Ausnahme."""
+    s = db_settings(conn)
+    if not s["typ"]:
+        return tr("Keine Datenbank gewählt.")
+    b = BACKENDS[s["typ"]](s)
+    try:
+        b.connect()
+        st = b.storage()
+    finally:
+        b.close()
+    lines = [describe(s)]
+    if st.tabelle is not None:
+        lines.append(tr("Tabelle {0}: {1}").format(s["tabelle"], fmt_bytes(st.tabelle)))
+    if st.zeilen is not None:
+        n = f"{st.zeilen:,}".replace(",", ".")
+        lines.append((tr("Werte: etwa {0}") if st.geschaetzt else tr("Werte: {0}")).format(n))
+    if st.gesamt is not None:
+        lines.append(tr("Datenbank gesamt: {0}").format(fmt_bytes(st.gesamt)))
+    if st.hinweis:
+        lines.append(st.hinweis)
+    if st.tabelle is None and st.gesamt is None and st.zeilen is None:
+        lines.append(tr("Diese Datenbank meldet keinen Speicherplatz."))
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------------------

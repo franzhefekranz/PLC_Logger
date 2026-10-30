@@ -3109,6 +3109,12 @@ the tick **Write CSV file** in the tab *Recording*.
        QuestDB) or when the values take up more than *n MB* (SQLite only).
    * - Test database
      - Connects, creates the table and reports the result.
+   * - Storage …
+     - Shows the space used by the table and the whole database and the number of
+       values. SQLite: file size, table, exact count. MariaDB and PostgreSQL/TimescaleDB:
+       table and database, count estimated. QuestDB (from 8.2) and InfluxDB 3: table and
+       count (InfluxDB without the values of the last minutes). VictoriaMetrics and
+       Prometheus: only the whole database.
 
 **Table structure** (one row per value, “narrow” format):
 
