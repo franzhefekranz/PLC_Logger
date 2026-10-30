@@ -202,7 +202,8 @@ def test_netpanel_touch(qapp, demo_config):
         w.keyboard.type(ch)
     assert w.ed_pw.text() == "Ab1"
     w.connect_wifi()
-    assert fake.calls[-1][:6] == ["nmcli", "device", "wifi", "connect", "Gast", "password"]
+    conn_call = next(c for c in fake.calls if c[:4] == ["nmcli", "device", "wifi", "connect"])
+    assert conn_call[4:7] == ["Gast", "password", "Ab1"]
     assert w.stack.currentWidget() is w.page_home
     w.close()
 
