@@ -3121,6 +3121,13 @@ the tick **Write CSV file** in the tab *Recording*.
        the growth of the last 24 hours and the space needed at full retention estimated
        from it.
 
+.. figure:: images/en/speicherplatz.png
+   :alt: Storage of a VictoriaMetrics database
+   :width: 50%
+   :align: center
+
+   **Storage …** with VictoriaMetrics: whole database, per project and space needed.
+
 **Table structure** (one row per value, “narrow” format):
 
 .. list-table::
@@ -3256,6 +3263,14 @@ For VictoriaMetrics and Prometheus (PromQL, e.g. in Grafana):
   TimescaleDB, QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus and Grafana with ready-made
   data sources (access data in ``docker/.env``). SQLite files can be read with Grafana's
   SQLite plugin.
+
+.. figure:: images/en/grafana_dashboard.png
+   :alt: Grafana dashboard from the export
+   :width: 100%
+   :align: center
+
+   Exported Grafana dashboard (VictoriaMetrics): layout, axes and colours as in the
+   logger, at the top the selection *Project*.
 
 
 .. _db-lesen:

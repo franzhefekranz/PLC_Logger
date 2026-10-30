@@ -3209,6 +3209,13 @@ Haken **CSV-Datei schreiben** im Reiter *Aufzeichnung* ein oder aus.
        je Projekt (Werte, Variablen, ältester Wert), der Zuwachs der letzten 24 Stunden
        und der daraus geschätzte Platzbedarf bei voller Aufbewahrung.
 
+.. figure:: images/speicherplatz.png
+   :alt: Speicherplatz einer VictoriaMetrics-Datenbank
+   :width: 50%
+   :align: center
+
+   **Speicherplatz …** bei VictoriaMetrics: ganze Datenbank, je Projekt und Platzbedarf.
+
 **Tabellenaufbau** (eine Zeile je Wert, „schmales“ Format):
 
 .. list-table::
@@ -3349,6 +3356,14 @@ Für VictoriaMetrics und Prometheus (PromQL, z. B. in Grafana):
 * **Testumgebung:** Im Ordner ``docker`` startet ``docker compose up -d`` TimescaleDB,
   QuestDB, InfluxDB 3 Core, VictoriaMetrics, Prometheus und Grafana mit fertig eingerichteten
   Datenquellen (Zugangsdaten in ``docker/.env``). SQLite-Dateien lassen sich mit dem SQLite-Plugin von Grafana lesen.
+
+.. figure:: images/grafana_dashboard.png
+   :alt: Grafana-Dashboard aus dem Export
+   :width: 100%
+   :align: center
+
+   Exportiertes Grafana-Dashboard (VictoriaMetrics): Anordnung, Achsen und Farben wie im
+   Logger, oben die Auswahl *Projekt*.
 
 
 .. _db-lesen:
