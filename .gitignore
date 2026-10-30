@@ -48,3 +48,4 @@ Thumbs.db
 wiki/
 release_notes.md
 test-ergebnis.xml
+docker/docker-compose.override.yml

@@ -20,7 +20,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   zeigt Rechnername, IP-Adressen von Ethernet und WLAN, Zustand des Logger-Dienstes und die Webserver-Adresse mit
   QR-Code; stellt über NetworkManager DHCP oder feste Adresse und WLAN (Suche, Passwort per Bildschirmtastatur) ein.
 * Anleitung: **Raspberry Pi als Datenlogger einrichten** – Ubuntu Server direkt auf der USB-SSD, NetworkManager,
-  Logger als systemd-Dienst, VictoriaMetrics und Grafana per Docker, Netzwerk-Panel als Dienst, Remotedesktop (xrdp).
+  Logger als systemd-Dienst, VictoriaMetrics per Docker, Grafana nur bei Bedarf (`docker/grafana.sh`, Desktop-Starter
+  mit `docker/desktop-starter.sh`, `docker/grafana-bei-bedarf.yml`), Netzwerk-Panel als Dienst, Remotedesktop (xrdp).
 
 ## [3.6.0] – 2026-10-30
 

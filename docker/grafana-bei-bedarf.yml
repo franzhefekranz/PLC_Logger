@@ -1,0 +1,6 @@
+# Grafana nur bei Bedarf (z. B. Raspberry Pi): nach einem Neustart NICHT von selbst starten.
+# Verwenden: cp grafana-bei-bedarf.yml docker-compose.override.yml   (docker compose liest die Datei automatisch)
+# Starten/beenden: ./grafana.sh start | ./grafana.sh stop  bzw. die Desktop-Starter (./desktop-starter.sh)
+services:
+  grafana:
+    restart: "no"

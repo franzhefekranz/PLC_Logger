@@ -4985,7 +4985,7 @@ viel besser aus als eine SD-Karte.
 **Welches System?** Empfohlen: **Ubuntu Server 24.04 LTS (64 Bit)** – darauf ist der Logger
 erprobt, Updates gibt es bis 2029. Der Pi startet **ohne Desktop**; ein Desktop (XFCE) läuft
 nur bei Bedarf über **Remotedesktop (xrdp)**. Auf einem angeschlossenen **Touchscreen** zeigt
-das **Netzwerk-Panel** die IP-Adressen und stellt Ethernet und WLAN ein (Schritt 5).
+das **Netzwerk-Panel** die IP-Adressen und stellt Ethernet und WLAN ein (Schritt 6).
 Alternativen: Raspberry Pi OS Lite (64 Bit, bringt NetworkManager schon mit) oder DietPi
 (sehr schlank) – das ``.deb`` passt zu beiden, dort ist der Logger aber noch nicht erprobt.
 
@@ -5033,7 +5033,7 @@ USB-Anschluss, optional ein Touchscreen (z. B. Waveshare, HDMI mit USB-Touch ode
   einen erreichbaren Zeitserver eintragen (``/etc/systemd/timesyncd.conf``, Zeile
   ``NTP=192.168.0.1``, dann ``sudo systemctl restart systemd-timesyncd``) oder ein RTC-Modul
   verwenden.
-* **Netzwerk über NetworkManager:** Das Netzwerk-Panel (Schritt 5) und ``nmcli`` stellen
+* **Netzwerk über NetworkManager:** Das Netzwerk-Panel (Schritt 6) und ``nmcli`` stellen
   Ethernet und WLAN ein. Ubuntu Server nutzt dafür zunächst systemd-networkd; umstellen
   (am besten mit Tastatur und Bildschirm am Pi, die SSH-Verbindung kann dabei abbrechen):
 
@@ -5105,25 +5105,37 @@ Reiter *Webserver & Headless*: Webserver an, Reiter *Datenbank*: VictoriaMetrics
 Konfigurationsprogramm (`Headless-Betrieb <headless_>`__) oder mit ``systemctl stop``
 beendet, bleibt er aus.
 
-**5. VictoriaMetrics und Grafana** (Docker; die Programme laufen mit ``restart:
-unless-stopped`` nach jedem Neustart weiter):
+**5. VictoriaMetrics und Grafana** (Docker). VictoriaMetrics läuft dauerhaft und startet nach
+jedem Neustart wieder; **Grafana nur bei Bedarf** – für die laufende Anzeige gibt es den
+Webserver des Loggers (``http://logger-kessel:8080``):
 
 .. code-block:: console
 
-   sudo apt install -y docker.io docker-compose-v2 git
+   sudo apt install -y docker.io docker-compose-v2 git curl
    sudo usermod -aG docker $USER  # danach ab- und wieder anmelden (ssh)
    git clone --depth 1 https://github.com/franzhefekranz/PLC_Logger.git ~/plc-docker
    cd ~/plc-docker/docker && cp .env.example .env
    nano .env                     # GRAFANA_PASSWORD setzen, VM_RETENTION (z. B. 1y)
-   docker compose up -d --no-deps victoriametrics grafana
+   cp grafana-bei-bedarf.yml docker-compose.override.yml   # Grafana nicht automatisch starten
+   docker compose up -d --no-deps victoriametrics
    docker compose ps
 
-``--no-deps`` startet nur diese beiden Dienste (ohne die übrigen Datenbanken der
-Testumgebung). Grafana: ``http://logger-kessel:3000``, Datenquelle *VictoriaMetrics* ist
-schon eingerichtet; das Dashboard aus **Datei › Grafana-Dashboard exportieren …** über
-*Dashboards › New › Import* hochladen. Der Webserver des Loggers: ``http://logger-kessel:8080``.
+``--no-deps`` startet nur VictoriaMetrics (ohne die übrigen Datenbanken der Testumgebung).
+**Grafana** starten und beenden:
 
-**5. Netzwerk-Panel auf dem Touchscreen** (``plc-netzwerk``): bildschirmfüllend, ohne
+.. code-block:: console
+
+   ~/plc-docker/docker/grafana.sh start     # startet, wartet bis bereit, öffnet im Desktop den Browser
+   ~/plc-docker/docker/grafana.sh stop      # beenden (VictoriaMetrics läuft weiter)
+   ~/plc-docker/docker/desktop-starter.sh   # einmal im Remotedesktop: Starter „Grafana starten/beenden“
+
+Die Starter liegen danach auf dem Desktop und im Anwendungsmenü der Remotedesktop-Sitzung
+(Schritt 7); ohne Desktop genügt ``grafana.sh start`` per SSH und der Browser am PC. Grafana:
+``http://logger-kessel:3000``, die Datenquelle *VictoriaMetrics* ist schon eingerichtet; das
+Dashboard aus **Datei › Grafana-Dashboard exportieren …** über *Dashboards › New › Import*
+hochladen. Nach einem Neustart des Pi ist Grafana aus.
+
+**6. Netzwerk-Panel auf dem Touchscreen** (``plc-netzwerk``): bildschirmfüllend, ohne
 Desktop. Es zeigt Rechnername, Uhrzeit, Ethernet und WLAN mit IP-Adressen, den Zustand des
 Logger-Dienstes und die Adresse des Webservers mit QR-Code (zum Öffnen am Tablet). Die
 Schaltflächen **Ethernet** und **WLAN** stellen DHCP oder eine feste Adresse (IP/Präfix,
@@ -5160,7 +5172,7 @@ Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten.
   nicht (``journalctl -u plc-netzwerk``), statt ``eglfs`` ``QT_QPA_PLATFORM=linuxfb``
   versuchen. Ausprobieren im Remotedesktop: ``plc-netzwerk --fenster``.
 
-**6. Remotedesktop (xrdp)** – ein Desktop nur bei Bedarf, der Pi selbst startet weiter ohne
+**7. Remotedesktop (xrdp)** – ein Desktop nur bei Bedarf, der Pi selbst startet weiter ohne
 Oberfläche:
 
 .. code-block:: console
@@ -5186,11 +5198,11 @@ dem Benutzer des Pi anmelden. Dort laufen Konfigurationsprogramm, Logger-Oberfl�
 IO-Check und Grafana im Browser; **Datei › Headless-Logger anzeigen/beenden …** sieht den
 Logger-Dienst, weil er unter demselben Benutzer läuft.
 
-**7. Betrieb:**
+**8. Betrieb:**
 
 * Updates: ``sudo apt update && sudo apt full-upgrade``, neuer Logger mit der neueren
   ``.deb``-Datei, Docker: ``docker compose pull && docker compose up -d --no-deps
-  victoriametrics grafana``.
+  victoriametrics`` (Grafana übernimmt die neue Version beim nächsten ``grafana.sh start``).
 * Platzbedarf nach einigen Stunden mit **Speicherplatz …** (Reiter *Datenbank*) prüfen.
 * Sichern: ``~/PLCDatenlogger`` (Konfiguration, CSV) und den Datenordner von VictoriaMetrics
   (``docker compose stop victoriametrics``, Volume kopieren, wieder starten).
