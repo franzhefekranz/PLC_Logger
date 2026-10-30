@@ -5171,6 +5171,16 @@ Oberfläche:
    sudo systemctl set-default multi-user.target     # beim Start keinen Desktop
    sudo systemctl enable --now xrdp
 
+*Alternative Lubuntu (LXQt):* sieht wie die Programme des Loggers aus (ebenfalls Qt), ist aber
+deutlich größer (viele Zusatzprogramme, eigener Anmeldebildschirm, der wegen
+``multi-user.target`` ungenutzt bleibt); XFCE läuft mit xrdp am zuverlässigsten. Statt der
+ersten beiden Zeilen oben:
+
+.. code-block:: console
+
+   sudo apt install -y lubuntu-desktop xrdp
+   echo startlxqt > ~/.xsession
+
 Am PC mit *Remotedesktopverbindung* (Windows: ``mstsc``) zu ``logger-kessel`` verbinden und mit
 dem Benutzer des Pi anmelden. Dort laufen Konfigurationsprogramm, Logger-Oberfläche,
 IO-Check und Grafana im Browser; **Datei › Headless-Logger anzeigen/beenden …** sieht den
