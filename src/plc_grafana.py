@@ -130,8 +130,8 @@ def _panel(db_type, table, chart, cvars, pid, grid):
                                                     "lineInterpolation": "linear"},
                                          "color": {"mode": "palette-classic"}, "unit": "none"},
                             "overrides": overrides},
-            "options": {"legend": {"showLegend": True, "displayMode": "table", "placement": "right",
-                                   "calcs": ["lastNotNull", "min", "max"]},
+            "options": {"legend": {"showLegend": True, "displayMode": "list", "placement": "bottom",
+                                   "calcs": ["lastNotNull"]},
                         "tooltip": {"mode": "multi", "sort": "none"}}}
 
 

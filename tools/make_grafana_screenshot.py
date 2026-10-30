@@ -42,7 +42,7 @@ def main():
     vm = urllib.parse.urlparse(a.vm)
     conn = {"db_typ": "victoriametrics", "db_host": vm.hostname, "db_port": vm.port or 8428, "db_tabelle": "messwerte",
             "projekt": "Kesselhaus", "anordnung": "untereinander", "seite_anordnung": "raster", "raster_spalten": 2,
-            "fenster_s": 900}
+            "fenster_s": 300}
     print("Werte geschrieben:", fill(conn, seconds=1800), flush=True)
     urllib.request.urlopen(a.vm + "/internal/force_flush").read()
     ds = api(a.grafana, "/api/datasources", {"name": "VictoriaMetrics", "type": "prometheus", "access": "proxy",
@@ -53,13 +53,14 @@ def main():
         {"name": "DS_PLC", "type": "datasource", "pluginId": "prometheus", "value": ds["uid"]}]})
     uid = res.get("uid") or d["uid"]
     end = int((time.time() - 60) * 1000)
-    url = f"{a.grafana}/d/{uid}?orgId=1&from={end - 900_000}&to={end}&var-projekt=Kesselhaus&theme=light"
+    url = f"{a.grafana}/d/{uid}?orgId=1&from={end - 300_000}&to={end}&var-projekt=Kesselhaus&theme=light"
     from playwright.sync_api import sync_playwright
     os.makedirs(os.path.join(a.out, "en"), exist_ok=True)
     path = os.path.join(a.out, "grafana_dashboard.png")
     with sync_playwright() as p:
         b = p.chromium.launch()
         page = b.new_page(viewport={"width": 1600, "height": 900})
+        page.add_init_script("try { localStorage.setItem('grafana.navigation.docked', 'false'); } catch (e) {}")
         page.goto(url, wait_until="networkidle")
         page.wait_for_timeout(4000)                        # Panels zeichnen
         page.screenshot(path=path)
