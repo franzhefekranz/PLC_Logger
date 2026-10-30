@@ -474,6 +474,42 @@ def s_config():
     cw.tabs.setCurrentIndex(0)
 
 
+@shot("speicherplatz")
+def s_storage():
+    """Meldung „Speicherplatz“ (Reiter Datenbank) mit einem echten VictoriaMetrics-Server (Umgebungsvariable
+    PLC_VM_URL, z. B. http://127.0.0.1:8428): Demo-Werte zweier Projekte, nur beim ersten Lauf geschrieben."""
+    url = os.environ.get("PLC_VM_URL", "")
+    if not url:
+        print("speicherplatz: übersprungen (PLC_VM_URL fehlt)", flush=True)
+        return
+    import json
+    import urllib.parse
+    import urllib.request
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from demo_db import fill
+    import plc_db
+    from PySide6.QtWidgets import QMessageBox
+    from plc_i18n import tr
+    u = urllib.parse.urlparse(url)
+    conn = {"db_typ": "victoriametrics", "db_host": u.hostname, "db_port": u.port or 8428, "db_tabelle": "messwerte",
+            "projekt": "Kesselhaus"}
+    q = urllib.parse.urlencode({"query": "count(last_over_time(messwerte_wert[1d]))"})
+    have = json.loads(urllib.request.urlopen(f"{url}/api/v1/query?{q}").read())["data"]["result"]
+    if not have:
+        fill(conn, seconds=6 * 3600)
+        fill(dict(conn, projekt="Linie 3"), seconds=2 * 3600)
+        urllib.request.urlopen(url + "/internal/force_flush").read()
+    text = plc_db.storage_info(conn)
+    cw = _cw()
+    cw.tabs.setCurrentIndex(4)
+    box = QMessageBox(QMessageBox.Icon.Information, tr("Speicherplatz"), text, QMessageBox.StandardButton.Ok, cw)
+    box.show()
+    wait(500)
+    save("speicherplatz", box)
+    box.close()
+    cw.tabs.setCurrentIndex(0)
+
+
 @shot("pid_einstellen")
 def s_config_dialogs():
     """Dialoge des Konfigurationsprogramms: PID, Blöcke, Formel, Trigger, Webbenutzer."""

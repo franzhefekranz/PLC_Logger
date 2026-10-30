@@ -1,7 +1,9 @@
 # Bilder der Bedienungsanleitung erzeugen (tools/make_screenshots.py) – unter Windows, damit die Fenster wie im
 # echten Programm aussehen. Start von Hand; die Bilder (deutsch und englisch) landen im Zweig "bilder" und als
 # Artifact. Übernehmen: git fetch origin +bilder:refs/remotes/origin/bilder && git checkout origin/bilder -- doc/images
-# Webseiten fotografiert Playwright (Chromium), PDF-Seiten werden mit PyMuPDF zu Bildern.
+# Webseiten fotografiert Playwright (Chromium), PDF-Seiten werden mit PyMuPDF zu Bildern. Das Bild „Speicherplatz“
+# braucht einen VictoriaMetrics-Server (wird gestartet); das Grafana-Dashboard entsteht in einem eigenen Linux-Job
+# (Grafana und VictoriaMetrics in Docker) und wird mit übernommen.
 name: Screenshots
 
 on:
@@ -16,7 +18,36 @@ permissions:
   contents: write
 
 jobs:
+  grafana:
+    if: inputs.nur == '' || contains(inputs.nur, 'grafana_dashboard')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Grafana und VictoriaMetrics
+        run: |
+          docker run -d --network host victoriametrics/victoria-metrics:v1.128.0 -httpListenAddr=127.0.0.1:8428 \
+            -retentionPeriod=1y >/dev/null
+          docker run -d --network host -e GF_SERVER_HTTP_ADDR=127.0.0.1 -e GF_AUTH_ANONYMOUS_ENABLED=true \
+            -e GF_AUTH_ANONYMOUS_ORG_ROLE=Admin -e GF_AUTH_DISABLE_LOGIN_FORM=true -e GF_USERS_DEFAULT_THEME=light \
+            -e GF_NEWS_NEWS_FEED_ENABLED=false grafana/grafana-oss:latest >/dev/null
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:3000/api/health >/dev/null && \
+            curl -sf http://127.0.0.1:8428/health >/dev/null && break; sleep 2; done
+      - name: Bild erzeugen
+        run: |
+          python -m pip install -q -r requirements.txt playwright
+          python -m playwright install --with-deps chromium >/dev/null
+          python tools/make_grafana_screenshot.py --out grafana-bild
+      - uses: actions/upload-artifact@v4
+        with:
+          name: grafana-bild
+          path: grafana-bild
+
   bilder:
+    needs: grafana
+    if: always()
     runs-on: windows-latest
     env:
       PYTHONUTF8: "1"
@@ -32,8 +63,24 @@ jobs:
       - name: Bilder erzeugen
         shell: bash
         run: |
+          # VictoriaMetrics für das Bild „Speicherplatz“ (im selben Schritt, damit der Server weiterläuft)
+          V=v1.128.0
+          curl -sSfL -o "$RUNNER_TEMP/vm.zip" \
+            "https://github.com/VictoriaMetrics/VictoriaMetrics/releases/download/$V/victoria-metrics-windows-amd64-$V.zip"
+          unzip -q -o "$RUNNER_TEMP/vm.zip" -d "$RUNNER_TEMP/vm"
+          "$RUNNER_TEMP/vm/victoria-metrics-windows-amd64-prod.exe" -storageDataPath="$RUNNER_TEMP/vmdata" \
+            -httpListenAddr=127.0.0.1:8428 -retentionPeriod=1y > "$RUNNER_TEMP/vm.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8428/health >/dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:8428/health >/dev/null && export PLC_VM_URL=http://127.0.0.1:8428
           python tools/make_screenshots.py --lang de --only "${{ inputs.nur }}" 2>&1 | tee doc/bilder_log_de.txt
           python tools/make_screenshots.py --lang en --only "${{ inputs.nur }}" 2>&1 | tee doc/bilder_log_en.txt
+          kill %1 2>/dev/null || true
+      - name: Bild des Grafana-Dashboards übernehmen
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: grafana-bild
+          path: doc/images
       - uses: actions/upload-artifact@v4
         with:
           name: bilder
