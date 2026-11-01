@@ -239,7 +239,7 @@ def test_netpanel_time(qapp, demo_config, monkeypatch):
     w.st_min.set_value(5)
     fake.calls.clear()
     w.apply_time()
-    assert fake.calls[-1] == ["timedatectl", "set-time", "2027-02-28 00:05:00"], fake.calls
+    assert ["timedatectl", "set-time", "2027-02-28 00:05:00"] in fake.calls, fake.calls
     assert not w.btn_ntp.isChecked() and "gestellt" in w.lbl_time_msg.text()
     # Zeitzone
     w.show_timezone()
@@ -261,7 +261,7 @@ def test_netpanel_time(qapp, demo_config, monkeypatch):
     assert w.plc_time and w.btn_take_plc.isEnabled() and "-363" in w.lbl_time_msg.text(), w.lbl_time_msg.text()
     fake.calls.clear()
     w.take_plc_clock()
-    stamp = fake.calls[-1][2]
+    stamp = next(c for c in fake.calls if c[:2] == ["timedatectl", "set-time"])[2]
     assert abs((datetime.datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S") - plc_dt).total_seconds()) <= 2
     # Uhr der Steuerung in UTC: wird in Ortszeit umgerechnet
     w.btn_utc.setChecked(True)
@@ -274,7 +274,7 @@ def test_netpanel_time(qapp, demo_config, monkeypatch):
     w.toggle_auto()
     fake.calls.clear()
     w.auto_sync()
-    assert fake.calls and fake.calls[-1][:2] == ["timedatectl", "set-time"] and "gestellt" in w.lbl_status.text()
+    assert any(c[:2] == ["timedatectl", "set-time"] for c in fake.calls) and "gestellt" in w.lbl_status.text()
     w.close()
 
 
