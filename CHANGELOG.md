@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.7.0] – 2026-11-01
+
 ### Neu
 
 * **Netzwerk-Panel: Datum und Uhrzeit** – von Hand stellen, Internetzeit (NTP) ein/aus, Zeitzone wählen; Uhrzeit
@@ -392,7 +394,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.6.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.7.0...HEAD
+[3.7.0]: ../../releases/tag/v3.7.0
 [3.6.0]: ../../releases/tag/v3.6.0
 [3.5.0]: ../../releases/tag/v3.5.0
 [3.4.3]: ../../releases/tag/v3.4.3
