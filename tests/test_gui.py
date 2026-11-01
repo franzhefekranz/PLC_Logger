@@ -245,7 +245,6 @@ def test_netpanel_time(qapp, demo_config, monkeypatch):
     w.show_timezone()
     assert w.list_tz.count() == 3 and w.list_tz.currentItem().text() == "Europe/Berlin"
     w.list_tz.setCurrentRow(2)
-    import time
     old_tz = os.environ.get("TZ")
     try:
         w.apply_timezone()
@@ -255,7 +254,8 @@ def test_netpanel_time(qapp, demo_config, monkeypatch):
             os.environ.pop("TZ", None)
         else:
             os.environ["TZ"] = old_tz
-        time.tzset()
+        if hasattr(time, "tzset"):                               # nicht unter Windows
+            time.tzset()
     # Steuerung lesen und übernehmen
     w.read_plc_clock()
     assert w.plc_time and w.btn_take_plc.isEnabled() and "-363" in w.lbl_time_msg.text(), w.lbl_time_msg.text()
