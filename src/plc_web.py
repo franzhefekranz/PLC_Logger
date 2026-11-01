@@ -429,7 +429,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         charts_out = []
         for ci, ch in enumerate(rec.charts):
             vars_out = [{"i": vi, "name": v.name, "dtype": v.dtype, "color": v.color, "axis": v.axis}
-                        for vi, v in enumerate(rec.vars) if v.chart == ci]
+                        for vi, v in enumerate(rec.vars) if v.chart == ci and getattr(v, "shown", True)]
             charts_out.append({"i": ci, "name": ch.name, "vars": vars_out,
                                "axes": [{"name": a.name, "auto": a.auto, "min": a.y_min, "max": a.y_max}
                                         for a in ch.axes]})

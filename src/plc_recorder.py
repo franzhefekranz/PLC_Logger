@@ -418,6 +418,12 @@ class Recorder:
         self.demo, self.log, self.config_path = demo, log, config_path
         n = len(variables)
         self.names = [v.name for v in variables]
+        # Gespeichert (CSV, Datenbank, Bericht) werden nur aufgezeichnete Variablen; nicht aufgezeichnete Block-Elemente
+        # werden mit ihrem Block gelesen und stehen für Formeln und Trigger bereit. store_idx = None: alle.
+        keep = [i for i, v in enumerate(variables) if getattr(v, "record", True)]
+        self.store_idx = None if len(keep) == n else keep
+        self.store_vars = [variables[i] for i in keep]
+        self.store_names = [v.name for v in self.store_vars]
         # Variablen je Steuerung (nur gelesene, keine berechneten) und berechnete Variablen.
         # Indizes in self.vars: computed_idx = berechnete Variablen, plc_vars[k] = die von Steuerung k gelesenen.
         # Die Werte einer Zeile stehen immer in der Reihenfolge von self.vars (CSV-Spalten, Puffer, Diagramme).
@@ -556,7 +562,7 @@ class Recorder:
         # Semikolon als Trennzeichen (deutsches Excel); Kopfzeile: Zeit, Epoch und die Variablennamen.
         self.csv_fh = open(path, "w", newline="", encoding="utf-8")
         self.csv_w = csv.writer(self.csv_fh, delimiter=";")
-        self.csv_w.writerow(["Zeit", "Epoch"] + self.names)
+        self.csv_w.writerow(["Zeit", "Epoch"] + self.store_names)
         self.csv_rows, self.csv_first, self._last_flush = 0, None, time.monotonic()
         self._csv_pending = True
 
@@ -575,7 +581,7 @@ class Recorder:
         if self.csv_on and self.gate is None:
             self.open_csv()
         if self.db_conf["typ"]:
-            self.db = DbWriter(self.conn, self.names, self.emit)
+            self.db = DbWriter(self.conn, self.store_names, self.emit)
             self.db.start()
         from plc_cleanup import CleanupThread, settings as cleanup_settings
         cs = cleanup_settings(self.conn)
@@ -778,7 +784,7 @@ class Recorder:
                 if acc.rows:
                     self._write_report(acc, partial=False)
                 acc = self.report_acc = self._new_report(ts)
-            acc.add(ts, row)
+            acc.add(ts, row if self.store_idx is None else row[self.store_idx])
         if gate is None:
             self._store(ts, row)
         else:                                # per Trigger: nur Vorlauf, Aufnahme und Nachlauf speichern
@@ -791,7 +797,9 @@ class Recorder:
                 self._capture_event("stop", ts)
 
     def _store(self, ts, row):
-        """Zeile in die CSV-Datei und die Datenbank schreiben."""
+        """Zeile in die CSV-Datei und die Datenbank schreiben (nur die aufgezeichneten Variablen)."""
+        if self.store_idx is not None:
+            row = row[self.store_idx]
         self._write_csv(ts, row)
         if self.db:
             self.db.put(ts, row)
@@ -802,7 +810,7 @@ class Recorder:
         c = self.conn
         kind = c.get("bericht_zeitraum") or "tag"
         t0, t1 = period_bounds(ts, kind, c.get("bericht_schichten", ""), c.get("bericht_beginn", "00:00"))
-        return ReportAccumulator(self.names, [v.dtype for v in self.vars], t0, t1, kind=kind,
+        return ReportAccumulator(self.store_names, [v.dtype for v in self.store_vars], t0, t1, kind=kind,
                                  label=period_label(kind, t0, t1, c.get("bericht_schichten", "")))
 
     def _write_report(self, acc, partial):
@@ -811,7 +819,7 @@ class Recorder:
         from plc_report import events_in, report_path, write_in_background
         try:
             path = report_path(self.conn, acc, self.csv_base, partial)
-            th = write_in_background(path, acc, self.charts, self.vars, self.conn.get("projekt", ""),
+            th = write_in_background(path, acc, self.charts, self.store_vars, self.conn.get("projekt", ""),
                                      events_in(self.events, acc.t0, acc.t1), partial, self.emit,
                                      logos=logo_paths(self.conn))
             self._report_threads = [t for t in self._report_threads if t.is_alive()] + [th]
@@ -910,7 +918,7 @@ class Recorder:
         ms = int(round(ts * 1000))
         stamp = datetime.fromtimestamp(ms // 1000).strftime("%Y-%m-%d %H:%M:%S") + f".{ms % 1000:03d}"
         self.csv_w.writerow([stamp, f"{ms / 1000:.3f}"] +
-                            [fmt_csv(float(val), self.vars[i].dtype) for i, val in enumerate(row)])
+                            [fmt_csv(float(val), v.dtype) for v, val in zip(self.store_vars, row)])
         if self.csv_first is None:
             self.csv_first = ts
         self.csv_rows += 1

@@ -35,6 +35,7 @@ self.y[i] (Werte der Variable i) sind numpy-Felder.
 """
 # Standardbibliothek: html, math, os, re, subprocess
 # (Konfigurationsprogramm starten), sys, datetime.
+import dataclasses
 import html
 import math
 import os
@@ -1514,7 +1515,7 @@ class MainWindow(QMainWindow):
         # Pro Diagramm ein ChartPanel (Kurven, Legende, Balken, Lineale) anlegen.
         for ci, ch in enumerate(self.charts):
             # Variablen dieses Diagramms: alle, deren Diagramm-Index passt (Reihenfolge wie in der Konfiguration).
-            idx = [i for i, v in enumerate(self.vars) if v.chart == ci]
+            idx = [i for i, v in enumerate(self.vars) if v.chart == ci and v.shown]
             panel = ChartPanel(ci, ch, idx, self.vars, show_bars, self.act_boolplot.isChecked(),
                                int(self.conn.get("balken_breite", 14) or 14))
             panel.apply_scaling(self.act_yauto.isChecked())
@@ -1611,7 +1612,7 @@ class MainWindow(QMainWindow):
         self.table.setRowCount(0)
         self.row_of = {}
         for i, v in enumerate(self.vars):
-            if not v.show_value:
+            if not v.show_value or not v.shown:
                 continue
             r = self.table.rowCount()
             self.table.insertRow(r)
@@ -1777,9 +1778,10 @@ class MainWindow(QMainWindow):
         i0, i1 = int(np.searchsorted(t, a, side="left")), int(np.searchsorted(t, b, side="right"))
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            acc = ReportAccumulator([v.name for v in self.vars], [v.dtype for v in self.vars], a, b,
+            keep = [i for i, v in enumerate(self.vars) if v.record]       # nur aufgezeichnete Variablen
+            acc = ReportAccumulator([self.vars[i].name for i in keep], [self.vars[i].dtype for i in keep], a, b,
                                     label=f"{fmt_time(a)[:16]} – {fmt_time(b)[:16]}")
-            acc.add_many(t[i0:i1], np.asarray(y, dtype=float)[:, i0:i1])
+            acc.add_many(t[i0:i1], np.asarray(y, dtype=float)[keep, i0:i1])
             from plc_common import logo_paths
             write_report(path, acc, self.charts, self.vars, self.conn.get("projekt", ""),
                          events_in(self.event_log(), a, b), logos=logo_paths(self.conn))
@@ -2733,7 +2735,7 @@ class MainWindow(QMainWindow):
         names = [v.name for v in self.vars]
         try:
             conn, _charts, cfg_vars = load_config(self.config_path)
-            names = [v.name for v in cfg_vars]
+            names = [v.name for v in cfg_vars if v.record]
         except Exception:
             pass
         dlg = DbLoadDialog(self, conn, names, conn.get("projekt", ""))
@@ -2777,8 +2779,9 @@ class MainWindow(QMainWindow):
             i0, i1 = int(np.searchsorted(t, a, side="left")), int(np.searchsorted(t, b, side="right"))
             return (i1 - i0, float(t[i0]), float(t[i1 - 1])) if i1 > i0 else (0, a, a)
 
-        n_visible = sum(1 for v in self.vars if v.name not in self.hidden)
-        dlg = export_dialog_class()(self, ranges, count, len(self.vars), n_visible)
+        n_rec = sum(1 for v in self.vars if v.record)
+        n_visible = sum(1 for v in self.vars if v.shown and v.name not in self.hidden)
+        dlg = export_dialog_class()(self, ranges, count, n_rec, n_visible)
         if not dlg.exec() or dlg.result is None:
             return
         res = dlg.result
@@ -2791,7 +2794,9 @@ class MainWindow(QMainWindow):
         if os.path.splitext(path)[1].lower() not in (".xlsx", ".csv"):
             path += ".csv" if "csv" in flt.lower() else ".xlsx"
         # Variablen und Zeitbereich auswählen, dann ggf. verdichten.
-        idx = [k for k, v in enumerate(self.vars) if not (res["visible_only"] and v.name in self.hidden)]
+        # Nur aufgezeichnete Variablen (wie in der CSV-Datei); „nur sichtbare“: angezeigt und nicht ausgeblendet.
+        idx = [k for k, v in enumerate(self.vars)
+               if v.record and not (res["visible_only"] and (v.name in self.hidden or not v.shown))]
         a, b = res["range"]
         i0, i1 = int(np.searchsorted(t, a, side="left")), int(np.searchsorted(t, b, side="right"))
         tt, yy = t[i0:i1], y[idx, i0:i1]
@@ -2815,8 +2820,9 @@ class MainWindow(QMainWindow):
         """Geladene Daten (CSV oder Datenbank) offline anzeigen."""
         # Farben, Diagramm- und Achsenzuordnung der Variablen kommen aus der aktuellen Konfiguration, soweit der Name dort vorkommt;
         # unbekannte Variablen erscheinen auf der ersten Achse des ersten Diagramms.
-        _conn, charts, cfg_vars = load_config(self.config_path)
-        ref = {v.name: v for v in cfg_vars}
+        # Was in der Datei steht, wurde aufgezeichnet (record=True); „anzeigen“ gilt wie in der Konfiguration.
+        _conn, charts, cfg_vars = load_config(self.config_path, alle=True)
+        ref = {v.name: dataclasses.replace(v, record=True) for v in cfg_vars}
         self.charts = charts
         self.vars = [ref.get(n) or Variable(name=n, color=PALETTE[k % len(PALETTE)])
                      for k, n in enumerate(names)]

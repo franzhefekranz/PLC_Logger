@@ -792,6 +792,18 @@ Jede Zeile der Variablentabelle beschreibt einen Wert einer Steuerung:
        sichtbar stehen und wird beim Speichern als Fehler gemeldet.
    * - Farbe
      - Linienfarbe; Klick öffnet die Farbauswahl.
+   * - Aufzeichnen
+     - Aktiv (Vorgabe): Die Variable wird aus der Steuerung gelesen und gespeichert
+       (CSV-Datei, Datenbank, Bericht). Aus: Die Variable bleibt mit allen
+       Einstellungen in der Konfiguration, wird aber **nicht gelesen** – so lassen
+       sich Variablen vorbereiten und bei Bedarf zur Aufzeichnung hinzunehmen oder
+       wieder herausnehmen. Formeln, Trigger und die PID-Optimierung können nicht
+       aufgezeichnete Variablen nicht verwenden (Meldung beim Speichern).
+   * - Anzeigen
+     - Aktiv (Vorgabe): Die Variable erscheint in den Diagrammen und in der
+       Werte-/Lineal-Tabelle (Logger, Webserver, Bericht, Grafana-Dashboard). Aus:
+       Die Variable wird aufgezeichnet, aber nicht angezeigt. Nur aufgezeichnete
+       Variablen können angezeigt werden.
    * - Werteanzeige
      - Aktiv: Die Variable erscheint in der Werte-/Lineal-Tabelle des Loggers.
    * - Balken
@@ -822,8 +834,11 @@ Variablen suchen und filtern
   vorkommen (``temp db10``), ``*`` und ``?`` sind Platzhalter (``DB?.DBD*``), ein
   Wort mit vorangestelltem ``-`` schließt aus (``temp -soll``).
 * **Steuerung** – nur Variablen einer Steuerung (berechnete Variablen bleiben sichtbar).
-* **Art** – *nur gelesene*, *nur berechnete* oder *ohne Adresse* (noch unvollständige
-  Zeilen).
+* **Art** – *nur gelesene*, *nur berechnete*, *ohne Adresse* (noch unvollständige
+  Zeilen), *nicht aufgezeichnet* oder *nicht angezeigt*.
+
+Im Variablenbaum links erscheinen nicht aufgezeichnete bzw. nicht angezeigte Variablen
+grau mit dem Zusatz *(nicht aufgezeichnet)* bzw. *(nicht angezeigt)*.
 
 Rechts steht, wie viele Variablen gerade zu sehen sind (*12 von 340*); das Suchfeld
 ist gelb hinterlegt, solange ein Filter wirkt. Ausgeblendete Variablen bleiben in
@@ -1035,6 +1050,18 @@ Hinweise:
 * Die Block-Elemente sind normale Variablen: Sie erscheinen in Diagrammen,
   Legende, Wertetabelle, Balken und CSV-Datei und können in **Formeln**
   verwendet werden, z. B. ``{Messwerte[3]} - {Messwerte[4]}``.
+* **Aufzeichnen und Anzeigen je Element:** Im Baum des Blockeditors hat jedes
+  Element die Kontrollkästchen *Aufzeichnen* und *Anzeigen*. Nicht aufgezeichnete
+  Elemente werden nicht gespeichert (CSV-Datei, Datenbank, Bericht), nur
+  aufgezeichnete Elemente ohne *Anzeigen* erscheinen nicht in den Diagrammen und der
+  Wertetabelle. **Gelesen wird der Block immer vollständig** – auch nicht
+  aufgezeichnete Elemente stehen deshalb für Formeln und Trigger bereit. Die
+  angezeigten Elemente lassen sich wie gewohnt auf die Diagramme verteilen. Unter dem
+  Baum setzt **Für alle setzen** *aufzeichnen und anzeigen*, *nur aufzeichnen* oder
+  *nicht aufzeichnen* für alle Elemente des markierten Blocks. Die Blockzeile im Baum
+  zeigt, wie viele Elemente aufgezeichnet bzw. angezeigt werden; in der
+  Konfigurationsdatei stehen die Ausnahmen unter ``nicht_aufzeichnen`` und
+  ``nicht_anzeigen`` (Liste der Elementindizes).
 * **Elementnamen ändern:** Im unteren Teil des Blockeditors zeigt ein **Baum**
   alle Blöcke mit ihren Elementen. Per Doppelklick auf die Spalte *Name* erhält
   ein Element einen eigenen Namen, z. B. ``Druck Vorlauf`` statt
@@ -1055,7 +1082,8 @@ Hinweise:
   genug, DB lang genug, Register vorhanden), sonst schlägt das Lesen des Blocks
   fehl; die übrigen Variablen werden weiter gelesen.
 * Viele Elemente bedeuten viele Kurven: Teilen Sie große Blöcke auf mehrere
-  Diagramme bzw. Y-Achsen auf oder schalten Sie *Werteanzeige* ab.
+  Diagramme bzw. Y-Achsen auf oder schalten Sie *Anzeigen* bzw. *Werteanzeige* für
+  einzelne Elemente ab.
 
 .. _ringpuffer:
 
@@ -1320,7 +1348,7 @@ Calc, ``.ods``).
 * **Variablen exportieren (CSV/Excel) …** schreibt alle Variablen der Tabelle
   (ohne Block-Elemente, siehe `Blocklesemodus <blocklesemodus_>`__) mit den Spalten
   ``Name``, ``Steuerung``, ``Diagramm``, ``Y-Achse``, ``Adresse``, ``Typ``,
-  ``Farbe``, ``Werteanzeige``, ``Balken`` und ``Formel``.
+  ``Farbe``, ``Aufzeichnen``, ``Anzeigen``, ``Werteanzeige``, ``Balken`` und ``Formel``.
 * **Variablen importieren (CSV/Excel/ODS) …** liest eine solche Datei. Die erste
   Zeile enthält die Spaltennamen; Pflicht ist nur ``Name``, Reihenfolge und
   Groß-/Kleinschreibung sind egal. CSV-Dateien dürfen Semikolon, Komma oder
@@ -1337,8 +1365,8 @@ Beim Import gilt:
   angelegt, leer = erstes Diagramm bzw. erste Achse.
 * ``Typ`` leer = Standardtyp des Treibers; ``Farbe`` als ``#rrggbb``, leer =
   Farbe aus der Palette.
-* ``Werteanzeige`` und ``Balken``: ``ja``/``nein`` (auch ``1``/``0``, ``x``);
-  leer = ja.
+* ``Aufzeichnen``, ``Anzeigen``, ``Werteanzeige`` und ``Balken``: ``ja``/``nein``
+  (auch ``1``/``0``, ``x``); leer = ja.
 * Ist ``Formel`` gefüllt, entsteht eine berechnete Variable (``Adresse`` und
   ``Typ`` werden dann ignoriert).
 

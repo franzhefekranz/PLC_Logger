@@ -319,6 +319,11 @@ class Variable:
     block: str = ""           # Name des Blocks, zu dem die Variable gehört (Blocklesemodus)
     block_idx: int = 0        # Position innerhalb des Blocks
     plc: int = 0              # Index der Steuerung (0-basiert, siehe Plc)
+    # aufzeichnen: aus der Steuerung lesen und speichern (CSV, Datenbank, Bericht). Nicht aufgezeichnete Variablen
+    # bleiben in der Konfiguration, werden aber nicht gelesen (load_config lässt sie weg); Block-Elemente werden mit
+    # ihrem Block immer gelesen, nur nicht gespeichert. anzeigen: in den Diagrammen und der Werteliste zeigen.
+    record: bool = True
+    display: bool = True
     # Element eines Ringpuffers: der Block (Block mit ring > 0). Solche Variablen liest der Treiber nicht im Takt,
     # sondern holt die in der Steuerung gesammelten Datensätze ab (siehe plc_treiber/ringbuffer.py).
     ring: object = field(default=None, repr=False, compare=False)
@@ -327,6 +332,11 @@ class Variable:
     def tag(self) -> str:
         """Gleichbedeutend mit address (Schreibweise der Tag-basierten Treiber)."""
         return self.address
+
+    @property
+    def shown(self) -> bool:
+        """In Diagrammen und Werteliste zeigen? (nur aufgezeichnete Variablen mit „anzeigen“)"""
+        return self.record and self.display
 
 
 def _shade(color: str, i: int) -> str:
@@ -378,6 +388,8 @@ class Block:
     targets: dict = field(default_factory=dict)  # abweichendes Ziel einzelner Elemente {Index: (Diagramm, Achse)}
     driver: str = DEFAULT_DRIVER                # Treiber der Steuerung (bestimmt die Elementadressen)
     ring: int = 0                               # > 0: Ringpuffer mit so vielen Datensätzen (0 = normaler Block)
+    no_record: set = field(default_factory=set)  # Elemente, die nicht gespeichert werden (gelesen wird der ganze Block)
+    no_display: set = field(default_factory=set)  # Elemente, die nicht in den Diagrammen erscheinen
 
     def size_bytes(self) -> int:
         """Größe des Blocks in Bytes (Anzahl × Größe des Datentyps; Ringpuffer: Zähler + alle Datensätze)."""
@@ -415,6 +427,7 @@ class Block:
                 name=self.names.get(i) or f"{self.name}[{i}]", address=self.element_address(i),
                 dtype=self.dtype, color=_shade(self.color, i), show_value=self.show_value,
                 chart=chart, axis=axis, bar=self.bar, block=self.name, block_idx=i, plc=self.plc,
+                record=i not in self.no_record, display=i not in self.no_record and i not in self.no_display,
                 ring=self if self.ring else None))
         return out
 
@@ -444,12 +457,13 @@ CONFIG_VERSION = 1
 _GROUPS = (("steuerungen", "Steuerungen", "Steuerung"), ("diagramme", "Diagramme", "Diagramm"),
            ("variablen", "Variablen", "Var"), ("bloecke", "Bloecke", "Block"), ("trigger", "Trigger", "Trigger"))
 # Schlüssel mit festem Typ in der JSON-Datei (alle übrigen bleiben Text)
-_BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "pid_aktiv", "gehen", "quittieren",
-              "web_aktiv", "web_https", "headless", "csv_aktiv", "bericht_aktiv", "archiv_beenden", "db_nur_aenderungen"}
+_BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "aufzeichnen", "anzeigen", "pid_aktiv", "gehen",
+              "quittieren", "web_aktiv", "web_https", "headless", "csv_aktiv", "bericht_aktiv", "archiv_beenden", "db_nur_aenderungen"}
 _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "start", "fenster_s", "max_records",
              "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl", "puffer"}
 _FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude", "aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s"}
+_INDEX_LIST_KEYS = {"nicht_aufzeichnen", "nicht_anzeigen"}                    # Block: Elementindizes als Zahlenliste
 _JSON_KEYS = {"treiberdaten", "web_benutzer", "benachrichtigung", "opcua_server"}                  # Text mit JSON-Inhalt -> verschachteltes Objekt
 
 
@@ -499,10 +513,14 @@ def _section_to_json(sec):
     """Einen Abschnitt (Schlüssel -> Text) in ein JSON-Objekt mit passenden Typen umsetzen.
 
     Die Blockschlüssel ``elem_<i>`` (eigene Elementnamen) und ``elemziel_<i>`` (abweichendes Diagramm/Achse) werden zu
-    den verschachtelten Objekten ``elementnamen`` bzw. ``elementziele`` zusammengefasst.
+    den verschachtelten Objekten ``elementnamen`` bzw. ``elementziele`` zusammengefasst; ``nicht_aufzeichnen`` und
+    ``nicht_anzeigen`` (Elementindizes) werden zu Zahlenlisten.
     """
     out = {}
     for k, v in sec.items():
+        if k in _INDEX_LIST_KEYS:
+            out[k] = sorted(_index_set(v, 1_000_000))
+            continue
         m = re.fullmatch(r"elem_(\d+)", k)
         if m:
             out.setdefault("elementnamen", {})[m.group(1)] = v
@@ -533,6 +551,8 @@ def _json_to_section(d):
         elif k == "elementziele" and isinstance(v, dict):
             for idx, (dg, ax) in v.items():
                 sec[f"elemziel_{int(idx)}"] = f"{int(dg)},{int(ax)}"
+        elif k in _INDEX_LIST_KEYS and isinstance(v, list):
+            sec[k] = ",".join(str(int(x)) for x in v)
         elif k != "achsen" or not isinstance(v, list):
             sec[k] = _to_text(v)
     return sec
@@ -856,6 +876,16 @@ def remember_config_path(path: str):
     save_settings(zuletzt=lst[:15])
 
 
+def _index_set(text, count):
+    """ "1, 3,7" -> {1, 3, 7} (nur gültige Indizes 0 … count-1; Unsinn wird übergangen)."""
+    out = set()
+    for part in str(text).replace(";", ",").split(","):
+        part = part.strip()
+        if part.isdigit() and int(part) < count:
+            out.add(int(part))
+    return out
+
+
 def _parse_blocks(cp, charts, n_plc=1, plc_drivers=()):
     """Block-Abschnitte der Konfiguration in Block-Objekte umsetzen (n_plc: Anzahl der Steuerungen)."""
     # Block-Abschnitte ([BlockN]) aus der geöffneten Konfiguration lesen.
@@ -892,12 +922,14 @@ def _parse_blocks(cp, charts, n_plc=1, plc_drivers=()):
                 ta = min(max(ta - 1, 0), len(charts[tc].axes) - 1)
                 if (tc, ta) != (chart, axis):
                     targets[int(key[9:])] = (tc, ta)
+        # Elemente ohne Aufzeichnung bzw. ohne Anzeige: Liste der Indizes (0-basiert), z. B. "1,3,7".
+        no_rec, no_disp = (_index_set(s.get(k, ""), count) for k in ("nicht_aufzeichnen", "nicht_anzeigen"))
         plc = min(max(s.getint("steuerung", 1) - 1, 0), max(n_plc - 1, 0))
         drv = plc_drivers[plc] if plc < len(plc_drivers) else DEFAULT_DRIVER
         old_s7 = "bereich" in s and not s.get("adresse", "").strip()
         ring = max(0, min(s.getint("puffer", 0), 100_000))           # Ringpuffer: Anzahl Datensätze (0 = Block)
         blocks.append(Block(
-            ring=ring,
+            ring=ring, no_record=no_rec, no_display=no_disp - no_rec,
             name=s.get("name", f"Block{i}"), address=_address_from(s, dtype),
             start=0 if old_s7 else max(0, s.getint("start", 0)), dtype=dtype, driver=drv,
             plc=plc, targets=targets,
@@ -924,10 +956,12 @@ def load_blocks(path: str = None) -> list:
     return _parse_blocks(cp, charts, len(plcs), [p.driver for p in plcs])
 
 
-def load_config(path: str = None):
+def load_config(path: str = None, alle: bool = False):
     """Liest die Konfigurationsdatei (JSON) -> (Verbindungs-Dict, Liste von Chart, Liste von Variable).
 
-    Die Steuerungen liefert load_plcs(); Variable.plc verweist auf deren Index."""
+    Die Steuerungen liefert load_plcs(); Variable.plc verweist auf deren Index. Variablen ohne „aufzeichnen“ fehlen in
+    der Liste (sie werden nicht gelesen), außer mit ``alle=True`` (Konfigurationsprogramm). Block-Elemente sind immer
+    dabei (der Block wird ganz gelesen); ``Variable.record``/``display`` sagen, ob gespeichert bzw. angezeigt wird."""
     path = path or CONFIG_FILE
     # Mit Vorgabewerten beginnen; was in der Datei steht, überschreibt sie.
     conn = default_connection()
@@ -1013,9 +1047,13 @@ def load_config(path: str = None):
             bar=s.getboolean("balken", True),
             formula=s.get("formel", ""),
             plc=min(max(s.getint("steuerung", 1) - 1, 0), len(plcs) - 1),
+            record=s.getboolean("aufzeichnen", True),
+            display=s.getboolean("anzeigen", True),
         ))
     # Block-Elemente stehen NICHT als [VarN] in der Datei, sondern werden hier aus den Blockdefinitionen
     # erzeugt und hinten an die Variablenliste gehängt (Reihenfolge: normale Variablen, dann Blöcke).
+    if not alle:
+        variables = [v for v in variables if v.record]
     for blk in _parse_blocks(cp, charts, len(plcs), [p.driver for p in plcs]):   # Block-Elemente anhängen
         variables.extend(blk.variables())
     return conn, charts, variables
@@ -1069,6 +1107,8 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
             "balken": "1" if v.bar else "0",
             "formel": " ".join(v.formula.split()),
             "steuerung": str(v.plc + 1),
+            "aufzeichnen": "1" if v.record else "0",
+            "anzeigen": "1" if v.display else "0",
         }
     cp["Bloecke"] = {"anzahl": str(len(blocks))}
     for i, b in enumerate(blocks, 1):
@@ -1079,6 +1119,12 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
             "steuerung": str(b.plc + 1)}
         if b.ring:
             cp[f"Block{i}"]["puffer"] = str(b.ring)
+        no_rec = sorted(k for k in b.no_record if 0 <= k < b.count)
+        no_disp = sorted(k for k in b.no_display if 0 <= k < b.count and k not in b.no_record)
+        if no_rec:
+            cp[f"Block{i}"]["nicht_aufzeichnen"] = ",".join(map(str, no_rec))
+        if no_disp:
+            cp[f"Block{i}"]["nicht_anzeigen"] = ",".join(map(str, no_disp))
         # Elemente, die in einem anderen Diagramm/auf einer anderen Y-Achse liegen als der Block.
         for idx, (tc, ta) in sorted(b.targets.items()):
             if 0 <= idx < b.count and (tc, ta) != (b.chart, b.axis):

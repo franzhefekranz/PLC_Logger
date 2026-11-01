@@ -29,7 +29,7 @@ Ziele in ``targets_of`` (Zeilen-ID -> {Index: (Diagramm, Achse)}); beim Schließ
 import time
 
 from PySide6.QtCore import QTimer, Qt, QUrl
-from PySide6.QtGui import QColor, QDesktopServices
+from PySide6.QtGui import QBrush, QColor, QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout,
     QHeaderView, QLabel, QMessageBox, QPushButton, QSpinBox, QSplitter, QTableWidget,
@@ -48,8 +48,12 @@ RING_TIP = tr("Ringpuffer für zyklussynchrone Aufzeichnung: Anzahl Datensätze 
               "Block). Die Steuerung schreibt je Zyklus einen Datensatz mit Anzahl Werten, der Logger holt sie im "
               "Leseintervall ab – lückenlos und mit dem Zeitpunkt aus der Steuerung. Puffer mindestens 3 × "
               "Leseintervall ÷ Zykluszeit groß wählen. Nur Treiber s7, tia und clx.")
-# Spalten des Elementbaums: Nummer, Name, Adresse, Format, Ziel (Diagramm › Y-Achse; Auswahlliste).
-T_NAME, T_ADDR, T_TYPE, T_TARGET = 1, 2, 3, 4
+# Spalten des Elementbaums: Nummer, Name, Adresse, Format, Ziel (Diagramm › Y-Achse; Auswahlliste), Aufzeichnen und
+# Anzeigen (Kontrollkästchen).
+T_NAME, T_ADDR, T_TYPE, T_TARGET, T_REC, T_DISP = 1, 2, 3, 4, 5, 6
+REC_TIP = tr("Aufzeichnen: Element speichern (CSV, Datenbank, Bericht). Gelesen wird immer der ganze Block; nicht "
+             "aufgezeichnete Elemente stehen für Formeln und Trigger bereit.")
+DISP_TIP = tr("Anzeigen: Element in den Diagrammen und der Werteliste zeigen (nur aufgezeichnete Elemente).")
 
 # Hilfetext oben im Dialog (HTML).
 HELP = (
@@ -60,7 +64,9 @@ HELP = (
        "<i>ersten Index</i>. Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in "
        "Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick "
        "ändern (leer = Standardname <code>Name[i]</code>) und einzelne Elemente einem <b>anderen Diagramm bzw. einer "
-       "anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks).")
+       "anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks). Mit <b>Aufzeichnen</b> und <b>Anzeigen</b> "
+       "wählen Sie je Element, ob es gespeichert und in den Diagrammen gezeigt wird – gelesen wird immer der ganze "
+       "Block.")
     + " " + tr("Ein <b>Ringpuffer</b> (Spalte <i>Ringpuffer</i> &gt; 0) zeichnet <b>zyklussynchron</b> auf: Die "
                "Steuerung sammelt je Zyklus einen Datensatz, der Logger holt die Datensätze ab (Bausteine unter "
                "<i>SPS-Vorlagen …</i>).")
@@ -89,6 +95,8 @@ class BlockEditor(QDialog):
         # Eigene Elementnamen je Tabellenzeile, über eine stabile Zeilen-ID erreichbar (Zeilennummern ändern sich beim Löschen).
         self.names_of = {}        # Zeilen-ID -> eigene Elementnamen {Index: Name}
         self.targets_of = {}      # Zeilen-ID -> abweichende Ziele einzelner Elemente {Index: (Diagramm, Achse)}
+        self.norec_of = {}        # Zeilen-ID -> Elemente ohne Aufzeichnung {Index}
+        self.nodisp_of = {}       # Zeilen-ID -> Elemente ohne Anzeige {Index}
         self._uid = 0             # Zähler für Zeilen-IDs
         # Während der Baum programmatisch gefüllt wird, sollen Änderungssignale nichts bewirken.
         self._filling = False     # True, solange der Baum befüllt wird (Änderungssignale ignorieren)
@@ -106,9 +114,12 @@ class BlockEditor(QDialog):
         # Baum unten: Block -> Elemente. Spalte 1 (Name) der Elemente ist editierbar.
         # Baum: Block > Elemente mit editierbarem Namen (Kinder werden erst beim Aufklappen erzeugt)
         self.tree = QTreeWidget()
-        self.tree.setColumnCount(5)
+        self.tree.setColumnCount(7)
         self.tree.setHeaderLabels([tr("Block / Element"), tr("Name (Doppelklick = ändern)"), tr("Adresse"), tr("Format"),
-                                   tr("Diagramm › Y-Achse")])
+                                   tr("Diagramm › Y-Achse"), tr("Aufzeichnen"), tr("Anzeigen")])
+        self.tree.headerItem().setToolTip(T_REC, REC_TIP)
+        self.tree.headerItem().setToolTip(T_DISP, DISP_TIP)
+        self.tree.setColumnWidth(T_TARGET, 260)
         self.tree.setColumnWidth(0, 200)
         self.tree.setColumnWidth(1, 320)
         self.tree.setColumnWidth(2, 160)
@@ -164,6 +175,17 @@ class BlockEditor(QDialog):
         row_all.addWidget(QLabel(tr("Ziel:")))
         row_all.addWidget(self.cb_all, 1)
         row_all.addWidget(b_all)
+        # Aufzeichnen/Anzeigen für alle Elemente des markierten Blocks.
+        self.cb_flags = QComboBox()
+        for text, key in ((tr("aufzeichnen und anzeigen"), (True, True)), (tr("nur aufzeichnen"), (True, False)),
+                          (tr("nicht aufzeichnen"), (False, False))):
+            self.cb_flags.addItem(text, key)
+        b_flags = QPushButton(tr("Für alle setzen"))
+        b_flags.setToolTip(tr("Aufzeichnen/Anzeigen für alle Elemente des markierten Blocks setzen"))
+        b_flags.clicked.connect(self.set_all_flags)
+        row_all.addSpacing(16)
+        row_all.addWidget(self.cb_flags)
+        row_all.addWidget(b_flags)
         bl.addLayout(row_all)
         split = QSplitter(Qt.Orientation.Vertical)
         split.addWidget(top)
@@ -195,6 +217,8 @@ class BlockEditor(QDialog):
         name_item.setData(Qt.ItemDataRole.UserRole, self._uid)       # stabile ID der Zeile
         self.names_of[self._uid] = dict(b.names)
         self.targets_of[self._uid] = dict(b.targets)
+        self.norec_of[self._uid] = set(b.no_record)
+        self.nodisp_of[self._uid] = set(b.no_display)
         self.table.setItem(r, C_NAME, name_item)
         # Steuerung, aus der der Block gelesen wird.
         plc = QComboBox(); plc.addItems(self.plc_names)
@@ -339,7 +363,7 @@ class BlockEditor(QDialog):
             color=t.cellWidget(r, C_COLOR).property("color"),
             show_value=t.item(r, C_SHOW).checkState() == Qt.CheckState.Checked,
             bar=t.item(r, C_BAR).checkState() == Qt.CheckState.Checked,
-            names=self.names_for_row(r))
+            names=self.names_for_row(r), **self.flags_for_row(r))
 
     # Info-Spalte aktualisieren (Adressbereich + Größe) und den Baum zur Neuerstellung vormerken.
     def update_info(self, r):
@@ -372,6 +396,14 @@ class BlockEditor(QDialog):
         count = self.table.cellWidget(r, C_COUNT).value() if self.table.cellWidget(r, C_COUNT) else 0
         return {i: n for i, n in self.names_of.get(self.row_uid(r), {}).items() if 0 <= i < count and n}
 
+    def flags_for_row(self, r):
+        """Elemente ohne Aufzeichnung bzw. ohne Anzeige der Zeile r -> {"no_record": …, "no_display": …}."""
+        count = self.table.cellWidget(r, C_COUNT).value() if self.table.cellWidget(r, C_COUNT) else 0
+        uid = self.row_uid(r)
+        norec = {i for i in self.norec_of.get(uid, ()) if 0 <= i < count}
+        nodisp = {i for i in self.nodisp_of.get(uid, ()) if 0 <= i < count} - norec
+        return {"no_record": norec, "no_display": nodisp}
+
     def targets_for_row(self, r, block_target):
         """Abweichende Ziele einzelner Elemente der Zeile r (nur gültige Indizes und gültige Ziele, die nicht
         dem Ziel des Blocks entsprechen)."""
@@ -396,7 +428,9 @@ class BlockEditor(QDialog):
             if self.table.cellWidget(r, C_COUNT) is None:      # Zeile noch im Aufbau
                 continue
             b = self.block_of_row(r)
-            top = QTreeWidgetItem([b.name, "", b.address_range(), f"{b.count} × {b.dtype}"])
+            top = QTreeWidgetItem([b.name, "", b.address_range(), f"{b.count} × {b.dtype}", "",
+                                   f"{b.count - len(b.no_record)}/{b.count}",
+                                   f"{b.count - len(b.no_record) - len(b.no_display)}/{b.count}"])
             top.setData(0, Qt.ItemDataRole.UserRole, self.row_uid(r))
             # Ohne Kind-Element würde kein Aufklapp-Pfeil angezeigt; der leere Platzhalter wird beim Aufklappen ersetzt.
             top.addChild(QTreeWidgetItem())                    # Platzhalter: zeigt den Aufklapp-Pfeil
@@ -436,7 +470,12 @@ class BlockEditor(QDialog):
             child = QTreeWidgetItem([f"[{i}]", v.name, v.address, v.dtype])
             child.setData(0, Qt.ItemDataRole.UserRole, i)
             # Nur Spalte 1 (Name) ist editierbar; Spalte 0 zeigt die Nummer [i].
-            child.setFlags(child.flags() | Qt.ItemFlag.ItemIsEditable)   # Spalte 1 ist editierbar
+            child.setFlags(child.flags() | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsUserCheckable)
+            child.setCheckState(T_REC, Qt.CheckState.Checked if v.record else Qt.CheckState.Unchecked)
+            child.setCheckState(T_DISP, Qt.CheckState.Checked if v.display else Qt.CheckState.Unchecked)
+            child.setToolTip(T_REC, REC_TIP)
+            child.setToolTip(T_DISP, DISP_TIP)
+            self._grey(child, v.record, v.display)
             top.addChild(child)
             # Spalte 'Diagramm › Y-Achse': Auswahlliste; Eintrag 0 = wie der Block, sonst ein eigenes Ziel des Elements.
             combo = QComboBox()
@@ -472,10 +511,56 @@ class BlockEditor(QDialog):
         self.rebuild_tree()
         self.expand_selected()
 
+    @staticmethod
+    def _grey(child, rec, disp):
+        """Nicht aufgezeichnete bzw. nicht angezeigte Elemente grau darstellen."""
+        brush = QBrush(QColor("#999")) if not (rec and disp) else QBrush()
+        for c in (0, T_NAME, T_ADDR, T_TYPE):
+            child.setForeground(c, brush)
+
+    def on_flag_changed(self, item, col):
+        """Kontrollkästchen Aufzeichnen/Anzeigen eines Elements geändert (ohne Aufzeichnung keine Anzeige)."""
+        uid = item.parent().data(0, Qt.ItemDataRole.UserRole)
+        idx = item.data(0, Qt.ItemDataRole.UserRole)
+        norec, nodisp = self.norec_of.setdefault(uid, set()), self.nodisp_of.setdefault(uid, set())
+        rec = item.checkState(T_REC) == Qt.CheckState.Checked
+        disp = item.checkState(T_DISP) == Qt.CheckState.Checked
+        if col == T_DISP and disp and not rec:          # Anzeigen verlangt Aufzeichnen
+            rec = True
+        (norec.discard if rec else norec.add)(idx)
+        (nodisp.discard if disp else nodisp.add)(idx)
+        self._filling = True
+        item.setCheckState(T_REC, Qt.CheckState.Checked if rec else Qt.CheckState.Unchecked)
+        item.setCheckState(T_DISP, Qt.CheckState.Checked if rec and disp else Qt.CheckState.Unchecked)
+        self._grey(item, rec, disp)
+        top = item.parent()
+        n = top.childCount()
+        top.setText(T_REC, f"{n - len(norec)}/{n}")
+        top.setText(T_DISP, f"{n - len(norec | nodisp)}/{n}")
+        self._filling = False
+
+    def set_all_flags(self):
+        """Aufzeichnen/Anzeigen aus der Auswahlliste für ALLE Elemente des markierten Blocks setzen."""
+        rows = sorted({i.row() for i in self.table.selectedIndexes()})
+        if not rows:
+            QMessageBox.information(self, tr("Aufzeichnen/Anzeigen"), tr("Bitte zuerst einen Block markieren."))
+            return
+        rec, disp = self.cb_flags.currentData()
+        uid, count = self.row_uid(rows[0]), self.table.cellWidget(rows[0], C_COUNT).value()
+        self.norec_of[uid] = set() if rec else set(range(count))
+        self.nodisp_of[uid] = set() if disp else set(range(count))
+        self.rebuild_tree()
+        self.expand_selected()
+
     def on_name_edited(self, item, col):
         """Name eines Elements wurde geändert: leer oder Standardname = Standard wiederherstellen."""
+        if self._filling or item.parent() is None:
+            return
+        if col in (T_REC, T_DISP):
+            self.on_flag_changed(item, col)
+            return
         # Nur Änderungen des Namens eines Elements (Kind, Spalte 1) interessieren, nicht das programmgesteuerte Befüllen.
-        if self._filling or col != 1 or item.parent() is None:
+        if col != 1:
             return
         uid = item.parent().data(0, Qt.ItemDataRole.UserRole)
         r = self.row_of_uid(uid)

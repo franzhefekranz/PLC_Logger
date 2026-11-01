@@ -16,6 +16,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Neu
 
+* **Aufzeichnen und Anzeigen je Variable:** Neue Spalten *Aufzeichnen* und *Anzeigen* in der Variablentabelle.
+  Nicht aufgezeichnete Variablen bleiben in der Konfiguration, werden aber nicht gelesen; angezeigt (Diagramme,
+  Wertetabelle, Webserver, Bericht, Grafana-Dashboard) werden nur aufgezeichnete Variablen mit *Anzeigen*. Bei Blöcken
+  lässt sich das je Element wählen (Blockeditor, auch für alle Elemente auf einmal); der Block wird weiterhin immer
+  vollständig gelesen, nicht aufgezeichnete Elemente stehen für Formeln und Trigger bereit. Filter „nicht
+  aufgezeichnet“/„nicht angezeigt“, graue Einträge im Variablenbaum, Spalten auch im Variablen-Export/-Import.
 * **Netzwerk-Panel für einen Touchscreen** (`plc-netzwerk` bzw. `--netzwerk`): bildschirmfüllend ohne Desktop (Qt eglfs),
   zeigt Rechnername, IP-Adressen von Ethernet und WLAN, Zustand des Logger-Dienstes und die Webserver-Adresse mit
   QR-Code; stellt über NetworkManager DHCP oder feste Adresse und WLAN (Suche, Passwort per Bildschirmtastatur) ein.

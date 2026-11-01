@@ -400,6 +400,82 @@ def test_block_editor_ring(qt_log, monkeypatch):
     dlg.close()
 
 
+def test_record_display_flags(qt_log, demo_config):
+    """Aufzeichnen/Anzeigen: Blockeditor (je Element und für alle), Variablentabelle und Baum des
+    Konfigurationsprogramms, Logger zeigt nur angezeigte Variablen und speichert nur aufgezeichnete."""
+    from PySide6.QtCore import Qt
+    from plc_block_dialog import T_DISP, T_REC, BlockEditor
+    from plc_common import Block, Plc, load_blocks, load_config, save_config
+    plcs = [Plc(name="S7", driver="s7")]
+    blk = Block(name="Blk", address="DB2.DBD0", dtype="REAL", count=4, driver="s7", no_record={3})
+    dlg = BlockEditor(None, [blk], [(0, 0)], ["Diagramm 1 › Achse 1"], lambda i: plcs[i], set(), plc_names=["S7"])
+    dlg.table.selectRow(0)
+    top = dlg.tree.topLevelItem(0)
+    top.setExpanded(True)
+    assert top.childCount() == 4 and top.child(3).checkState(T_REC) == Qt.CheckState.Unchecked
+    top.child(1).setCheckState(T_DISP, Qt.CheckState.Unchecked)           # nur aufzeichnen
+    top.child(3).setCheckState(T_DISP, Qt.CheckState.Checked)             # anzeigen schaltet aufzeichnen ein
+    assert top.child(3).checkState(T_REC) == Qt.CheckState.Checked
+    top.child(0).setCheckState(T_REC, Qt.CheckState.Unchecked)            # nicht aufzeichnen: auch nicht anzeigen
+    assert top.child(0).checkState(T_DISP) == Qt.CheckState.Unchecked
+    b = dlg.block_of_row(0)
+    assert b.no_record == {0} and b.no_display == {1}
+    dlg.cb_flags.setCurrentIndex(1)                                       # alle: nur aufzeichnen
+    dlg.set_all_flags()
+    assert dlg.block_of_row(0).no_record == set() and dlg.block_of_row(0).no_display == {0, 1, 2, 3}
+    dlg.cb_flags.setCurrentIndex(0)
+    dlg.set_all_flags()
+    dlg.close()
+
+    # Konfiguration: Block mit Elementen ohne Aufzeichnung/Anzeige, eine Variable ohne Aufzeichnung.
+    conn, charts, variables = load_config(demo_config)
+    variables[4].record = False                                           # Zähler (in keiner Formel)
+    variables[1].display = False                                          # Druck
+    names = (variables[4].name, variables[1].name)
+    save_config(conn, charts, variables, demo_config, plcs=[Plc(name="SPS 1")],
+                blocks=[Block(name="Blk", address="DB2.DBD0", count=3, driver="s7", no_record={1}, no_display={2})])
+    import plc_config
+    w = plc_config.ConfigWindow(demo_config)
+    w.show()
+    wait(100)
+    assert w.table.item(4, plc_config.C_REC).checkState() == Qt.CheckState.Unchecked
+    texts = []
+    stack = [w.tree.topLevelItem(i) for i in range(w.tree.topLevelItemCount())]
+    while stack:
+        it = stack.pop()
+        texts.append(it.text(0))
+        stack += [it.child(i) for i in range(it.childCount())]
+    assert any("nicht aufgezeichnet" in x and x.startswith(names[0]) for x in texts), texts
+    assert any("1 nicht aufgezeichnet, 1 nicht angezeigt" in x for x in texts), texts
+    w.cb_filter_kind.setCurrentIndex(w.cb_filter_kind.findData("norec"))
+    wait(50)
+    assert [r for r in range(w.table.rowCount()) if not w.table.isRowHidden(r)] == [4]
+    w.cb_filter_kind.setCurrentIndex(0)
+    w.table.item(4, plc_config.C_REC).setCheckState(Qt.CheckState.Checked)
+    assert w.collect()[4].record and not w.collect()[1].display
+    w.table.item(4, plc_config.C_REC).setCheckState(Qt.CheckState.Unchecked)
+    assert w._write(demo_config), qt_log.messages
+    assert load_blocks(demo_config)[0].no_record == {1}
+    assert not load_config(demo_config, alle=True)[2][4].record
+    _close(w)
+
+    # Logger: nicht aufgezeichnete Variable fehlt, „nur aufzeichnen“ ohne Kurve, CSV ohne Blk[1].
+    import plc_gui
+    m = plc_gui.MainWindow(demo_config, demo=True)
+    m.show()
+    assert names[0] not in [v.name for v in m.vars]
+    curves = {m.vars[i].name for i, c in enumerate(m.curves) if c is not None}
+    assert names[1] not in curves and "Blk[0]" in curves and not {"Blk[1]", "Blk[2]"} & curves
+    m.act_run.setChecked(True)
+    wait(800)
+    m.act_run.setChecked(False)
+    wait(300)
+    with open(m.rec.csv_path, encoding="utf-8") as f:
+        header = f.readline().strip().split(";")
+    assert names[1] in header and "Blk[2]" in header and "Blk[1]" not in header and names[0] not in header
+    _close(m)
+
+
 def test_program_icons(qapp):
     """Jedes Programm bekommt sein eigenes Icon; ein konfiguriertes Icon geht vor."""
     from plc_branding import PROGRAM_ICONS, app_icon

@@ -257,7 +257,13 @@
 @ Ringpuffer für zyklussynchrone Aufzeichnung: Anzahl Datensätze im Puffer der Steuerung (aus = normaler Block). Die Steuerung schreibt je Zyklus einen Datensatz mit Anzahl Werten, der Logger holt sie im Leseintervall ab – lückenlos und mit dem Zeitpunkt aus der Steuerung. Puffer mindestens 3 × Leseintervall ÷ Zykluszeit groß wählen. Nur Treiber s7, tia und clx.
 > 
 
-@ Ein <b>Block</b> liest <i>Anzahl</i> zusammenhängende Werte gleichen <i>Formats</i> gemeinsam (meist mit einer einzigen Anfrage, schneller als einzelne Variablen). Je nach Treiber der Steuerung ist die <b>Startadresse</b> die Adresse des ersten Werts (z. B. <code>DB10.DBD0</code>, <code>40001</code>; die Elemente folgen lückenlos) oder der Name eines <b>Arrays</b> ohne Index (z. B. <code>Messwerte</code>, <code>Mess_DB.Werte</code>) mit dem <i>ersten Index</i>. Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>) und einzelne Elemente einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks).
+@ Aufzeichnen: Element speichern (CSV, Datenbank, Bericht). Gelesen wird immer der ganze Block; nicht aufgezeichnete Elemente stehen für Formeln und Trigger bereit.
+> 
+
+@ Anzeigen: Element in den Diagrammen und der Werteliste zeigen (nur aufgezeichnete Elemente).
+> 
+
+@ Ein <b>Block</b> liest <i>Anzahl</i> zusammenhängende Werte gleichen <i>Formats</i> gemeinsam (meist mit einer einzigen Anfrage, schneller als einzelne Variablen). Je nach Treiber der Steuerung ist die <b>Startadresse</b> die Adresse des ersten Werts (z. B. <code>DB10.DBD0</code>, <code>40001</code>; die Elemente folgen lückenlos) oder der Name eines <b>Arrays</b> ohne Index (z. B. <code>Messwerte</code>, <code>Mess_DB.Werte</code>) mit dem <i>ersten Index</i>. Jedes Element wird zur Variable <code>Name[0]</code>, <code>Name[1]</code>, … und kann in Formeln verwendet werden. Im <b>Baum</b> unten lassen sich die <b>Namen der einzelnen Elemente</b> per Doppelklick ändern (leer = Standardname <code>Name[i]</code>) und einzelne Elemente einem <b>anderen Diagramm bzw. einer anderen Y-Achse</b> zuordnen (<i>wie Block</i> = Ziel des Blocks). Mit <b>Aufzeichnen</b> und <b>Anzeigen</b> wählen Sie je Element, ob es gespeichert und in den Diagrammen gezeigt wird – gelesen wird immer der ganze Block.
 > 
 
 @ Ein <b>Ringpuffer</b> (Spalte <i>Ringpuffer</i> &gt; 0) zeichnet <b>zyklussynchron</b> auf: Die Steuerung sammelt je Zyklus einen Datensatz, der Logger holt die Datensätze ab (Bausteine unter <i>SPS-Vorlagen …</i>).
@@ -273,6 +279,12 @@
 > 
 
 @ Adresse
+> 
+
+@ Aufzeichnen
+> 
+
+@ Anzeigen
 > 
 
 @ Block hinzufügen
@@ -305,6 +317,21 @@
 @ Ziel:
 > 
 
+@ aufzeichnen und anzeigen
+> 
+
+@ nur aufzeichnen
+> 
+
+@ nicht aufzeichnen
+> 
+
+@ Für alle setzen
+> 
+
+@ Aufzeichnen/Anzeigen für alle Elemente des markierten Blocks setzen
+> 
+
 @ aus
 > 
 
@@ -324,6 +351,9 @@
 > 
 
 @ Bitte zuerst einen Block markieren.
+> 
+
+@ Aufzeichnen/Anzeigen
 > 
 
 @ Block testen
@@ -428,6 +458,12 @@
 > 
 
 @ Formel
+> 
+
+@ Aufzeichnen: aus der Steuerung lesen und speichern (CSV, Datenbank, Bericht). Aus: die Variable bleibt in der Konfiguration, wird aber nicht gelesen.
+> 
+
+@ Anzeigen: in den Diagrammen und der Werteliste zeigen (nur aufgezeichnete Variablen). Aus: wird aufgezeichnet, aber nicht angezeigt.
 > 
 
 @ Treiber
@@ -781,6 +817,12 @@
 @ ohne Adresse
 > 
 
+@ nicht aufgezeichnet
+> 
+
+@ nicht angezeigt
+> 
+
 @ <b>Variablen</b>
 > 
 
@@ -1090,10 +1132,22 @@
 @ Auto
 > 
 
+@   (nicht aufgezeichnet)
+> 
+
+@   (nicht angezeigt)
+> 
+
 @  ({0} in anderen Diagrammen)
 > 
 
 @ , Ringpuffer {0} Datensätze
+> 
+
+@ , {0} nicht aufgezeichnet
+> 
+
+@ , {0} nicht angezeigt
 > 
 
 @ {0}: Ist {1}, Stell {2}
@@ -1232,6 +1286,9 @@
 > 
 
 @ Ungültige Einstellungen oder Adressen:\n
+> 
+
+@ {0}: verwendet nicht aufgezeichnete Variablen: 
 > 
 
 @ {0}: unbekannte oder später definierte Variablen: 

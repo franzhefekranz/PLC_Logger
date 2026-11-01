@@ -171,7 +171,8 @@ def dashboard(conn, charts, variables, title=""):
     cols_cfg = int(conn.get("raster_spalten", 0) or 0)
     by_chart = {}
     for v in variables:
-        by_chart.setdefault(v.chart, []).append(v)
+        if getattr(v, "shown", True):           # nur aufgezeichnete Variablen mit „anzeigen“
+            by_chart.setdefault(v.chart, []).append(v)
     panels, pid, y = [], 1, 0
     groups = pages(charts, layout)
     use_rows = len(groups) > 1 or bool(groups and groups[0][0])

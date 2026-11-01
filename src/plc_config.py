@@ -38,7 +38,7 @@ import sys
 
 # Qt-Grundbausteine: Qt (Konstanten), QTimer (verzögerte Aktionen), Signal (eigene Ereignisse).
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QColor, QIcon, QKeySequence, QPixmap
+from PySide6.QtGui import QAction, QBrush, QColor, QIcon, QKeySequence, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QColorDialog, QComboBox,
     QDoubleSpinBox, QFileDialog, QFormLayout, QGroupBox, QHBoxLayout,
@@ -74,13 +74,18 @@ ROLE_AI = ROLE_UID + 3     # Achsen-Index
 
 # Spalten der Variablentabelle (Nummern) und ihre Überschriften.
 # Spalten der Variablentabelle
-(C_NAME, C_PLC, C_AXIS, C_TAG, C_TYPE, C_COLOR, C_SHOW, C_BAR, C_TEST, C_FORMULA) = range(10)
+(C_NAME, C_PLC, C_AXIS, C_TAG, C_TYPE, C_COLOR, C_REC, C_DISP, C_SHOW, C_BAR, C_TEST, C_FORMULA) = range(12)
 # Spalten der Variablenliste für Import/Export (CSV/Excel). Die Kopfzeile bleibt in jeder Sprache deutsch, damit
 # Dateien austauschbar sind; beim Import zählt nur der Spaltenname (Reihenfolge und Groß-/Kleinschreibung egal).
-VAR_IO_COLS = ["Name", "Steuerung", "Diagramm", "Y-Achse", "Adresse", "Typ", "Farbe", "Werteanzeige", "Balken",
-               "Formel"]
+VAR_IO_COLS = ["Name", "Steuerung", "Diagramm", "Y-Achse", "Adresse", "Typ", "Farbe", "Aufzeichnen", "Anzeigen",
+               "Werteanzeige", "Balken", "Formel"]
 VAR_COLS = [tr("Name"), tr("Steuerung"), tr("Diagramm › Y-Achse"), tr("Adresse"), tr("Typ"),
-            tr("Farbe"), tr("Werteanzeige"), tr("Balken"), tr("Testwert"), tr("Formel")]
+            tr("Farbe"), tr("Aufzeichnen"), tr("Anzeigen"), tr("Werteanzeige"), tr("Balken"), tr("Testwert"),
+            tr("Formel")]
+REC_TIP = tr("Aufzeichnen: aus der Steuerung lesen und speichern (CSV, Datenbank, Bericht). Aus: die Variable bleibt in "
+             "der Konfiguration, wird aber nicht gelesen.")
+DISP_TIP = tr("Anzeigen: in den Diagrammen und der Werteliste zeigen (nur aufgezeichnete Variablen). Aus: wird "
+              "aufgezeichnet, aber nicht angezeigt.")
 
 # Spalten der Steuerungen-Tabelle (Reiter „Projekt & Steuerungen“).
 PLC_COLS = [tr("Name"), tr("Treiber"), tr("Verbindung"), "", tr("Intervall"), tr("Aktiv")]
@@ -453,6 +458,8 @@ class ConfigWindow(QMainWindow):
         # ---------- Variablen ----------
         self.table = QTableWidget(0, len(VAR_COLS))
         self.table.setHorizontalHeaderLabels(VAR_COLS)
+        self.table.horizontalHeaderItem(C_REC).setToolTip(REC_TIP)
+        self.table.horizontalHeaderItem(C_DISP).setToolTip(DISP_TIP)
         self.table.horizontalHeader().setSectionResizeMode(C_NAME, QHeaderView.ResizeMode.Stretch)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         # Änderung des Namens -> Baum aktualisieren; Doppelklick auf die Formelspalte -> Formeleditor.
@@ -473,7 +480,8 @@ class ConfigWindow(QMainWindow):
         self.cb_filter_plc.currentIndexChanged.connect(lambda _i: self.apply_var_filter())
         self.cb_filter_kind = QComboBox()
         for text, key in ((tr("alle Arten"), ""), (tr("nur gelesene"), "plc"), (tr("nur berechnete"), "calc"),
-                          (tr("ohne Adresse"), "empty")):
+                          (tr("ohne Adresse"), "empty"), (tr("nicht aufgezeichnet"), "norec"),
+                          (tr("nicht angezeigt"), "nodisp")):
             self.cb_filter_kind.addItem(text, key)
         self.cb_filter_kind.currentIndexChanged.connect(lambda _i: self.apply_var_filter())
         self.lbl_filter = QLabel("")
@@ -527,7 +535,7 @@ class ConfigWindow(QMainWindow):
 
         # Beim Start die vorhandene Konfigurationsdatei laden (Verbindung, Diagramme, Variablen, Blöcke) und das Fenster-Icon setzen.
         self.build_menu()
-        self.fill(*load_config(self.path), blocks=load_blocks(self.path), plcs=load_plcs(self.path))
+        self.fill(*load_config(self.path, alle=True), blocks=load_blocks(self.path), plcs=load_plcs(self.path))
         self.triggers = load_triggers(self.path)
         self._update_trigger_summary()
         if load_errors():
@@ -1263,7 +1271,14 @@ class ConfigWindow(QMainWindow):
         for r in range(self.table.rowCount()):
             parent = axis_items.get(self.assign_of_row(r)) or axis_items[(0, 0)]
             name_item = self.table.item(r, C_NAME)
-            child = QTreeWidgetItem([name_item.text()])
+            rec, disp = (self.table.item(r, c) is None or self.table.item(r, c).checkState() == Qt.CheckState.Checked
+                         for c in (C_REC, C_DISP))
+            child = QTreeWidgetItem([name_item.text() + ("" if rec and disp else
+                                                         tr("  (nicht aufgezeichnet)") if not rec else
+                                                         tr("  (nicht angezeigt)"))])
+            if not (rec and disp):
+                child.setForeground(0, QBrush(QColor("#999")))
+                child.setToolTip(0, REC_TIP if not rec else DISP_TIP)
             child.setData(0, ROLE_KIND, "var")
             child.setData(0, ROLE_UID, name_item.data(ROLE_UID))
             child.setIcon(0, swatch(self.table.cellWidget(r, C_COLOR).property("color")))
@@ -1276,6 +1291,10 @@ class ConfigWindow(QMainWindow):
             extra = tr(" ({0} in anderen Diagrammen)").format(len(b.targets)) if b.targets else ""
             if b.ring:
                 extra = tr(", Ringpuffer {0} Datensätze").format(b.ring) + extra
+            if b.no_record:
+                extra += tr(", {0} nicht aufgezeichnet").format(len(b.no_record))
+            if b.no_display - b.no_record:
+                extra += tr(", {0} nicht angezeigt").format(len(b.no_display - b.no_record))
             it = QTreeWidgetItem([f"▦ Block {b.name}: {b.count} × {b.dtype}{extra}"])
             it.setData(0, ROLE_KIND, "block")
             it.setData(0, ROLE_UID, bi)
@@ -1287,7 +1306,8 @@ class ConfigWindow(QMainWindow):
             groups = {}
             # (eigene Namen – „key“ ist oben die gemerkte Auswahl und wird unten noch gebraucht)
             for idx, target in sorted(b.targets.items()):
-                groups.setdefault(target, []).append(idx)
+                if idx not in b.no_record and idx not in b.no_display:
+                    groups.setdefault(target, []).append(idx)
             for target, idxs in groups.items():
                 p2 = axis_items.get(target)
                 if p2 is None:
@@ -1553,11 +1573,14 @@ class ConfigWindow(QMainWindow):
         btn.clicked.connect(lambda _=False, b=btn: self.pick_color(b))
         self.table.setCellWidget(r, C_COLOR, btn)
 
-        # Kontrollkästchen 'Werteanzeige' und 'Balken'.
-        for col, state in ((C_SHOW, v.show_value), (C_BAR, v.bar)):
+        # Kontrollkästchen 'Aufzeichnen', 'Anzeigen', 'Werteanzeige' und 'Balken'.
+        for col, state, tip in ((C_REC, v.record, REC_TIP), (C_DISP, v.display, DISP_TIP),
+                                (C_SHOW, v.show_value, ""), (C_BAR, v.bar, "")):
             chk = QTableWidgetItem()
             chk.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
             chk.setCheckState(Qt.CheckState.Checked if state else Qt.CheckState.Unchecked)
+            if tip:
+                chk.setToolTip(tip)
             self.table.setItem(r, col, chk)
 
         # Berechnete Variable: keine SPS-Adresse, deshalb die Adressfelder sperren; die Formel steht in der letzten Spalte.
@@ -1688,9 +1711,9 @@ class ConfigWindow(QMainWindow):
 
     # Namensänderung -> Baum neu aufbauen (zeigt den Namen).
     def on_var_item_changed(self, item):
-        if item.column() == C_NAME:
+        if item.column() in (C_NAME, C_REC, C_DISP):
             self.refresh_tree()
-        if item.column() in (C_NAME, C_TAG, C_FORMULA):
+        if item.column() in (C_NAME, C_TAG, C_FORMULA, C_REC, C_DISP):
             self.apply_var_filter()
 
     # ---------- Suchen und Filtern ----------
@@ -1724,6 +1747,11 @@ class ConfigWindow(QMainWindow):
         if (kind == "plc" and formula) or (kind == "calc" and not formula) or \
                 (kind == "empty" and (formula or addr.strip())):
             return False
+        if kind in ("norec", "nodisp"):
+            rec, disp = (t.item(r, c) is not None and t.item(r, c).checkState() == Qt.CheckState.Checked
+                         for c in (C_REC, C_DISP))
+            if (kind == "norec" and rec) or (kind == "nodisp" and rec and disp):
+                return False
         return text_filter(self.ed_filter.text())(name, addr, formula, axis, typ, plc)
 
     def apply_var_filter(self):
@@ -1997,6 +2025,8 @@ class ConfigWindow(QMainWindow):
                 chart=ci, axis=ai,
                 bar=t.item(r, C_BAR).checkState() == Qt.CheckState.Checked,
                 formula=t.item(r, C_FORMULA).text(),
+                record=t.item(r, C_REC).checkState() == Qt.CheckState.Checked,
+                display=t.item(r, C_DISP).checkState() == Qt.CheckState.Checked,
             ))
         return out
 
@@ -2021,6 +2051,7 @@ class ConfigWindow(QMainWindow):
             axis = chart.axes[v.axis] if 0 <= v.axis < len(chart.axes) else chart.axes[0]
             rows.append([v.name, plcs[v.plc] if 0 <= v.plc < len(plcs) else "", chart.name, axis.name,
                          "" if v.formula else v.address, "" if v.formula else v.dtype, v.color,
+                         "ja" if v.record else "nein", "ja" if v.display else "nein",
                          "ja" if v.show_value else "nein", "ja" if v.bar else "nein", v.formula])
         try:
             write_table(path, VAR_IO_COLS, rows, sheet="Variablen")
@@ -2106,7 +2137,8 @@ class ConfigWindow(QMainWindow):
             new.append(Variable(name=name, plc=plc, address="" if formula else cell(row, "Adresse"),
                                 dtype=cell(row, "Typ") or self.driver_of_plc(plc).default_type, color=color,
                                 show_value=flag(cell(row, "Werteanzeige"), True), bar=flag(cell(row, "Balken"), True),
-                                chart=ci, axis=ai, formula=formula))
+                                chart=ci, axis=ai, formula=formula,
+                                record=flag(cell(row, "Aufzeichnen"), True), display=flag(cell(row, "Anzeigen"), True)))
         self.set_assignments(assigns)
         # 2. Durchgang: Zeilen anlegen und den Baum einmal neu aufbauen.
         for v in new:
@@ -2257,7 +2289,7 @@ class ConfigWindow(QMainWindow):
             if err:
                 bad.append(f"{p.name}: {err}")
         for v in variables:
-            if not v.formula:
+            if not v.formula and v.record:       # nicht aufgezeichnete Variablen werden nicht gelesen
                 err = self.driver_of_plc(v.plc).check_address(v.address, v.dtype)
                 if err:
                     bad.append(f"{v.name}: {err}")
@@ -2273,15 +2305,22 @@ class ConfigWindow(QMainWindow):
             return False
         # Formeln prüfen: Syntax und Variablen. Verfügbar sind alle echten Variablen (auch Block-Elemente) und berechnete,
         # die weiter oben in der Tabelle definiert wurden.
-        avail, problems = {v.name for v in variables if not v.formula} | set(self.block_names()), []
+        # Nicht aufgezeichnete Variablen (ohne Block-Elemente) werden nicht gelesen bzw. berechnet und stehen nicht zur
+        # Verfügung.
+        norec = {v.name for v in variables if not v.record}
+        avail, problems = {v.name for v in variables if not v.formula and v.record} | set(self.block_names()), []
         for v in variables:                      # Formeln prüfen (Syntax, bekannte/frühere Variablen)
             # Berechnete Variablen werden nicht aus der SPS gelesen.
-            if v.formula:
+            if v.formula and v.record:
                 f, err = check_formula(v.formula)
                 if f is None:
                     problems.append(f"{v.name}: {err}")
                 else:
-                    missing = [n for n in f.refs if n not in avail]
+                    off = [n for n in f.refs if n in norec]
+                    missing = [n for n in f.refs if n not in avail and n not in norec]
+                    if off:
+                        problems.append(tr("{0}: verwendet nicht aufgezeichnete Variablen: ").format(v.name)
+                                        + ", ".join(off))
                     if missing:
                         problems.append(tr("{0}: unbekannte oder später definierte Variablen: ").format(v.name)
                                         + ", ".join(missing))
@@ -2306,7 +2345,7 @@ class ConfigWindow(QMainWindow):
                                     "angezeigt, aber nicht gespeichert. Trotzdem speichern?")) != QMessageBox.StandardButton.Yes:
                 return False
         # PID-Optimierung: die gewählten Variablen müssen existieren (z. B. nach Umbenennen).
-        avail_pid = {v.name for v in variables} | set(self.block_names())
+        avail_pid = {v.name for v in variables if v.record} | set(self.block_names())
         bad_pid = [f"{c.name}: " + ", ".join(n for n in (c.pid_sw, c.pid_iw, c.pid_stw) if n and n not in avail_pid)
                    for c in self.charts if c.pid and any(n and n not in avail_pid
                                                          for n in (c.pid_sw, c.pid_iw, c.pid_stw))]
@@ -2315,7 +2354,7 @@ class ConfigWindow(QMainWindow):
                 + tr("\n\nTrotzdem speichern?")) != QMessageBox.StandardButton.Yes:
             return False
         # Trigger: aktive Trigger müssen zu den (evtl. umbenannten) Variablen passen.
-        avail_all = {v.name for v in variables} | set(self.block_names())
+        avail_all = {v.name for v in variables if v.record} | set(self.block_names())
         bad = [f"{t.name}: {err}" for t in self.triggers if t.aktiv for err in [check_trigger(t, avail_all)] if err]
         if bad:
             if QMessageBox.question(self, tr("Trigger prüfen"), tr("Fehlerhafte Trigger (werden beim Aufzeichnen "
@@ -2384,7 +2423,7 @@ class ConfigWindow(QMainWindow):
         except OSError:
             pass
         try:
-            data = (load_config(p), load_blocks(p), load_plcs(p))
+            data = (load_config(p, alle=True), load_blocks(p), load_plcs(p))
         except Exception as e:
             QMessageBox.critical(self, tr("Konfiguration laden"), tr("{0}\n\nDie Datei konnte nicht gelesen werden:\n{1}").format(p, e))
             return False

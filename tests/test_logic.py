@@ -928,3 +928,46 @@ def test_netz_without_networkmanager():
     devs = plc_netz.Netz(run=run).devices()
     assert [(d.name, d.typ, d.ipv4, d.state) for d in devs] == [("eth0", "ethernet", ["192.168.1.9/24"], "connected"),
                                                                ("wlan0", "wifi", [], "disconnected")]
+
+
+# ---- Aufzeichnen / Anzeigen ---------------------------------------------------------------------------------------
+def test_record_display_config_roundtrip(tmp_path):
+    """Variablen und Block-Elemente: aufzeichnen/anzeigen speichern und laden; nicht aufgezeichnete Variablen fehlen
+    beim Lesen der Konfiguration (außer alle=True), Block-Elemente bleiben (der Block wird ganz gelesen)."""
+    from plc_common import Axis, Block, Chart, Plc, Variable, load_blocks, load_config, save_config
+    path = str(tmp_path / "flags.json")
+    variables = [Variable("A", "DB1.DBD0"), Variable("B", "DB1.DBD4", record=False),
+                 Variable("C", "DB1.DBD8", display=False)]
+    blk = Block(name="Blk", address="DB2.DBD0", count=4, driver="s7", no_record={1}, no_display={1, 2})
+    save_config({"projekt": "x"}, [Chart(axes=[Axis()])], variables, path, blocks=[blk], plcs=[Plc(driver="s7")])
+    b2 = load_blocks(path)[0]
+    assert b2.no_record == {1} and b2.no_display == {2}            # „anzeigen“ setzt „aufzeichnen“ voraus
+    _c, _ch, vs = load_config(path)
+    assert [v.name for v in vs] == ["A", "C", "Blk[0]", "Blk[1]", "Blk[2]", "Blk[3]"]
+    assert [(v.record, v.display, v.shown) for v in vs[1:]] == [
+        (True, False, False), (True, True, True), (False, False, False), (True, False, False), (True, True, True)]
+    _c, _ch, alle = load_config(path, alle=True)
+    assert [v.name for v in alle][:3] == ["A", "B", "C"] and not alle[1].record
+
+
+def test_record_flags_recorder_csv(tmp_path):
+    """Recorder: nicht aufgezeichnete Block-Elemente werden gelesen (Formeln), aber nicht in die CSV geschrieben."""
+    import time
+
+    from plc_common import Axis, Block, Chart, Plc, Variable
+    from plc_recorder import Recorder
+    blk = Block(name="Blk", address="DB2.DBD0", count=3, driver="s7", no_record={1})
+    variables = blk.variables() + [Variable("Summe", formula="{Blk[0]} + {Blk[1]}")]
+    conn = {"csv_ordner": str(tmp_path), "csv_name": "flags", "csv_aktiv": 1}
+    rec = Recorder(conn, [Plc(name="SPS", driver="s7", intervall_ms=50)], [Chart(axes=[Axis()])], variables,
+                   demo=True)
+    assert rec.store_names == ["Blk[0]", "Blk[2]", "Summe"]
+    rec.start()
+    time.sleep(0.6)
+    rec.stop()
+    with open(rec.csv_path, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+    assert lines[0].split(";") == ["Zeit", "Epoch", "Blk[0]", "Blk[2]", "Summe"]
+    assert len(lines) > 2 and all(len(x.split(";")) == 5 for x in lines[1:])
+    # Formel mit dem nicht aufgezeichneten Element ist gerechnet worden (Puffer enthält alle Variablen).
+    assert not np.all(np.isnan(rec.ybuf[3, :rec.n]))

@@ -776,6 +776,16 @@ Each row of the variable table describes one value of a controller:
        error when saving.
    * - Colour
      - Line colour; a click opens the colour picker.
+   * - Record
+     - Active (default): the variable is read from the controller and stored (CSV file,
+       database, report). Off: the variable stays in the configuration with all its
+       settings but is **not read** – this way variables can be prepared and added to
+       or removed from the recording as needed. Formulas, triggers and PID tuning
+       cannot use variables that are not recorded (message when saving).
+   * - Display
+     - Active (default): the variable appears in the charts and in the value/ruler
+       table (logger, web server, report, Grafana dashboard). Off: the variable is
+       recorded but not displayed. Only recorded variables can be displayed.
    * - Value display
      - Active: the variable appears in the logger's value/ruler table.
    * - Bars
@@ -805,7 +815,11 @@ Above the variable table there are a **search field** and two choice lists
   (``temp db10``), ``*`` and ``?`` are wildcards (``DB?.DBD*``), a word with a leading
   ``-`` excludes (``temp -setpoint``).
 * **Controller** – only variables of one controller (calculated variables stay visible).
-* **Kind** – *read only*, *computed only* or *without address* (incomplete rows).
+* **Kind** – *read only*, *computed only*, *without address* (incomplete rows),
+  *not recorded* or *not displayed*.
+
+In the variable tree on the left, variables that are not recorded or not displayed are
+shown in grey with the note *(not recorded)* or *(not displayed)*.
 
 On the right you see how many variables are currently shown (*12 of 340*); the search
 field has a yellow background while a filter is active. Hidden variables stay in the
@@ -1009,6 +1023,16 @@ Notes:
 * The block elements are normal variables: they appear in charts, legend, value table,
   bars and CSV file and can be used in **formulas**, e.g.
   ``{Messwerte[3]} - {Messwerte[4]}``.
+* **Record and display per element:** In the tree of the block editor every element has
+  the check boxes *Record* and *Display*. Elements that are not recorded are not stored
+  (CSV file, database, report); recorded elements without *Display* do not appear in the
+  charts and the value table. **The block is always read completely** – elements that
+  are not recorded are therefore still available to formulas and triggers. The displayed
+  elements are distributed over the charts as usual. Below the tree, **Set for all** sets
+  *record and display*, *record only* or *do not record* for all elements of the
+  selected block. The block row in the tree shows how many elements are recorded and
+  displayed; in the configuration file the exceptions are stored under
+  ``nicht_aufzeichnen`` and ``nicht_anzeigen`` (list of element indices).
 * **Renaming elements:** In the lower part of the block editor a **tree** shows all
   blocks with their elements. Double-click the *Name* column to give an element a name
   of its own, e.g. ``Supply pressure`` instead of ``Messwerte[1]``. An empty name
@@ -1026,7 +1050,7 @@ Notes:
   enough, registers present), otherwise reading the block fails; the other variables
   are still read.
 * Many elements mean many curves: split large blocks over several charts or Y axes or
-  switch off *value display*.
+  switch off *Display* or *value display* for individual elements.
 
 .. _ringpuffer:
 
@@ -1284,7 +1308,7 @@ Calc, ``.ods``) can be read as well.
 * **Export variables (CSV/Excel) …** writes all variables of the table (without block
   elements, see `Block read mode <blocklesemodus_>`__) with the columns ``Name``,
   ``Steuerung``, ``Diagramm``, ``Y-Achse``, ``Adresse``, ``Typ``, ``Farbe``,
-  ``Werteanzeige``, ``Balken`` and ``Formel``. The column names are always German, so
+  ``Aufzeichnen``, ``Anzeigen``, ``Werteanzeige``, ``Balken`` and ``Formel``. The column names are always German, so
   files can be exchanged between languages.
 * **Import variables (CSV/Excel/ODS) …** reads such a file. The first row contains the
   column names; only ``Name`` is mandatory, order and case do not matter. CSV files may
@@ -1301,8 +1325,8 @@ When importing:
   first chart or first axis.
 * ``Typ`` empty = default type of the driver; ``Farbe`` as ``#rrggbb``, empty = colour
   from the palette.
-* ``Werteanzeige`` and ``Balken``: ``ja``/``nein`` (also ``yes``/``no``, ``1``/``0``,
-  ``x``); empty = yes.
+* ``Aufzeichnen``, ``Anzeigen``, ``Werteanzeige`` and ``Balken``: ``ja``/``nein`` (also
+  ``yes``/``no``, ``1``/``0``, ``x``); empty = yes.
 * If ``Formel`` is filled, a calculated variable is created (``Adresse`` and ``Typ`` are
   then ignored).
 

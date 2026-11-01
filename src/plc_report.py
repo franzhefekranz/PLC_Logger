@@ -816,7 +816,7 @@ def write_report(path, acc, charts, variables, project="", events=(), partial=Fa
     doc.heading(tr("Verlauf"))
     names_idx = {n: i for i, n in enumerate(acc.names)}
     for ci, ch in enumerate(charts):
-        idx = [names_idx[v.name] for v in variables if v.chart == ci and v.name in names_idx]
+        idx = [names_idx[v.name] for v in variables if v.chart == ci and v.name in names_idx and v.shown]
         if idx:
             _chart(doc, ch, idx, acc, [_var_for(variables, n) for n in acc.names])
     # Ereignisse
