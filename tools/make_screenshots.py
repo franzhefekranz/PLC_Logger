@@ -176,7 +176,8 @@ def demo_config(folder):
     plc1.params.update(ip="192.168.0.10")
     plc2 = Plc(name="SPS 2", driver="clx", intervall_ms=500)
     plc2.params.update(ip="192.168.0.20")
-    blocks = [Block(name="Ventile", address="DB10.DBX0.0", dtype="BOOL", count=8, chart=2, axis=1, color="#e377c2")]
+    blocks = [Block(name="Ventile", address="DB10.DBX0.0", dtype="BOOL", count=8, chart=2, axis=1, color="#e377c2",
+                    no_display={6, 7})]                    # Reserve-Ventile: aufgezeichnet, nicht angezeigt
     path = os.path.join(folder, "kesselhaus.json")
     save_config(conn, charts, variables, path, blocks=blocks, plcs=[plc1, plc2])
     from plc_events import save_triggers
@@ -520,8 +521,11 @@ def s_config_dialogs():
     def blocks(d):
         from plc_common import Block
         d.add_row(Block(name="Puffer", address="DB100.DBX0.0", dtype="REAL", count=10, ring=100, plc=0,
-                        color="#ff7f0e", driver=d.get_conn(0).driver))      # Ringpuffer (zyklussynchron)
+                        color="#ff7f0e", driver=d.get_conn(0).driver,       # Ringpuffer (zyklussynchron)
+                        no_record={8, 9}, no_display={5}))                  # Aufzeichnen/Anzeigen je Element
         d.rebuild_tree()
+        d.table.selectRow(d.table.rowCount() - 1)
+        d.expand_selected()
     job("blockeditor", prep=blocks, size=(1400, 790))
     cw.open_block_editor()
 
@@ -621,6 +625,73 @@ def s_plc_dialogs():
     wait(200)
     save("netzwerksuche", d)
     d.close()
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Netzwerk-Panel (Touchscreen am Raspberry Pi), ohne echtes Netzwerk nachgestellt
+# ---------------------------------------------------------------------------------------------------------------------
+class _FakePi:
+    """Antworten von nmcli/timedatectl wie auf einem Raspberry Pi."""
+
+    def __call__(self, args, timeout=30):
+        a = " ".join(args)
+        answers = {
+            "nmcli -t -f RUNNING general": "running\n",
+            "nmcli -t -f DEVICE,TYPE,STATE,CONNECTION device":
+                "eth0:ethernet:connected:Anlage\nwlan0:wifi:connected:Werkstatt\n",
+            "nmcli -t radio wifi": "enabled\n",
+            "timedatectl list-timezones": "Europe/Berlin\nEurope/Vienna\nEurope/Zurich\nUTC\n",
+        }
+        if a in answers:
+            return answers[a]
+        if a.startswith("nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show eth0"):
+            return "IP4.ADDRESS[1]:192.168.0.50/24\nIP4.GATEWAY:192.168.0.1\n"
+        if a.startswith("nmcli -t -f IP4.ADDRESS,IP4.GATEWAY,IP4.DNS device show wlan0"):
+            return "IP4.ADDRESS[1]:10.0.0.23/24\nIP4.GATEWAY:10.0.0.1\n"
+        if a.startswith("nmcli -g ipv4.method connection show"):
+            return "manual\n" if "Anlage" in a else "auto\n"
+        if a.startswith("timedatectl show"):
+            return "Timezone=Europe/Berlin\nNTP=yes\nNTPSynchronized=no\n"
+        return ""
+
+
+@shot("netzpanel")
+def s_netpanel():
+    """Netzwerk-Panel: Übersicht und Seite Datum/Uhrzeit mit gelesener Uhrzeit der Steuerung (800 × 480)."""
+    import datetime
+    import socket
+
+    import plc_netpanel
+    import plc_netz
+    from PySide6.QtGui import QFont
+    from PySide6.QtWidgets import QApplication
+    from plc_treiber.s7 import S7Driver
+    app = QApplication.instance()
+    old_font, old_host, old_clock = app.font(), socket.gethostname, S7Driver.read_clock
+    old_service = plc_netz.service_state
+    f = QFont(app.font())
+    f.setPixelSize(480 // 26)
+    app.setFont(f)
+    socket.gethostname = lambda: "logger-kessel"
+    plc_netz.service_state = lambda name="": "active"
+    S7Driver.read_clock = lambda self, plc: datetime.datetime.now() - datetime.timedelta(minutes=7, seconds=12)
+    try:
+        w = plc_netpanel.NetPanel(plc_netz.Netz(run=_FakePi()), config_path=CTX["cfg"], background=False,
+                                  settings={"uhr_auto": True})
+        w.resize(800, 480)
+        w.show()
+        wait(400)
+        w.refresh()
+        wait(200)
+        save("netzpanel", w)
+        w.show_time()
+        w.read_plc_clock()
+        wait(300)
+        save("netzpanel_uhrzeit", w)
+        w.close()
+    finally:
+        app.setFont(old_font)
+        socket.gethostname, S7Driver.read_clock, plc_netz.service_state = old_host, old_clock, old_service
 
 
 # ---------------------------------------------------------------------------------------------------------------------
