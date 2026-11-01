@@ -89,6 +89,19 @@ class ClxDriver(Driver):
         from plc_treiber.clx_io import TagReader
         return TagReader(plc, variables)
 
+    clock_support = True
+
+    def read_clock(self, plc):
+        """Systemuhr der Steuerung (Wall Clock Time, UTC) über pycomm3 -> datetime mit Zeitzone UTC."""
+        import datetime
+        from pycomm3 import LogixDriver
+        from plc_treiber.clx_common import pycomm3_path
+        with LogixDriver(pycomm3_path(plc), init_tags=False) as drv:
+            tag = drv.get_plc_time(tz=datetime.timezone.utc)
+        if not tag or not tag.value:
+            raise ConnectionError(f"{plc.ip}: {tag.error if tag else tr('keine Antwort')}")
+        return tag.value["datetime"]
+
     def browse(self, parent, ctx):
         """Auswahldialog mit der Tag-Liste der Steuerung (pycomm3); Arrays als Blöcke."""
         from plc_treiber.clx_browser import TagBrowser

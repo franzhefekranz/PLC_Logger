@@ -442,6 +442,20 @@ class OpcUaDriver(Driver):
         import asyncua  # noqa: F401
         return True
 
+    clock_support = True
+
+    def read_clock(self, plc):
+        """Uhrzeit des Servers (Server › ServerStatus › CurrentTime, UTC) -> datetime mit Zeitzone UTC."""
+        import datetime
+        client = make_client(plc.params)
+        try:
+            value = client.get_node("i=2258").read_value()
+        finally:
+            close_client(client)
+        if not isinstance(value, datetime.datetime):
+            raise ValueError(tr("Der Server liefert keine Uhrzeit."))
+        return value if value.tzinfo else value.replace(tzinfo=datetime.timezone.utc)
+
     def create_reader(self, plc, variables):
         """Leser für einen Server (siehe OpcUaReader)."""
         return OpcUaReader(self, plc, variables)

@@ -16,6 +16,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Neu
 
+* **Netzwerk-Panel: Datum und Uhrzeit** – von Hand stellen, Internetzeit (NTP) ein/aus, Zeitzone wählen; Uhrzeit
+  einer Steuerung lesen und auf den Pi übernehmen, auf Wunsch automatisch (beim Start und stündlich, solange keine
+  Internetzeit synchronisiert ist). Treiber mit Uhrzeit: `s7`, `clx` (Systemuhr), `opcua` (Serverzeit);
+  neue Treiberschnittstelle `Driver.read_clock`.
 * **Aufzeichnen und Anzeigen je Variable:** Neue Spalten *Aufzeichnen* und *Anzeigen* in der Variablentabelle.
   Nicht aufgezeichnete Variablen bleiben in der Konfiguration, werden aber nicht gelesen; angezeigt (Diagramme,
   Wertetabelle, Webserver, Bericht, Grafana-Dashboard) werden nur aufgezeichnete Variablen mit *Anzeigen*. Bei Blöcken

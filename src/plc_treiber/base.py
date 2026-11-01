@@ -220,6 +220,15 @@ class Driver:
         finally:
             r.close()
 
+    # Uhrzeit der Steuerung lesen (Netzwerk-Panel: Uhr des Rechners nach der Steuerung stellen). Treiber, die das
+    # können, setzen clock_support = True und liefern einen datetime: zeitzonenbehaftet, wenn die Steuerung die Zeitzone
+    # kennt (z. B. UTC), sonst ohne Zeitzone (Ortszeit der Steuerung).
+    clock_support = False
+
+    def read_clock(self, plc):
+        """Uhrzeit der Steuerung -> datetime. Löst eine Ausnahme aus, wenn sie nicht lesbar ist."""
+        raise NotImplementedError(tr("Der Treiber {0} kann die Uhrzeit der Steuerung nicht lesen.").format(self.name))
+
     def read_ring_once(self, plc, variables):
         """Ringpuffer einmal abholen (Test im Blockeditor). Rückgabe: ([(Positionen, Zeit, Werte)], Fehler, Zähler je
         Ringpuffer {Name: Zählerstand}). Löst eine Ausnahme aus, wenn die Steuerung nicht erreichbar ist."""

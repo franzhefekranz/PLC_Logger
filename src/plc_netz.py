@@ -11,8 +11,11 @@ Befehle mitschreibt.
     netz.set_ipv4("eth0", dhcp=False, address="192.168.0.50/24", gateway="192.168.0.1", dns="192.168.0.1")
     netz.wifi_list()                     # [Wifi(ssid="Büro", signal=72, security="WPA2", active=False)]
     netz.wifi_connect("Büro", "geheim")
+    netz.time_info()                     # TimeInfo(timezone="Europe/Berlin", ntp=True, synced=True)
+    netz.set_time(datetime.datetime(2026, 11, 1, 9, 30))   # Ortszeit; schaltet NTP ab
 
-Die Einstellungen gelten dauerhaft (Verbindungsprofil von NetworkManager, auch nach dem Neustart).
+Die Einstellungen gelten dauerhaft (Verbindungsprofil von NetworkManager, auch nach dem Neustart). Datum, Uhrzeit,
+Zeitzone und NTP stellt ``timedatectl`` (systemd) ein.
 """
 import ipaddress
 import json
@@ -48,6 +51,15 @@ class Wifi:
     signal: int = 0
     security: str = ""
     active: bool = False
+
+
+@dataclass
+class TimeInfo:
+    """Zeiteinstellungen des Rechners (timedatectl)."""
+    timezone: str = ""
+    ntp: bool = False                # automatische Zeitsynchronisierung eingeschaltet
+    synced: bool = False             # Uhr ist synchronisiert (NTP)
+    available: bool = False          # timedatectl vorhanden
 
 
 def _split(line):
@@ -231,6 +243,43 @@ class Netz:
                     "ipv4.gateway", gateway.strip(), "ipv4.dns", " ".join(dns.replace(",", " ").split())]
         self.run(["nmcli", "connection", "modify", con] + args)
         self.run(["nmcli", "connection", "up", con])
+
+    # ------------------------------------------------------------------ Datum und Uhrzeit (timedatectl)
+    def time_info(self):
+        """Zeitzone, NTP an/aus und synchronisiert (``timedatectl show``); ohne timedatectl: available=False."""
+        if self.run is self._run and not shutil.which("timedatectl"):
+            return TimeInfo()
+        try:
+            out = self.run(["timedatectl", "show", "-p", "Timezone", "-p", "NTP", "-p", "NTPSynchronized"])
+        except (RuntimeError, OSError, subprocess.SubprocessError):
+            return TimeInfo()
+        vals = dict(line.split("=", 1) for line in out.splitlines() if "=" in line)
+        return TimeInfo(vals.get("Timezone", ""), vals.get("NTP") == "yes", vals.get("NTPSynchronized") == "yes",
+                        True)
+
+    def set_time(self, dt):
+        """Uhr stellen (``dt`` Ortszeit oder zeitzonenbehaftet). Schaltet die automatische Synchronisierung (NTP) ab –
+        sonst lehnt timedatectl das Stellen ab. Eine vorhandene Hardware-Uhr (RTC) wird mitgestellt."""
+        self.run(["timedatectl", "set-ntp", "false"])
+        self.run(["timedatectl", "set-time", local_naive(dt).strftime("%Y-%m-%d %H:%M:%S")])
+
+    def set_ntp(self, on):
+        """Automatische Zeitsynchronisierung über das Netz (NTP) ein- oder ausschalten."""
+        self.run(["timedatectl", "set-ntp", "true" if on else "false"])
+
+    def timezones(self):
+        """Alle Zeitzonen (z. B. Europe/Berlin)."""
+        return [z.strip() for z in self.run(["timedatectl", "list-timezones"]).splitlines() if z.strip()]
+
+    def set_timezone(self, tz):
+        self.run(["timedatectl", "set-timezone", tz])
+
+
+def local_naive(dt):
+    """Zeitpunkt -> Ortszeit ohne Zeitzone (zeitzonenbehaftete Werte werden umgerechnet), auf Sekunden gerundet."""
+    if dt.tzinfo is not None:
+        dt = dt.astimezone().replace(tzinfo=None)
+    return dt.replace(microsecond=0)
 
 
 def hostname():

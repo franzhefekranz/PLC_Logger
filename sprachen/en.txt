@@ -3345,6 +3345,9 @@
 @ WLAN
 > WLAN
 
+@ Uhrzeit
+> Time
+
 @ DHCP (automatisch)
 > DHCP (automatic)
 
@@ -3380,6 +3383,45 @@
 
 @ Verbinden
 > Connect
+
+@ Datum und Uhrzeit
+> Date and time
+
+@ Internetzeit (NTP)
+> Internet time (NTP)
+
+@ Tag
+> Day
+
+@ Monat
+> Month
+
+@ Jahr
+> Year
+
+@ Stunde
+> Hour
+
+@ Minute
+> Minute
+
+@ Steuerung wählen (antippen = nächste)
+> Choose controller (tap = next)
+
+@ Lesen
+> Read
+
+@ UTC
+> UTC
+
+@ Die Steuerung liefert die Uhrzeit in UTC (sonst Ortszeit) – nur bei S7 von Bedeutung
+> The controller delivers its time in UTC (otherwise local time) – only relevant for S7
+
+@ Zeitzone
+> Time zone
+
+@ Uhr stellen
+> Set clock
 
 @ keine Adresse
 > no address
@@ -3425,6 +3467,54 @@
 
 @ WLAN „{0}“
 > WLAN “{0}”
+
+@ timedatectl fehlt – die Uhr lässt sich hier nicht stellen.
+> timedatectl is missing – the clock cannot be set here.
+
+@ Zeitzone: {0}
+> Time zone: {0}
+
+@ Internetzeit: synchronisiert
+> Internet time: synchronised
+
+@ Internetzeit: nicht erreichbar
+> Internet time: not reachable
+
+@ Internetzeit: aus
+> Internet time: off
+
+@ Wird gestellt …
+> Setting …
+
+@ Uhr gestellt: {0}
+> Clock set: {0}
+
+@ Internetzeit eingeschaltet
+> Internet time switched on
+
+@ Internetzeit ausgeschaltet
+> Internet time switched off
+
+@ Zeitzone {0} eingestellt
+> Time zone {0} set
+
+@ Automatisch: Uhrzeit beim Start und stündlich von der Steuerung übernehmen, solange keine Internetzeit synchronisiert ist.
+> Automatic: take the time from the controller at start-up and every hour as long as no internet time is synchronised.
+
+@ Automatisch aus
+> Automatic off
+
+@ Lese Uhrzeit von {0} …
+> Reading time from {0} …
+
+@ {0}: {1}   (Abweichung zum Pi: {2:+.0f} s) – „Übernehmen“ stellt den Pi
+> {0}: {1}   (difference to the Pi: {2:+.0f} s) – “Take over” sets the Pi
+
+@ Uhrzeit von {0}: {1}
+> Time from {0}: {1}
+
+@ Uhr nach {0} gestellt (Abweichung {1:+.0f} s)
+> Clock set from {0} (difference {1:+.0f} s)
 
 # ---------------- plc_netscan.py
 
@@ -4030,14 +4120,8 @@
 @ Schicht
 > Shift
 
-@ Tag
-> Day
-
 @ Woche
 > Week
-
-@ Monat
-> Month
 
 @ Schicht {0} ({1:%H:%M}–{2:%H:%M}) am {1:%d.%m.%Y}
 > Shift {0} ({1:%H:%M}–{2:%H:%M}) on {1:%Y-%m-%d}
@@ -4687,6 +4771,9 @@
 @ Adresse des Ringpuffers fehlt
 > Ring buffer address missing
 
+@ Der Treiber {0} kann die Uhrzeit der Steuerung nicht lesen.
+> The driver {0} cannot read the controller's clock.
+
 # ---------------- plc_treiber/clx.py
 
 @ Allen-Bradley Logix (EtherNet/IP, libplctag)
@@ -4733,6 +4820,9 @@
 
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
 > Array tag “{0}” is empty or invalid (specify without index).
+
+@ keine Antwort
+> no response
 
 # ---------------- plc_treiber/clx_browser.py
 
@@ -4856,9 +4946,6 @@
 
 @ Ungültiger Tag-Name des Ringpuffers „{0}“ (Tag des UDT ohne Index)
 > Invalid ring buffer tag name "{0}" (tag of the UDT without index)
-
-@ keine Antwort
-> no response
 
 @ keine Antwort innerhalb von {0} ms
 > no response within {0} ms
@@ -5393,6 +5480,9 @@
 
 @ Ungültige NodeId „{0}“ (z. B. ns=2;s=Name oder ns=2;i=1001)
 > Invalid NodeId "{0}" (e.g. ns=2;s=Name or ns=2;i=1001)
+
+@ Der Server liefert keine Uhrzeit.
+> The server does not deliver a time.
 
 # ---------------- plc_treiber/opcua_browser.py
 

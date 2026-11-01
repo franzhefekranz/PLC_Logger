@@ -4557,6 +4557,9 @@ All details are in ``src/plc_treiber/base.py``. The most important parts:
        also loaded without them.
    * - ``read_once(plc, variables)``
      - Connection test; default: ``connect`` + ``read`` + ``close``.
+   * - ``read_clock(plc)``
+     - Time of the controller as ``datetime`` (with time zone if known, otherwise local
+       time) for the network panel; set ``clock_support = True`` as well.
    * - ``browse(parent, ctx)``
      - Browse dialog (Qt). ``ctx``: ``BrowseContext`` with ``plc``, ``existing``
        (existing addresses), ``target_labels``, ``default_target`` and ``store``
@@ -5047,6 +5050,27 @@ and the address of the web server with a QR code (to open it on a tablet). The b
 **Ethernet** and **WLAN** set DHCP or a fixed address (IP/prefix, gateway, DNS), search for
 WLANs and connect with a password – input via the on-screen keyboard. The settings are kept
 after a reboot.
+
+**Time** sets date and time – important because the Raspberry Pi 4 has no battery-backed
+clock and, without internet, starts with a wrong time after a reboot (the time stamps of the
+recording come from the Pi):
+
+* **Manually:** choose day, month, year, hour and minute with ▲/▼, **Set clock**. Internet
+  time is switched off; **Internet time (NTP)** switches it on again. **Time zone** chooses
+  the time zone from a list (e.g. ``Europe/Berlin``).
+* **From the controller:** the row below appears when the configuration contains an active
+  controller with the driver ``s7``, ``clx`` or ``opcua`` (with several, tapping the name
+  selects the next one). **Read** shows the controller's time and the difference to the Pi,
+  **Take over** then sets the Pi. ``clx`` (system clock) and ``opcua`` (server time) deliver
+  UTC; the panel converts to the Pi's time zone. With ``s7`` the CPU time is taken as local
+  time; if the CPU clock runs in UTC (common with S7-1200/1500 – recognisable by a difference
+  of whole hours), switch on **UTC**. ``tia`` cannot read the time; if PUT/GET is enabled in
+  the CPU, an additional controller with the driver ``s7`` (same IP address) without
+  variables is sufficient.
+* **Automatic:** takes over the controller's time when the panel starts and then every hour,
+  as long as no internet time is synchronised and the difference is larger than 2 s (message
+  on the overview). The panel's settings are stored in ``plc_netzwerk.json`` in root's data
+  folder.
 
 * **Display:** for Waveshare HDMI displays enter the lines for the respective model from the
   Waveshare wiki in ``/boot/firmware/config.txt`` (resolution); touch works via USB without

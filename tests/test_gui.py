@@ -208,6 +208,76 @@ def test_netpanel_touch(qapp, demo_config):
     w.close()
 
 
+def test_netpanel_time(qapp, demo_config, monkeypatch):
+    """Netzwerk-Panel, Datum und Uhrzeit: von Hand stellen, Zeitzone, Uhrzeit der Steuerung lesen und übernehmen
+    (Ortszeit bzw. UTC), automatischer Abgleich."""
+    import datetime
+
+    import plc_netpanel
+    from test_logic import _FakeNm
+    from plc_treiber.s7 import S7Driver
+    monkeypatch.setattr(plc_netpanel, "save_settings", lambda data: None)
+    plc_dt = datetime.datetime.now().replace(microsecond=0) - datetime.timedelta(hours=1, seconds=30)
+    monkeypatch.setattr(S7Driver, "read_clock", lambda self, plc: plc_dt)
+    fake = _FakeNm()
+    w = plc_netpanel.NetPanel(plc_netz_fake(fake), config_path=demo_config, service="", background=False,
+                              settings={})
+    w.resize(800, 480)
+    w.show()
+    w.show_time()
+    assert w.stack.currentWidget() is w.page_time and w.btn_ntp.isChecked() and not w.plc_row.isHidden()
+    assert "Europe/Berlin" in w.lbl_time_info.text() and w.btn_plc.text() == "SPS 1"
+    # von Hand: 29.02. gibt es 2027 nicht
+    w.st_year.set_value(2028)
+    w.st_month.set_value(2)
+    w.st_day.set_value(29)
+    w.st_year.step(-1)
+    assert w.st_day.value == 28
+    w.st_hour.set_value(23)
+    w.st_hour.step(1)
+    assert w.st_hour.value == 0
+    w.st_min.set_value(5)
+    fake.calls.clear()
+    w.apply_time()
+    assert fake.calls[-1] == ["timedatectl", "set-time", "2027-02-28 00:05:00"], fake.calls
+    assert not w.btn_ntp.isChecked() and "gestellt" in w.lbl_time_msg.text()
+    # Zeitzone
+    w.show_timezone()
+    assert w.list_tz.count() == 3 and w.list_tz.currentItem().text() == "Europe/Berlin"
+    w.list_tz.setCurrentRow(2)
+    import time
+    old_tz = os.environ.get("TZ")
+    try:
+        w.apply_timezone()
+        assert ["timedatectl", "set-timezone", "UTC"] in fake.calls and w.stack.currentWidget() is w.page_time
+    finally:
+        if old_tz is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = old_tz
+        time.tzset()
+    # Steuerung lesen und übernehmen
+    w.read_plc_clock()
+    assert w.plc_time and w.btn_take_plc.isEnabled() and "-363" in w.lbl_time_msg.text(), w.lbl_time_msg.text()
+    fake.calls.clear()
+    w.take_plc_clock()
+    stamp = fake.calls[-1][2]
+    assert abs((datetime.datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S") - plc_dt).total_seconds()) <= 2
+    # Uhr der Steuerung in UTC: wird in Ortszeit umgerechnet
+    w.btn_utc.setChecked(True)
+    w.toggle_utc()
+    assert not w.btn_take_plc.isEnabled()
+    expect = plc_dt.replace(tzinfo=datetime.timezone.utc).astimezone().replace(tzinfo=None)
+    assert w.plc_local_time(plc_dt) == expect
+    # automatisch: NTP nicht synchronisiert -> stellen
+    w.btn_auto.setChecked(True)
+    w.toggle_auto()
+    fake.calls.clear()
+    w.auto_sync()
+    assert fake.calls and fake.calls[-1][:2] == ["timedatectl", "set-time"] and "gestellt" in w.lbl_status.text()
+    w.close()
+
+
 def plc_netz_fake(fake):
     import plc_netz
     return plc_netz.Netz(run=fake)

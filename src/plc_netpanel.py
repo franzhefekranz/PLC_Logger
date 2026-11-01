@@ -8,11 +8,16 @@ Läuft bildschirmfüllend direkt auf dem Display – ohne Desktop (Qt-Plattform 
   Webservers mit QR-Code (aus der Konfigurationsdatei, falls angegeben).
 * **IP-Einstellung** je Schnittstelle: DHCP oder feste Adresse (IP/Präfix, Gateway, DNS) mit Zifferntastatur.
 * **WLAN:** ein/aus, Netze suchen, verbinden (Passwort über die Bildschirmtastatur).
+* **Datum und Uhrzeit:** von Hand stellen, Internetzeit (NTP) ein/aus, Zeitzone; Uhrzeit aus einer Steuerung der
+  Konfiguration lesen und übernehmen – auf Wunsch automatisch (beim Start und stündlich, solange keine Internetzeit
+  synchronisiert ist). Treiber mit Uhrzeit: s7, clx, opcua (``Driver.read_clock``).
 
-Eingestellt wird über NetworkManager (plc_netz); die Befehle laufen in einem Hintergrund-Thread, damit die Oberfläche
-bedienbar bleibt. Ohne NetworkManager zeigt das Panel nur die Adressen an.
+Eingestellt wird über NetworkManager bzw. timedatectl (plc_netz); die Befehle laufen in einem Hintergrund-Thread, damit
+die Oberfläche bedienbar bleibt. Ohne NetworkManager zeigt das Panel nur die Adressen an. Die Einstellungen des Panels
+(Steuerung für die Uhrzeit, automatisch, Uhr der Steuerung in UTC) stehen in ``plc_netzwerk.json`` im Datenordner.
 """
 import datetime
+import json
 import os
 import sys
 import threading
@@ -20,7 +25,7 @@ import threading
 from PySide6.QtCore import QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (
-    QApplication, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
+    QApplication, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton, QScroller,
     QSizePolicy, QStackedWidget, QVBoxLayout, QWidget,
 )
 
@@ -174,13 +179,108 @@ class TouchEdit(QLineEdit):
         super().focusInEvent(ev)
 
 
+class Stepper(QWidget):
+    """Zahl mit großen Tasten ▲/▼ (Touch): ``value`` zwischen ``lo`` und ``hi``, am Ende geht es von vorn los."""
+
+    def __init__(self, label, lo, hi, width=2, changed=None):
+        super().__init__()
+        self.lo, self.hi, self.width, self.changed = lo, hi, width, changed
+        self.value = lo
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(2)
+        t = QLabel(label)
+        t.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        v.addWidget(t)
+        for text, step in (("▲", 1), (None, 0), ("▼", -1)):
+            if text is None:
+                self.lbl = QLabel()
+                self.lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.lbl.setObjectName("titel")
+                v.addWidget(self.lbl)
+                continue
+            b = QPushButton(text)
+            b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            b.setMinimumHeight(48)
+            b.setAutoRepeat(True)
+            b.setAutoRepeatDelay(400)
+            b.setAutoRepeatInterval(120)
+            b.clicked.connect(lambda _=False, d=step: self.step(d))
+            v.addWidget(b)
+        self.set_value(lo)
+
+    def set_range(self, lo, hi):
+        self.lo, self.hi = lo, hi
+        self.set_value(min(max(self.value, lo), hi), notify=False)
+
+    def set_value(self, value, notify=True):
+        self.value = int(value)
+        self.lbl.setText(str(self.value).zfill(self.width))
+        if notify and self.changed:
+            self.changed()
+
+    def step(self, d):
+        n = self.hi - self.lo + 1
+        self.set_value(self.lo + (self.value - self.lo + d) % n)
+
+
+SETTINGS_FILE = "plc_netzwerk.json"
+
+
+def load_settings():
+    """Einstellungen des Panels (Datenordner) -> dict."""
+    from plc_common import BASE_DIR
+    try:
+        with open(os.path.join(BASE_DIR, SETTINGS_FILE), encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_settings(data):
+    from plc_common import BASE_DIR
+    try:
+        os.makedirs(BASE_DIR, exist_ok=True)
+        with open(os.path.join(BASE_DIR, SETTINGS_FILE), "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=1)
+    except OSError:
+        pass
+
+
+def clock_plcs(config_path):
+    """Aktive Steuerungen der Konfiguration, deren Treiber die Uhrzeit lesen kann -> [(Plc, Treiber)]."""
+    if not config_path:
+        return []
+    try:
+        from plc_common import get_driver, load_plcs
+        out = []
+        for p in load_plcs(config_path):
+            try:
+                d = get_driver(p.driver)
+            except Exception:
+                continue
+            if p.enabled and d.clock_support:
+                out.append((p, d))
+        return out
+    except Exception:
+        return []
+
+
 class NetPanel(QWidget):
     """Hauptfenster des Panels mit den Seiten Übersicht, IP-Einstellung, WLAN und WLAN-Passwort."""
 
-    def __init__(self, netz=None, config_path="", service="plc-datenlogger", background=True):
+    SYNC_LIMIT_S = 2.0              # automatisch: erst ab dieser Abweichung stellen
+    SYNC_EVERY_MS = 3600 * 1000     # automatisch: stündlich
+
+    def __init__(self, netz=None, config_path="", service="plc-datenlogger", background=True, settings=None):
         super().__init__()
         self.netz = netz or plc_netz.Netz()
         self.config_path = config_path
+        self.settings = load_settings() if settings is None else settings
+        self.clock_plcs = clock_plcs(config_path)
+        self.plc_time = None                    # zuletzt gelesene Uhrzeit der Steuerung (Ortszeit) und Lesezeitpunkt
+        self.timezones = []
         self.service = service
         self.background = background            # Befehle im Hintergrund-Thread (Tests: False)
         self.devs = []
@@ -198,7 +298,9 @@ class NetPanel(QWidget):
         self.page_ip = self._build_ip()
         self.page_wifi = self._build_wifi()
         self.page_pw = self._build_password()
-        for p in (self.page_home, self.page_ip, self.page_wifi, self.page_pw):
+        self.page_time = self._build_time()
+        self.page_tz = self._build_timezone()
+        for p in (self.page_home, self.page_ip, self.page_wifi, self.page_pw, self.page_time, self.page_tz):
             self.stack.addWidget(p)
         self.timer = QTimer(self)
         self.timer.setInterval(5000)
@@ -209,9 +311,15 @@ class NetPanel(QWidget):
         self.poll = QTimer(self)
         self.poll.setInterval(200)
         self.poll.timeout.connect(self._poll_job)
+        self.sync_timer = QTimer(self)
+        self.sync_timer.setInterval(self.SYNC_EVERY_MS)
+        self.sync_timer.timeout.connect(self.auto_sync)
         self.refresh()
         self.timer.start()
         self.clock.start()
+        self.sync_timer.start()
+        if background and self.settings.get("uhr_auto") and self.clock_plcs:
+            QTimer.singleShot(15000, self.auto_sync)            # beim Start: Steuerung braucht evtl. etwas länger
 
     # ------------------------------------------------------------------ Seiten
     @staticmethod
@@ -248,8 +356,10 @@ class NetPanel(QWidget):
         row = QHBoxLayout()
         self.btn_eth = self._button(tr("Ethernet"), lambda: self.show_ip("ethernet"))
         self.btn_wifi = self._button(tr("WLAN"), self.show_wifi)
+        self.btn_time = self._button(tr("Uhrzeit"), self.show_time)
         row.addWidget(self.btn_eth)
         row.addWidget(self.btn_wifi)
+        row.addWidget(self.btn_time)
         row.addWidget(self._button(tr("Aktualisieren"), self.refresh))
         v.addLayout(row)
         return w
@@ -340,6 +450,73 @@ class NetPanel(QWidget):
         row.addWidget(self._button(tr("Abbrechen"), self.show_wifi))
         self.btn_connect = self._button(tr("Verbinden"), self.connect_wifi)
         row.addWidget(self.btn_connect)
+        v.addLayout(row)
+        return w
+
+    def _build_time(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        h = QHBoxLayout()
+        t = QLabel(tr("Datum und Uhrzeit"))
+        t.setObjectName("titel")
+        h.addWidget(t, 1)
+        self.btn_ntp = self._button(tr("Internetzeit (NTP)"), self.toggle_ntp, checkable=True)
+        h.addWidget(self.btn_ntp)
+        v.addLayout(h)
+        self.lbl_time_info = QLabel()
+        self.lbl_time_info.setWordWrap(True)
+        v.addWidget(self.lbl_time_info)
+        steps = QHBoxLayout()
+        self.st_day = Stepper(tr("Tag"), 1, 31)
+        self.st_month = Stepper(tr("Monat"), 1, 12, changed=self._fix_days)
+        self.st_year = Stepper(tr("Jahr"), 2020, 2099, width=4, changed=self._fix_days)
+        self.st_hour = Stepper(tr("Stunde"), 0, 23)
+        self.st_min = Stepper(tr("Minute"), 0, 59)
+        for k, st in enumerate((self.st_day, self.st_month, self.st_year, self.st_hour, self.st_min)):
+            if k == 3:
+                steps.addSpacing(24)
+            steps.addWidget(st, 1)
+        v.addLayout(steps, 1)
+        # Steuerung: Uhrzeit lesen und übernehmen
+        prow = QHBoxLayout()
+        self.btn_plc = self._button("", self.next_plc)
+        self.btn_plc.setToolTip(tr("Steuerung wählen (antippen = nächste)"))
+        self.btn_read_plc = self._button(tr("Lesen"), self.read_plc_clock)
+        self.btn_take_plc = self._button(tr("Übernehmen"), self.take_plc_clock)
+        self.btn_utc = self._button(tr("UTC"), self.toggle_utc, checkable=True)
+        self.btn_utc.setToolTip(tr("Die Steuerung liefert die Uhrzeit in UTC (sonst Ortszeit) – nur bei S7 von "
+                                   "Bedeutung"))
+        self.btn_auto = self._button(tr("Automatisch"), self.toggle_auto, checkable=True)
+        for b in (self.btn_plc, self.btn_read_plc, self.btn_take_plc, self.btn_utc, self.btn_auto):
+            prow.addWidget(b)
+        self.plc_row = QWidget()
+        self.plc_row.setLayout(prow)
+        v.addWidget(self.plc_row)
+        self.lbl_time_msg = QLabel()
+        self.lbl_time_msg.setWordWrap(True)
+        v.addWidget(self.lbl_time_msg)
+        row = QHBoxLayout()
+        row.addWidget(self._button(tr("Zurück"), self.show_home))
+        row.addWidget(self._button(tr("Zeitzone"), self.show_timezone))
+        self.btn_set_time = self._button(tr("Uhr stellen"), self.apply_time)
+        row.addWidget(self.btn_set_time)
+        v.addLayout(row)
+        return w
+
+    def _build_timezone(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        t = QLabel(tr("Zeitzone"))
+        t.setObjectName("titel")
+        v.addWidget(t)
+        self.list_tz = QListWidget()
+        QScroller.grabGesture(self.list_tz.viewport(), QScroller.ScrollerGestureType.LeftMouseButtonGesture)
+        v.addWidget(self.list_tz, 1)
+        self.lbl_tz_msg = QLabel()
+        v.addWidget(self.lbl_tz_msg)
+        row = QHBoxLayout()
+        row.addWidget(self._button(tr("Zurück"), self.show_time))
+        row.addWidget(self._button(tr("Übernehmen"), self.apply_timezone))
         v.addLayout(row)
         return w
 
@@ -520,6 +697,215 @@ class NetPanel(QWidget):
             return
         self.ed_pw.clear()
         self.show_home()
+
+    # ------------------------------------------------------------------ Datum und Uhrzeit
+    def show_time(self):
+        """Seite Datum/Uhrzeit: Felder mit der aktuellen Zeit füllen."""
+        now = datetime.datetime.now()
+        for st, val in ((self.st_year, now.year), (self.st_month, now.month), (self.st_day, now.day),
+                        (self.st_hour, now.hour), (self.st_min, now.minute)):
+            st.set_value(val, notify=False)
+        self._fix_days()
+        info = self.netz.time_info()
+        self.btn_ntp.setChecked(info.ntp)
+        for b in (self.btn_ntp, self.btn_set_time):
+            b.setEnabled(info.available)
+        self.plc_row.setVisible(bool(self.clock_plcs))
+        self.btn_utc.setChecked(bool(self.settings.get("uhr_utc")))
+        self.btn_auto.setChecked(bool(self.settings.get("uhr_auto")))
+        self.btn_take_plc.setEnabled(self.plc_time is not None)
+        self._update_plc_button()
+        self._time_info_text(info)
+        self.lbl_time_msg.setText("" if info.available else
+                                  tr("timedatectl fehlt – die Uhr lässt sich hier nicht stellen."))
+        self.stack.setCurrentWidget(self.page_time)
+
+    def _time_info_text(self, info=None):
+        info = info or self.netz.time_info()
+        parts = [tr("Zeitzone: {0}").format(info.timezone or "?")]
+        if info.ntp:
+            parts.append(tr("Internetzeit: synchronisiert") if info.synced else tr("Internetzeit: nicht erreichbar"))
+        else:
+            parts.append(tr("Internetzeit: aus"))
+        self.lbl_time_info.setText("   ·   ".join(parts))
+
+    def _fix_days(self):
+        """Tage des gewählten Monats (Schaltjahr) begrenzen."""
+        import calendar
+        self.st_day.set_range(1, calendar.monthrange(self.st_year.value, self.st_month.value)[1])
+
+    def chosen_time(self):
+        return datetime.datetime(self.st_year.value, self.st_month.value, self.st_day.value,
+                                 self.st_hour.value, self.st_min.value)
+
+    def apply_time(self):
+        """Uhr auf die eingestellte Zeit stellen (Sekunden 0; Internetzeit wird dabei ausgeschaltet)."""
+        dt = self.chosen_time()
+        self._msg(self.lbl_time_msg, tr("Wird gestellt …"), True)
+        self._run(lambda: self.netz.set_time(dt), lambda err: self._time_done(err, dt))
+
+    def _time_done(self, err, dt):
+        if err:
+            self._msg(self.lbl_time_msg, tr("Fehler: {0}").format(err), False)
+            return
+        self.btn_ntp.setChecked(False)
+        self._time_info_text()
+        self._tick()
+        self._msg(self.lbl_time_msg, tr("Uhr gestellt: {0}").format(dt.strftime("%d.%m.%Y %H:%M:%S")), True)
+
+    def toggle_ntp(self):
+        on = self.btn_ntp.isChecked()
+        self._run(lambda: self.netz.set_ntp(on), lambda err: (
+            self._msg(self.lbl_time_msg, tr("Fehler: {0}").format(err), False) if err else
+            (self._time_info_text(), self._msg(self.lbl_time_msg, tr("Internetzeit eingeschaltet") if on
+                                               else tr("Internetzeit ausgeschaltet"), True))))
+
+    def show_timezone(self):
+        if not self.timezones:
+            try:
+                self.timezones = self.netz.timezones()
+            except Exception as e:
+                self._msg(self.lbl_time_msg, tr("Fehler: {0}").format(e), False)
+                return
+        cur = self.netz.time_info().timezone
+        self.list_tz.clear()
+        for z in self.timezones:
+            it = QListWidgetItem(z)
+            it.setSizeHint(QSize(0, 48))
+            self.list_tz.addItem(it)
+            if z == cur:
+                self.list_tz.setCurrentItem(it)
+        if self.list_tz.currentItem():
+            self.list_tz.scrollToItem(self.list_tz.currentItem(), QListWidget.ScrollHint.PositionAtCenter)
+        self.lbl_tz_msg.setText("")
+        self.stack.setCurrentWidget(self.page_tz)
+
+    def apply_timezone(self):
+        it = self.list_tz.currentItem()
+        if it is None:
+            return
+        tz = it.text()
+
+        def done(err):
+            if err:
+                self._msg(self.lbl_tz_msg, tr("Fehler: {0}").format(err), False)
+                return
+            os.environ["TZ"] = tz                       # auch die Anzeige dieses Programms umstellen
+            try:
+                import time
+                time.tzset()
+            except AttributeError:
+                pass
+            self.show_time()
+            self._msg(self.lbl_time_msg, tr("Zeitzone {0} eingestellt").format(tz), True)
+        self._run(lambda: self.netz.set_timezone(tz), done)
+
+    # Steuerung
+    def current_plc(self):
+        """(Plc, Treiber) der gewählten Steuerung oder None."""
+        if not self.clock_plcs:
+            return None
+        name = self.settings.get("uhr_steuerung", "")
+        return next((x for x in self.clock_plcs if x[0].name == name), self.clock_plcs[0])
+
+    def _update_plc_button(self):
+        cur = self.current_plc()
+        self.btn_plc.setText(cur[0].name if cur else "")
+        self.btn_plc.setEnabled(len(self.clock_plcs) > 1)
+
+    def next_plc(self):
+        cur = self.current_plc()
+        if not cur:
+            return
+        k = (self.clock_plcs.index(cur) + 1) % len(self.clock_plcs)
+        self.settings["uhr_steuerung"] = self.clock_plcs[k][0].name
+        save_settings(self.settings)
+        self.plc_time = None
+        self.btn_take_plc.setEnabled(False)
+        self._update_plc_button()
+
+    def toggle_utc(self):
+        self.settings["uhr_utc"] = self.btn_utc.isChecked()
+        save_settings(self.settings)
+        self.plc_time = None
+        self.btn_take_plc.setEnabled(False)
+
+    def toggle_auto(self):
+        self.settings["uhr_auto"] = self.btn_auto.isChecked()
+        save_settings(self.settings)
+        self._msg(self.lbl_time_msg, tr("Automatisch: Uhrzeit beim Start und stündlich von der Steuerung übernehmen, "
+                                        "solange keine Internetzeit synchronisiert ist.")
+                  if self.settings["uhr_auto"] else tr("Automatisch aus"), True)
+
+    def plc_local_time(self, dt):
+        """Uhrzeit der Steuerung -> Ortszeit (ohne Zeitzone liefert die Steuerung Orts- bzw. – Schalter UTC – UTC)."""
+        if dt.tzinfo is None and self.settings.get("uhr_utc"):
+            dt = dt.replace(tzinfo=datetime.timezone.utc)
+        return plc_netz.local_naive(dt) if dt.tzinfo else dt.replace(microsecond=0)
+
+    def _read_clock(self, result):
+        """Im Hintergrund: Uhr der gewählten Steuerung lesen -> result["plc"] (Ortszeit), result["at"] (Pi-Zeit)."""
+        plc, drv = self.current_plc()
+        dt = drv.read_clock(plc)
+        result["at"] = datetime.datetime.now()
+        result["plc"] = self.plc_local_time(dt)
+
+    def read_plc_clock(self):
+        cur = self.current_plc()
+        if not cur:
+            return
+        result = {}
+        self._msg(self.lbl_time_msg, tr("Lese Uhrzeit von {0} …").format(cur[0].name), True)
+        self.btn_read_plc.setEnabled(False)
+
+        def done(err):
+            self.btn_read_plc.setEnabled(True)
+            if err:
+                self.plc_time = None
+                self.btn_take_plc.setEnabled(False)
+                self._msg(self.lbl_time_msg, tr("Fehler: {0}").format(err), False)
+                return
+            self.plc_time = (result["plc"], result["at"])
+            diff = (result["plc"] - result["at"]).total_seconds()
+            self.btn_take_plc.setEnabled(True)
+            self._msg(self.lbl_time_msg, tr("{0}: {1}   (Abweichung zum Pi: {2:+.0f} s) – „Übernehmen“ stellt den Pi")
+                      .format(cur[0].name, result["plc"].strftime("%d.%m.%Y %H:%M:%S"), diff), True)
+        self._run(lambda: self._read_clock(result), done)
+
+    def take_plc_clock(self):
+        """Gelesene Uhrzeit der Steuerung übernehmen (um die seit dem Lesen vergangene Zeit weitergerechnet)."""
+        if self.plc_time is None:
+            return
+        plc_dt, at = self.plc_time
+        dt = plc_dt + (datetime.datetime.now() - at)
+        self._msg(self.lbl_time_msg, tr("Wird gestellt …"), True)
+        self._run(lambda: self.netz.set_time(dt), lambda err: self._time_done(err, plc_netz.local_naive(dt)))
+
+    def auto_sync(self):
+        """Automatisch: Uhr der Steuerung übernehmen, wenn keine Internetzeit synchronisiert ist und die Abweichung
+        größer als SYNC_LIMIT_S ist (Meldung in der Statuszeile der Übersicht)."""
+        if not self.settings.get("uhr_auto") or not self.current_plc() or self._job is not None:
+            return
+        info = self.netz.time_info()
+        if not info.available or info.synced:
+            return
+        result = {}
+
+        def work():
+            self._read_clock(result)
+            dt = result["plc"] + (datetime.datetime.now() - result["at"])
+            result["diff"] = (dt - datetime.datetime.now()).total_seconds()
+            if abs(result["diff"]) > self.SYNC_LIMIT_S:
+                self.netz.set_time(dt)
+
+        def done(err):
+            name = self.current_plc()[0].name
+            if err:
+                self.lbl_status.setText(tr("Uhrzeit von {0}: {1}").format(name, err))
+            elif abs(result.get("diff", 0)) > self.SYNC_LIMIT_S:
+                self.lbl_status.setText(tr("Uhr nach {0} gestellt (Abweichung {1:+.0f} s)").format(name, result["diff"]))
+            self._tick()
+        self._run(work, done)
 
     # ------------------------------------------------------------------ Hilfen
     @staticmethod

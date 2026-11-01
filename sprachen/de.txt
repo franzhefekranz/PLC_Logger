@@ -3345,6 +3345,9 @@
 @ WLAN
 > 
 
+@ Uhrzeit
+> 
+
 @ DHCP (automatisch)
 > 
 
@@ -3379,6 +3382,45 @@
 > 
 
 @ Verbinden
+> 
+
+@ Datum und Uhrzeit
+> 
+
+@ Internetzeit (NTP)
+> 
+
+@ Tag
+> 
+
+@ Monat
+> 
+
+@ Jahr
+> 
+
+@ Stunde
+> 
+
+@ Minute
+> 
+
+@ Steuerung wählen (antippen = nächste)
+> 
+
+@ Lesen
+> 
+
+@ UTC
+> 
+
+@ Die Steuerung liefert die Uhrzeit in UTC (sonst Ortszeit) – nur bei S7 von Bedeutung
+> 
+
+@ Zeitzone
+> 
+
+@ Uhr stellen
 > 
 
 @ keine Adresse
@@ -3424,6 +3466,54 @@
 > 
 
 @ WLAN „{0}“
+> 
+
+@ timedatectl fehlt – die Uhr lässt sich hier nicht stellen.
+> 
+
+@ Zeitzone: {0}
+> 
+
+@ Internetzeit: synchronisiert
+> 
+
+@ Internetzeit: nicht erreichbar
+> 
+
+@ Internetzeit: aus
+> 
+
+@ Wird gestellt …
+> 
+
+@ Uhr gestellt: {0}
+> 
+
+@ Internetzeit eingeschaltet
+> 
+
+@ Internetzeit ausgeschaltet
+> 
+
+@ Zeitzone {0} eingestellt
+> 
+
+@ Automatisch: Uhrzeit beim Start und stündlich von der Steuerung übernehmen, solange keine Internetzeit synchronisiert ist.
+> 
+
+@ Automatisch aus
+> 
+
+@ Lese Uhrzeit von {0} …
+> 
+
+@ {0}: {1}   (Abweichung zum Pi: {2:+.0f} s) – „Übernehmen“ stellt den Pi
+> 
+
+@ Uhrzeit von {0}: {1}
+> 
+
+@ Uhr nach {0} gestellt (Abweichung {1:+.0f} s)
 > 
 
 # ---------------- plc_netscan.py
@@ -4030,13 +4120,7 @@
 @ Schicht
 > 
 
-@ Tag
-> 
-
 @ Woche
-> 
-
-@ Monat
 > 
 
 @ Schicht {0} ({1:%H:%M}–{2:%H:%M}) am {1:%d.%m.%Y}
@@ -4687,6 +4771,9 @@
 @ Adresse des Ringpuffers fehlt
 > 
 
+@ Der Treiber {0} kann die Uhrzeit der Steuerung nicht lesen.
+> 
+
 # ---------------- plc_treiber/clx.py
 
 @ Allen-Bradley Logix (EtherNet/IP, libplctag)
@@ -4732,6 +4819,9 @@
 > 
 
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
+> 
+
+@ keine Antwort
 > 
 
 # ---------------- plc_treiber/clx_browser.py
@@ -4855,9 +4945,6 @@
 > 
 
 @ Ungültiger Tag-Name des Ringpuffers „{0}“ (Tag des UDT ohne Index)
-> 
-
-@ keine Antwort
 > 
 
 @ keine Antwort innerhalb von {0} ms
@@ -5392,6 +5479,9 @@
 > 
 
 @ Ungültige NodeId „{0}“ (z. B. ns=2;s=Name oder ns=2;i=1001)
+> 
+
+@ Der Server liefert keine Uhrzeit.
 > 
 
 # ---------------- plc_treiber/opcua_browser.py

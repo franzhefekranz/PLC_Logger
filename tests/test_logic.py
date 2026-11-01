@@ -881,6 +881,10 @@ class _FakeNm:
             return "yes:Büro:70:WPA2\nno:Gast:40:\nno:Büro:30:WPA2\nno:Mit\\:Doppelpunkt:55:WPA2\nno::20:\n"
         if a == "nmcli -t radio wifi":
             return "enabled\n"
+        if a.startswith("timedatectl show"):
+            return "Timezone=Europe/Berlin\nNTP=yes\nNTPSynchronized=no\n"
+        if a == "timedatectl list-timezones":
+            return "Europe/Berlin\nEurope/Vienna\nUTC\n"
         return ""
 
 
@@ -971,3 +975,34 @@ def test_record_flags_recorder_csv(tmp_path):
     assert len(lines) > 2 and all(len(x.split(";")) == 5 for x in lines[1:])
     # Formel mit dem nicht aufgezeichneten Element ist gerechnet worden (Puffer enthält alle Variablen).
     assert not np.all(np.isnan(rec.ybuf[3, :rec.n]))
+
+
+def test_netz_time():
+    """Datum und Uhrzeit über timedatectl: Zustand lesen, Uhr stellen (schaltet NTP ab), Zeitzone, NTP."""
+    import datetime
+
+    import plc_netz
+    fake = _FakeNm()
+    n = plc_netz.Netz(run=fake)
+    info = n.time_info()
+    assert info.available and info.timezone == "Europe/Berlin" and info.ntp and not info.synced
+    assert n.timezones() == ["Europe/Berlin", "Europe/Vienna", "UTC"]
+    fake.calls.clear()
+    n.set_time(datetime.datetime(2026, 11, 1, 9, 30, 5, 700000))
+    assert fake.calls == [["timedatectl", "set-ntp", "false"], ["timedatectl", "set-time", "2026-11-01 09:30:05"]]
+    utc = datetime.datetime(2026, 11, 1, 8, 30, tzinfo=datetime.timezone.utc)
+    assert plc_netz.local_naive(utc) == utc.astimezone().replace(tzinfo=None)
+    n.set_timezone("UTC")
+    n.set_ntp(True)
+    assert fake.calls[-2:] == [["timedatectl", "set-timezone", "UTC"], ["timedatectl", "set-ntp", "true"]]
+
+
+def test_driver_clock_support():
+    """Uhrzeit der Steuerung: s7, clx und opcua können sie lesen, andere melden es verständlich."""
+    from plc_common import Plc
+    from plc_treiber import get_driver
+    assert all(get_driver(d).clock_support for d in ("s7", "clx", "opcua"))
+    d = get_driver("modbus")
+    assert not d.clock_support
+    with pytest.raises(NotImplementedError):
+        d.read_clock(Plc(driver="modbus"))

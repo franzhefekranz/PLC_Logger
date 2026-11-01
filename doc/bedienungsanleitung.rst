@@ -4668,6 +4668,9 @@ Alle Einzelheiten stehen in ``src/plc_treiber/base.py``. Die wichtigsten Teile:
        der Treiber auch ohne sie geladen wird.
    * - ``read_once(plc, variables)``
      - Verbindungstest; Standard: ``connect`` + ``read`` + ``close``.
+   * - ``read_clock(plc)``
+     - Uhrzeit der Steuerung als ``datetime`` (mit Zeitzone, wenn bekannt, sonst
+       Ortszeit) für das Netzwerk-Panel; dazu ``clock_support = True`` setzen.
    * - ``browse(parent, ctx)``
      - Auswahldialog (Qt). ``ctx``: ``BrowseContext`` mit ``plc``, ``existing``
        (vorhandene Adressen), ``target_labels``, ``default_target`` und ``store``
@@ -5169,6 +5172,27 @@ Logger-Dienstes und die Adresse des Webservers mit QR-Code (zum Öffnen am Table
 Schaltflächen **Ethernet** und **WLAN** stellen DHCP oder eine feste Adresse (IP/Präfix,
 Gateway, DNS) ein, suchen WLANs und verbinden mit Passwort – Eingabe über die
 Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten.
+
+**Uhrzeit** stellt Datum und Uhrzeit ein – wichtig, weil der Raspberry Pi 4 keine
+batteriegepufferte Uhr hat und ohne Internet nach einem Neustart mit einer falschen Zeit
+startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
+
+* **Von Hand:** Tag, Monat, Jahr, Stunde und Minute mit ▲/▼ wählen, **Uhr stellen**.
+  Die Internetzeit wird dabei ausgeschaltet; **Internetzeit (NTP)** schaltet sie wieder ein.
+  **Zeitzone** wählt die Zeitzone aus einer Liste (z. B. ``Europe/Berlin``).
+* **Von der Steuerung:** Die Zeile darunter erscheint, wenn die Konfiguration eine aktive
+  Steuerung mit dem Treiber ``s7``, ``clx`` oder ``opcua`` enthält (bei mehreren wählt ein
+  Antippen des Namens die nächste). **Lesen** zeigt die Uhrzeit der Steuerung und die
+  Abweichung zum Pi, **Übernehmen** stellt den Pi danach. ``clx`` (Systemuhr) und
+  ``opcua`` (Serverzeit) liefern UTC, das Panel rechnet in die Zeitzone des Pi um. Bei
+  ``s7`` gilt die Uhrzeit der CPU als Ortszeit; läuft die CPU-Uhr in UTC (häufig bei
+  S7-1200/1500 – erkennbar an einer Abweichung von ganzen Stunden), **UTC** einschalten.
+  ``tia`` kann die Uhrzeit nicht lesen; ist in der CPU PUT/GET freigegeben, genügt eine
+  zusätzliche Steuerung mit dem Treiber ``s7`` (gleiche IP-Adresse) ohne Variablen.
+* **Automatisch:** übernimmt die Uhrzeit der Steuerung beim Start des Panels und danach
+  stündlich, solange keine Internetzeit synchronisiert ist und die Abweichung größer als
+  2 s ist (Meldung in der Übersicht). Die Einstellungen des Panels stehen in
+  ``plc_netzwerk.json`` im Datenordner von root.
 
 * **Display:** Bei Waveshare-HDMI-Displays die Zeilen für das jeweilige Modell aus dem
   Waveshare-Wiki in ``/boot/firmware/config.txt`` eintragen (Auflösung); der Touch läuft

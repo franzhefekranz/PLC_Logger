@@ -328,6 +328,21 @@ class S7Driver(Driver):
         """Leser für eine Steuerung (siehe S7Reader)."""
         return S7Reader(self, plc, variables)
 
+    clock_support = True
+
+    def read_clock(self, plc):
+        """Uhr der CPU (S7-Funktion „Uhrzeit lesen“) -> datetime ohne Zeitzone (so wie in der CPU eingestellt)."""
+        from snap7.client import Client
+        c = Client()
+        try:
+            c.connect(plc.ip, int(plc.rack), int(plc.slot))
+            return c.get_plc_datetime()
+        finally:
+            try:
+                c.disconnect()
+            except Exception:
+                pass
+
     # ------------------------------------------------------------------ Auswahldialog
     def browse(self, parent, ctx):
         """Auswahldialog aus importierten DB-Quellen (S7 liefert über PUT/GET keine Namen); bereits vorhandene Adressen
