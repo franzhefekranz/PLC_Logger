@@ -207,7 +207,7 @@ class Stepper(QWidget):
             b.setAutoRepeatInterval(120)
             b.clicked.connect(lambda _=False, d=step: self.step(d))
             v.addWidget(b)
-        self.set_value(lo)
+        self.set_value(lo, notify=False)
 
     def set_range(self, lo, hi):
         self.lo, self.hi = lo, hi
