@@ -5051,6 +5051,13 @@ and the address of the web server with a QR code (to open it on a tablet). The b
 WLANs and connect with a password – input via the on-screen keyboard. The settings are kept
 after a reboot.
 
+.. figure:: images/en/netzpanel.png
+   :alt: Network panel, overview
+   :width: 60%
+   :align: center
+
+   Network panel (800 × 480): overview with IP addresses, logger service and web server.
+
 **Time** sets date and time – important because the Raspberry Pi 4 has no battery-backed
 clock and, without internet, starts with a wrong time after a reboot (the time stamps of the
 recording come from the Pi):
@@ -5071,6 +5078,13 @@ recording come from the Pi):
   as long as no internet time is synchronised and the difference is larger than 2 s (message
   on the overview). The panel's settings are stored in ``plc_netzwerk.json`` in root's data
   folder.
+
+.. figure:: images/en/netzpanel_uhrzeit.png
+   :alt: Network panel, date and time
+   :width: 60%
+   :align: center
+
+   Date and time: set manually or take over the time read from the controller.
 
 * **Display:** for Waveshare HDMI displays enter the lines for the respective model from the
   Waveshare wiki in ``/boot/firmware/config.txt`` (resolution); touch works via USB without

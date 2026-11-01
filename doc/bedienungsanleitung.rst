@@ -5173,6 +5173,13 @@ Schaltflächen **Ethernet** und **WLAN** stellen DHCP oder eine feste Adresse (I
 Gateway, DNS) ein, suchen WLANs und verbinden mit Passwort – Eingabe über die
 Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten.
 
+.. figure:: images/netzpanel.png
+   :alt: Netzwerk-Panel, Übersicht
+   :width: 60%
+   :align: center
+
+   Netzwerk-Panel (800 × 480): Übersicht mit IP-Adressen, Logger-Dienst und Webserver.
+
 **Uhrzeit** stellt Datum und Uhrzeit ein – wichtig, weil der Raspberry Pi 4 keine
 batteriegepufferte Uhr hat und ohne Internet nach einem Neustart mit einer falschen Zeit
 startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
@@ -5193,6 +5200,13 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
   stündlich, solange keine Internetzeit synchronisiert ist und die Abweichung größer als
   2 s ist (Meldung in der Übersicht). Die Einstellungen des Panels stehen in
   ``plc_netzwerk.json`` im Datenordner von root.
+
+.. figure:: images/netzpanel_uhrzeit.png
+   :alt: Netzwerk-Panel, Datum und Uhrzeit
+   :width: 60%
+   :align: center
+
+   Datum und Uhrzeit: von Hand stellen oder die gelesene Uhrzeit der Steuerung übernehmen.
 
 * **Display:** Bei Waveshare-HDMI-Displays die Zeilen für das jeweilige Modell aus dem
   Waveshare-Wiki in ``/boot/firmware/config.txt`` eintragen (Auflösung); der Touch läuft
