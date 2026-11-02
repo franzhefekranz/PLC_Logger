@@ -5051,8 +5051,9 @@ USB-Anschluss, optional ein Touchscreen (z. B. Waveshare, HDMI mit USB-Touch ode
    sudo systemctl daemon-reload && sudo mount -a && df -h /data
    mkdir -p /data/PLCDatenlogger && ln -s /data/PLCDatenlogger ~/PLCDatenlogger
 
-``nofail`` sorgt dafür, dass der Pi auch ohne SSD startet; Docker legt seine Daten mit
-``{"data-root": "/data/docker"}`` in ``/etc/docker/daemon.json`` ebenfalls auf die SSD.
+``nofail`` sorgt dafür, dass der Pi auch ohne SSD startet. Der Link legt Konfiguration,
+CSV-Dateien, Archiv und Logdatei des Loggers auf die SSD (die SD-Karte nutzt sich sonst
+ab); die Daten von VictoriaMetrics kommen in Schritt 5 dazu.
 
 **2. Grundeinrichtung:**
 
@@ -5159,6 +5160,50 @@ Webserver des Loggers (``http://logger-kessel:8080``):
    docker compose ps
 
 ``--no-deps`` startet nur VictoriaMetrics (ohne die übrigen Datenbanken der Testumgebung).
+
+*System auf SD-Karte, Daten auf der SSD* (Variante aus Schritt 1): VictoriaMetrics speichert
+sonst in einem Docker-Volume auf der SD-Karte. So kommen die Daten nach ``/data``:
+
+#. **Docker auf die SSD warten lassen** – sonst startet VictoriaMetrics nach dem Booten
+   eventuell, bevor die SSD eingehängt ist, und schreibt unbemerkt auf die SD-Karte.
+   ``sudo systemctl edit docker`` und zwischen den Kommentarzeilen eintragen:
+
+   .. code-block:: ini
+
+      [Unit]
+      RequiresMountsFor=/data
+
+#. **Ordner statt Volume:** in ``~/plc-docker/docker/docker-compose.override.yml`` (oben aus
+   ``grafana-bei-bedarf.yml`` angelegt; ``docker-compose.yml`` bleibt unverändert, ``git pull``
+   geht weiter) ergänzen:
+
+   .. code-block:: yaml
+
+      services:
+        grafana:
+          restart: "no"
+        victoriametrics:
+          volumes:
+            - /data/victoriametrics:/storage
+
+#. **Vorhandene Daten mitnehmen** (nur wenn schon aufgezeichnet wurde) und neu starten:
+
+   .. code-block:: console
+
+      docker compose stop victoriametrics
+      docker volume ls | grep victoria             # Name, meist docker_victoriametrics-data
+      sudo mkdir -p /data/victoriametrics
+      sudo cp -a /var/lib/docker/volumes/docker_victoriametrics-data/_data/. /data/victoriametrics/
+      docker compose up -d --no-deps victoriametrics
+      docker inspect plc-victoriametrics --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}}'
+
+   Die letzte Zeile muss ``/data/victoriametrics -> /storage`` zeigen. **Speicherplatz …** im
+   Konfigurationsprogramm zeigt, ob die Aufzeichnungen da sind; danach das alte Volume
+   löschen: ``docker volume rm docker_victoriametrics-data``.
+
+Alternativ zieht ``{"data-root": "/data/docker"}`` in ``/etc/docker/daemon.json`` Docker
+komplett auf die SSD (mit Grafana und den Images; ``RequiresMountsFor`` ist auch dann nötig).
+
 **Grafana** starten und beenden:
 
 .. code-block:: console

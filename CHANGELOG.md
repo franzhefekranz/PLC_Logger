@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* Anleitung Raspberry Pi, System auf SD-Karte: Daten von VictoriaMetrics auf die SSD (Bind-Mount in
+  `docker-compose.override.yml`, Docker wartet mit `RequiresMountsFor` auf die SSD, vorhandene Daten umziehen).
+
 ## [3.7.1] – 2026-11-02
 
 ### Behoben
