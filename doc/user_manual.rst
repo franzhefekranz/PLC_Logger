@@ -4969,7 +4969,7 @@ in ``/etc/docker/daemon.json`` Docker also stores its data on the SSD.
 
 .. code-block:: console
 
-   VER=3.6.0
+   VER=3.7.0
    wget https://github.com/franzhefekranz/PLC_Logger/releases/download/v$VER/plc-datenlogger_${VER}_arm64.deb
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
@@ -5043,6 +5043,42 @@ session (step 7); without desktop, ``grafana.sh start`` via SSH and the browser 
 are enough. Grafana: ``http://logger-kessel:3000``, the data source *VictoriaMetrics* is
 already set up; upload the dashboard from **File › Export Grafana dashboard …** via
 *Dashboards › New › Import*. After a reboot of the Pi, Grafana is off.
+
+**Accessing the database from the PC:** VictoriaMetrics can be reached from the whole network
+(Docker publishes port 8428 on all interfaces of the Pi).
+
+* **Logger on the PC (read mode):** in the configuration, tab *Database*, enter the name or
+  IP address of the Pi as server (``logger-kessel`` or ``192.168.0.50``) instead of
+  ``127.0.0.1``; project and table as on the Pi. Then in the logger **File › Load from
+  database …** (`read mode <db-lesen_>`__). Simplest: the Pi's name is already in the
+  configuration running on the Pi – the logger there reaches itself that way too, and PC and
+  Pi use the same file.
+* **Storage …** in the configuration program shows the database usage on the Pi.
+* **VictoriaMetrics web interface:** ``http://logger-kessel:8428/vmui``.
+* **Grafana on the PC** instead of on the Pi: data source of type *Prometheus* with the URL
+  ``http://logger-kessel:8428``, then import the exported dashboard.
+
+**Securing it:** VictoriaMetrics has no login – anyone in the network can read data, but also
+write and delete. In an isolated control network this is usually fine, otherwise use one of
+the two options (then ``docker compose up -d --no-deps victoriametrics``):
+
+* **Password:** in ``~/plc-docker/docker/docker-compose.yml`` add to the service
+  ``victoriametrics`` under ``command:``
+
+  .. code-block:: yaml
+
+     - -httpAuth.username=logger
+     - -httpAuth.password=secret
+
+  and enter user and password in the configuration program (tab *Database*) – on the Pi and
+  on the PC; the logger then logs in with HTTP Basic. In Grafana switch on *Basic auth* for
+  the data source (on the Pi under *Connections › Data sources › VictoriaMetrics*).
+* **Publish to one network only:** under ``ports:`` prefix the Pi's address in the desired
+  network, e.g. ``"192.168.0.50:8428:8428"`` instead of ``"8428:8428"`` (the logger on the Pi
+  then also uses this address instead of ``127.0.0.1``).
+
+A firewall such as ``ufw`` does not help here: Docker adds published ports to the rules itself
+and bypasses it.
 
 **6. Network panel on the touchscreen** (``plc-netzwerk``): full screen, without desktop. It
 shows host name, time, Ethernet and WLAN with IP addresses, the state of the logger service
