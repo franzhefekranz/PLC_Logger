@@ -1006,3 +1006,18 @@ def test_driver_clock_support():
     assert not d.clock_support
     with pytest.raises(NotImplementedError):
         d.read_clock(Plc(driver="modbus"))
+
+
+@pytest.mark.skipif(not hasattr(os, "geteuid"), reason="nur Unix")
+def test_netpanel_sudo_xauthority(tmp_path, monkeypatch):
+    """Netzwerk-Panel mit sudo im Desktop: XAUTHORITY des aufrufenden Benutzers übernehmen."""
+    import pwd
+    pytest.importorskip("PySide6")
+    from plc_netpanel import _sudo_xauthority
+    (tmp_path / ".Xauthority").write_text("x")
+    monkeypatch.setattr(os, "geteuid", lambda: 0)
+    monkeypatch.setattr(pwd, "getpwnam", lambda name: type("P", (), {"pw_dir": str(tmp_path)})())
+    env = {"SUDO_USER": "benutzer", "DISPLAY": ":10.0"}
+    assert _sudo_xauthority(env) == str(tmp_path / ".Xauthority") and env["XAUTHORITY"].endswith(".Xauthority")
+    assert _sudo_xauthority({"SUDO_USER": "benutzer"}) == ""                     # ohne Desktop (eglfs)
+    assert _sudo_xauthority({"DISPLAY": ":0"}) == ""                             # ohne sudo

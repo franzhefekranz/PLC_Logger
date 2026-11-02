@@ -5150,7 +5150,9 @@ recording come from the Pi):
 
 * Rotate the picture by 180°: add ``Environment=QT_QPA_EGLFS_ROTATION=180``. If the panel does
   not start (``journalctl -u plc-netzwerk``), try ``QT_QPA_PLATFORM=linuxfb`` instead of
-  ``eglfs``. To try it in the remote desktop: ``plc-netzwerk --fenster``.
+  ``eglfs``. By hand on the Pi's text console:
+  ``sudo plc-netzwerk`` (full screen; ``sudo timeout 600 plc-netzwerk`` ends it after 10 minutes
+  by itself). In the remote desktop as a window: ``sudo plc-netzwerk --fenster``.
 
 **7. Remote desktop (XFCE and xrdp)** – a desktop only when needed: the Pi keeps booting
 without user interface (the network panel runs on the display), and a remote desktop

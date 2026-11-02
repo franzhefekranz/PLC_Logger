@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* Netzwerk-Panel: `sudo plc-netzwerk --fenster` in einer (Remote-)Desktop-Sitzung scheiterte mit „Authorization
+  required“ – das Panel verwendet jetzt die X-Anmeldedaten des aufrufenden Benutzers.
+
 ### Geändert
 
 * Anleitung Raspberry Pi: Datenbankzugriff vom PC und Absichern von VictoriaMetrics; Remotedesktop ausführlich (XFCE

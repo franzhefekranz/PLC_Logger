@@ -947,12 +947,31 @@ class NetPanel(QWidget):
         done(state.get("err", ""))
 
 
+def _sudo_xauthority(environ=None):
+    """Mit sudo in einer Desktop-/Remotedesktop-Sitzung gestartet: X-Anmeldedaten des aufrufenden Benutzers verwenden
+    (sonst „Authorization required, but no authorization protocol specified“)."""
+    env = os.environ if environ is None else environ
+    user = env.get("SUDO_USER", "")
+    if not user or not env.get("DISPLAY") or env.get("XAUTHORITY") or not hasattr(os, "geteuid") or os.geteuid():
+        return ""
+    try:
+        import pwd
+        path = os.path.join(pwd.getpwnam(user).pw_dir, ".Xauthority")
+    except (ImportError, KeyError):
+        return ""
+    if os.path.exists(path):
+        env["XAUTHORITY"] = path
+        return path
+    return ""
+
+
 def run_panel(config_path="", service="plc-datenlogger", windowed=False):
     """Panel starten (bildschirmfüllend). Ohne Desktop wählt Qt ``eglfs`` (anders: QT_QPA_PLATFORM=linuxfb)."""
     if sys.platform.startswith("linux") and not os.environ.get("QT_QPA_PLATFORM") \
             and not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
         os.environ["QT_QPA_PLATFORM"] = "eglfs"
         os.environ.setdefault("QT_QPA_EGLFS_HIDECURSOR", "1")
+    _sudo_xauthority()
     app = QApplication.instance() or QApplication(sys.argv[:1])
     from plc_i18n import install_qt
     install_qt(app)

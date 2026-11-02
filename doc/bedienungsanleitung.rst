@@ -5273,7 +5273,9 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
 
 * Bild um 180° drehen: ``Environment=QT_QPA_EGLFS_ROTATION=180`` ergänzen. Startet das Panel
   nicht (``journalctl -u plc-netzwerk``), statt ``eglfs`` ``QT_QPA_PLATFORM=linuxfb``
-  versuchen. Ausprobieren im Remotedesktop: ``plc-netzwerk --fenster``.
+  versuchen. Von Hand an der Textkonsole des Pi: ``sudo plc-netzwerk`` (bildschirmfüllend; mit
+  ``sudo timeout 600 plc-netzwerk`` endet es nach 10 Minuten von selbst). Im Remotedesktop als
+  Fenster: ``sudo plc-netzwerk --fenster``.
 
 **7. Remotedesktop (XFCE und xrdp)** – ein Desktop nur bei Bedarf: Der Pi startet weiter ohne
 Oberfläche (auf dem Display läuft das Netzwerk-Panel), am PC öffnet eine
