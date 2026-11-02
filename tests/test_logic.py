@@ -1021,3 +1021,21 @@ def test_netpanel_sudo_xauthority(tmp_path, monkeypatch):
     assert _sudo_xauthority(env) == str(tmp_path / ".Xauthority") and env["XAUTHORITY"].endswith(".Xauthority")
     assert _sudo_xauthority({"SUDO_USER": "benutzer"}) == ""                     # ohne Desktop (eglfs)
     assert _sudo_xauthority({"DISPLAY": ":0"}) == ""                             # ohne sudo
+
+
+def test_netpanel_display_platform():
+    """Netzwerk-Panel: ohne --fenster immer auf das Display (eglfs bzw. ohne Grafiktreiber linuxfb)."""
+    pytest.importorskip("PySide6")
+    from plc_netpanel import display_platform
+    assert display_platform(False, {"DISPLAY": ":10.0"}, "linux", dri=True) == "eglfs"      # aus dem Remotedesktop
+    assert display_platform(False, {}, "linux", dri=False) == "linuxfb"
+    assert display_platform(True, {"DISPLAY": ":10.0"}, "linux", dri=True) == ""            # --fenster
+    assert display_platform(False, {"QT_QPA_PLATFORM": "linuxfb"}, "linux", dri=True) == ""
+    assert display_platform(False, {}, "win32", dri=True) == ""
+
+
+def test_logger_no_display():
+    """Logger ohne grafische Sitzung (Dienst, SSH) startet headless."""
+    from plc_logger import no_display
+    assert no_display({}, "linux") and not no_display({"DISPLAY": ":0"}, "linux")
+    assert not no_display({"QT_QPA_PLATFORM": "offscreen"}, "linux") and not no_display({}, "win32")

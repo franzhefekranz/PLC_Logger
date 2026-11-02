@@ -965,13 +965,31 @@ def _sudo_xauthority(environ=None):
     return ""
 
 
+def display_platform(windowed, environ=None, platform=None, dri=None):
+    """Qt-Plattform für das angeschlossene Display: ``eglfs`` (mit Grafiktreiber /dev/dri/card*), sonst ``linuxfb``.
+
+    "" = nichts ändern: Fenster im Desktop (``--fenster``), nicht Linux oder QT_QPA_PLATFORM schon gesetzt. Auch aus
+    einem Terminal im Remotedesktop gestartet geht das Panel ohne ``--fenster`` auf das Display des Rechners."""
+    env = os.environ if environ is None else environ
+    if windowed or not (platform or sys.platform).startswith("linux") or env.get("QT_QPA_PLATFORM"):
+        return ""
+    if dri is None:
+        import glob
+        dri = bool(glob.glob("/dev/dri/card*"))
+    return "eglfs" if dri else "linuxfb"
+
+
 def run_panel(config_path="", service="plc-datenlogger", windowed=False):
-    """Panel starten (bildschirmfüllend). Ohne Desktop wählt Qt ``eglfs`` (anders: QT_QPA_PLATFORM=linuxfb)."""
-    if sys.platform.startswith("linux") and not os.environ.get("QT_QPA_PLATFORM") \
-            and not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
-        os.environ["QT_QPA_PLATFORM"] = "eglfs"
+    """Panel starten: bildschirmfüllend auf dem Display (``eglfs`` bzw. ``linuxfb``, siehe display_platform) oder mit
+    ``windowed`` als Fenster im Desktop."""
+    plat = display_platform(windowed)
+    if plat:
+        os.environ["QT_QPA_PLATFORM"] = plat
         os.environ.setdefault("QT_QPA_EGLFS_HIDECURSOR", "1")
-    _sudo_xauthority()
+        for k in ("DISPLAY", "WAYLAND_DISPLAY"):          # nicht in einer (Remote-)Desktop-Sitzung öffnen
+            os.environ.pop(k, None)
+    else:
+        _sudo_xauthority()
     app = QApplication.instance() or QApplication(sys.argv[:1])
     from plc_i18n import install_qt
     install_qt(app)

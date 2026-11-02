@@ -3322,6 +3322,9 @@
 
 # ---------------- plc_logger.py
 
+@ Keine grafische Oberfläche gefunden – der Logger startet headless (Oberfläche erzwingen: --gui).
+> 
+
 @ Neue Konfiguration
 > 
 

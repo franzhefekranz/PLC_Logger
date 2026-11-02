@@ -3144,7 +3144,9 @@ eignet sich für Dauerbetrieb, z. B. als Autostart-Programm auf einem Industrie-
 
 * **Einschalten:** Option *Headless-Modus* im Reiter *Webserver & Headless* der
   Konfiguration, oder Startparameter ``--headless``. Mit ``--gui`` lässt sich trotz
-  eingestelltem Headless-Modus die Oberfläche öffnen.
+  eingestelltem Headless-Modus die Oberfläche öffnen. Unter Linux ohne grafische
+  Sitzung (systemd-Dienst, SSH) startet der Logger immer headless, auch wenn der
+  Schalter aus ist.
 * **Meldungen** (Verbindung, Fehler, Archivierung) stehen in der Logdatei
   ``plc_logger.log`` im Programm- bzw. Datenordner (rotierend, mehrere Dateien).
 * **Beenden:** Mit ``Strg+C`` im Konsolenfenster bzw. durch das Signal SIGTERM
@@ -5096,13 +5098,18 @@ USB-Anschluss, optional ein Touchscreen (z. B. Waveshare, HDMI mit USB-Touch ode
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
 Die Konfiguration am PC mit dem Konfigurationsprogramm erstellen (Steuerungen, Variablen,
-Reiter *Webserver & Headless*: Webserver an, Reiter *Datenbank*: VictoriaMetrics, Server
+Reiter *Webserver & Headless*: Webserver an, *Headless-Modus* an, Reiter *Datenbank*: VictoriaMetrics, Server
 ``127.0.0.1``, Port 8428) und auf den Pi kopieren:
 
 .. code-block:: console
 
    scp anlage.json benutzer@logger-kessel:~/PLCDatenlogger/   # am PC
-   plc-datenlogger --headless ~/PLCDatenlogger/anlage.json     # am Pi: Probelauf, Strg+C beendet
+   plc-datenlogger ~/PLCDatenlogger/anlage.json     # am Pi per SSH: Probelauf, Strg+C beendet
+
+Ob der Logger mit oder ohne Oberfläche läuft, bestimmt der Schalter *Headless-Modus* in der
+Konfiguration. Ohne grafische Sitzung (Dienst, SSH) läuft er immer headless; im
+Remotedesktop (Schritt 7) öffnet ``plc-datenlogger`` mit ausgeschaltetem Schalter die
+Oberfläche – dann vorher den Dienst beenden, sonst lesen zwei Logger dieselben Steuerungen.
 
 **4. Logger als Dienst** – startet beim Einschalten und nach einem Absturz neu. Datei
 ``/etc/systemd/system/plc-datenlogger.service`` (Benutzername anpassen):
@@ -5116,7 +5123,7 @@ Reiter *Webserver & Headless*: Webserver an, Reiter *Datenbank*: VictoriaMetrics
 
    [Service]
    User=benutzer
-   ExecStart=/usr/bin/plc-datenlogger --headless /home/benutzer/PLCDatenlogger/anlage.json
+   ExecStart=/usr/bin/plc-datenlogger /home/benutzer/PLCDatenlogger/anlage.json
    Restart=on-failure
    RestartSec=10
    TimeoutStopSec=60
@@ -5273,9 +5280,11 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
 
 * Bild um 180° drehen: ``Environment=QT_QPA_EGLFS_ROTATION=180`` ergänzen. Startet das Panel
   nicht (``journalctl -u plc-netzwerk``), statt ``eglfs`` ``QT_QPA_PLATFORM=linuxfb``
-  versuchen. Von Hand an der Textkonsole des Pi: ``sudo plc-netzwerk`` (bildschirmfüllend; mit
-  ``sudo timeout 600 plc-netzwerk`` endet es nach 10 Minuten von selbst). Im Remotedesktop als
-  Fenster: ``sudo plc-netzwerk --fenster``.
+  versuchen. Ohne Grafiktreiber (kein ``/dev/dri/card…``) nimmt das Panel ``linuxfb`` von
+  selbst. Von Hand (ohne Dienst): ``sudo plc-netzwerk`` – an der Textkonsole, per SSH oder aus
+  einem Terminal im Remotedesktop, das Panel erscheint immer bildschirmfüllend auf dem Display
+  des Pi (mit ``sudo timeout 600 plc-netzwerk`` endet es nach 10 Minuten von selbst). Als
+  Fenster im Remotedesktop: ``sudo plc-netzwerk --fenster``.
 
 **7. Remotedesktop (XFCE und xrdp)** – ein Desktop nur bei Bedarf: Der Pi startet weiter ohne
 Oberfläche (auf dem Display läuft das Netzwerk-Panel), am PC öffnet eine

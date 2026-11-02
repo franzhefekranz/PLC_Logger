@@ -3055,7 +3055,9 @@ an industrial PC.
 
 * **Switching on:** option *Headless mode* in the tab *Web server & headless* of the
   configuration, or command-line parameter ``--headless``. With ``--gui`` the user
-  interface can be opened despite the headless mode being set.
+  interface can be opened despite the headless mode being set. On Linux without a graphical
+  session (systemd service, SSH) the logger always starts headless, even if the option is
+  off.
 * **Messages** (connection, errors, archiving) are written to the log file
   ``plc_logger.log`` in the program or data folder (rotating, several files).
 * **Exiting:** ``Ctrl+C`` in the console window or the signal SIGTERM (stop service,
@@ -4974,13 +4976,18 @@ in ``/etc/docker/daemon.json`` Docker also stores its data on the SSD.
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
 Create the configuration on the PC with the configuration program (controllers, variables,
-tab *Web server & headless*: web server on, tab *Database*: VictoriaMetrics, server
+tab *Web server & headless*: web server on, *Headless mode* on, tab *Database*: VictoriaMetrics, server
 ``127.0.0.1``, port 8428) and copy it to the Pi:
 
 .. code-block:: console
 
    scp anlage.json user@logger-kessel:~/PLCDatenlogger/       # on the PC
-   plc-datenlogger --headless ~/PLCDatenlogger/anlage.json     # on the Pi: test run, Ctrl+C stops
+   plc-datenlogger ~/PLCDatenlogger/anlage.json     # on the Pi via SSH: test run, Ctrl+C stops
+
+Whether the logger runs with or without user interface is decided by the option *Headless
+mode* in the configuration. Without a graphical session (service, SSH) it always runs
+headless; in the remote desktop (step 7) ``plc-datenlogger`` opens the user interface if the
+option is off – stop the service first, otherwise two loggers read the same controllers.
 
 **4. Logger as a service** – starts at power-on and again after a crash. File
 ``/etc/systemd/system/plc-datenlogger.service`` (adjust the user name):
@@ -4994,7 +5001,7 @@ tab *Web server & headless*: web server on, tab *Database*: VictoriaMetrics, ser
 
    [Service]
    User=user
-   ExecStart=/usr/bin/plc-datenlogger --headless /home/user/PLCDatenlogger/anlage.json
+   ExecStart=/usr/bin/plc-datenlogger /home/user/PLCDatenlogger/anlage.json
    Restart=on-failure
    RestartSec=10
    TimeoutStopSec=60
@@ -5150,9 +5157,11 @@ recording come from the Pi):
 
 * Rotate the picture by 180°: add ``Environment=QT_QPA_EGLFS_ROTATION=180``. If the panel does
   not start (``journalctl -u plc-netzwerk``), try ``QT_QPA_PLATFORM=linuxfb`` instead of
-  ``eglfs``. By hand on the Pi's text console:
-  ``sudo plc-netzwerk`` (full screen; ``sudo timeout 600 plc-netzwerk`` ends it after 10 minutes
-  by itself). In the remote desktop as a window: ``sudo plc-netzwerk --fenster``.
+  ``eglfs``. Without a graphics driver (no ``/dev/dri/card…``) the panel uses ``linuxfb`` by
+  itself. By hand (without service): ``sudo plc-netzwerk`` – on the text console, via SSH or from
+  a terminal in the remote desktop, the panel always appears full screen on the Pi's display
+  (``sudo timeout 600 plc-netzwerk`` ends it after 10 minutes by itself). As a window in the
+  remote desktop: ``sudo plc-netzwerk --fenster``.
 
 **7. Remote desktop (XFCE and xrdp)** – a desktop only when needed: the Pi keeps booting
 without user interface (the network panel runs on the display), and a remote desktop

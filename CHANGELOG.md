@@ -16,6 +16,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* Netzwerk-Panel: aus einem Terminal im Remotedesktop gestartet, versuchte `plc-netzwerk` sich in der Remotesitzung zu
+  öffnen statt auf dem Display des Pi; jetzt immer auf dem Display (ohne Grafiktreiber automatisch `linuxfb`), als
+  Fenster nur mit `--fenster`.
+* Logger: ohne grafische Sitzung (systemd-Dienst, SSH) startet er headless, auch wenn der Headless-Modus in der
+  Konfiguration aus ist (vorher Abbruch). Der Dienst in der Raspberry-Anleitung braucht kein `--headless` mehr – der
+  Schalter in der Konfiguration entscheidet.
 * Netzwerk-Panel: `sudo plc-netzwerk --fenster` in einer (Remote-)Desktop-Sitzung scheiterte mit „Authorization
   required“ – das Panel verwendet jetzt die X-Anmeldedaten des aufrufenden Benutzers.
 

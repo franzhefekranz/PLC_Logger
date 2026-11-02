@@ -27,6 +27,7 @@ import os
 import sys
 
 from plc_common import last_config_path, load_config, remember_config_path
+from plc_i18n import tr
 
 
 def parse_args(argv):
@@ -85,10 +86,23 @@ def main(argv=None):
         headless = True
     if args.gui:
         headless = False
+    if not headless and not args.gui and no_display():
+        # z. B. als systemd-Dienst oder per SSH: ohne Bildschirm geht nur headless (statt mit Fehler abzubrechen)
+        print(tr("Keine grafische Oberfläche gefunden – der Logger startet headless (Oberfläche erzwingen: --gui)."),
+              file=sys.stderr, flush=True)
+        headless = True
     if headless:
         from plc_headless import run
         return run(path, demo=args.demo)
     return run_with_start_window(path, bool(explicit), args.demo)
+
+
+def no_display(environ=None, platform=None):
+    """Linux ohne grafische Sitzung (kein DISPLAY/WAYLAND_DISPLAY, keine eigene Qt-Plattform)?"""
+    env = os.environ if environ is None else environ
+    if not (platform or sys.platform).startswith("linux"):
+        return False
+    return not (env.get("DISPLAY") or env.get("WAYLAND_DISPLAY") or env.get("QT_QPA_PLATFORM"))
 
 
 def run_with_start_window(path, explicit, demo):
