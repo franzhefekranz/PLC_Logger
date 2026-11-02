@@ -278,6 +278,59 @@ def test_netpanel_time(qapp, demo_config, monkeypatch):
     w.close()
 
 
+def test_netpanel_display_dim(qapp, demo_config, tmp_path, monkeypatch):
+    """Netzwerk-Panel: Display nach der eingestellten Zeit abdunkeln, die erste Berührung schaltet nur ein (löst keinen
+    Knopf aus); ohne Hintergrundbeleuchtung schwarzes Bild."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+
+    import plc_netpanel
+    from test_logic import _FakeNm
+    monkeypatch.setattr(plc_netpanel, "save_settings", lambda data: None)
+    dev = tmp_path / "backlight" / "10-0045"
+    dev.mkdir(parents=True)
+    for name, val in (("max_brightness", "255"), ("brightness", "255"), ("bl_power", "0")):
+        (dev / name).write_text(val)
+    bl = plc_netpanel.Backlight(str(tmp_path / "backlight"))
+    assert bl.available and bl.get() == 100
+    settings = {"dunkel_min": 2, "hell_prozent": 80, "dunkel_prozent": 10}
+    w = plc_netpanel.NetPanel(plc_netz_fake(_FakeNm()), config_path=demo_config, service="", background=False,
+                              settings=settings, backlight=bl)
+    w.resize(800, 480)
+    w.show()
+    wait(100)
+    assert (dev / "brightness").read_text() == "204" and w.idle.isActive() and w.idle.interval() == 120_000
+    w.dim()
+    assert w.dimmed and (dev / "brightness").read_text() == "26"
+    QTest.mouseClick(w.btn_time, Qt.MouseButton.LeftButton)          # erste Berührung: nur einschalten
+    assert not w.dimmed and (dev / "brightness").read_text() == "204" and w.stack.currentWidget() is w.page_home
+    QTest.mouseClick(w.btn_display, Qt.MouseButton.LeftButton)       # jetzt wirkt der Knopf
+    assert w.stack.currentWidget() is w.page_display and "10-0045" in w.lbl_display_info.text()
+    w.st_dim_level.step(-1)
+    assert settings["dunkel_prozent"] == 5
+    w.st_dim_min.set_value(0)
+    assert not w.idle.isActive()                                     # 0 = nie abdunkeln
+    w.dim()
+    assert (dev / "brightness").read_text() == "13"
+    w.st_dim_level.set_value(0)
+    w.wake()
+    w.dim()
+    assert (dev / "bl_power").read_text() == "4"                     # 0 % = Beleuchtung aus
+    w.wake()
+    assert (dev / "bl_power").read_text() == "0" and w.stack.currentWidget() is w.page_home
+    w.close()
+    # ohne Hintergrundbeleuchtung: schwarzes Bild
+    w2 = plc_netpanel.NetPanel(plc_netz_fake(_FakeNm()), config_path=demo_config, service="", background=False,
+                               settings={}, backlight=plc_netpanel.Backlight(str(tmp_path / "keins")))
+    w2.resize(800, 480)
+    w2.show()
+    w2.dim()
+    assert w2.black.isVisible()
+    QTest.mouseClick(w2.btn_time, Qt.MouseButton.LeftButton)
+    assert not w2.black.isVisible() and w2.stack.currentWidget() is w2.page_home
+    w2.close()
+
+
 def plc_netz_fake(fake):
     import plc_netz
     return plc_netz.Netz(run=fake)

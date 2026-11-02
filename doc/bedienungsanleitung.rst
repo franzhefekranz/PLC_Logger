@@ -5269,6 +5269,13 @@ Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten.
 
    Netzwerk-Panel (800 × 480): Übersicht mit IP-Adressen, Logger-Dienst und Webserver.
 
+**Display** dunkelt den Bildschirm nach einer einstellbaren Zeit ohne Berührung ab
+(Vorgabe 5 Minuten, 0 = nie); die erste Berührung schaltet ihn wieder ein, ohne einen Knopf
+auszulösen, und zeigt die Übersicht. Einstellbar sind außerdem die Helligkeit im Betrieb und
+im abgedunkelten Zustand (0 % = Hintergrundbeleuchtung aus). Dafür braucht das Panel eine
+einstellbare Hintergrundbeleuchtung unter ``/sys/class/backlight`` (bei DSI-Displays mit dem
+``dtoverlay`` laut Wiki vorhanden, z. B. ``10-0045``); ohne sie wird das Bild nur schwarz.
+
 **Uhrzeit** stellt Datum und Uhrzeit ein – wichtig, weil der Raspberry Pi 4 keine
 batteriegepufferte Uhr hat und ohne Internet nach einem Neustart mit einer falschen Zeit
 startet (die Zeitstempel der Aufzeichnung kommen vom Pi):

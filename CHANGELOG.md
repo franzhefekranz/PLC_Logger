@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Netzwerk-Panel: Display abdunkeln** nach einstellbaren Minuten ohne Berührung (Hintergrundbeleuchtung über
+  `/sys/class/backlight`, Helligkeit im Betrieb und abgedunkelt einstellbar, sonst schwarzes Bild); die erste Berührung
+  schaltet nur wieder ein.
+
 ### Geändert
 
 * Anleitung Raspberry Pi, System auf SD-Karte: Daten von VictoriaMetrics auf die SSD (Bind-Mount in

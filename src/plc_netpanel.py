@@ -8,6 +8,8 @@ Läuft bildschirmfüllend direkt auf dem Display – ohne Desktop (Qt-Plattform 
   Webservers mit QR-Code (aus der Konfigurationsdatei, falls angegeben).
 * **IP-Einstellung** je Schnittstelle: DHCP oder feste Adresse (IP/Präfix, Gateway, DNS) mit Zifferntastatur.
 * **WLAN:** ein/aus, Netze suchen, verbinden (Passwort über die Bildschirmtastatur).
+* **Display:** nach einstellbaren Minuten ohne Berührung abdunkeln (Hintergrundbeleuchtung über
+  ``/sys/class/backlight``, sonst schwarzes Bild); die erste Berührung schaltet nur wieder ein.
 * **Datum und Uhrzeit:** von Hand stellen, Internetzeit (NTP) ein/aus, Zeitzone; Uhrzeit aus einer Steuerung der
   Konfiguration lesen und übernehmen – auf Wunsch automatisch (beim Start und stündlich, solange keine Internetzeit
   synchronisiert ist). Treiber mit Uhrzeit: s7, clx, opcua (``Driver.read_clock``).
@@ -22,7 +24,7 @@ import os
 import sys
 import threading
 
-from PySide6.QtCore import QRectF, QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QObject, QRectF, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QFont, QPainter
 from PySide6.QtWidgets import (
     QApplication, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton, QScroller,
@@ -180,11 +182,13 @@ class TouchEdit(QLineEdit):
 
 
 class Stepper(QWidget):
-    """Zahl mit großen Tasten ▲/▼ (Touch): ``value`` zwischen ``lo`` und ``hi``, am Ende geht es von vorn los."""
+    """Zahl mit großen Tasten ▲/▼ (Touch): ``value`` zwischen ``lo`` und ``hi`` in Schritten ``inc``; mit ``wrap`` geht
+    es am Ende von vorn los, sonst bleibt der Wert an der Grenze stehen."""
 
-    def __init__(self, label, lo, hi, width=2, changed=None):
+    def __init__(self, label, lo, hi, width=2, changed=None, inc=1, wrap=True):
         super().__init__()
         self.lo, self.hi, self.width, self.changed = lo, hi, width, changed
+        self.inc, self.wrap = inc, wrap
         self.value = lo
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
@@ -220,8 +224,83 @@ class Stepper(QWidget):
             self.changed()
 
     def step(self, d):
+        if not self.wrap:
+            self.set_value(min(max(self.value + d * self.inc, self.lo), self.hi))
+            return
         n = self.hi - self.lo + 1
-        self.set_value(self.lo + (self.value - self.lo + d) % n)
+        self.set_value(self.lo + (self.value - self.lo + d * self.inc) % n)
+
+
+class Backlight:
+    """Hintergrundbeleuchtung des Displays (``/sys/class/backlight/<Gerät>/brightness``, z. B. ``10-0045`` beim
+    DSI-Display); ``available`` False, wenn es keine gibt. Helligkeit in Prozent."""
+
+    def __init__(self, base="/sys/class/backlight"):
+        import glob
+        dirs = sorted(glob.glob(os.path.join(base, "*")))
+        self.path = dirs[0] if dirs else ""
+        try:
+            self.max = int(self._read("max_brightness")) or 255
+        except (OSError, ValueError):
+            self.max = 255
+        self.available = bool(self.path) and os.access(os.path.join(self.path, "brightness"), os.W_OK)
+
+    def _read(self, name):
+        with open(os.path.join(self.path, name)) as f:
+            return f.read().strip()
+
+    def _write(self, name, value):
+        try:
+            with open(os.path.join(self.path, name), "w") as f:
+                f.write(str(value))
+        except OSError:
+            pass
+
+    def get(self):
+        try:
+            return round(int(self._read("brightness")) * 100 / self.max)
+        except (OSError, ValueError):
+            return 100
+
+    def set(self, percent):
+        """Helligkeit setzen; 0 schaltet die Beleuchtung ganz aus (bl_power), alles andere wieder ein."""
+        if not self.available:
+            return
+        percent = min(max(int(percent), 0), 100)
+        if os.path.exists(os.path.join(self.path, "bl_power")):
+            self._write("bl_power", 4 if percent == 0 else 0)
+        self._write("brightness", round(self.max * percent / 100))
+
+
+class _InputWatch(QObject):
+    """Beobachtet alle Eingaben der Anwendung: hält das Display wach und verschluckt die erste Berührung im dunklen
+    Zustand (sie schaltet nur ein, löst aber keinen Knopf aus)."""
+
+    PRESS = (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick, QEvent.Type.TouchBegin,
+             QEvent.Type.KeyPress)
+    OTHER = (QEvent.Type.MouseButtonRelease, QEvent.Type.MouseMove, QEvent.Type.TouchUpdate, QEvent.Type.TouchEnd,
+             QEvent.Type.KeyRelease)
+    END = (QEvent.Type.MouseButtonRelease, QEvent.Type.TouchEnd, QEvent.Type.KeyRelease)
+
+    def __init__(self, panel):
+        super().__init__(panel)
+        self.panel = panel
+        self.swallow = False
+
+    def eventFilter(self, obj, ev):
+        t = ev.type()
+        if t not in self.PRESS and t not in self.OTHER:
+            return False
+        if self.swallow:
+            if t in self.END:
+                self.swallow = False
+            return True
+        if self.panel.dimmed and t in self.PRESS:
+            self.panel.wake()
+            self.swallow = t != QEvent.Type.KeyPress
+            return True
+        self.panel.touch()
+        return False
 
 
 SETTINGS_FILE = "plc_netzwerk.json"
@@ -273,8 +352,11 @@ class NetPanel(QWidget):
     SYNC_LIMIT_S = 2.0              # automatisch: erst ab dieser Abweichung stellen
     SYNC_EVERY_MS = 3600 * 1000     # automatisch: stündlich
 
-    def __init__(self, netz=None, config_path="", service="plc-datenlogger", background=True, settings=None):
+    def __init__(self, netz=None, config_path="", service="plc-datenlogger", background=True, settings=None,
+                 backlight=None):
         super().__init__()
+        self.backlight = backlight or Backlight()
+        self.dimmed = False
         self.netz = netz or plc_netz.Netz()
         self.config_path = config_path
         self.settings = load_settings() if settings is None else settings
@@ -300,8 +382,22 @@ class NetPanel(QWidget):
         self.page_pw = self._build_password()
         self.page_time = self._build_time()
         self.page_tz = self._build_timezone()
-        for p in (self.page_home, self.page_ip, self.page_wifi, self.page_pw, self.page_time, self.page_tz):
+        self.page_display = self._build_display()
+        for p in (self.page_home, self.page_ip, self.page_wifi, self.page_pw, self.page_time, self.page_tz,
+                  self.page_display):
             self.stack.addWidget(p)
+        # Abdunkeln: ohne Hintergrundbeleuchtung deckt ein schwarzes Bild alles ab (ein Antippen schaltet ein).
+        self.black = QWidget(self)
+        self.black.setStyleSheet("background: black;")
+        self.black.hide()
+        self.idle = QTimer(self)
+        self.idle.setSingleShot(True)
+        self.idle.timeout.connect(self.dim)
+        self.watch = _InputWatch(self)
+        QApplication.instance().installEventFilter(self.watch)
+        if self.backlight.available and self.settings.get("hell_prozent"):
+            self.backlight.set(self.settings["hell_prozent"])
+        self.touch()
         self.timer = QTimer(self)
         self.timer.setInterval(5000)
         self.timer.timeout.connect(self.refresh)
@@ -357,9 +453,11 @@ class NetPanel(QWidget):
         self.btn_eth = self._button(tr("Ethernet"), lambda: self.show_ip("ethernet"))
         self.btn_wifi = self._button(tr("WLAN"), self.show_wifi)
         self.btn_time = self._button(tr("Uhrzeit"), self.show_time)
+        self.btn_display = self._button(tr("Display"), self.show_display)
         row.addWidget(self.btn_eth)
         row.addWidget(self.btn_wifi)
         row.addWidget(self.btn_time)
+        row.addWidget(self.btn_display)
         row.addWidget(self._button(tr("Aktualisieren"), self.refresh))
         v.addLayout(row)
         return w
@@ -697,6 +795,94 @@ class NetPanel(QWidget):
             return
         self.ed_pw.clear()
         self.show_home()
+
+    # ------------------------------------------------------------------ Display (Abdunkeln)
+    def _build_display(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        t = QLabel(tr("Display"))
+        t.setObjectName("titel")
+        v.addWidget(t)
+        self.lbl_display_info = QLabel()
+        self.lbl_display_info.setWordWrap(True)
+        v.addWidget(self.lbl_display_info)
+        steps = QHBoxLayout()
+        self.st_dim_min = Stepper(tr("Abdunkeln nach (min, 0 = nie)"), 0, 60, changed=self._display_changed,
+                                  wrap=False)
+        self.st_bright = Stepper(tr("Helligkeit %"), 10, 100, width=1, changed=self._display_changed, inc=10,
+                                 wrap=False)
+        self.st_dim_level = Stepper(tr("Abgedunkelt %"), 0, 50, width=1, changed=self._display_changed, inc=5,
+                                    wrap=False)
+        for st in (self.st_dim_min, self.st_bright, self.st_dim_level):
+            steps.addWidget(st, 1)
+        v.addLayout(steps, 1)
+        row = QHBoxLayout()
+        row.addWidget(self._button(tr("Zurück"), self.show_home))
+        row.addWidget(self._button(tr("Jetzt abdunkeln"), self.dim))
+        v.addLayout(row)
+        return w
+
+    def dim_minutes(self):
+        try:
+            return max(0, int(self.settings.get("dunkel_min", 5)))
+        except (TypeError, ValueError):
+            return 5
+
+    def show_display(self):
+        self._filling_display = True
+        self.st_dim_min.set_value(self.dim_minutes(), notify=False)
+        self.st_bright.set_value(int(self.settings.get("hell_prozent", 100) or 100), notify=False)
+        self.st_dim_level.set_value(int(self.settings.get("dunkel_prozent", 0) or 0), notify=False)
+        self._filling_display = False
+        for st in (self.st_bright, self.st_dim_level):
+            st.setEnabled(self.backlight.available)
+        self.lbl_display_info.setText(
+            tr("Hintergrundbeleuchtung: {0}").format(os.path.basename(self.backlight.path))
+            if self.backlight.available else
+            tr("Keine einstellbare Hintergrundbeleuchtung gefunden – abgedunkelt wird das Bild nur schwarz."))
+        self.stack.setCurrentWidget(self.page_display)
+
+    def _display_changed(self):
+        if getattr(self, "_filling_display", False):
+            return
+        self.settings.update(dunkel_min=self.st_dim_min.value, hell_prozent=self.st_bright.value,
+                             dunkel_prozent=self.st_dim_level.value)
+        save_settings(self.settings)
+        if self.backlight.available:
+            self.backlight.set(self.st_bright.value)
+        self.touch()
+
+    def touch(self):
+        """Eingabe: Zeit bis zum Abdunkeln neu beginnen."""
+        minutes = self.dim_minutes()
+        if minutes:
+            self.idle.start(minutes * 60_000)
+        else:
+            self.idle.stop()
+
+    def dim(self):
+        """Display abdunkeln (Hintergrundbeleuchtung auf „Abgedunkelt %“, ohne Beleuchtung schwarzes Bild)."""
+        if self.dimmed:
+            return
+        self.dimmed = True
+        if self.backlight.available:
+            self.backlight.set(int(self.settings.get("dunkel_prozent", 0) or 0))
+        else:
+            self.black.setGeometry(self.rect())
+            self.black.raise_()
+            self.black.show()
+
+    def wake(self):
+        """Display wieder einschalten und zur Übersicht (aktuelle Adressen)."""
+        if not self.dimmed:
+            return
+        self.dimmed = False
+        self.black.hide()
+        if self.backlight.available:
+            self.backlight.set(int(self.settings.get("hell_prozent", 100) or 100))
+        if self.stack.currentWidget() is self.page_display:
+            self.show_home()
+        self.touch()
 
     # ------------------------------------------------------------------ Datum und Uhrzeit
     def show_time(self):

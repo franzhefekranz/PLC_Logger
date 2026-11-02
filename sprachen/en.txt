@@ -3351,6 +3351,9 @@
 @ Uhrzeit
 > Time
 
+@ Display
+> Display
+
 @ DHCP (automatisch)
 > DHCP (automatic)
 
@@ -3470,6 +3473,24 @@
 
 @ WLAN „{0}“
 > WLAN “{0}”
+
+@ Abdunkeln nach (min, 0 = nie)
+> Dim after (min, 0 = never)
+
+@ Helligkeit %
+> Brightness %
+
+@ Abgedunkelt %
+> Dimmed %
+
+@ Jetzt abdunkeln
+> Dim now
+
+@ Hintergrundbeleuchtung: {0}
+> Backlight: {0}
+
+@ Keine einstellbare Hintergrundbeleuchtung gefunden – abgedunkelt wird das Bild nur schwarz.
+> No adjustable backlight found – dimming only turns the picture black.
 
 @ timedatectl fehlt – die Uhr lässt sich hier nicht stellen.
 > timedatectl is missing – the clock cannot be set here.

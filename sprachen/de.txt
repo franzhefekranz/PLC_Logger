@@ -3351,6 +3351,9 @@
 @ Uhrzeit
 > 
 
+@ Display
+> 
+
 @ DHCP (automatisch)
 > 
 
@@ -3469,6 +3472,24 @@
 > 
 
 @ WLAN „{0}“
+> 
+
+@ Abdunkeln nach (min, 0 = nie)
+> 
+
+@ Helligkeit %
+> 
+
+@ Abgedunkelt %
+> 
+
+@ Jetzt abdunkeln
+> 
+
+@ Hintergrundbeleuchtung: {0}
+> 
+
+@ Keine einstellbare Hintergrundbeleuchtung gefunden – abgedunkelt wird das Bild nur schwarz.
 > 
 
 @ timedatectl fehlt – die Uhr lässt sich hier nicht stellen.

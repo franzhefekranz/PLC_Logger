@@ -5148,6 +5148,13 @@ after a reboot.
 
    Network panel (800 × 480): overview with IP addresses, logger service and web server.
 
+**Display** dims the screen after an adjustable time without touch (default 5 minutes,
+0 = never); the first touch switches it on again without triggering a button and shows the
+overview. Brightness in operation and in the dimmed state can also be set (0 % = backlight
+off). This needs an adjustable backlight under ``/sys/class/backlight`` (present for DSI
+displays with the ``dtoverlay`` according to the wiki, e.g. ``10-0045``); without it the
+picture only turns black.
+
 **Time** sets date and time – important because the Raspberry Pi 4 has no battery-backed
 clock and, without internet, starts with a wrong time after a reboot (the time stamps of the
 recording come from the Pi):
