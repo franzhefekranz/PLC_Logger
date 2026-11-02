@@ -5093,7 +5093,7 @@ USB-Anschluss, optional ein Touchscreen (z. B. Waveshare, HDMI mit USB-Touch ode
 
 .. code-block:: console
 
-   VER=3.7.0
+   VER=3.7.1
    wget https://github.com/franzhefekranz/PLC_Logger/releases/download/v$VER/plc-datenlogger_${VER}_arm64.deb
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
