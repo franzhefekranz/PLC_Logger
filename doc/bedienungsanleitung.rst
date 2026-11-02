@@ -5267,7 +5267,6 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
 
      [Service]
      ExecStart=/usr/bin/plc-netzwerk /home/benutzer/PLCDatenlogger/anlage.json
-     Environment=QT_QPA_PLATFORM=eglfs
      Restart=always
      RestartSec=5
 
@@ -5279,8 +5278,7 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
      sudo systemctl daemon-reload && sudo systemctl enable --now plc-netzwerk
 
 * Bild um 180° drehen: ``Environment=QT_QPA_EGLFS_ROTATION=180`` ergänzen. Startet das Panel
-  nicht (``journalctl -u plc-netzwerk``), statt ``eglfs`` ``QT_QPA_PLATFORM=linuxfb``
-  versuchen. Ohne Grafiktreiber (kein ``/dev/dri/card…``) nimmt das Panel ``linuxfb`` von
+  nicht (``journalctl -u plc-netzwerk``), ``Environment=QT_QPA_PLATFORM=linuxfb`` ergänzen. Ohne Grafiktreiber (kein ``/dev/dri/card…``) nimmt das Panel ``linuxfb`` von
   selbst. Von Hand (ohne Dienst): ``sudo plc-netzwerk`` – an der Textkonsole, per SSH oder aus
   einem Terminal im Remotedesktop, das Panel erscheint immer bildschirmfüllend auf dem Display
   des Pi (mit ``sudo timeout 600 plc-netzwerk`` endet es nach 10 Minuten von selbst). Als
