@@ -5275,31 +5275,73 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
   nicht (``journalctl -u plc-netzwerk``), statt ``eglfs`` ``QT_QPA_PLATFORM=linuxfb``
   versuchen. Ausprobieren im Remotedesktop: ``plc-netzwerk --fenster``.
 
-**7. Remotedesktop (xrdp)** – ein Desktop nur bei Bedarf, der Pi selbst startet weiter ohne
-Oberfläche:
+**7. Remotedesktop (XFCE und xrdp)** – ein Desktop nur bei Bedarf: Der Pi startet weiter ohne
+Oberfläche (auf dem Display läuft das Netzwerk-Panel), am PC öffnet eine
+Remotedesktopverbindung eine XFCE-Sitzung auf dem Pi.
+
+*a) Pakete installieren* – mit ``--no-install-recommends``, sonst holt ``xfce4`` den
+Anmeldebildschirm ``lightdm`` mit, der beim Start den Desktop auf dem Display des Pi öffnen
+würde. ``xorgxrdp`` ist der Grafikteil von xrdp und muss deshalb ausdrücklich dabei sein:
 
 .. code-block:: console
 
-   sudo apt install -y xfce4 xfce4-terminal xrdp dbus-x11
-   echo xfce4-session > ~/.xsession
+   sudo apt update
+   sudo apt install -y --no-install-recommends xfce4 xfce4-terminal xfce4-taskmanager \
+        thunar mousepad dbus-x11 xrdp xorgxrdp fonts-dejavu adwaita-icon-theme
+   sudo snap install firefox                        # Browser für Grafana (optional)
+
+*b) Beim Start keinen Desktop* – der Pi bleibt im Textmodus, auch wenn später doch ein
+Anmeldebildschirm installiert wird:
+
+.. code-block:: console
+
+   sudo systemctl set-default multi-user.target
+   systemctl get-default                            # muss multi-user.target zeigen
+
+*c) xrdp einrichten* – XFCE als Sitzung für den Benutzer, Zugriff auf das Zertifikat, Dienst
+einschalten:
+
+.. code-block:: console
+
+   echo xfce4-session > ~/.xsession                 # für jeden Benutzer, der sich anmeldet
    sudo adduser xrdp ssl-cert
-   sudo systemctl set-default multi-user.target     # beim Start keinen Desktop
    sudo systemctl enable --now xrdp
+   systemctl status xrdp                            # active (running)
+
+*d) Rückfrage „Authentifizierung erforderlich“ abstellen* – ohne diese Regel fragt XFCE in
+der Remotesitzung nach jedem Anmelden nach dem Passwort für ein „farbverwaltetes Gerät“
+(colord). Datei ``/etc/polkit-1/rules.d/45-xrdp-colord.rules``:
+
+.. code-block:: javascript
+
+   polkit.addRule(function(action, subject) {
+       if (action.id.indexOf("org.freedesktop.color-manager.") == 0 && subject.isInGroup("sudo")) {
+           return polkit.Result.YES;
+       }
+   });
+
+*e) Verbinden:* Am PC mit *Remotedesktopverbindung* (Windows: ``mstsc``, Linux: Remmina, macOS:
+*Windows App*) zu ``logger-kessel`` (Port 3389) verbinden, Sitzung *Xorg*, Benutzer und
+Passwort des Pi. Dort laufen Konfigurationsprogramm, Logger-Oberfläche, IO-Check und Grafana im
+Browser (Starter aus Schritt 5); **Datei › Headless-Logger anzeigen/beenden …** sieht den
+Logger-Dienst, weil er unter demselben Benutzer läuft. Abmelden über das XFCE-Menü beendet die
+Sitzung; nur das Fenster zu schließen lässt sie weiterlaufen (beim nächsten Verbinden geht es
+dort weiter).
+
+Bleibt das Fenster nach der Anmeldung schwarz oder schließt sich sofort: ``~/.xsession`` prüfen
+und die Meldungen ansehen (``cat ~/.xsession-errors``, ``sudo journalctl -u xrdp-sesman``).
+Derselbe Benutzer darf nicht gleichzeitig am Display des Pi grafisch angemeldet sein – das ist
+hier wegen ``multi-user.target`` ohnehin nicht der Fall.
 
 *Alternative Lubuntu (LXQt):* sieht wie die Programme des Loggers aus (ebenfalls Qt), ist aber
-deutlich größer (viele Zusatzprogramme, eigener Anmeldebildschirm, der wegen
-``multi-user.target`` ungenutzt bleibt); XFCE läuft mit xrdp am zuverlässigsten. Statt der
-ersten beiden Zeilen oben:
+deutlich größer (viele Zusatzprogramme, eigener Anmeldebildschirm ``sddm``, der wegen
+``multi-user.target`` ungenutzt bleibt); XFCE läuft mit xrdp am zuverlässigsten. Statt a) und
+der ersten Zeile von c):
 
 .. code-block:: console
 
-   sudo apt install -y lubuntu-desktop xrdp
+   sudo apt install -y lubuntu-desktop xrdp xorgxrdp
    echo startlxqt > ~/.xsession
-
-Am PC mit *Remotedesktopverbindung* (Windows: ``mstsc``) zu ``logger-kessel`` verbinden und mit
-dem Benutzer des Pi anmelden. Dort laufen Konfigurationsprogramm, Logger-Oberfläche,
-IO-Check und Grafana im Browser; **Datei › Headless-Logger anzeigen/beenden …** sieht den
-Logger-Dienst, weil er unter demselben Benutzer läuft.
 
 **8. Betrieb:**
 

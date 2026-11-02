@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* Anleitung Raspberry Pi: Datenbankzugriff vom PC und Absichern von VictoriaMetrics; Remotedesktop ausführlich (XFCE
+  ohne Anmeldebildschirm mit `--no-install-recommends`, xrdp mit `xorgxrdp`, Polkit-Regel gegen die colord-Rückfrage,
+  Fehlersuche).
+
 ## [3.7.0] – 2026-11-01
 
 ### Neu

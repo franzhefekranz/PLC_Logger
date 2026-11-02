@@ -5152,31 +5152,73 @@ recording come from the Pi):
   not start (``journalctl -u plc-netzwerk``), try ``QT_QPA_PLATFORM=linuxfb`` instead of
   ``eglfs``. To try it in the remote desktop: ``plc-netzwerk --fenster``.
 
-**7. Remote desktop (xrdp)** – a desktop only when needed, the Pi itself keeps booting
-without user interface:
+**7. Remote desktop (XFCE and xrdp)** – a desktop only when needed: the Pi keeps booting
+without user interface (the network panel runs on the display), and a remote desktop
+connection from the PC opens an XFCE session on the Pi.
+
+*a) Install the packages* – with ``--no-install-recommends``, otherwise ``xfce4`` pulls in
+the login screen ``lightdm``, which would open the desktop on the Pi's display at boot.
+``xorgxrdp`` is the graphics part of xrdp and therefore has to be listed explicitly:
 
 .. code-block:: console
 
-   sudo apt install -y xfce4 xfce4-terminal xrdp dbus-x11
-   echo xfce4-session > ~/.xsession
+   sudo apt update
+   sudo apt install -y --no-install-recommends xfce4 xfce4-terminal xfce4-taskmanager \
+        thunar mousepad dbus-x11 xrdp xorgxrdp fonts-dejavu adwaita-icon-theme
+   sudo snap install firefox                        # browser for Grafana (optional)
+
+*b) No desktop at boot* – the Pi stays in text mode, even if a login screen gets installed
+later:
+
+.. code-block:: console
+
+   sudo systemctl set-default multi-user.target
+   systemctl get-default                            # must show multi-user.target
+
+*c) Set up xrdp* – XFCE as the user's session, access to the certificate, enable the
+service:
+
+.. code-block:: console
+
+   echo xfce4-session > ~/.xsession                 # for every user who logs in
    sudo adduser xrdp ssl-cert
-   sudo systemctl set-default multi-user.target     # no desktop at boot
    sudo systemctl enable --now xrdp
+   systemctl status xrdp                            # active (running)
+
+*d) Stop the “Authentication required” prompt* – without this rule XFCE asks in the remote
+session after every login for the password for a “color managed device” (colord). File
+``/etc/polkit-1/rules.d/45-xrdp-colord.rules``:
+
+.. code-block:: javascript
+
+   polkit.addRule(function(action, subject) {
+       if (action.id.indexOf("org.freedesktop.color-manager.") == 0 && subject.isInGroup("sudo")) {
+           return polkit.Result.YES;
+       }
+   });
+
+*e) Connect:* on the PC connect to ``logger-kessel`` (port 3389) with *Remote Desktop
+Connection* (Windows: ``mstsc``, Linux: Remmina, macOS: *Windows App*), session *Xorg*, user
+and password of the Pi. The configuration program, the logger's user interface, the IO check
+and Grafana in the browser (launchers from step 5) run there; **File › Show/stop headless
+loggers …** sees the logger service because it runs under the same user. Logging out via the
+XFCE menu ends the session; just closing the window keeps it running (the next connection
+continues there).
+
+If the window stays black after login or closes immediately: check ``~/.xsession`` and look at
+the messages (``cat ~/.xsession-errors``, ``sudo journalctl -u xrdp-sesman``). The same user
+must not be logged in graphically on the Pi's display at the same time – which is not the case
+here anyway because of ``multi-user.target``.
 
 *Alternative Lubuntu (LXQt):* looks like the logger's programs (also Qt) but is much larger
-(many additional programs, its own login screen, which stays unused because of
-``multi-user.target``); XFCE runs most reliably with xrdp. Instead of the first two lines
-above:
+(many additional programs, its own login screen ``sddm``, which stays unused because of
+``multi-user.target``); XFCE runs most reliably with xrdp. Instead of a) and the first line of
+c):
 
 .. code-block:: console
 
-   sudo apt install -y lubuntu-desktop xrdp
+   sudo apt install -y lubuntu-desktop xrdp xorgxrdp
    echo startlxqt > ~/.xsession
-
-On the PC, connect to ``logger-kessel`` with *Remote Desktop Connection* (Windows: ``mstsc``)
-and log in with the Pi's user. The configuration program, the logger's user interface, the
-IO check and Grafana in the browser run there; **File › Show/stop headless loggers …** sees
-the logger service because it runs under the same user.
 
 **8. Operation:**
 
