@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.10.0] – 2026-11-03
+
 ### Neu
 
 * **Web-Client: Auswerten im Browser** – Zoom je Diagramm (Mausrad, Bereich aufziehen mit Y-Zoom, zwei Finger auf dem
@@ -456,7 +458,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.9.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.10.0...HEAD
+[3.10.0]: ../../releases/tag/v3.10.0
 [3.9.0]: ../../releases/tag/v3.9.0
 [3.8.0]: ../../releases/tag/v3.8.0
 [3.7.1]: ../../releases/tag/v3.7.1
