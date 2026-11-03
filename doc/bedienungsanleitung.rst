@@ -5094,7 +5094,7 @@ ab); die Daten von VictoriaMetrics kommen in Schritt 5 dazu.
 
 .. code-block:: console
 
-   VER=3.7.1
+   VER=3.8.0
    wget https://github.com/franzhefekranz/PLC_Logger/releases/download/v$VER/plc-datenlogger_${VER}_arm64.deb
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
