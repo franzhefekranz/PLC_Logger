@@ -5239,12 +5239,26 @@ under the file's owner, until the next reboot. **Stop** stops the logger and dis
 service. The web server address and the controller for the time then follow the chosen
 configuration.
 
+.. figure:: images/en/netzpanel_logger.png
+   :alt: Network panel, page Logger
+   :width: 60%
+   :align: center
+
+   Page Logger: choose a configuration, start or stop it headless.
+
 **Display** dims the screen after an adjustable time without touch (default 5 minutes,
 0 = never); the first touch switches it on again without triggering a button and shows the
 overview. Brightness in operation and in the dimmed state can also be set (0 % = backlight
 off). This needs an adjustable backlight under ``/sys/class/backlight`` (present for DSI
 displays with the ``dtoverlay`` according to the wiki, e.g. ``10-0045``); without it the
 picture only turns black.
+
+.. figure:: images/en/netzpanel_display.png
+   :alt: Network panel, page Display
+   :width: 60%
+   :align: center
+
+   Page Display: time until dimming, brightness in operation and dimmed.
 
 **Time** sets date and time – important because the Raspberry Pi 4 has no battery-backed
 clock and, without internet, starts with a wrong time after a reboot (the time stamps of the

@@ -5364,12 +5364,26 @@ Panel den Logger direkt unter dem Besitzer der Datei, bis zum nächsten Neustart
 beendet den Logger und schaltet den Dienst aus. Webserver-Adresse und Uhrzeit-Steuerung
 richten sich danach nach der gewählten Konfiguration.
 
+.. figure:: images/netzpanel_logger.png
+   :alt: Netzwerk-Panel, Seite Logger
+   :width: 60%
+   :align: center
+
+   Seite Logger: Konfiguration wählen, headless starten oder stoppen.
+
 **Display** dunkelt den Bildschirm nach einer einstellbaren Zeit ohne Berührung ab
 (Vorgabe 5 Minuten, 0 = nie); die erste Berührung schaltet ihn wieder ein, ohne einen Knopf
 auszulösen, und zeigt die Übersicht. Einstellbar sind außerdem die Helligkeit im Betrieb und
 im abgedunkelten Zustand (0 % = Hintergrundbeleuchtung aus). Dafür braucht das Panel eine
 einstellbare Hintergrundbeleuchtung unter ``/sys/class/backlight`` (bei DSI-Displays mit dem
 ``dtoverlay`` laut Wiki vorhanden, z. B. ``10-0045``); ohne sie wird das Bild nur schwarz.
+
+.. figure:: images/netzpanel_display.png
+   :alt: Netzwerk-Panel, Seite Display
+   :width: 60%
+   :align: center
+
+   Seite Display: Zeit bis zum Abdunkeln, Helligkeit im Betrieb und abgedunkelt.
 
 **Uhrzeit** stellt Datum und Uhrzeit ein – wichtig, weil der Raspberry Pi 4 keine
 batteriegepufferte Uhr hat und ohne Internet nach einem Neustart mit einer falschen Zeit
