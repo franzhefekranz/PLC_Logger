@@ -684,8 +684,11 @@ def s_netpanel():
                 f.write(val)
         backlight = plc_netpanel.Backlight(os.path.dirname(bl_dir))
         # zweite Konfiguration neben der Demo, damit die Liste der Seite Logger eine Auswahl zeigt
-        import shutil as _sh
-        _sh.copy(CTX["cfg"], os.path.join(os.path.dirname(CTX["cfg"]), "linie2.json"))
+        with open(CTX["cfg"], encoding="utf-8") as f:
+            doc = json.load(f)
+        doc.setdefault("einstellungen", {})["projekt"] = "Linie 2"
+        with open(os.path.join(os.path.dirname(CTX["cfg"]), "linie2.json"), "w", encoding="utf-8") as f:
+            json.dump(doc, f, ensure_ascii=False)
         ctl = plc_netpanel.LoggerControl(lambda args: "", "plc-datenlogger", run_dirs=[])
         w = plc_netpanel.NetPanel(plc_netz.Netz(run=_FakePi()), config_path=CTX["cfg"], background=False,
                                   settings={"uhr_auto": True, "dunkel_min": 5, "hell_prozent": 80,
