@@ -1039,3 +1039,18 @@ def test_logger_no_display():
     from plc_logger import no_display
     assert no_display({}, "linux") and not no_display({"DISPLAY": ":0"}, "linux")
     assert not no_display({"QT_QPA_PLATFORM": "offscreen"}, "linux") and not no_display({}, "win32")
+
+
+def test_netpanel_logger_state(tmp_path):
+    """Netzwerk-Panel: Logger läuft als Dienst oder von Hand headless (Statusdateien), sonst gestoppt."""
+    import time
+    pytest.importorskip("PySide6")
+    import plc_headless
+    from plc_netpanel import logger_state
+    run = str(tmp_path / "laufend")
+    assert logger_state("", "plc-datenlogger", [run], lambda n: "active")[0] == "active"
+    assert logger_state("", "plc-datenlogger", [run], lambda n: "inactive") == ("inactive", "gestoppt")
+    assert logger_state("", "plc-datenlogger", [run], lambda n: "") == ("", "")
+    plc_headless.write_status({"pid": 4711, "projekt": "Kessel", "start": time.time()}, run)
+    state, text = logger_state("", "plc-datenlogger", [run], lambda n: "inactive")
+    assert state == "active" and "headless" in text and "Kessel" in text

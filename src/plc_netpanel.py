@@ -346,6 +346,41 @@ def clock_plcs(config_path):
         return []
 
 
+def headless_run_dirs(config_path=""):
+    """Ordner mit den Statusdateien laufender Headless-Logger: der eigene Datenordner, ``laufend`` neben der
+    Konfiguration und die Datenordner der Benutzer (das Panel läuft als root, der Logger meist als Benutzer)."""
+    import glob
+
+    import plc_headless
+    dirs = [plc_headless.RUN_DIR]
+    if config_path:
+        dirs.append(os.path.join(os.path.dirname(os.path.abspath(config_path)), "laufend"))
+    dirs += sorted(glob.glob("/home/*/PLCDatenlogger/laufend"))
+    out = []
+    for d in dirs:
+        if d not in out:
+            out.append(d)
+    return out
+
+
+def logger_state(config_path="", service="plc-datenlogger", run_dirs=None, service_state=None):
+    """Zustand des Loggers -> (Zustand, Text): Dienst aktiv, sonst laufende Headless-Logger (Statusdateien), sonst der
+    Zustand des Dienstes (gestoppt, Fehler). ("", "") ohne Dienst und ohne laufenden Logger."""
+    import plc_headless
+    state = (service_state or plc_netz.service_state)(service) if service else ""
+    if state == "active":
+        return "active", tr("läuft (Dienst)")
+    running = []
+    for d in (headless_run_dirs(config_path) if run_dirs is None else run_dirs):
+        running += plc_headless.running_loggers(d)
+    if running:
+        names = ", ".join(sorted({str(r.get("projekt") or "") for r in running if r.get("projekt")}))
+        return "active", tr("läuft (headless)") + (f" – {names}" if names else "")
+    if not state:
+        return "", ""
+    return state, {"inactive": tr("gestoppt"), "failed": tr("Fehler")}.get(state, state)
+
+
 class NetPanel(QWidget):
     """Hauptfenster des Panels mit den Seiten Übersicht, IP-Einstellung, WLAN und WLAN-Passwort."""
 
@@ -658,10 +693,9 @@ class NetPanel(QWidget):
                         f"<span style='font-size:130%'>{ips}</span>{how}</p>")
         if not rows:
             rows.append("<p>" + tr("Keine Netzwerkschnittstelle gefunden.") + "</p>")
-        state = plc_netz.service_state(self.service) if self.service else ""
+        state, text = logger_state(self.config_path, self.service)
         if state:
             color = "#a5d6a7" if state == "active" else "#ff8a80"
-            text = {"active": tr("läuft"), "inactive": tr("gestoppt"), "failed": tr("Fehler")}.get(state, state)
             rows.append(f"<p>{tr('Logger')}: <span style='color:{color}'><b>{text}</b></span></p>")
         url = self.web_url()
         if url:

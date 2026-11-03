@@ -3339,6 +3339,15 @@
 @ Leertaste
 > Space
 
+@ läuft (Dienst)
+> running (service)
+
+@ läuft (headless)
+> running (headless)
+
+@ gestoppt
+> stopped
+
 @ PLC Datenlogger – Netzwerk
 > PLC data logger – network
 
@@ -3440,9 +3449,6 @@
 
 @ Keine Netzwerkschnittstelle gefunden.
 > No network interface found.
-
-@ gestoppt
-> stopped
 
 @ Logger
 > Logger

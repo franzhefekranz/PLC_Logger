@@ -3339,6 +3339,15 @@
 @ Leertaste
 > 
 
+@ läuft (Dienst)
+> 
+
+@ läuft (headless)
+> 
+
+@ gestoppt
+> 
+
 @ PLC Datenlogger – Netzwerk
 > 
 
@@ -3439,9 +3448,6 @@
 > 
 
 @ Keine Netzwerkschnittstelle gefunden.
-> 
-
-@ gestoppt
 > 
 
 @ Logger

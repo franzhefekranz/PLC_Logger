@@ -22,6 +22,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   `/sys/class/backlight`, Helligkeit im Betrieb und abgedunkelt einstellbar, sonst schwarzes Bild); die erste Berührung
   schaltet nur wieder ein.
 
+### Behoben
+
+* Netzwerk-Panel: ein von Hand gestarteter Headless-Logger wurde als „gestoppt“ angezeigt (geprüft wurde nur der
+  Dienst); jetzt zählen auch die Statusdateien laufender Headless-Logger („läuft (headless) – Projekt“).
+
 ### Geändert
 
 * Anleitung Raspberry Pi, System auf SD-Karte: Daten von VictoriaMetrics auf die SSD (Bind-Mount in
