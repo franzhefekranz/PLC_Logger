@@ -4928,11 +4928,26 @@ erases the SSD):
    sudo mkdir -p /data
    echo 'LABEL=daten /data ext4 defaults,noatime,nofail,x-systemd.device-timeout=30 0 2' | sudo tee -a /etc/fstab
    sudo systemctl daemon-reload && sudo mount -a && df -h /data
-   mkdir -p /data/PLCDatenlogger && ln -s /data/PLCDatenlogger ~/PLCDatenlogger
+   sudo mkdir -p /data/PLCDatenlogger && sudo chown $USER: /data/PLCDatenlogger
+   ln -s /data/PLCDatenlogger ~/PLCDatenlogger      # if ~/PLCDatenlogger exists already: see below
+   ls -l ~/PLCDatenlogger                           # shows -> /data/PLCDatenlogger
 
 ``nofail`` makes sure the Pi also boots without SSD. The link puts the logger's
 configuration, CSV files, archive and log file on the SSD (the SD card wears out otherwise);
-the VictoriaMetrics data follow in step 5.
+the VictoriaMetrics data follow in step 5. If ``~/PLCDatenlogger`` exists already (the logger
+has run before), stop the logger first and move the folder:
+
+.. code-block:: console
+
+   sudo systemctl stop plc-datenlogger              # or stop the headless logger in the configuration program
+   cp -a ~/PLCDatenlogger/. /data/PLCDatenlogger/
+   mv ~/PLCDatenlogger ~/PLCDatenlogger.alt
+   ln -s /data/PLCDatenlogger ~/PLCDatenlogger
+   sudo systemctl start plc-datenlogger
+   rm -r ~/PLCDatenlogger.alt                       # only once everything runs
+
+The path ``~/PLCDatenlogger/…`` stays the same – services and launchers need no change, only
+the line ``RequiresMountsFor=/data`` in the logger's service (step 4).
 
 **2. Basic setup:**
 
@@ -4999,6 +5014,7 @@ option is off – stop the service first, otherwise two loggers read the same co
    Description=PLC Datenlogger (headless)
    After=network-online.target docker.service
    Wants=network-online.target
+   # RequiresMountsFor=/data          # only with data on the SSD (step 1): start once it is mounted
 
    [Service]
    User=user

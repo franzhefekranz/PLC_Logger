@@ -5049,11 +5049,26 @@ USB-Anschluss, optional ein Touchscreen (z. B. Waveshare, HDMI mit USB-Touch ode
    sudo mkdir -p /data
    echo 'LABEL=daten /data ext4 defaults,noatime,nofail,x-systemd.device-timeout=30 0 2' | sudo tee -a /etc/fstab
    sudo systemctl daemon-reload && sudo mount -a && df -h /data
-   mkdir -p /data/PLCDatenlogger && ln -s /data/PLCDatenlogger ~/PLCDatenlogger
+   sudo mkdir -p /data/PLCDatenlogger && sudo chown $USER: /data/PLCDatenlogger
+   ln -s /data/PLCDatenlogger ~/PLCDatenlogger      # gibt es ~/PLCDatenlogger schon: siehe unten
+   ls -l ~/PLCDatenlogger                           # zeigt -> /data/PLCDatenlogger
 
 ``nofail`` sorgt dafür, dass der Pi auch ohne SSD startet. Der Link legt Konfiguration,
 CSV-Dateien, Archiv und Logdatei des Loggers auf die SSD (die SD-Karte nutzt sich sonst
-ab); die Daten von VictoriaMetrics kommen in Schritt 5 dazu.
+ab); die Daten von VictoriaMetrics kommen in Schritt 5 dazu. Gibt es ``~/PLCDatenlogger``
+schon (Logger lief bereits), zuerst den Logger beenden und den Ordner umziehen:
+
+.. code-block:: console
+
+   sudo systemctl stop plc-datenlogger              # bzw. Headless-Logger im Konfigurationsprogramm beenden
+   cp -a ~/PLCDatenlogger/. /data/PLCDatenlogger/
+   mv ~/PLCDatenlogger ~/PLCDatenlogger.alt
+   ln -s /data/PLCDatenlogger ~/PLCDatenlogger
+   sudo systemctl start plc-datenlogger
+   rm -r ~/PLCDatenlogger.alt                       # erst wenn alles läuft
+
+Der Pfad ``~/PLCDatenlogger/…`` bleibt dabei gleich – Dienste und Starter brauchen keine
+Änderung, nur im Dienst des Loggers (Schritt 4) die Zeile ``RequiresMountsFor=/data``.
 
 **2. Grundeinrichtung:**
 
@@ -5121,6 +5136,7 @@ Oberfläche – dann vorher den Dienst beenden, sonst lesen zwei Logger dieselbe
    Description=PLC Datenlogger (headless)
    After=network-online.target docker.service
    Wants=network-online.target
+   # RequiresMountsFor=/data          # nur bei Daten auf der SSD (Schritt 1): erst starten, wenn sie eingehängt ist
 
    [Service]
    User=benutzer

@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* Anleitung Raspberry Pi, Daten auf der SSD: Ordner mit `sudo` anlegen und dem Benutzer übergeben (vorher „Keine
+  Berechtigung“), vorhandenen `~/PLCDatenlogger` umziehen, Logger-Dienst mit `RequiresMountsFor=/data`.
+
 ## [3.8.0] – 2026-11-03
 
 ### Neu
