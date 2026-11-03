@@ -3363,6 +3363,9 @@
 @ Display
 > Display
 
+@ Logger
+> Logger
+
 @ DHCP (automatisch)
 > DHCP (automatic)
 
@@ -3450,9 +3453,6 @@
 @ Keine Netzwerkschnittstelle gefunden.
 > No network interface found.
 
-@ Logger
-> Logger
-
 @ Ohne NetworkManager nur Anzeige (Einstellen: NetworkManager einrichten, siehe Anleitung).
 > Without NetworkManager display only (to change settings: set up NetworkManager, see the manual).
 
@@ -3479,6 +3479,33 @@
 
 @ WLAN „{0}“
 > WLAN “{0}”
+
+@ Stoppen
+> Stop
+
+@ Starten (headless)
+> Start (headless)
+
+@ Keine Konfigurationsdatei gefunden (Ordner PLCDatenlogger im Home-Ordner).
+> No configuration file found (folder PLCDatenlogger in the home folder).
+
+@ Bitte eine Konfiguration wählen.
+> Please choose a configuration.
+
+@ Starte {0} …
+> Starting {0} …
+
+@ Gestartet: {0} (Dienst, auch nach dem Neustart)
+> Started: {0} (service, also after a reboot)
+
+@ Gestartet: {0} (bis zum Neustart – für den Start beim Booten den Dienst einrichten)
+> Started: {0} (until the next reboot – set up the service to start at boot)
+
+@ Beende den Logger …
+> Stopping the logger …
+
+@ Logger beendet (startet nicht mehr beim Booten).
+> Logger stopped (no longer starts at boot).
 
 @ Abdunkeln nach (min, 0 = nie)
 > Dim after (min, 0 = never)

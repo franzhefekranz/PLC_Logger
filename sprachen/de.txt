@@ -3363,6 +3363,9 @@
 @ Display
 > 
 
+@ Logger
+> 
+
 @ DHCP (automatisch)
 > 
 
@@ -3450,9 +3453,6 @@
 @ Keine Netzwerkschnittstelle gefunden.
 > 
 
-@ Logger
-> 
-
 @ Ohne NetworkManager nur Anzeige (Einstellen: NetworkManager einrichten, siehe Anleitung).
 > 
 
@@ -3478,6 +3478,33 @@
 > 
 
 @ WLAN „{0}“
+> 
+
+@ Stoppen
+> 
+
+@ Starten (headless)
+> 
+
+@ Keine Konfigurationsdatei gefunden (Ordner PLCDatenlogger im Home-Ordner).
+> 
+
+@ Bitte eine Konfiguration wählen.
+> 
+
+@ Starte {0} …
+> 
+
+@ Gestartet: {0} (Dienst, auch nach dem Neustart)
+> 
+
+@ Gestartet: {0} (bis zum Neustart – für den Start beim Booten den Dienst einrichten)
+> 
+
+@ Beende den Logger …
+> 
+
+@ Logger beendet (startet nicht mehr beim Booten).
 > 
 
 @ Abdunkeln nach (min, 0 = nie)

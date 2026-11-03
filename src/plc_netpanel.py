@@ -10,6 +10,8 @@ Läuft bildschirmfüllend direkt auf dem Display – ohne Desktop (Qt-Plattform 
 * **WLAN:** ein/aus, Netze suchen, verbinden (Passwort über die Bildschirmtastatur).
 * **Display:** nach einstellbaren Minuten ohne Berührung abdunkeln (Hintergrundbeleuchtung über
   ``/sys/class/backlight``, sonst schwarzes Bild); die erste Berührung schaltet nur wieder ein.
+* **Logger:** Konfigurationsdatei wählen und den Logger headless starten bzw. stoppen (über den Dienst
+  ``plc-datenlogger``, sonst direkt unter dem Besitzer der Datei).
 * **Datum und Uhrzeit:** von Hand stellen, Internetzeit (NTP) ein/aus, Zeitzone; Uhrzeit aus einer Steuerung der
   Konfiguration lesen und übernehmen – auf Wunsch automatisch (beim Start und stündlich, solange keine Internetzeit
   synchronisiert ist). Treiber mit Uhrzeit: s7, clx, opcua (``Driver.read_clock``).
@@ -381,6 +383,114 @@ def logger_state(config_path="", service="plc-datenlogger", run_dirs=None, servi
     return state, {"inactive": tr("gestoppt"), "failed": tr("Fehler")}.get(state, state)
 
 
+def config_files(extra_dirs=()):
+    """Konfigurationsdateien (JSON im Format des Loggers) im Datenordner, in ``extra_dirs`` und in den Datenordnern der
+    Benutzer -> [(Pfad, Projekt)], nach Pfad sortiert."""
+    import glob
+
+    from plc_common import BASE_DIR, CONFIG_FORMAT
+    dirs = [BASE_DIR] + [d for d in extra_dirs if d] + sorted(glob.glob("/home/*/PLCDatenlogger"))
+    out, seen = [], set()
+    for d in dirs:
+        for path in sorted(glob.glob(os.path.join(d, "*.json"))):
+            real = os.path.realpath(path)
+            if real in seen:
+                continue
+            seen.add(real)
+            try:
+                with open(path, encoding="utf-8-sig") as f:
+                    doc = json.load(f)
+            except (OSError, ValueError):
+                continue
+            if isinstance(doc, dict) and doc.get("format") == CONFIG_FORMAT:
+                out.append((path, str((doc.get("einstellungen") or {}).get("projekt") or "")))
+    return out
+
+
+def _systemd_quote(args):
+    """Befehlszeile für ExecStart (Leerzeichen in Anführungszeichen)."""
+    return " ".join('"' + a.replace('"', '\\"') + '"' if (" " in a or '"' in a) else a for a in args)
+
+
+class LoggerControl:
+    """Headless-Logger starten und stoppen.
+
+    Mit eingerichtetem Dienst (``plc-datenlogger``): die gewählte Konfiguration kommt in eine Ergänzung des Dienstes
+    (``/etc/systemd/system/plc-datenlogger.service.d/konfig.conf``), der Dienst wird eingeschaltet und neu gestartet –
+    so startet sie auch nach dem Booten. Ohne Dienst: direkt im Hintergrund unter dem Besitzer der Datei (bis zum
+    nächsten Neustart). Stoppen beendet den Dienst (und schaltet ihn aus) und alle laufenden Headless-Logger."""
+
+    def __init__(self, run, service="plc-datenlogger", dropin_dir=None, popen=None, program=None, run_dirs=None):
+        self.run, self.service = run, service
+        self.dropin_dir = dropin_dir or f"/etc/systemd/system/{service}.service.d"
+        self.popen = popen
+        self.program = program
+        self.run_dirs = run_dirs
+
+    def has_service(self):
+        if not self.service:
+            return False
+        try:
+            self.run(["systemctl", "cat", self.service])
+            return True
+        except Exception:
+            return False
+
+    def command(self, path):
+        """Befehlszeile des Loggers für ``path`` (headless)."""
+        import shutil
+
+        from plc_common import program_command
+        prog = self.program or ([shutil.which("plc-datenlogger")] if shutil.which("plc-datenlogger")
+                                else program_command("logger"))
+        return list(prog) + ["--headless", os.path.abspath(path)]
+
+    def _stop_headless(self):
+        import plc_headless
+        n = 0
+        for d in (headless_run_dirs() if self.run_dirs is None else self.run_dirs):
+            for info in plc_headless.running_loggers(d):
+                plc_headless.request_stop(int(info["pid"]), d)
+                n += 1
+        return n
+
+    def start(self, path):
+        """Konfiguration ``path`` headless starten (ein laufender Logger wird vorher beendet)."""
+        if self._stop_headless():
+            import time
+            time.sleep(1.5)                     # sie beenden sich innerhalb etwa einer Sekunde
+        if self.has_service():
+            os.makedirs(self.dropin_dir, exist_ok=True)
+            with open(os.path.join(self.dropin_dir, "konfig.conf"), "w", encoding="utf-8") as f:
+                f.write("# vom Netzwerk-Panel geschrieben: Konfiguration des Loggers\n[Service]\nExecStart=\n"
+                        f"ExecStart={_systemd_quote(self.command(path))}\n")
+            self.run(["systemctl", "daemon-reload"])
+            self.run(["systemctl", "enable", self.service])
+            self.run(["systemctl", "restart", self.service])
+            return "service"
+        cmd = self.command(path)
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            import pwd
+            owner = pwd.getpwuid(os.stat(path).st_uid).pw_name
+            if owner != "root":
+                cmd = ["runuser", "-u", owner, "--"] + cmd
+        import subprocess
+        (self.popen or subprocess.Popen)(cmd, start_new_session=True, stdin=subprocess.DEVNULL,
+                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                         cwd=os.path.dirname(os.path.abspath(path)))
+        return "direct"
+
+    def stop(self):
+        """Dienst beenden und ausschalten (startet nicht mehr beim Booten), laufende Headless-Logger beenden."""
+        if self.has_service():
+            for args in (["systemctl", "stop", self.service], ["systemctl", "disable", self.service]):
+                try:
+                    self.run(args)
+                except Exception:
+                    pass
+        self._stop_headless()
+
+
 class NetPanel(QWidget):
     """Hauptfenster des Panels mit den Seiten Übersicht, IP-Einstellung, WLAN und WLAN-Passwort."""
 
@@ -388,14 +498,20 @@ class NetPanel(QWidget):
     SYNC_EVERY_MS = 3600 * 1000     # automatisch: stündlich
 
     def __init__(self, netz=None, config_path="", service="plc-datenlogger", background=True, settings=None,
-                 backlight=None):
+                 backlight=None, logger_ctl=None, config_dirs=None):
         super().__init__()
         self.backlight = backlight or Backlight()
         self.dimmed = False
         self.netz = netz or plc_netz.Netz()
-        self.config_path = config_path
         self.settings = load_settings() if settings is None else settings
-        self.clock_plcs = clock_plcs(config_path)
+        # Im Panel gewählte Konfiguration (Seite Logger) geht vor der beim Start angegebenen.
+        chosen = self.settings.get("logger_konfig", "")
+        self.config_path = chosen if chosen and os.path.exists(chosen) else config_path
+        self.start_config = config_path
+        self.config_dirs = config_dirs
+        self.logger_ctl = logger_ctl or LoggerControl(self.netz.run, service)
+        self.configs = []
+        self.clock_plcs = clock_plcs(self.config_path)
         self.plc_time = None                    # zuletzt gelesene Uhrzeit der Steuerung (Ortszeit) und Lesezeitpunkt
         self.timezones = []
         self.service = service
@@ -418,8 +534,9 @@ class NetPanel(QWidget):
         self.page_time = self._build_time()
         self.page_tz = self._build_timezone()
         self.page_display = self._build_display()
+        self.page_logger = self._build_logger()
         for p in (self.page_home, self.page_ip, self.page_wifi, self.page_pw, self.page_time, self.page_tz,
-                  self.page_display):
+                  self.page_display, self.page_logger):
             self.stack.addWidget(p)
         # Abdunkeln: ohne Hintergrundbeleuchtung deckt ein schwarzes Bild alles ab (ein Antippen schaltet ein).
         self.black = QWidget(self)
@@ -493,7 +610,8 @@ class NetPanel(QWidget):
         row.addWidget(self.btn_wifi)
         row.addWidget(self.btn_time)
         row.addWidget(self.btn_display)
-        row.addWidget(self._button(tr("Aktualisieren"), self.refresh))
+        self.btn_logger = self._button(tr("Logger"), self.show_logger)
+        row.addWidget(self.btn_logger)
         v.addLayout(row)
         return w
 
@@ -829,6 +947,95 @@ class NetPanel(QWidget):
             return
         self.ed_pw.clear()
         self.show_home()
+
+    # ------------------------------------------------------------------ Logger (Konfiguration wählen, starten)
+    def _build_logger(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        t = QLabel(tr("Logger"))
+        t.setObjectName("titel")
+        v.addWidget(t)
+        self.lbl_logger_state = QLabel()
+        self.lbl_logger_state.setTextFormat(Qt.TextFormat.RichText)
+        v.addWidget(self.lbl_logger_state)
+        self.list_cfg = QListWidget()
+        QScroller.grabGesture(self.list_cfg.viewport(), QScroller.ScrollerGestureType.LeftMouseButtonGesture)
+        v.addWidget(self.list_cfg, 1)
+        self.lbl_logger_msg = QLabel()
+        self.lbl_logger_msg.setWordWrap(True)
+        v.addWidget(self.lbl_logger_msg)
+        row = QHBoxLayout()
+        row.addWidget(self._button(tr("Zurück"), self.show_home))
+        self.btn_logger_stop = self._button(tr("Stoppen"), self.stop_logger)
+        self.btn_logger_start = self._button(tr("Starten (headless)"), self.start_logger)
+        row.addWidget(self.btn_logger_stop)
+        row.addWidget(self.btn_logger_start)
+        v.addLayout(row)
+        return w
+
+    def _logger_state_text(self):
+        state, text = logger_state(self.config_path, self.logger_ctl.service)
+        color = "#a5d6a7" if state == "active" else "#ff8a80"
+        return f"{tr('Logger')}: <span style='color:{color}'><b>{text or tr('gestoppt')}</b></span>"
+
+    def show_logger(self):
+        """Seite Logger: Konfigurationsdateien auflisten, die aktuelle markieren."""
+        extra = [os.path.dirname(os.path.abspath(p)) for p in (self.config_path, self.start_config) if p]
+        self.configs = config_files(extra + list(self.config_dirs or []))
+        self.list_cfg.clear()
+        cur = os.path.realpath(self.config_path) if self.config_path else ""
+        for path, project in self.configs:
+            name = os.path.basename(path)
+            it = QListWidgetItem(f"{name}   –   {project}" if project else name)
+            it.setSizeHint(QSize(0, 52))
+            it.setToolTip(path)
+            self.list_cfg.addItem(it)
+            if os.path.realpath(path) == cur:
+                self.list_cfg.setCurrentItem(it)
+        self.lbl_logger_state.setText(self._logger_state_text())
+        self.lbl_logger_msg.setText("" if self.configs else tr("Keine Konfigurationsdatei gefunden (Ordner "
+                                                               "PLCDatenlogger im Home-Ordner)."))
+        self.btn_logger_start.setEnabled(bool(self.configs))
+        self.stack.setCurrentWidget(self.page_logger)
+
+    def start_logger(self):
+        row = self.list_cfg.currentRow()
+        if not 0 <= row < len(self.configs):
+            self._msg(self.lbl_logger_msg, tr("Bitte eine Konfiguration wählen."), False)
+            return
+        path = self.configs[row][0]
+        self._msg(self.lbl_logger_msg, tr("Starte {0} …").format(os.path.basename(path)), True)
+        result = {}
+
+        def work():
+            result["how"] = self.logger_ctl.start(path)
+
+        def done(err):
+            if err:
+                self._msg(self.lbl_logger_msg, tr("Fehler: {0}").format(err), False)
+                return
+            self.settings["logger_konfig"] = path
+            save_settings(self.settings)
+            self.config_path = path                  # Webserver-Adresse und Uhrzeit-Steuerung dieser Konfiguration
+            self.clock_plcs = clock_plcs(path)
+            self.plc_time = None
+            self._msg(self.lbl_logger_msg, tr("Gestartet: {0} (Dienst, auch nach dem Neustart)").format(
+                os.path.basename(path)) if result.get("how") == "service" else
+                tr("Gestartet: {0} (bis zum Neustart – für den Start beim Booten den Dienst einrichten)").format(
+                os.path.basename(path)), True)
+            QTimer.singleShot(3000, lambda: self.lbl_logger_state.setText(self._logger_state_text()))
+        self._run(work, done)
+
+    def stop_logger(self):
+        self._msg(self.lbl_logger_msg, tr("Beende den Logger …"), True)
+
+        def done(err):
+            if err:
+                self._msg(self.lbl_logger_msg, tr("Fehler: {0}").format(err), False)
+                return
+            self._msg(self.lbl_logger_msg, tr("Logger beendet (startet nicht mehr beim Booten)."), True)
+            QTimer.singleShot(2000, lambda: self.lbl_logger_state.setText(self._logger_state_text()))
+        self._run(self.logger_ctl.stop, done)
 
     # ------------------------------------------------------------------ Display (Abdunkeln)
     def _build_display(self):

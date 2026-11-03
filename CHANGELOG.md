@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Netzwerk-Panel: Logger starten/stoppen** – Konfigurationsdatei aus einer Liste wählen und headless starten; mit
+  eingerichtetem Dienst stellt das Panel ihn auf die gewählte Datei um (startet dann auch nach dem Booten), sonst
+  startet es den Logger direkt. Statt „Aktualisieren“ (die Übersicht erneuert sich ohnehin alle 5 s) gibt es den Knopf
+  „Logger“.
+
 ### Geändert
 
 * Anleitung Raspberry Pi, Daten auf der SSD: Ordner mit `sudo` anlegen und dem Benutzer übergeben (vorher „Keine

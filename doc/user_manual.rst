@@ -5164,6 +5164,16 @@ after a reboot.
 
    Network panel (800 × 480): overview with IP addresses, logger service and web server.
 
+**Logger** lists the configuration files in the folder ``PLCDatenlogger`` (in the users' home
+folders and next to the file given at start) with their project name. Choose one and **Start
+(headless)** – a logger that is already running is stopped first. If the service
+``plc-datenlogger`` (step 4) is set up, the panel switches it to the chosen file (drop-in
+``/etc/systemd/system/plc-datenlogger.service.d/konfig.conf``), enables and restarts it – the
+file then also starts after booting. Without the service the panel starts the logger directly
+under the file's owner, until the next reboot. **Stop** stops the logger and disables the
+service. The web server address and the controller for the time then follow the chosen
+configuration.
+
 **Display** dims the screen after an adjustable time without touch (default 5 minutes,
 0 = never); the first touch switches it on again without triggering a button and shows the
 overview. Brightness in operation and in the dimmed state can also be set (0 % = backlight

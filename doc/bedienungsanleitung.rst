@@ -5285,6 +5285,16 @@ Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten.
 
    Netzwerk-Panel (800 × 480): Übersicht mit IP-Adressen, Logger-Dienst und Webserver.
 
+**Logger** listet die Konfigurationsdateien im Ordner ``PLCDatenlogger`` (im Home-Ordner
+der Benutzer und neben der beim Start angegebenen Datei) mit ihrem Projektnamen. Eine wählen
+und **Starten (headless)** – ein schon laufender Logger wird vorher beendet. Ist der Dienst
+``plc-datenlogger`` (Schritt 4) eingerichtet, stellt das Panel ihn auf die gewählte Datei um
+(Ergänzung ``/etc/systemd/system/plc-datenlogger.service.d/konfig.conf``), schaltet ihn ein
+und startet ihn neu – die Datei startet dann auch nach dem Booten. Ohne Dienst startet das
+Panel den Logger direkt unter dem Besitzer der Datei, bis zum nächsten Neustart. **Stoppen**
+beendet den Logger und schaltet den Dienst aus. Webserver-Adresse und Uhrzeit-Steuerung
+richten sich danach nach der gewählten Konfiguration.
+
 **Display** dunkelt den Bildschirm nach einer einstellbaren Zeit ohne Berührung ab
 (Vorgabe 5 Minuten, 0 = nie); die erste Berührung schaltet ihn wieder ein, ohne einen Knopf
 auszulösen, und zeigt die Übersicht. Einstellbar sind außerdem die Helligkeit im Betrieb und

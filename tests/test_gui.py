@@ -331,6 +331,56 @@ def test_netpanel_display_dim(qapp, demo_config, tmp_path, monkeypatch):
     w2.close()
 
 
+def test_netpanel_logger_start(qapp, demo_config, tmp_path, monkeypatch):
+    """Netzwerk-Panel, Seite Logger: Konfigurationsdateien auflisten, über den Dienst starten (Ergänzung mit
+    ExecStart) bzw. ohne Dienst direkt, stoppen."""
+    import plc_headless
+    import plc_netpanel
+    from plc_common import Plc, load_config, save_config
+    from test_logic import _FakeNm
+    monkeypatch.setattr(plc_netpanel, "save_settings", lambda data: None)
+    folder = tmp_path / "PLC Daten"
+    folder.mkdir()
+    conn, charts, cvars = load_config(demo_config)
+    for name, project in (("kessel.json", "Kesselhaus"), ("linie2.json", "Linie 2")):
+        conn["projekt"] = project
+        save_config(conn, charts, cvars, str(folder / name), plcs=[Plc(name="SPS 1")])
+    (folder / "anderes.json").write_text('{"kein": "logger"}')
+    run_dir = str(tmp_path / "laufend")
+    plc_headless.write_status({"pid": 999999, "projekt": "Alt", "start": 0}, run_dir)
+    fake = _FakeNm()
+    started = []
+    ctl = plc_netpanel.LoggerControl(fake, "plc-datenlogger", dropin_dir=str(tmp_path / "dropin"),
+                                     popen=lambda cmd, **kw: started.append(cmd),
+                                     program=["/usr/bin/plc-datenlogger"], run_dirs=[run_dir])
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    w = plc_netpanel.NetPanel(plc_netz_fake(fake), config_path=demo_config, service="", background=False,
+                              settings={}, logger_ctl=ctl, config_dirs=[str(folder)])
+    w.resize(800, 480)
+    w.show()
+    w.show_logger()
+    names = [w.list_cfg.item(i).text() for i in range(w.list_cfg.count())]
+    assert any("kessel.json" in n and "Kesselhaus" in n for n in names) and not any("anderes" in n for n in names)
+    assert w.list_cfg.currentItem().toolTip() == demo_config                  # aktuelle Konfiguration markiert
+    w.list_cfg.setCurrentRow(next(i for i, n in enumerate(names) if "linie2" in n))
+    w.start_logger()
+    conf = (tmp_path / "dropin" / "konfig.conf").read_text()
+    assert f'ExecStart=/usr/bin/plc-datenlogger --headless "{folder / "linie2.json"}"' in conf, conf
+    assert ["systemctl", "restart", "plc-datenlogger"] in fake.calls and ["systemctl", "enable", "plc-datenlogger"] \
+        in fake.calls
+    assert plc_headless.stop_requested(999999, run_dir)                       # laufender Logger wurde beendet
+    assert w.config_path == str(folder / "linie2.json") and "Dienst" in w.lbl_logger_msg.text()
+    w.stop_logger()
+    assert ["systemctl", "disable", "plc-datenlogger"] in fake.calls
+    # ohne Dienst: direkt starten
+    monkeypatch.setattr(ctl, "has_service", lambda: False)
+    w.list_cfg.setCurrentRow(0)
+    w.start_logger()
+    assert started and started[-1][-2:] == ["--headless", w.configs[0][0]], started
+    assert "Neustart" in w.lbl_logger_msg.text()
+    w.close()
+
+
 def plc_netz_fake(fake):
     import plc_netz
     return plc_netz.Netz(run=fake)
