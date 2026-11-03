@@ -526,7 +526,8 @@ class RemoteRecorder:
     def load_range(self, t0, t1, max_rows=200_000):
         """Werte t0..t1 vom Server (sein Speicher, davor seine Datenbank) -> (Zeiten, Werte[Variable][Zeile], Quelle,
         Fehlertext). Für „Aus Datenbank laden“ und „Im Diagramm zeigen“ im Client."""
-        d = self.con.get_json("api/verlauf", {"t0": f"{t0:.3f}", "t1": f"{t1:.3f}", "max": int(max_rows)},
+        d = self.con.get_json("api/verlauf", {"t0": f"{t0 - 0.001:.3f}", "t1": f"{t1 + 0.001:.3f}",  # gerundet: Ränder dabei
+                                              "max": int(max_rows)},
                               timeout=120)
         t = np.asarray(d.get("t") or [], dtype=float)
         y = (np.array([[np.nan if v is None else v for v in row] for row in d.get("y") or []], dtype=float)
