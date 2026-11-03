@@ -49,6 +49,10 @@ def parse_args(argv):
     ap.add_argument("--dienst", default="plc-datenlogger", help="Netzwerk-Panel: angezeigter systemd-Dienst")
     ap.add_argument("--fenster", action="store_true", help="Netzwerk-Panel im Fenster statt bildschirmfüllend")
     ap.add_argument("--demo", action="store_true", help="simulierte Werte statt SPS-Verbindung")
+    ap.add_argument("--client", metavar="ADRESSE", nargs="?", const="",
+                    help="Betriebsart Client: Aufzeichnung eines anderen Loggers über dessen Webserver anzeigen "
+                         "(z. B. --client https://logger-kessel:8080/; ohne Adresse: Auswahl im Dialog)")
+    ap.add_argument("--benutzer", default="", help="Client: Benutzername (das Passwort wird im Dialog abgefragt)")
     return ap.parse_args(argv)
 
 
@@ -74,6 +78,8 @@ def main(argv=None):
         from plc_netpanel import run_panel
         return run_panel(os.path.abspath(explicit) if explicit else "", args.dienst, windowed=args.fenster)
     path = os.path.abspath(explicit) if explicit else last_config_path()
+    if args.client is not None:                      # Client: keine eigene Konfiguration, kein Headless-Betrieb
+        return run_client(path, args.client, args.benutzer)
     if explicit and os.path.exists(path):
         remember_config_path(path)                    # die nächste Sitzung öffnet dieselbe Datei
     # Nur die Verbindungs-/Optionswerte lesen, um den Headless-Schalter zu kennen. Eine fehlerhafte Datei
@@ -105,6 +111,20 @@ def no_display(environ=None, platform=None):
     return not (env.get("DISPLAY") or env.get("WAYLAND_DISPLAY") or env.get("QT_QPA_PLATFORM"))
 
 
+def run_client(path, url="", user=""):
+    """Betriebsart Client von der Befehlszeile: Verbindungsdialog, dann das Hauptfenster als Client."""
+    from PySide6.QtWidgets import QApplication
+    from plc_branding import set_windows_app_id
+    from plc_i18n import install_qt
+    set_windows_app_id()
+    from plc_common import qt_platform_setup
+    qt_platform_setup()
+    app = QApplication.instance() or QApplication(sys.argv[:1])
+    install_qt(app)
+    from plc_gui import run_gui
+    return run_gui(path, client={"url": url, "user": user})
+
+
 def run_with_start_window(path, explicit, demo):
     """Oberfläche starten: zuerst das Startbild (Auswahl der Konfiguration, danach Lade-Anzeige), dann das
     Hauptfenster. Das Startbild erscheint, bevor die großen Bibliotheken (pyqtgraph) geladen werden."""
@@ -122,6 +142,9 @@ def run_with_start_window(path, explicit, demo):
         return 0
     path = res["path"] or path
     demo = demo or res["demo"]
+    if res.get("client"):
+        from plc_gui import run_gui
+        return run_gui(path, splash=win, client={"url": "", "user": ""})
     if res["new"]:                                    # neue Konfiguration: Datei anlegen, Konfigurationsprogramm öffnen
         import subprocess
         from plc_common import Chart, default_connection, program_command, save_config

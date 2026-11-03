@@ -734,3 +734,67 @@ def test_netscan_dialog_and_take(qt_log, demo_config, monkeypatch):
     assert plcs[-2].driver == "s7" and plcs[-2].params["slot"] == 2 and plcs[-2].name == "CPU 315-2 PN/DP"
     assert plcs[-1].driver == "modbus" and plcs[-1].params["ip"] == "10.1.1.6"
     w.close()
+
+
+def test_logger_client_mode(qt_log, demo_config, tmp_path):
+    """Betriebsart Client: Verbindungsdialog, Hauptfenster mit Konfiguration und Werten vom Server (Demo-Aufzeichnung
+    hinter dem Webserver), Zeitraum vom Server laden, Ereignisse, Export und zurück zur eigenen Konfiguration."""
+    pytest.importorskip("flask")
+    import socket
+
+    import plc_gui
+    import plc_web
+    from plc_client_dialog import ClientDialog
+    from plc_common import Plc, default_connection
+    from plc_recorder import Recorder
+    from plc_recorder import demo_config as demo
+    from plc_webauth import hash_password
+    conn = default_connection()
+    conn.update(csv_ordner=str(tmp_path / "server"), csv_aktiv=0, projekt="Kessel", anordnung="tabs")
+    charts, variables = demo()
+    rec = Recorder(conn, [Plc(name="SPS Kessel")], charts, variables, demo=True)
+    rec.start()
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    srv = plc_web.WebServer(lambda: rec, "127.0.0.1", port, users={"chef": hash_password("pw", 1000)})
+    srv.start()
+    try:
+        wait(1200)
+        dlg = ClientDialog(None, f"127.0.0.1:{port}", "chef")
+        dlg.ed_pw.setText("falsch")
+        dlg.try_connect()
+        assert dlg.connection is None and dlg.lbl_err.text()
+        dlg.ed_pw.setText("pw")
+        dlg.try_connect()
+        assert dlg.connection is not None, dlg.lbl_err.text()
+        w = plc_gui.MainWindow(demo_config, client=dlg.connection)
+        w.show()
+        wait(2500)
+        assert w.rec is not None and w.rec.count() > 5 and w.act_run.isChecked()
+        assert "Client" in w.windowTitle() and "Kessel" in w.windowTitle()
+        assert not w.act_cfg.isEnabled() and not w.act_demo.isEnabled() and w.act_leave.isEnabled()
+        assert w.leds and w.leds[0].lbl.text() == "SPS Kessel"
+        assert len(w.panels) == len(charts) and w.web is None
+        w.show_events()
+        assert w.event_log() is w.rec.events
+        qt_log.file = str(tmp_path / "export.csv")
+        w.export_values()
+        # Zeitraum vom Server laden (offline), dann wieder live
+        t, _y = rec.snapshot()
+        assert w._client_load_range(float(t[0]), float(t[-1]))
+        assert w.source == "client" and not w.online and len(w.t) > 5
+        w.goto_time(float(t[len(t) // 2]))
+        w.act_online.setChecked(True)
+        wait(1200)
+        assert w.source == "rec" and w.rec.running
+        assert not w.connect_client()                         # Dialog (exec ersetzt) abgebrochen
+        w.leave_client()
+        assert w.client is None and w.source == "none" and w.act_cfg.isEnabled()
+        for kind, _title, text in qt_log.messages:
+            assert kind != "critical", text
+        _close(w)
+    finally:
+        srv.stop()
+        rec.stop()

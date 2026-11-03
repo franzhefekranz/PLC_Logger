@@ -426,6 +426,94 @@
 @ ⚠ [Aufräumen] {0}
 > ⚠ [Clean-up] {0}
 
+# ---------------- plc_client.py
+
+@ Unbekanntes Zertifikat von {0}
+> Unknown certificate from {0}
+
+@ Bitte die Adresse des Loggers angeben, z. B. https://logger-kessel:8080/
+> Please enter the address of the logger, e.g. https://logger-kessel:8080/
+
+@ Ungültige Adresse: {0}
+> Invalid address: {0}
+
+@ Der Fingerabdruck des Zertifikats hat sich geändert: {0}
+> The certificate fingerprint has changed: {0}
+
+@ Anmeldung erforderlich (Benutzer und Passwort bzw. Zugriffscode)
+> Login required (user and password or access code)
+
+@ Keine Berechtigung: der Benutzer hat am Logger nur Leserecht.
+> Not permitted: the user has read-only access on the logger.
+
+@ {0} nicht erreichbar: {1}
+> {0} not reachable: {1}
+
+@ Benutzer oder Passwort falsch.
+> Wrong user or password.
+
+@ Der Logger zeichnet gerade nicht auf.
+> The logger is not recording at the moment.
+
+@ Server
+> server
+
+@ verbinde …
+> connecting …
+
+@ Datenbank
+> Database
+
+@ Die Aufzeichnung am Server wurde neu gestartet – verbinde neu …
+> The recording on the server was restarted – reconnecting …
+
+@ Verbindung zu {0} wiederhergestellt
+> Connection to {0} restored
+
+@ verbunden
+> connected
+
+@ Client: {0}
+> Client: {0}
+
+@ Server nicht erreichbar: {0}
+> Server not reachable: {0}
+
+# ---------------- plc_client_dialog.py
+
+@ Mit Logger verbinden (Client)
+> Connect to logger (client)
+
+@ Zeigt die Aufzeichnung eines anderen Loggers an (z. B. headless auf einem Raspberry Pi) – Diagramme, Variablen und Anzeige kommen von dort, eine eigene Konfiguration ist nicht nötig. Dort muss der Webserver eingeschaltet sein.
+> Shows the recording of another logger (e.g. headless on a Raspberry Pi) – charts, variables and display settings come from there, no configuration of your own is needed. The web server must be enabled there.
+
+@ nur ohne Benutzer
+> only without users
+
+@ Adresse und Benutzer merken (nicht das Passwort)
+> Remember address and user (not the password)
+
+@ Adresse:
+> Address:
+
+@ Benutzer:
+> User:
+
+@ Passwort:
+> Password:
+
+@ Zugriffscode:
+> Access code:
+
+@ Verbinden
+> Connect
+
+@ Zertifikat prüfen
+> Check certificate
+
+@ Der Logger {0} verwendet ein Zertifikat, das dieser Rechner nicht kennt (z. B. selbstsigniert).\n\nSHA-256-Fingerabdruck:\n{1}\n\nVergleichen Sie ihn mit der Anzeige am Logger (Datei › Webserver-Adresse … bzw. Logdatei im Headless-Betrieb). Stimmt er überein, diesem Zertifikat vertrauen?
+> The logger {0} uses a certificate this computer does not know (e.g. self-signed).\n\nSHA-256 fingerprint:\n{1}\n\nCompare it with the display on the logger (File › Web server address … or the log file in headless mode). If it matches, trust this certificate?
+
 # ---------------- plc_common.py
 
 @ Untereinander
@@ -667,9 +755,6 @@
 @ Port:
 > Port:
 
-@ Zugriffscode:
-> Access code:
-
 @ Aktualisierung im Browser:
 > Browser refresh:
 
@@ -741,9 +826,6 @@
 
 @ Webserver && Headless
 > Web server && headless
-
-@ Datenbank
-> Database
 
 @ Trigger && Ereignisse
 > Triggers && events
@@ -2373,6 +2455,15 @@
 @ Datei
 > File
 
+@ Mit Logger verbinden (Client) …
+> Connect to logger (client) …
+
+@ Aufzeichnung eines anderen Loggers über dessen Webserver anzeigen (ohne eigene Konfiguration und Steuerung)
+> Show the recording of another logger via its web server (without own configuration and PLC)
+
+@ Verbindung trennen (eigene Konfiguration)
+> Disconnect (own configuration)
+
 @ CSV-Dateien aneinanderhängen und speichern …
 > Join CSV files and save …
 
@@ -2604,6 +2695,24 @@
 @ ■ Stop
 > ■ Stop
 
+@ ▶ Verbinden
+> ▶ Connect
+
+@ Client
+> Client
+
+@ Keine Verbindung zum Logger {0}:\n{1}
+> No connection to the logger {0}:\n{1}
+
+@ ■ Trennen
+> ■ Disconnect
+
+@ Verbunden mit {0}
+> Connected to {0}
+
+@ (nur Leserecht)
+> (read-only)
+
 @ Offline
 > Offline
 
@@ -2642,6 +2751,21 @@
 
 @ Geladen: {0} ({1} Zeitpunkte)
 > Loaded: {0} ({1} time points)
+
+@ Laden vom Server fehlgeschlagen: {0}
+> Loading from the server failed: {0}
+
+@ Vom Server geladen: {0} bis {1} ({2} Zeitpunkte, {3})
+> Loaded from the server: {0} to {1} ({2} points in time, {3})
+
+@ Zeitraum vom Server laden
+> Load time range from server
+
+@ Werte aus dem Speicher des Loggers, ältere aus seiner Datenbank (lange Zeiträume als Mittelwerte).
+> Values from the logger's memory, older ones from its database (long periods as averages).
+
+@ Im gewählten Zeitraum liegen am Logger keine Messwerte vor.
+> The logger has no values in the selected time range.
 
 @ Es sind keine Messwerte vorhanden.
 > There are no values.
@@ -2859,9 +2983,6 @@
 
 @ Treiber {0}: {1}
 > Driver {0}: {1}
-
-@ Verbunden mit {0}
-> Connected to {0}
 
 @ Lesefehler: {0} – neuer Verbindungsversuch
 > Read error: {0} – trying to reconnect
@@ -3401,9 +3522,6 @@
 
 @ Zeigen
 > Show
-
-@ Verbinden
-> Connect
 
 @ Datum und Uhrzeit
 > Date and time
@@ -4311,6 +4429,12 @@
 @ Mit simulierten Werten starten (ohne Steuerung)
 > Start with simulated values (without a controller)
 
+@ Mit Logger verbinden …
+> Connect to logger …
+
+@ Betriebsart Client: die Aufzeichnung eines anderen Loggers anzeigen (z. B. headless auf einem Raspberry Pi) – ohne eigene Konfiguration
+> Client mode: show the recording of another logger (e.g. headless on a Raspberry Pi) – without a configuration of your own
+
 @ Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
 > Do not show at startup (open the last used file)
 
@@ -4554,9 +4678,6 @@
 
 @ Anmelden
 > Log in
-
-@ Benutzer oder Passwort falsch.
-> Wrong user or password.
 
 @ Unverschlüsselte Verbindung (HTTP): Passwort und Werte sind im Netz lesbar.
 > Unencrypted connection (HTTP): password and values can be read on the network.

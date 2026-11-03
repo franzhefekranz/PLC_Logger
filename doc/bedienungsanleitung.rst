@@ -2514,7 +2514,8 @@ nicht neu; dadurch bleibt die Bedienung auch bei vielen Variablen flüssig.
 
 Menü **Datei** des Loggers: **Config laden …** (``Strg+O``, Dateidialog für eine
 beliebig benannte Konfigurationsdatei), **Konfiguration neu laden** (``F5``),
-**Konfig-Editor**, **CSV laden**, **Webserver-Adresse …** und **Beenden**.
+**Konfig-Editor**, **Mit Logger verbinden (Client) …** (``Strg+K``, `Logger als Client`_),
+**CSV laden**, **Webserver-Adresse …** und **Beenden**.
 Der Fenstertitel zeigt den Projektnamen und die Konfigurationsdatei.
 
 .. _status-led:
@@ -3143,6 +3144,55 @@ Layout, **Abbrechen** verwirft die Änderungen.
   angemeldete Benutzer mit Schreibrecht – wer die Seite nur mit Zugriffscode aufruft, kann sie ansehen,
   aber nicht ändern (gut für ein fest installiertes Anzeigegerät). Ohne Anmeldung darf
   jeder mit Zugang zur Seite bearbeiten.
+
+.. _logger-client:
+
+Logger als Client
+----------------------------------------------------------------------
+
+Ein Logger kann die Aufzeichnung eines **anderen** Loggers anzeigen – etwa eines
+Raspberry Pi, der headless an der Anlage aufzeichnet, während im Büro ein zweiter Logger
+nur anzeigt und auswertet. Der Client braucht **keine eigene Konfiguration** und keine
+Verbindung zur Steuerung: Diagramme, Variablen, Seitenanordnung, Fensterbreite und die
+Namen der Steuerungen kommen vom aufzeichnenden Logger, ebenso die Messwerte. Am Server
+muss nur der Webserver eingeschaltet sein (`Webserver (Diagramme im Browser)`_).
+
+**Verbinden**
+
+* im Startbild *Mit Logger verbinden …*,
+* im Logger *Datei › Mit Logger verbinden (Client) …* (Strg+K) oder
+* von der Befehlszeile ``plc_logger.py --client https://logger-kessel:8080/ --benutzer chef``
+  (ohne Adresse erscheint nur der Dialog).
+
+Im Dialog stehen **Adresse** (``http://`` oder ``https://``, Rechnername oder IP-Adresse
+und Port des Webservers), **Benutzer** und **Passwort** – bzw. ohne eingerichtete
+Benutzer der **Zugriffscode**. Adresse und Benutzer werden für das nächste Mal gemerkt,
+das Passwort nie. Verwendet der Server ein selbstsigniertes Zertifikat, zeigt der Client
+dessen **SHA-256-Fingerabdruck**; vergleichen Sie ihn mit *Datei › Webserver-Adresse …*
+am Server (headless: Logdatei). Nach dem Bestätigen merkt sich der Client das
+Zertifikat; ändert es sich später, verweigert er die Verbindung.
+
+**Im Client**
+
+* Die Anzeige läuft live mit (die neuen Zeilen holt der Client im Takt des Webservers);
+  beim Verbinden kommen die letzten 30 000 Zeilen aus dem Speicher des Servers.
+  Offline-Ansicht, Lineale, Zoom, Wertetabelle, Analyse (XY, FFT, PID), Bericht,
+  Screenshots und *Werte exportieren* arbeiten wie beim eigenen Aufzeichnen.
+* *Aus Datenbank laden …* und *Im Diagramm zeigen* (Ereignisse) holen ältere Zeiträume
+  vom Server – aus seinem Speicher, davor aus seiner Datenbank (lange Zeiträume als
+  Mittelwerte). Zurück zur Live-Anzeige mit *Online*.
+* Die Status-LEDs zeigen den Zustand der Steuerungen **am Server**; ist der Server nicht
+  erreichbar, werden sie rot und der Client versucht es weiter.
+* **Ereignisse:** Zähler, Ereignisprotokoll und Marken kommen vom Server. Quittieren und
+  Notizen gehen an den Server – nur für Benutzer mit Schreibrecht (`HTTPS und Anmeldung`_).
+* Startet der Server eine neue Aufzeichnung (z. B. mit geänderter Konfiguration),
+  verbindet sich der Client selbständig neu und baut die Anzeige neu auf.
+* *▶ Verbinden* / *■ Trennen* ersetzen Start/Stopp. Nicht verfügbar sind Demo,
+  Konfig-Editor, IO-Check, Webserver und Prozessbild des Clients – sie gehören zum
+  aufzeichnenden Logger. *Datei › Verbindung trennen (eigene Konfiguration)* oder
+  *Config laden …* kehren zur eigenen Konfiguration zurück.
+* Der Client schreibt keine CSV-Dateien und nichts in die Datenbank; es gibt also nur
+  eine Aufzeichnung und eine Datenbasis.
 
 .. _opcua-server:
 

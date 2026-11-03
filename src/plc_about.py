@@ -127,6 +127,7 @@ HELP_TOPICS = {
     "XYDialog": "XY-Diagramm",
     "FftDialog": "Frequenzanalyse (FFT)",
     "WebUsersDialog": "HTTPS und Anmeldung",
+    "ClientDialog": "Logger als Client",
     "PasswordDialog": "HTTPS und Anmeldung",
     "NotifyDialog": "Benachrichtigungen",
     "OpcUaServerDialog": "OPC-UA-Server",

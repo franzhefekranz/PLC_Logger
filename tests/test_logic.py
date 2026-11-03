@@ -1137,3 +1137,103 @@ def test_web_break_gaps():
     t2, y2 = plc_web.break_gaps(t, y)
     assert len(t2) == 8 and np.isnan(y2[0, 4]) and t2[4] == 16.5
     assert len(plc_web.break_gaps(np.array([0.0, 1, 2]), np.zeros((1, 3)))[0]) == 3
+
+
+def test_client_remote_recorder(tmp_path, monkeypatch):
+    """Logger als Client: anmelden, Konfiguration vom Server, Zeilen nachladen, Ereignisse quittieren; HTTPS mit
+    selbstsigniertem Zertifikat erst nach Bestätigen des Fingerabdrucks; falsches Passwort; Neustart am Server."""
+    pytest.importorskip("flask")
+    pytest.importorskip("cryptography")
+    import socket
+    import time
+
+    import plc_client as pc
+    import plc_web
+    from plc_common import Plc, default_connection
+    from plc_events import Trigger
+    from plc_recorder import Recorder, demo_config
+    from plc_webauth import hash_password
+    monkeypatch.setattr(plc_web, "tls_dir", lambda: str(tmp_path / "tls"))
+    conn = default_connection()
+    conn.update(csv_ordner=str(tmp_path), csv_aktiv=0, projekt="Kessel", anordnung="tabs")
+    charts, variables = demo_config()
+    rec = Recorder(conn, [Plc(name="SPS 1")], charts, variables, demo=True)
+    rec.start()
+    holder = {"rec": rec}
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    users = {"chef": hash_password("pw", 1000), "gast": hash_password("pw", 1000)}
+    srv = plc_web.WebServer(lambda: holder["rec"], "127.0.0.1", port, https=True, users=users,
+                            rights={"gast": "lesen"})
+    srv.start()
+    try:
+        time.sleep(1.2)
+        url = f"https://127.0.0.1:{port}"
+        with pytest.raises(pc.UntrustedCertificate) as ex:
+            pc.Connection(url, "chef", "pw").connect()
+        fp = ex.value.fingerprint
+        assert fp == srv.fingerprint()
+        bad = pc.Connection(url, "chef", "falsch", pins={f"127.0.0.1:{port}": fp})
+        with pytest.raises(pc.LoginRequired):
+            bad.connect()
+        con = pc.Connection(url, "chef", "pw")
+        con.trust(fp)
+        k = con.connect()
+        assert k["project"] == "Kessel" and k["write"] and len(k["vars"]) == len(variables)
+        assert "db_passwort" not in k["conn"] and "web_benutzer" not in str(k)
+        r = pc.RemoteRecorder(con)
+        assert [v.name for v in r.vars] == [v.name for v in variables] and r.conn["anordnung"] == "tabs"
+        assert r.conn["web_aktiv"] == 0 and [p.name for p in r.plcs] == ["SPS 1"]
+        r.start()
+        time.sleep(2.5)
+        n1 = r.count()
+        assert n1 > 5 and r.link_state()[0] == "ok", (n1, r.link_state(), list(r.messages))
+        t, y = r.snapshot()
+        t_srv, y_srv = rec.snapshot()
+        assert np.allclose(y[0][:5], y_srv[0][np.searchsorted(t_srv, t[0] - 0.002):][:5], equal_nan=True)
+        assert r.status_list()[0][0] == "SPS 1"
+        time.sleep(1.5)
+        assert r.count() > n1                                   # neue Zeilen kommen nach
+        # Ereignisse über den Server
+        rec.events.come(Trigger(name="Test", prio="Alarm"), "zu heiß")
+        time.sleep(1.5)
+        assert r.events.open_count() >= 1
+        evs = r.events.events()
+        eid = next(e.id for e in evs if e.trigger == "Test")
+        assert r.events.acknowledge([eid]) == 1
+        e = next(e for e in rec.events.events() if e.id == eid)
+        assert not e.offen and e.benutzer == "chef"
+        r.events.note("vom Client", time.time())
+        assert any(e.text == "vom Client" and e.notiz for e in rec.events.events())
+        # Zeitraum laden (Speicher des Servers)
+        th, yh, src, err = r.load_range(float(t_srv[0]), float(t_srv[-1]))
+        assert len(th) >= len(t_srv) - 1 and yh.shape == (len(variables), len(th)) and src == "speicher" and not err
+        # Nur Leserecht: Quittieren wird abgelehnt (ClientError ist ein OSError, wie Dateifehler im Viewer)
+        g = pc.Connection(url, "gast", "pw", pins=con.pins)
+        assert g.connect()["write"] is False
+        with pytest.raises(OSError):
+            pc.RemoteEventLog(g).acknowledge(None)
+        # Neustart der Aufzeichnung am Server: Client merkt es
+        rec.stop()
+        holder["rec"] = rec2 = Recorder(conn, [Plc(name="SPS 1")], charts, variables, demo=True)
+        rec2.start()
+        time.sleep(2.5)
+        assert r.reconfigure and not r.running
+        rec2.stop()
+    finally:
+        srv.stop()
+        rec.stop()
+    assert pc.normalize_url("logger:8080") == "http://logger:8080/"
+    with pytest.raises(pc.ClientError):
+        pc.normalize_url("")
+
+
+def test_logger_args_client():
+    """Befehlszeile: --client mit und ohne Adresse, --benutzer."""
+    from plc_logger import parse_args
+    a = parse_args(["--client", "https://pi:8080/", "--benutzer", "chef"])
+    assert a.client == "https://pi:8080/" and a.benutzer == "chef"
+    assert parse_args(["--client"]).client == ""
+    assert parse_args([]).client is None

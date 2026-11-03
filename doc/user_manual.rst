@@ -2455,7 +2455,7 @@ even with many variables.
 
 **File** menu of the logger: **Load config …** (``Ctrl+O``, file dialog for a
 configuration file with any name), **Reload configuration** (``F5``), **Config
-editor**, **Load CSV**, **Join CSV files and save …**, **Load from database …**,
+editor**, **Connect to logger (client) …** (``Ctrl+K``, `Logger as client`_), **Load CSV**, **Join CSV files and save …**, **Load from database …**,
 **Export values (CSV/Excel) …**, **Web server address …**, **Event log …**, **Note to
 the event log …** and **Exit**. The window title shows the project name and the
 configuration file.
@@ -3049,6 +3049,55 @@ layout, **Abbrechen** (cancel) discards the changes.
   whoever opens the page with the access code only can view it but not change it (good
   for a permanently installed display). Without login anybody with access to the page may
   edit.
+
+.. _logger-client:
+
+Logger as client
+----------------------------------------------------------------------
+
+A logger can display the recording of **another** logger – for example a Raspberry Pi
+recording headless at the plant while a second logger in the office only displays and
+analyses. The client needs **no configuration of its own** and no connection to the PLC:
+charts, variables, page layout, window width and the names of the PLCs come from the
+recording logger, as do the values. On the server only the web server has to be enabled
+(`Web server (charts in the browser)`_).
+
+**Connecting**
+
+* in the start window *Connect to logger …*,
+* in the logger *File › Connect to logger (client) …* (Ctrl+K) or
+* from the command line ``plc_logger.py --client https://logger-kessel:8080/ --benutzer chef``
+  (without an address only the dialog appears).
+
+The dialog asks for the **address** (``http://`` or ``https://``, host name or IP address
+and port of the web server), **user** and **password** – or, without users set up, the
+**access code**. Address and user are remembered for next time, the password never. If
+the server uses a self-signed certificate, the client shows its **SHA-256 fingerprint**;
+compare it with *File › Web server address …* on the server (headless: log file). Once
+confirmed, the client remembers the certificate; if it changes later, the client refuses
+to connect.
+
+**In the client**
+
+* The display runs live (the client fetches the new rows at the refresh rate of the web
+  server); on connecting, the last 30,000 rows come from the server's memory. Offline
+  view, rulers, zoom, value table, analysis (XY, FFT, PID), report, screenshots and
+  *Export values* work as when recording yourself.
+* *Load from database …* and *Show in chart* (events) fetch older periods from the server
+  – from its memory, before that from its database (long periods as averages). Back to
+  the live display with *Online*.
+* The status LEDs show the state of the PLCs **on the server**; if the server cannot be
+  reached they turn red and the client keeps trying.
+* **Events:** counter, event log and marks come from the server. Acknowledging and notes
+  go to the server – only for users with write access (`HTTPS and login`_).
+* If the server starts a new recording (e.g. with a changed configuration), the client
+  reconnects on its own and rebuilds the display.
+* *▶ Connect* / *■ Disconnect* replace start/stop. Not available are demo, configuration
+  editor, IO check, web server and process view of the client – they belong to the
+  recording logger. *File › Disconnect (own configuration)* or *Load config …* return to
+  your own configuration.
+* The client writes no CSV files and nothing to the database; so there is only one
+  recording and one data basis.
 
 .. _opcua-server:
 

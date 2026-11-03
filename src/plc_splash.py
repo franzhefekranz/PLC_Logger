@@ -321,6 +321,12 @@ class StartWindow(QWidget):
             btn_demo.setToolTip(tr("Mit simulierten Werten starten (ohne Steuerung)"))
             btn_demo.clicked.connect(self.demo)
             row.addWidget(btn_demo)
+        if kind == "logger":
+            btn_client = QPushButton(tr("Mit Logger verbinden …"))
+            btn_client.setToolTip(tr("Betriebsart Client: die Aufzeichnung eines anderen Loggers anzeigen (z. B. "
+                                     "headless auf einem Raspberry Pi) – ohne eigene Konfiguration"))
+            btn_client.clicked.connect(self.client)
+            row.addWidget(btn_client)
         row.addStretch(1)
         self.buttons = QWidget()
         self.buttons.setLayout(row)
@@ -388,12 +394,16 @@ class StartWindow(QWidget):
             self.move(g.center().x() - self.width() // 2, g.center().y() - self.height() // 2)
 
     # ------------------------------------------------------------------ Auswahl
-    def _finish(self, path, new=False, demo=False):
+    def client(self):
+        """Betriebsart Client: Konfiguration kommt vom Server (Dialog folgt im Hauptprogramm)."""
+        self._finish(self.current, client=True)
+
+    def _finish(self, path, new=False, demo=False, client=False):
         """Auswahl abschließen: Einstellung „Startbild zeigen“ speichern, Ergebnis setzen, auf Lade-Anzeige umschalten
         und ``chosen`` senden.
         """
         save_settings(startbild=not self.chk_skip.isChecked())
-        self.result = {"path": path, "new": new, "demo": demo}
+        self.result = {"path": path, "new": new, "demo": demo, "client": client}
         self.set_loading("Lade …")
         self.chosen.emit()
 

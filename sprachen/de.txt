@@ -426,6 +426,94 @@
 @ ⚠ [Aufräumen] {0}
 > 
 
+# ---------------- plc_client.py
+
+@ Unbekanntes Zertifikat von {0}
+> 
+
+@ Bitte die Adresse des Loggers angeben, z. B. https://logger-kessel:8080/
+> 
+
+@ Ungültige Adresse: {0}
+> 
+
+@ Der Fingerabdruck des Zertifikats hat sich geändert: {0}
+> 
+
+@ Anmeldung erforderlich (Benutzer und Passwort bzw. Zugriffscode)
+> 
+
+@ Keine Berechtigung: der Benutzer hat am Logger nur Leserecht.
+> 
+
+@ {0} nicht erreichbar: {1}
+> 
+
+@ Benutzer oder Passwort falsch.
+> 
+
+@ Der Logger zeichnet gerade nicht auf.
+> 
+
+@ Server
+> 
+
+@ verbinde …
+> 
+
+@ Datenbank
+> 
+
+@ Die Aufzeichnung am Server wurde neu gestartet – verbinde neu …
+> 
+
+@ Verbindung zu {0} wiederhergestellt
+> 
+
+@ verbunden
+> 
+
+@ Client: {0}
+> 
+
+@ Server nicht erreichbar: {0}
+> 
+
+# ---------------- plc_client_dialog.py
+
+@ Mit Logger verbinden (Client)
+> 
+
+@ Zeigt die Aufzeichnung eines anderen Loggers an (z. B. headless auf einem Raspberry Pi) – Diagramme, Variablen und Anzeige kommen von dort, eine eigene Konfiguration ist nicht nötig. Dort muss der Webserver eingeschaltet sein.
+> 
+
+@ nur ohne Benutzer
+> 
+
+@ Adresse und Benutzer merken (nicht das Passwort)
+> 
+
+@ Adresse:
+> 
+
+@ Benutzer:
+> 
+
+@ Passwort:
+> 
+
+@ Zugriffscode:
+> 
+
+@ Verbinden
+> 
+
+@ Zertifikat prüfen
+> 
+
+@ Der Logger {0} verwendet ein Zertifikat, das dieser Rechner nicht kennt (z. B. selbstsigniert).\n\nSHA-256-Fingerabdruck:\n{1}\n\nVergleichen Sie ihn mit der Anzeige am Logger (Datei › Webserver-Adresse … bzw. Logdatei im Headless-Betrieb). Stimmt er überein, diesem Zertifikat vertrauen?
+> 
+
 # ---------------- plc_common.py
 
 @ Untereinander
@@ -667,9 +755,6 @@
 @ Port:
 > 
 
-@ Zugriffscode:
-> 
-
 @ Aktualisierung im Browser:
 > 
 
@@ -740,9 +825,6 @@
 > 
 
 @ Webserver && Headless
-> 
-
-@ Datenbank
 > 
 
 @ Trigger && Ereignisse
@@ -2373,6 +2455,15 @@
 @ Datei
 > 
 
+@ Mit Logger verbinden (Client) …
+> 
+
+@ Aufzeichnung eines anderen Loggers über dessen Webserver anzeigen (ohne eigene Konfiguration und Steuerung)
+> 
+
+@ Verbindung trennen (eigene Konfiguration)
+> 
+
 @ CSV-Dateien aneinanderhängen und speichern …
 > 
 
@@ -2604,6 +2695,24 @@
 @ ■ Stop
 > 
 
+@ ▶ Verbinden
+> 
+
+@ Client
+> 
+
+@ Keine Verbindung zum Logger {0}:\n{1}
+> 
+
+@ ■ Trennen
+> 
+
+@ Verbunden mit {0}
+> 
+
+@ (nur Leserecht)
+> 
+
 @ Offline
 > 
 
@@ -2641,6 +2750,21 @@
 > 
 
 @ Geladen: {0} ({1} Zeitpunkte)
+> 
+
+@ Laden vom Server fehlgeschlagen: {0}
+> 
+
+@ Vom Server geladen: {0} bis {1} ({2} Zeitpunkte, {3})
+> 
+
+@ Zeitraum vom Server laden
+> 
+
+@ Werte aus dem Speicher des Loggers, ältere aus seiner Datenbank (lange Zeiträume als Mittelwerte).
+> 
+
+@ Im gewählten Zeitraum liegen am Logger keine Messwerte vor.
 > 
 
 @ Es sind keine Messwerte vorhanden.
@@ -2858,9 +2982,6 @@
 > 
 
 @ Treiber {0}: {1}
-> 
-
-@ Verbunden mit {0}
 > 
 
 @ Lesefehler: {0} – neuer Verbindungsversuch
@@ -3400,9 +3521,6 @@
 > 
 
 @ Zeigen
-> 
-
-@ Verbinden
 > 
 
 @ Datum und Uhrzeit
@@ -4311,6 +4429,12 @@
 @ Mit simulierten Werten starten (ohne Steuerung)
 > 
 
+@ Mit Logger verbinden …
+> 
+
+@ Betriebsart Client: die Aufzeichnung eines anderen Loggers anzeigen (z. B. headless auf einem Raspberry Pi) – ohne eigene Konfiguration
+> 
+
 @ Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
 > 
 
@@ -4553,9 +4677,6 @@
 > 
 
 @ Anmelden
-> 
-
-@ Benutzer oder Passwort falsch.
 > 
 
 @ Unverschlüsselte Verbindung (HTTP): Passwort und Werte sind im Netz lesbar.

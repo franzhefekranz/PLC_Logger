@@ -14,6 +14,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Betriebsart Client** – der Logger zeigt die Aufzeichnung eines anderen Loggers an (z. B. headless auf einem
+  Raspberry Pi), ohne eigene Konfiguration und ohne Steuerung: Diagramme, Variablen, Anordnung und Steuerungs-LEDs kommen
+  über dessen Webserver. Live-Anzeige mit allen Auswertungen des Loggers (Lineale, Zoom, Analyse, Bericht, Export),
+  Ereignisse quittieren und Notizen (mit Schreibrecht), ältere Zeiträume aus Speicher und Datenbank des Servers
+  („Aus Datenbank laden …“, „Im Diagramm zeigen“). Start über *Mit Logger verbinden …* im Startbild, *Datei › Mit Logger
+  verbinden (Client) …* (Strg+K) oder `--client [ADRESSE] [--benutzer NAME]`. Selbstsignierte HTTPS-Zertifikate nach
+  Bestätigen des Fingerabdrucks; Adresse und Benutzer werden gemerkt (nie das Passwort). Startet der Server eine neue
+  Aufzeichnung, verbindet sich der Client neu. Neue Schnittstellen `/api/konfig`, `/api/zeilen`, `/api/verlauf`.
+
 ## [3.10.0] – 2026-11-03
 
 ### Neu

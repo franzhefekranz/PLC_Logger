@@ -19,6 +19,8 @@ Adressen
 ``/api/export``   Werte eines Zeitraums als CSV- oder Excel-Datei (t0, t1, format=csv|xlsx, vars=Indizes)
 ``/api/bericht``  PDF-Bericht eines Zeitraums (t0, t1)
 ``/api/ereignisse`` Ereignisse und Notizen (GET); quittieren bzw. Notiz eintragen (POST, JSON, nur mit Schreibrecht)
+``/api/konfig``   Konfiguration für den Logger als Client (Diagramme, Variablen, Anzeige; ohne Passwörter)
+``/api/zeilen``   Messwerte als Rohzeilen seit einem Zeitpunkt (seit = Unix-Zeit, 0 = die letzten ``max`` Zeilen)
 ``/prozess``      Prozessbild: Kacheln (Wert, Zeiger, Balken, Lampe, Kurzverlauf), im Browser bearbeitbar
 ``/api/prozess``  Layout des Prozessbilds lesen (GET) bzw. speichern (POST, JSON; siehe *_web_prozess.py)
 
@@ -233,6 +235,9 @@ def logos_html(logos) -> str:
 # ---------------------------------------------------------------------------------------
 # Werte eines Zeitraums: Speicher des Loggers, davor die Datenbank
 # ---------------------------------------------------------------------------------------
+# Einstellungen, die ein Logger als Client vom Server übernimmt (Anzeige; keine Zugangsdaten).
+CLIENT_CONN_KEYS = ("projekt", "anordnung", "seite_anordnung", "raster_spalten", "fenster_s", "balken", "balken_breite",
+                    "csv_name", "db_typ", "bericht_schichten", "bericht_beginn")
 DB_RASTER_FROM_S = 900          # längere Zeiträume liest der Server aus der Datenbank als Mittelwerte (Raster)
 
 
@@ -606,6 +611,103 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
                       "series": series, "values": values, "plcs": _plcs(rec), "rows": rec.count(),
                       "running": rec.running, "events": _events(rec), "source": source, "db_error": db_error,
                       "first": first, "marks": _marks(rec, t0, t1)})
+
+    # ---- Logger als Client (plc_client): Konfiguration und Rohzeilen ----------------------------------------------
+    @app.route("/api/konfig")
+    def api_konfig():
+        """Konfiguration für einen Logger als Client: Diagramme mit Achsen, alle Variablen (auch nicht angezeigte, in
+        der Reihenfolge der Zeilen von ``/api/zeilen``), Steuerungen (Name, Kurzbeschreibung) und Anzeige-Einstellungen.
+        Keine Zugangsdaten (Datenbank, Steuerungen, Web-Benutzer)."""
+        rec = get_rec()
+        if rec is None:
+            return reply({"version": None, "message": tr("Keine Aufzeichnung aktiv")})
+        conn = {k: rec.conn.get(k) for k in CLIENT_CONN_KEYS if k in rec.conn}
+        plcs = []
+        for p in getattr(rec, "plcs", []):
+            try:
+                summary = p.summary()
+            except Exception:
+                summary = ""
+            plcs.append({"name": p.name, "driver": getattr(p, "driver", ""), "summary": summary})
+        charts = [{"name": c.name, "page": c.page, "pid": c.pid, "pid_sw": c.pid_sw, "pid_iw": c.pid_iw,
+                   "pid_stw": c.pid_stw, "pid_typ": c.pid_typ, "pid_verhalten": c.pid_verhalten,
+                   "axes": [{"name": a.name, "auto": a.auto, "y_min": a.y_min, "y_max": a.y_max} for a in c.axes]}
+                  for c in rec.charts]
+        variables = [{"name": v.name, "address": v.address, "dtype": v.dtype, "color": v.color,
+                      "show_value": v.show_value, "chart": v.chart, "axis": v.axis, "bar": v.bar, "formula": v.formula,
+                      "block": v.block, "block_idx": v.block_idx, "plc": v.plc,
+                      "record": bool(getattr(v, "record", True)), "display": bool(getattr(v, "display", True))}
+                     for v in rec.vars]
+        return reply({"version": id(rec), "project": rec.conn.get("projekt", ""), "refresh_ms": refresh_ms,
+                      "write": may_edit(), "user": session.get("user", "") if users else "", "conn": conn,
+                      "plcs": plcs, "charts": charts, "vars": variables, "events": getattr(rec, "events", None)
+                      is not None, "rows": rec.count()})
+
+    @app.route("/api/zeilen")
+    def api_rows():
+        """Rohzeilen für den Client: alle Zeilen mit Zeit > ``seit`` (höchstens ``max``, ``mehr`` = es gibt weitere);
+        ``seit`` = 0: die letzten ``max`` Zeilen. Dazu Zustand der Steuerungen und der Ereignisse."""
+        import numpy as np
+        rec = get_rec()
+        if rec is None:
+            return reply({"version": None})
+        try:
+            since = float(request.args.get("seit", 0) or 0)
+            maxn = min(max(int(request.args.get("max", 20000)), 1), 200000)
+        except ValueError:
+            abort(400)
+        last_t, _ = rec.last_row()
+        more = False
+        if last_t is None:
+            t, y = np.empty(0), np.empty((len(rec.vars), 0))
+        elif since <= 0:
+            t, y = rec.snapshot()
+            t, y = t[-maxn:], y[:, -maxn:]
+        else:
+            t, y = rec.slice_time(since, last_t)
+            keep = t > since
+            t, y = t[keep], y[:, keep]
+            if len(t) > maxn:
+                t, y, more = t[:maxn], y[:, :maxn], True
+        log = getattr(rec, "events", None)
+        ev = {"version": None, "open": 0}
+        if log is not None:
+            try:
+                if log.changed_on_disk():
+                    log.reload()
+                ev = {"version": f"{id(log)}:{log.version}", "open": log.open_count()}
+            except Exception:
+                pass
+        return reply({"version": id(rec), "t": [round(float(x), 3) for x in t],
+                      "y": [_clean(np.asarray(row, dtype=float), 6) for row in y], "more": more,
+                      "plcs": _plcs(rec), "running": rec.running, "events": ev,
+                      "capture": rec.capture_state() if hasattr(rec, "capture_state") and rec.running else None})
+
+    @app.route("/api/verlauf")
+    def api_history():
+        """Werte eines Zeitraums für den Client (``t0``, ``t1``; höchstens ``max`` Zeilen): aus dem Speicher, der Teil
+        davor aus der Datenbank (lange Zeiträume als Mittelwerte). Zu viele Zeilen werden gleichmäßig ausgedünnt."""
+        import numpy as np
+        rec = get_rec()
+        if rec is None:
+            return reply({"version": None})
+        t0, t1, _sel = _range_args()
+        try:
+            maxn = min(max(int(request.args.get("max", 200000)), 100), 500000)
+        except ValueError:
+            abort(400)
+        try:
+            t, y, source, err = load_range(rec, t0, t1, points=maxn)
+        except MemoryError as e:
+            return reply({"error": str(e)}, 400)
+        keep = (t >= t0) & (t <= t1)
+        t, y = t[keep], np.asarray(y, dtype=float)[:, keep]
+        if len(t) > maxn:
+            step = int(np.ceil(len(t) / maxn))
+            t, y = t[::step], y[:, ::step]
+        return reply({"version": id(rec), "t": [round(float(x), 3) for x in t],
+                      "y": [_clean(np.asarray(row, dtype=float), 6) for row in y], "source": source,
+                      "db_error": err})
 
     # ---- Export, Bericht, Ereignisse ------------------------------------------------------------------------------
     def _range_args():

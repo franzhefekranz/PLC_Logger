@@ -1090,17 +1090,24 @@ def dock_features(dock):
         dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable)
 
 class MainWindow(QMainWindow):
-    # config_path: Konfigurationsdatei (JSON); demo: Demo-Modus vorwählen.
-    def __init__(self, config_path, demo=False):
+    # config_path: Konfigurationsdatei (JSON); demo: Demo-Modus vorwählen; client: angemeldete plc_client.Connection
+    # (Betriebsart Client: Konfiguration und Messwerte kommen vom Webserver eines anderen Loggers).
+    def __init__(self, config_path, demo=False, client=None):
         super().__init__()
         # Menüleiste im Fenster: Unter Linux (KDE Plasma, Ubuntu mit globalem Menü …) wandert sie sonst in die
         # Leiste der Arbeitsoberfläche und fehlt im Fenster – samt Logo rechts oben. macOS: wie üblich oben am Bildschirm.
         self.menuBar().setNativeMenuBar(sys.platform == "darwin")
         self.resize(1400, 800)
         self.config_path = config_path
+        self.client = client
         # Konfiguration laden; ohne Konfigurationsdatei erscheint eine leere Standardkonfiguration, bei einer fehlerhaften Datei
         # eine Meldung (das Fenster öffnet trotzdem, die Konfiguration kann dann neu geladen werden).
-        self.conn, self.charts, self.vars, self.plcs = self._read_config(config_path)
+        # Als Client: Konfiguration vom Server.
+        if client is not None:
+            from plc_client import model_from_konfig
+            self.conn, self.charts, self.vars, self.plcs = model_from_konfig(client.konfig or client.connect())
+        else:
+            self.conn, self.charts, self.vars, self.plcs = self._read_config(config_path)
         # Aktuelle Anordnung der Seiten (untereinander/nebeneinander/tabs) und der Diagramme innerhalb einer Seite.
         self.layout_mode = self.conn["anordnung"]
         self.page_mode = self._page_mode_from(self.conn)
@@ -1170,6 +1177,9 @@ class MainWindow(QMainWindow):
         self.ev_timer.timeout.connect(self.update_event_button)
         self.ev_timer.start(1000)
         self.update_event_button()
+        self._client_ui()
+        if client is not None:
+            QTimer.singleShot(0, lambda: self.act_run.setChecked(True))       # gleich verbinden
 
     # Konfiguration einer Datei lesen -> (conn, charts, variables, plcs); bei Fehlern Meldung und Standardkonfiguration.
     def _read_config(self, path):
@@ -1191,6 +1201,9 @@ class MainWindow(QMainWindow):
     # Fenstertitel: Programmname, Projektname und Name der Konfigurationsdatei.
     def _title(self):
         proj = self.conn.get("projekt", "")
+        if self.client is not None:
+            return "PLC Datenlogger" + (f" – {proj}" if proj else "") + "  [" + tr("Client: {0}").format(
+                self.client.url) + "]"
         return "PLC Datenlogger" + (f" – {proj}" if proj else "") + f"  [{os.path.basename(self.config_path)}]"
 
     # ---------------- UI ----------------
@@ -1240,24 +1253,24 @@ class MainWindow(QMainWindow):
         self.act_online.toggled.connect(self.set_online)
         act_load = QAction(tr("CSV laden"), self)
         act_load.triggered.connect(self.load_csv)
-        act_load_db = QAction(tr("Aus Datenbank laden …"), self)
+        self.act_load_db = act_load_db = QAction(tr("Aus Datenbank laden …"), self)
         act_load_db.setShortcut("Ctrl+D")
         act_load_db.setToolTip(tr("Zeitraum aus der Datenbank wählen und offline anzeigen"))
         act_load_db.triggered.connect(self.load_db)
-        act_cfg = QAction(tr("Konfig-Editor"), self)
+        self.act_cfg = act_cfg = QAction(tr("Konfig-Editor"), self)
         act_cfg.setToolTip(tr("Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen"))
         act_cfg.triggered.connect(self.open_config)
         # Konfigurationsdatei laden (beliebiger Dateiname) bzw. die aktuelle neu einlesen (nach Änderungen im Editor).
-        act_cfg_load = QAction(tr("Config laden …"), self)
+        self.act_cfg_load = act_cfg_load = QAction(tr("Config laden …"), self)
         act_cfg_load.setShortcut("Ctrl+O")
         act_cfg_load.setToolTip(tr("Andere Konfigurationsdatei laden (beliebiger Dateiname)"))
         act_cfg_load.triggered.connect(self.load_config_file)
-        act_cfg_reload = QAction(tr("Konfiguration neu laden"), self)
+        self.act_cfg_reload = act_cfg_reload = QAction(tr("Konfiguration neu laden"), self)
         act_cfg_reload.setShortcut("F5")
         act_cfg_reload.triggered.connect(lambda: self.set_config(self.config_path))
-        act_web = QAction(tr("Webserver-Adresse …"), self)
+        self.act_web = act_web = QAction(tr("Webserver-Adresse …"), self)
         act_web.triggered.connect(self.show_web_url)
-        act_proc = QAction(tr("Prozessbild im Browser"), self)
+        self.act_proc = act_proc = QAction(tr("Prozessbild im Browser"), self)
         act_proc.setToolTip(tr("Prozessbild (Kacheln mit Werten, Zeigern, Lampen) des Webservers im Browser öffnen"))
         act_proc.triggered.connect(self.open_process_view)
         act_quit = QAction(tr("Beenden"), self)
@@ -1364,6 +1377,17 @@ class MainWindow(QMainWindow):
         m_file = self.menuBar().addMenu(tr("Datei"))
         for a in (act_cfg_load, act_cfg_reload, act_cfg):
             m_file.addAction(a)
+        m_file.addSeparator()
+        # Betriebsart Client: Aufzeichnung eines anderen Loggers anzeigen (Konfiguration kommt vom Server).
+        self.act_client = QAction(tr("Mit Logger verbinden (Client) …"), self)
+        self.act_client.setShortcut("Ctrl+K")
+        self.act_client.setToolTip(tr("Aufzeichnung eines anderen Loggers über dessen Webserver anzeigen (ohne "
+                                      "eigene Konfiguration und Steuerung)"))
+        self.act_client.triggered.connect(self.connect_client)
+        m_file.addAction(self.act_client)
+        self.act_leave = QAction(tr("Verbindung trennen (eigene Konfiguration)"), self)
+        self.act_leave.triggered.connect(self.leave_client)
+        m_file.addAction(self.act_leave)
         m_file.addSeparator()
         m_file.addAction(act_load)
         act_join = QAction(tr("CSV-Dateien aneinanderhängen und speichern …"), self)
@@ -1575,6 +1599,7 @@ class MainWindow(QMainWindow):
         a_io = self.menu_pid.addAction(tr("IO-Check …"))
         a_io.setToolTip(tr("Inbetriebnahme: Signalliste prüfen, Ein-/Ausgänge als Matrix, Vertauschungen erkennen"))
         a_io.triggered.connect(lambda _=False: self.open_iocheck())
+        a_io.setEnabled(self.client is None)          # Client: keine eigenen Steuerungen
         self.menu_pid.addSeparator()
         a_xy = self.menu_pid.addAction(tr("XY-Diagramm …"))
         a_xy.setToolTip(tr("Variablen über einer anderen Variable darstellen (z. B. Druck über Hub)"))
@@ -1672,6 +1697,8 @@ class MainWindow(QMainWindow):
         if rec.events.version != self._ev_seen:          # neues Ereignis: Zähler sofort aktualisieren
             self.update_event_button()
         self._update_capture_label(rec.capture_state() if rec.running else None)
+        if getattr(rec, "reconfigure", False):
+            self._client_poll(rec)
 
     def _update_capture_label(self, state):
         """Anzeige der Aufzeichnung per Trigger in der Statusleiste."""
@@ -1828,7 +1855,7 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # Aktuelles Ereignisprotokoll: das der Aufzeichnung, sonst das der geladenen Konfiguration.
     def event_log(self):
-        if self.rec is not None and self.source == "rec":
+        if self.rec is not None and self.source in ("rec", "client"):
             return self.rec.events
         path = event_log_path(self.conn)
         if self._offline_events is None or self._offline_events.path != path:
@@ -1950,6 +1977,8 @@ class MainWindow(QMainWindow):
     def _load_db_for(self, t0, t1):
         """Werte des Zeitraums t0..t1 (plus je 10 min davor/danach) aus der Datenbank der Konfiguration laden und
         offline anzeigen. Rückgabe: True, wenn Werte geladen wurden (False: keine Datenbank, Fehler oder keine Werte)."""
+        if self.client is not None:
+            return self._client_load_range(t0 - 600.0, t1 + 600.0)
         from plc_db import create_reader, nice_raster
         try:
             conn, _charts, cfg_vars = load_config(self.config_path)
@@ -1993,7 +2022,7 @@ class MainWindow(QMainWindow):
         a, b = t0 - margin, (t1 or t0) + margin
         have = len(self.t) and float(self.t[0]) <= t0 <= float(self.t[-1])
         if not have and not self._load_db_for(a, b):       # zuerst die Datenbank, dann CSV-Dateien/Archiv
-            paths = self._log_files_for(a, b)
+            paths = [] if self.client is not None else self._log_files_for(a, b)
             if not paths:
                 QMessageBox.information(self, tr("Im Diagramm zeigen"), tr(
                     "Für {0} liegen keine Messwerte im Speicher, in der Datenbank oder in einer CSV-Datei vor.").format(
@@ -2068,6 +2097,9 @@ class MainWindow(QMainWindow):
             self.act_run.setChecked(False)          # stoppt die Aufzeichnung (on_run_toggled)
         self.config_path = path
         remember_config_path(path)
+        if self.client is not None:                 # eigene Konfiguration: Betriebsart Client verlassen
+            self.client = None
+            self._client_ui()
         self.conn, self.charts, self.vars, self.plcs = conn, charts, variables, plcs
         # Die bisherigen Daten gehören zur alten Konfiguration: verwerfen.
         self.rec, self.source = None, "none"
@@ -2095,7 +2127,7 @@ class MainWindow(QMainWindow):
     # Webserver passend zur Konfiguration starten, neu starten (geänderte Einstellungen) oder beenden.
     def _apply_web(self):
         from plc_web import web_settings
-        want = bool(self.conn.get("web_aktiv"))
+        want = bool(self.conn.get("web_aktiv")) and self.client is None    # Client: kein eigener Webserver
         key = web_settings(self.conn)
         if self.web is not None and (not want or self._web_key != key):
             self.web.stop()
@@ -2264,6 +2296,8 @@ class MainWindow(QMainWindow):
     # Aufzeichnung starten: Konfiguration neu laden (Änderungen wirken so sofort), Recorder anlegen, Anzeige neu aufbauen,
     # dann starten (CSV-Datei öffnen, je Steuerung ein Lese-Thread).
     def start(self):
+        if self.client is not None:
+            return self._start_client()
         try:
             conn, charts, variables = load_config(self.config_path)
             plcs = load_plcs(self.config_path)
@@ -2316,8 +2350,94 @@ class MainWindow(QMainWindow):
             finally:
                 QApplication.restoreOverrideCursor()
             self.poll_recorder()
-        self.act_run.setText(tr("▶ Start"))
-        self.act_demo.setEnabled(True)
+        self.act_run.setText(tr("▶ Verbinden") if self.client is not None else tr("▶ Start"))
+        self.act_demo.setEnabled(self.client is None)
+
+    # ---------------------------------------------------------------------------------------
+    # Betriebsart Client (plc_client): Anzeige der Aufzeichnung eines anderen Loggers
+    # ---------------------------------------------------------------------------------------
+    def _start_client(self):
+        """Mit dem Server verbinden: Konfiguration holen, Anzeige aufbauen, neue Zeilen fortlaufend abholen."""
+        from plc_client import ClientError, RemoteRecorder
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            konfig = self.client.connect()
+        except ClientError as e:
+            QApplication.restoreOverrideCursor()
+            QMessageBox.warning(self, tr("Client"), tr("Keine Verbindung zum Logger {0}:\n{1}").format(
+                self.client.url, e))
+            self._uncheck_run()
+            self.act_run.setText(tr("▶ Verbinden"))
+            return
+        QApplication.restoreOverrideCursor()
+        if self.rec is not None and self.rec.running:
+            self.rec.stop()
+        rec = RemoteRecorder(self.client, konfig)
+        self.conn, self.charts, self.vars, self.plcs = rec.conn, rec.charts, rec.vars, rec.plcs
+        self.layout_mode = self.conn["anordnung"]
+        self.page_mode = self._page_mode_from(self.conn)
+        self.act_bars.setChecked(bool(self.conn["balken"]))
+        self.win_spin.setValue(int(self.conn["fenster_s"]))
+        self.rec, self.source = rec, "rec"
+        self.t, self.y = np.empty(0), np.empty((len(self.vars), 0))
+        self.setWindowTitle(self._title())
+        self._sync_menus()
+        self._rebuild()
+        self._rebuild_leds()
+        self._apply_web()
+        self._ev_shown = None
+        self.update_event_button()
+        rec.start()
+        self.act_demo.setEnabled(False)
+        self.act_run.setText(tr("■ Trennen"))
+        self.act_online.setChecked(True)
+        self.statusBar().showMessage(tr("Verbunden mit {0}").format(rec.describe()) +
+                                     ("" if rec.write else "  " + tr("(nur Leserecht)")), 10000)
+
+    def _client_ui(self):
+        """Menüs passend zur Betriebsart: als Client gibt es keine eigene Konfiguration, Steuerung oder Webserver."""
+        own = self.client is None
+        for a in (self.act_cfg_reload, self.act_cfg, self.act_demo, self.act_web, self.act_proc):
+            a.setEnabled(own)
+        self.act_leave.setEnabled(not own)
+        if self.rec is None or not self.rec.running:
+            self.act_run.setText(tr("▶ Start") if own else tr("▶ Verbinden"))
+
+    def connect_client(self, url="", user=""):
+        """Dialog „Mit Logger verbinden“; danach Betriebsart Client. Rückgabe: True bei Erfolg."""
+        from plc_client_dialog import ClientDialog
+        dlg = ClientDialog(self, url or (self.client.url if self.client else ""), user)
+        if not dlg.exec() or dlg.connection is None:
+            return False
+        if self.rec is not None and self.rec.running:
+            self.act_run.setChecked(False)                # eigene Aufzeichnung bzw. alte Verbindung beenden
+        if self.web is not None:
+            self.web.stop()
+            self.web = None
+        self.client = dlg.connection
+        self.hidden = set()
+        self._states = {}
+        self._client_ui()
+        self.act_run.setChecked(True)                     # verbinden (start -> _start_client)
+        return True
+
+    def leave_client(self):
+        """Betriebsart Client verlassen: Verbindung trennen und wieder die eigene Konfiguration laden."""
+        if self.client is None:
+            return
+        if self.rec is not None and self.rec.running:
+            self.act_run.setChecked(False)
+        self.client = None
+        self.set_config(self.config_path)
+        self._client_ui()
+
+    def _client_poll(self, rec):
+        """Server hat eine neue Aufzeichnung begonnen (andere Konfiguration): neu verbinden."""
+        if self.client is None or rec is not self.rec or not rec.reconfigure or rec.running:
+            return
+        rec.reconfigure = False
+        self._uncheck_run()
+        QTimer.singleShot(500, lambda: self.act_run.setChecked(True))
 
     # ---------------------------------------------------------------------------------------
     # Online- und Offline-Anzeige
@@ -2326,6 +2446,8 @@ class MainWindow(QMainWindow):
     # Zwischen Online (fortlaufend) und Offline (Rückblick mit Scrollleiste und Linealen) umschalten.
     def set_online(self, flag):
         self.online = flag
+        if flag and self.source == "client":         # Client: vom Server geladener Zeitraum -> wieder live
+            self.source = "rec"
         self.act_online.setText(tr("Online") if flag else tr("Offline"))
         self.scroll.setEnabled(not flag)
         self._apply_mode()
@@ -2730,6 +2852,8 @@ class MainWindow(QMainWindow):
 
     def load_db(self):
         """Lesemodus Datenbank: Zeitraum und Variablen wählen, Werte laden und offline anzeigen."""
+        if self.client is not None:
+            return self._client_load_range_dialog()
         from plc_db_dialog import DbLoadDialog
         conn = self.conn
         names = [v.name for v in self.vars]
@@ -2745,6 +2869,65 @@ class MainWindow(QMainWindow):
         if self.rec is not None and self.rec.running:
             self.act_run.setChecked(False)  # stoppt das Logging (Laden ersetzt die Daten im Speicher)
         self._show_loaded(names, list(t), cols, "db", tr("Geladen: {0} ({1} Zeitpunkte)").format(label, len(t)))
+
+    def _client_load_range(self, t0, t1):
+        """Client: Werte t0..t1 vom Server laden (sein Speicher, davor seine Datenbank) und offline anzeigen.
+        Die Verbindung bleibt bestehen; zurück zur Live-Anzeige mit „Online“. Rückgabe: True, wenn Werte kamen."""
+        from plc_client import ClientError
+        rec = self.rec
+        if rec is None or not hasattr(rec, "load_range"):
+            return False
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            t, y, source, err = rec.load_range(t0, t1)
+        except ClientError as e:
+            QApplication.restoreOverrideCursor()
+            self.statusBar().showMessage(tr("Laden vom Server fehlgeschlagen: {0}").format(e), 10000)
+            return False
+        QApplication.restoreOverrideCursor()
+        if err:
+            self.statusBar().showMessage(err, 10000)
+        if not len(t):
+            return False
+        if self.online:
+            self.act_online.setChecked(False)
+        self.t, self.y = t, y
+        self.source = "client"
+        self.enter_offline()
+        self.statusBar().showMessage(tr("Vom Server geladen: {0} bis {1} ({2} Zeitpunkte, {3})").format(
+            fmt_time(t[0])[:19], fmt_time(t[-1])[:19], len(t), source), 15000)
+        return True
+
+    def _client_load_range_dialog(self):
+        """Client: Zeitraum wählen und vom Server laden."""
+        from PySide6.QtWidgets import QDateTimeEdit, QDialog, QDialogButtonBox, QFormLayout
+        from PySide6.QtCore import QDateTime
+        dlg = QDialog(self)
+        dlg.setWindowTitle(tr("Zeitraum vom Server laden"))
+        form = QFormLayout(dlg)
+        now = QDateTime.currentDateTime()
+        ed0, ed1 = QDateTimeEdit(now.addSecs(-3600)), QDateTimeEdit(now)
+        for ed in (ed0, ed1):
+            ed.setCalendarPopup(True)
+            ed.setDisplayFormat("dd.MM.yyyy HH:mm:ss")
+        form.addRow(tr("Von:"), ed0)
+        form.addRow(tr("Bis:"), ed1)
+        form.addRow(QLabel(tr("Werte aus dem Speicher des Loggers, ältere aus seiner Datenbank (lange Zeiträume als "
+                              "Mittelwerte).")))
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        bb.accepted.connect(dlg.accept)
+        bb.rejected.connect(dlg.reject)
+        form.addRow(bb)
+        if not dlg.exec():
+            return False
+        t0, t1 = ed0.dateTime().toSecsSinceEpoch(), ed1.dateTime().toSecsSinceEpoch()
+        if t1 <= t0:
+            return False
+        if not self._client_load_range(float(t0), float(t1)):
+            QMessageBox.information(self, tr("Zeitraum vom Server laden"),
+                                    tr("Im gewählten Zeitraum liegen am Logger keine Messwerte vor."))
+            return False
+        return True
 
     def export_values(self):
         """Messwerte eines Zeitbereichs (Lineale, sichtbarer Ausschnitt oder alles) als CSV oder Excel speichern,
@@ -2821,7 +3004,10 @@ class MainWindow(QMainWindow):
         # Farben, Diagramm- und Achsenzuordnung der Variablen kommen aus der aktuellen Konfiguration, soweit der Name dort vorkommt;
         # unbekannte Variablen erscheinen auf der ersten Achse des ersten Diagramms.
         # Was in der Datei steht, wurde aufgezeichnet (record=True); „anzeigen“ gilt wie in der Konfiguration.
-        _conn, charts, cfg_vars = load_config(self.config_path, alle=True)
+        if self.client is not None and self.rec is not None and hasattr(self.rec, "konfig"):
+            charts, cfg_vars = self.rec.charts, self.rec.vars           # Client: Konfiguration des Servers
+        else:
+            _conn, charts, cfg_vars = load_config(self.config_path, alle=True)
         ref = {v.name: dataclasses.replace(v, record=True) for v in cfg_vars}
         self.charts = charts
         self.vars = [ref.get(n) or Variable(name=n, color=PALETTE[k % len(PALETTE)])
@@ -2943,7 +3129,9 @@ class MainWindow(QMainWindow):
 
 # Programmstart der Oberfläche (von plc_logger.py aufgerufen): Windows-App-ID (Taskleistensymbol), QApplication,
 # Hauptfenster, Ereignisschleife. Rückgabe: Exit-Code.
-def run_gui(config_path, demo=False, splash=None):
+def run_gui(config_path, demo=False, splash=None, client=None):
+    """client: plc_client.Connection oder {"url", "user"} (erst den Verbindungsdialog zeigen; abgebrochen ->
+    Hauptfenster mit der eigenen Konfiguration bzw. ohne Startbild: Programmende)."""
     set_windows_app_id()
     from plc_common import qt_platform_setup
     qt_platform_setup()                      # Linux/Wayland: über XWayland (siehe dort)
@@ -2951,7 +3139,18 @@ def run_gui(config_path, demo=False, splash=None):
     if splash is None:
         from plc_i18n import install_qt
         install_qt(app)
-    win = MainWindow(config_path, demo)
+    if isinstance(client, dict):
+        from plc_client_dialog import ClientDialog
+        if splash is not None:
+            splash.hide()
+        dlg = ClientDialog(None, client.get("url", ""), client.get("user", ""))
+        client = dlg.connection if dlg.exec() else None
+        if client is None and splash is None:
+            return 0
+        if splash is not None:
+            splash.show()
+            QApplication.processEvents()
+    win = MainWindow(config_path, demo, client=client)
     app.setWindowIcon(win.windowIcon())
     win.show()
     if splash is not None:
