@@ -2918,6 +2918,28 @@ any number of browsers show the same data.
   Note …** (at the time of ruler 1, otherwise now); the acknowledgement records the
   logged-in user. Events and notes appear as dashed marks in the charts.
 
+.. figure:: images/en/web_lineale.png
+   :alt: Rulers in the browser
+   :width: 95%
+   :align: center
+
+   Rulers: values at both points in time and difference in the legend, event marks
+   (dashed).
+
+.. figure:: images/en/web_ereignisse.png
+   :alt: Event list in the browser
+   :width: 80%
+   :align: center
+
+   Events and notes: ⌖ jumps into the chart, acknowledging with write access.
+
+.. figure:: images/en/web_export.png
+   :alt: Export in the browser
+   :width: 80%
+   :align: center
+
+   Export of the time range as Excel/CSV or PDF report.
+
 .. _https-anmeldung:
 
 HTTPS and login

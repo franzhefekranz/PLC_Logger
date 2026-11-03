@@ -3010,6 +3010,28 @@ Raspberry Pi), beliebig viele Browser zeigen dieselben Daten an.
   Quittierung trägt den angemeldeten Benutzer ein. Ereignisse und Notizen erscheinen als
   gestrichelte Marken in den Diagrammen.
 
+.. figure:: images/web_lineale.png
+   :alt: Lineale im Browser
+   :width: 95%
+   :align: center
+
+   Lineale: Werte an beiden Zeitpunkten und Differenz in der Legende, Ereignis-Marken
+   (gestrichelt).
+
+.. figure:: images/web_ereignisse.png
+   :alt: Ereignisliste im Browser
+   :width: 80%
+   :align: center
+
+   Ereignisse und Notizen: ⌖ springt ins Diagramm, Quittieren mit Schreibrecht.
+
+.. figure:: images/web_export.png
+   :alt: Export im Browser
+   :width: 80%
+   :align: center
+
+   Export des Zeitbereichs als Excel/CSV oder PDF-Bericht.
+
 .. _https-anmeldung:
 
 HTTPS und Anmeldung
