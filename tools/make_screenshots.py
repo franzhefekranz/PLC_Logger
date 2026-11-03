@@ -657,7 +657,7 @@ class _FakePi:
 
 @shot("netzpanel")
 def s_netpanel():
-    """Netzwerk-Panel: Übersicht und Seite Datum/Uhrzeit mit gelesener Uhrzeit der Steuerung (800 × 480)."""
+    """Netzwerk-Panel: Übersicht, Datum/Uhrzeit mit gelesener Uhrzeit der Steuerung, Display, Logger (800 × 480)."""
     import datetime
     import socket
 
@@ -676,8 +676,21 @@ def s_netpanel():
     plc_netz.service_state = lambda name="": "active"
     S7Driver.read_clock = lambda self, plc: datetime.datetime.now() - datetime.timedelta(minutes=7, seconds=12)
     try:
+        # Hintergrundbeleuchtung wie beim DSI-Display (Ordner statt /sys/class/backlight)
+        bl_dir = os.path.join(tempfile.mkdtemp(), "10-0045")
+        os.makedirs(bl_dir)
+        for name, val in (("max_brightness", "255"), ("brightness", "204"), ("bl_power", "0")):
+            with open(os.path.join(bl_dir, name), "w") as f:
+                f.write(val)
+        backlight = plc_netpanel.Backlight(os.path.dirname(bl_dir))
+        # zweite Konfiguration neben der Demo, damit die Liste der Seite Logger eine Auswahl zeigt
+        import shutil as _sh
+        _sh.copy(CTX["cfg"], os.path.join(os.path.dirname(CTX["cfg"]), "linie2.json"))
+        ctl = plc_netpanel.LoggerControl(lambda args: "", "plc-datenlogger", run_dirs=[])
         w = plc_netpanel.NetPanel(plc_netz.Netz(run=_FakePi()), config_path=CTX["cfg"], background=False,
-                                  settings={"uhr_auto": True})
+                                  settings={"uhr_auto": True, "dunkel_min": 5, "hell_prozent": 80,
+                                            "dunkel_prozent": 0}, backlight=backlight, logger_ctl=ctl,
+                                  config_dirs=[])
         w.resize(800, 480)
         w.show()
         wait(400)
@@ -688,6 +701,12 @@ def s_netpanel():
         w.read_plc_clock()
         wait(300)
         save("netzpanel_uhrzeit", w)
+        w.show_display()
+        wait(200)
+        save("netzpanel_display", w)
+        w.show_logger()
+        wait(200)
+        save("netzpanel_logger", w)
         w.close()
     finally:
         app.setFont(old_font)
