@@ -13,8 +13,12 @@ Adressen
 --------
 ``/``             die Seite (eine Seite je „Seite/Tab“ der Konfiguration, Diagramme als Kacheln)
 ``/api/config``   Struktur: Projekt, Seiten, Diagramme, Y-Achsen, Variablen
-``/api/data``     Messdaten eines Zeitfensters (Parameter: window = Sekunden, end = Endzeit, max = Punkte je Kurve)
+``/api/data``     Messdaten eines Zeitfensters (Parameter: window = Sekunden, end = Endzeit, max = Punkte je Kurve);
+                  älter als der Speicher des Loggers: aus der Datenbank der Konfiguration (siehe ``load_range``)
 ``/api/status``   Zustand der Steuerungen und letzte Werte
+``/api/export``   Werte eines Zeitraums als CSV- oder Excel-Datei (t0, t1, format=csv|xlsx, vars=Indizes)
+``/api/bericht``  PDF-Bericht eines Zeitraums (t0, t1)
+``/api/ereignisse`` Ereignisse und Notizen (GET); quittieren bzw. Notiz eintragen (POST, JSON, nur mit Schreibrecht)
 ``/prozess``      Prozessbild: Kacheln (Wert, Zeiger, Balken, Lampe, Kurzverlauf), im Browser bearbeitbar
 ``/api/prozess``  Layout des Prozessbilds lesen (GET) bzw. speichern (POST, JSON; siehe *_web_prozess.py)
 
@@ -23,6 +27,9 @@ Zugriffsschutz
 * Anmeldung (web_benutzer): Benutzer mit Passwort (gespeichert nur als Hash, siehe ``hash_password``). Ohne gültige
   Anmeldung leitet die Seite auf ``/login`` um; die Anmeldung gilt bis zum Abmelden bzw. 12 Stunden (Sitzungs-Cookie,
   HttpOnly, SameSite=Strict, bei HTTPS zusätzlich Secure). Nach 5 Fehlversuchen ist eine Adresse 60 s gesperrt.
+* Rechte (web_rechte): je Benutzer „lesen“ (ansehen, exportieren) oder „schreiben“ (zusätzlich Ereignisse quittieren,
+  Notizen eintragen, Prozessbild bearbeiten). Ohne eingerichtete Benutzer darf jeder mit Zugang schreiben, mit
+  Benutzern der Zugriffscode nur lesen.
 * Zugriffscode (web_token): alternativ oder zusätzlich – Aufrufe mit ``?token=...`` sind ohne Anmeldung erlaubt
   (z. B. für ein fest installiertes Anzeigegerät).
 * HTTPS (web_https): verschlüsselte Verbindung. Ohne eigenes Zertifikat erzeugt das Programm einmalig ein
@@ -52,7 +59,7 @@ from werkzeug.serving import make_server
 from plc_common import BASE_DIR, logo_paths
 from plc_i18n import tr
 from plc_util import decimate_minmax
-from plc_webauth import check_password, hash_password, parse_users  # noqa: F401 (hash_password: Schnittstelle)
+from plc_webauth import WRITE, check_password, hash_password, parse_rights, parse_users  # noqa: F401 (hash_password)
 
 # Ersatzquelle für Chart.js, falls web_static/chart.umd.js fehlt (benötigt Internet auf dem Anzeigegerät).
 CDN_URL = "https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.js"
@@ -223,15 +230,129 @@ def logos_html(logos) -> str:
     return "".join(f'<img class="logo" src="logo/{n}" alt="">' for n, p in enumerate(logos) if os.path.isfile(p))
 
 
-def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logos=None):
+# ---------------------------------------------------------------------------------------
+# Werte eines Zeitraums: Speicher des Loggers, davor die Datenbank
+# ---------------------------------------------------------------------------------------
+DB_RASTER_FROM_S = 900          # längere Zeiträume liest der Server aus der Datenbank als Mittelwerte (Raster)
+
+
+def store_vars(rec):
+    """Aufgezeichnete Variablen [(Index, Variable)] (nur diese stehen in CSV und Datenbank)."""
+    return [(vi, v) for vi, v in enumerate(rec.vars) if getattr(v, "record", True)]
+
+
+def has_db(rec):
+    return bool((getattr(rec, "db_conf", None) or {}).get("typ"))
+
+
+def _db_values(rec, t0, t1, points=0, raw=False):
+    """Werte [t0, t1] aus der Datenbank der Konfiguration -> (Zeiten, Werte[Variable][Zeile]) in der Reihenfolge von
+    ``rec.vars`` (nicht aufgezeichnete Variablen NaN); lange Zeiträume als Mittelwerte auf etwa ``points`` Punkte."""
+    import numpy as np
+    from plc_db import create_reader
+    pairs = store_vars(rec)
+    raster = 0.0 if raw or not points or (t1 - t0) <= DB_RASTER_FROM_S else (t1 - t0) / points
+    reader = create_reader(rec.conn).connect()
+    try:
+        td, names, cols = reader.load([v.name for _vi, v in pairs], t0, t1, project=rec.conn.get("projekt", ""),
+                                      raster_s=raster, hold=bool(int(rec.conn.get("db_nur_aenderungen", 0) or 0)))
+    finally:
+        reader.close()
+    y = np.full((len(rec.vars), len(td)), np.nan)
+    pos = {n: k for k, n in enumerate(names)}
+    for vi, v in pairs:
+        if v.name in pos:
+            y[vi] = cols[pos[v.name]]
+    return np.asarray(td, dtype=float), y
+
+
+_DB_CACHE = {}                  # id(Recorder) -> letzter Datenbank-Teil (ändert sich nicht mehr, siehe load_range)
+_DB_CACHE_LOCK = threading.Lock()
+DB_CACHE_S = 300                # so lange wird der Datenbank-Teil eines Zeitfensters wiederverwendet
+
+
+def _db_part(rec, t0, end, points, raw):
+    """Datenbank-Teil [t0, end] – im Live-Betrieb fragt die Seite jede Sekunde; der Teil vor dem Speicher ändert
+    sich aber nicht. Deshalb: ein früheres Ergebnis, das den Bereich abdeckt, wiederverwenden (bis DB_CACHE_S)."""
+    key = id(rec)
+    now = time.time()
+    with _DB_CACHE_LOCK:
+        c = _DB_CACHE.get(key)
+    if (c and not raw and c["end"] == end and c["t0"] <= t0 and now - c["at"] < DB_CACHE_S
+            and c["points"] * 0.5 <= points <= c["points"] * 2 and (c["t1span"] >= (end - t0) * 0.5)):
+        k = c["t"] >= t0
+        return c["t"][k], c["y"][:, k]
+    td, yd = _db_values(rec, t0, end, points, raw)
+    if not raw:
+        with _DB_CACHE_LOCK:
+            _DB_CACHE.clear()
+            _DB_CACHE[key] = {"t0": t0, "end": end, "points": points, "t": td, "y": yd, "at": now,
+                              "t1span": end - t0}
+    return td, yd
+
+
+def load_range(rec, t0, t1, points=0, raw=False):
+    """Werte [t0, t1]: aus dem Speicher des Loggers, der Teil davor aus der Datenbank (falls eingestellt).
+
+    Rückgabe (Zeiten, Werte[Variable][Zeile], Quelle, Fehlertext); Quelle "speicher", "datenbank" oder
+    "datenbank+speicher". Ist die Datenbank nicht erreichbar, bleibt es beim Speicher (Fehlertext gesetzt)."""
+    import numpy as np
+    t, y = rec.slice_time(t0, t1)
+    first = rec.first_time() if hasattr(rec, "first_time") else (float(t[0]) if len(t) else None)
+    if not has_db(rec) or (first is not None and t0 >= first):
+        return t, y, "speicher", ""
+    end = t1 if first is None else min(t1, first)
+    if end <= t0:
+        return t, y, "speicher", ""
+    try:
+        td, yd = _db_part(rec, t0, end, points, raw)
+    except Exception as e:
+        return t, y, "speicher", tr("Datenbank: {0}").format(e)
+    if first is not None and len(td):
+        keep = td < first - 0.01                 # Datenbank speichert auf ms gerundet: Nahtstelle nicht doppelt
+        td, yd = td[keep], yd[:, keep]
+    if not len(td):
+        return t, y, "speicher", ""
+    return (np.concatenate([td, t]), np.concatenate([yd, y], axis=1),
+            "datenbank+speicher" if len(t) else "datenbank", "")
+
+
+def break_gaps(t, y, factor=10.0, min_gap_s=5.0):
+    """Lücken (Aufzeichnung unterbrochen, Nahtstelle Datenbank/Speicher) als NaN-Zeile einfügen, damit die Diagramme
+    dort keine Linie ziehen: Abstand größer als ``factor`` × üblicher Abstand und mindestens ``min_gap_s``."""
+    import numpy as np
+    if len(t) < 3:
+        return t, y
+    dt = np.diff(t)
+    limit = max(float(np.median(dt)) * factor, min_gap_s)
+    gaps = np.nonzero(dt > limit)[0]
+    if not len(gaps):
+        return t, y
+    t2 = np.insert(t, gaps + 1, t[gaps] + dt[gaps] / 2)
+    y2 = np.insert(np.asarray(y, dtype=float), gaps + 1, np.nan, axis=1)
+    return t2, y2
+
+
+def event_json(e):
+    """Ereignis (plc_events.Event) -> dict für die Webseite (mit Unix-Zeit ``ts``)."""
+    from plc_events import parse_stamp
+    return {"id": e.id, "zeit": e.zeit[:19], "ts": parse_stamp(e.zeit), "prio": tr(e.prio), "prio_de": e.prio,
+            "trigger": e.trigger,
+            "text": e.text, "offen": bool(e.offen), "quittiert": e.quittiert[:19], "benutzer": e.benutzer,
+            "gegangen": e.gegangen[:19], "notiz": bool(e.notiz), "pflicht": bool(e.pflicht)}
+
+
+def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logos=None, rights=None):
     """Flask-Anwendung. ``get_rec`` liefert bei jedem Aufruf den aktuellen Recorder (oder None).
 
-    users: {Name: Passwort-Hash} – nicht leer = Anmeldung erforderlich; https: Cookies nur über HTTPS senden;
-    logos: Liste der Logo-Dateien für die Kopfzeilen (wird bei jedem Seitenaufruf gelesen, darf sich also ändern)."""
+    users: {Name: Passwort-Hash} – nicht leer = Anmeldung erforderlich; rights: {Name: "lesen"|"schreiben"} (ohne
+    Eintrag: schreiben); https: Cookies nur über HTTPS senden; logos: Liste der Logo-Dateien für die Kopfzeilen (wird
+    bei jedem Seitenaufruf gelesen, darf sich also ändern)."""
     logos = logos if logos is not None else []
     app = Flask(__name__, static_folder=None)    # eigene Route für statische Dateien (siehe unten)
     app.config["JSON_AS_ASCII"] = False
     users = dict(users or {})
+    rights = parse_rights(rights or {}, users)
     app.secret_key = _secret_key()
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Strict", SESSION_COOKIE_SECURE=bool(https),
                       SESSION_COOKIE_NAME="plc_sitzung", PERMANENT_SESSION_LIFETIME=_dt.timedelta(hours=12))
@@ -362,8 +483,11 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         return ("?token=" + html.escape(request.args["token"])) if request.args.get("token") else ""
 
     def may_edit():
-        """Prozessbild bearbeiten: angemeldete Benutzer; ohne eingerichtete Anmeldung jeder mit Zugang."""
-        return logged_in() if users else True
+        """Schreibrecht (Prozessbild bearbeiten, Ereignisse quittieren, Notizen): angemeldete Benutzer mit Recht
+        „schreiben“; ohne eingerichtete Anmeldung jeder mit Zugang; mit Benutzern der Zugriffscode nicht."""
+        if not users:
+            return True
+        return logged_in() and rights.get(session.get("user"), WRITE) == WRITE
 
     # ---- Prozessbild --------------------------------------------------------------------------------------------
     @app.route("/prozess")
@@ -393,7 +517,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         cfg_path = getattr(rec, "config_path", "") or ""
         if request.method == "POST":
             if not may_edit():
-                return reply({"error": tr("Nur angemeldete Benutzer dürfen das Prozessbild ändern.")}, 403)
+                return reply({"error": tr("Nur Benutzer mit Schreibrecht dürfen das Prozessbild ändern.")}, 403)
             if not request.is_json:              # nur JSON: Formulare fremder Seiten (CSRF) werden abgewiesen
                 abort(415)
             try:
@@ -435,7 +559,10 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
                                         for a in ch.axes]})
         return reply({"version": id(rec), "project": rec.conn.get("projekt", ""), "refresh_ms": refresh_ms,
                       "pages": [{"name": n, "charts": c} for n, c in page_groups(rec.charts)],
-                      "charts": charts_out})
+                      "charts": charts_out, "write": may_edit(), "user": session.get("user", "") if users else "",
+                      "db": has_db(rec), "events": getattr(rec, "events", None) is not None,
+                      "vars": [{"i": vi, "name": v.name, "dtype": v.dtype, "color": v.color,
+                                "shown": bool(getattr(v, "shown", True))} for vi, v in store_vars(rec)]})
 
     @app.route("/api/data")
     def api_data():
@@ -459,11 +586,12 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         except ValueError:
             abort(400)
         last_t, _ = rec.last_row()
-        if last_t is None:
+        if last_t is None and not (end is not None and has_db(rec)):
             return reply({"version": id(rec), "empty": True, "plcs": _plcs(rec)})
         t1 = end if end is not None else last_t
         t0 = t1 - window
-        t, y = rec.slice_time(t0, t1)
+        t, y, source, db_error = load_range(rec, t0, t1, maxpts)
+        t, y = break_gaps(t, y)
         series = {}
         for vi in range(len(rec.vars)):
             if only is not None and vi not in only:
@@ -473,9 +601,153 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
             series[vi] = {"x": _clean(xs - t0, 2), "y": _clean(ys)}
         values = {vi: (None if len(t) == 0 or y[vi][-1] != y[vi][-1] else round(float(y[vi][-1]), 5))
                   for vi in range(len(rec.vars))}
+        first = rec.first_time() if hasattr(rec, "first_time") else None
         return reply({"version": id(rec), "t0": t0, "t1": t1, "last": last_t, "live": end is None,
                       "series": series, "values": values, "plcs": _plcs(rec), "rows": rec.count(),
-                      "running": rec.running, "events": _events(rec)})
+                      "running": rec.running, "events": _events(rec), "source": source, "db_error": db_error,
+                      "first": first, "marks": _marks(rec, t0, t1)})
+
+    # ---- Export, Bericht, Ereignisse ------------------------------------------------------------------------------
+    def _range_args():
+        """t0, t1 (Unix-Zeit) und die gewählten Variablen (``vars`` = Indizes, leer = alle aufgezeichneten)."""
+        try:
+            t0, t1 = float(request.args["t0"]), float(request.args["t1"])
+            sel = request.args.get("vars", "")
+            sel = None if not sel else {int(x) for x in sel.split(",") if x}
+        except (KeyError, ValueError):
+            abort(400)
+        if not t1 > t0 or t1 - t0 > 400 * 86400:
+            abort(400)
+        return t0, t1, sel
+
+    def _selected(rec, sel):
+        return [vi for vi, _v in store_vars(rec) if sel is None or vi in sel]
+
+    def _file_reply(path, mimetype, name, inline=False):
+        with open(path, "rb") as f:
+            data = f.read()
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        disp = "inline" if inline else "attachment"
+        return Response(data, mimetype=mimetype, headers={"Content-Disposition": f'{disp}; filename="{name}"',
+                                                          "Cache-Control": "no-store"})
+
+    def _stem(rec):
+        return re.sub(r"[^\w\-]+", "_", rec.conn.get("csv_name") or "export").strip("_") or "export"
+
+    @app.route("/api/export")
+    def api_export():
+        """Werte eines Zeitraums (Rohdaten aus Speicher bzw. Datenbank) als CSV- oder Excel-Datei."""
+        import tempfile
+
+        import numpy as np
+        from plc_export import write_values
+        rec = get_rec()
+        if rec is None:
+            abort(404)
+        t0, t1, sel = _range_args()
+        fmt = "xlsx" if request.args.get("format") == "xlsx" else "csv"
+        try:
+            t, y, _src, err = load_range(rec, t0, t1, raw=True)
+        except MemoryError as e:
+            return reply({"error": str(e)}, 400)
+        keep = (t >= t0) & (t <= t1)
+        idx = _selected(rec, sel)
+        if not keep.any() or not idx:
+            return reply({"error": err or tr("Im gewählten Zeitbereich liegen keine Messwerte.")}, 404)
+        name = f"{_stem(rec)}_{_dt.datetime.fromtimestamp(t0):%Y%m%d_%H%M%S}.{fmt}"
+        fd, path = tempfile.mkstemp(suffix="." + fmt)
+        os.close(fd)
+        try:
+            write_values(path, t[keep], [rec.vars[i].name for i in idx], [rec.vars[i].dtype for i in idx],
+                         np.asarray(y)[idx][:, keep])
+        except ValueError as e:                    # z. B. zu viele Zeilen für Excel
+            os.remove(path)
+            return reply({"error": str(e)}, 400)
+        mime = ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if fmt == "xlsx"
+                else "text/csv; charset=utf-8")
+        return _file_reply(path, mime, name)
+
+    @app.route("/api/bericht")
+    def api_report():
+        """PDF-Bericht eines Zeitraums (Statistik, Diagramme, Ereignisse) – wie im Logger."""
+        import tempfile
+
+        import numpy as np
+        from plc_report import ReportAccumulator, events_in, write_report
+        from plc_util import fmt_time
+        rec = get_rec()
+        if rec is None:
+            abort(404)
+        t0, t1, sel = _range_args()
+        try:
+            t, y, _src, err = load_range(rec, t0, t1, points=20000)
+        except MemoryError as e:
+            return reply({"error": str(e)}, 400)
+        keep = (t >= t0) & (t <= t1)
+        idx = _selected(rec, sel)
+        if not keep.any() or not idx:
+            return reply({"error": err or tr("Im gewählten Zeitbereich liegen keine Messwerte.")}, 404)
+        acc = ReportAccumulator([rec.vars[i].name for i in idx], [rec.vars[i].dtype for i in idx], t0, t1,
+                                label=f"{fmt_time(t0)[:16]} – {fmt_time(t1)[:16]}")
+        acc.add_many(t[keep], np.asarray(y)[idx][:, keep])
+        log = getattr(rec, "events", None)
+        fd, path = tempfile.mkstemp(suffix=".pdf")
+        os.close(fd)
+        write_report(path, acc, rec.charts, [rec.vars[i] for i in idx], rec.conn.get("projekt", ""),
+                     events_in(log, t0, t1) if log is not None else [], logos=list(logos))
+        return _file_reply(path, "application/pdf", f"Bericht_{_stem(rec)}.pdf", inline=True)
+
+    @app.route("/api/ereignisse", methods=["GET", "POST"])
+    def api_events():
+        """Ereignisse und Notizen (GET: ``tage`` bzw. t0/t1, neueste zuerst, höchstens 500); POST (JSON, nur mit
+        Schreibrecht): {"aktion": "quittieren", "ids": [..] | "alle"} oder {"aktion": "notiz", "text": …, "ts": …}."""
+        rec = get_rec()
+        log = getattr(rec, "events", None) if rec is not None else None
+        if log is None:
+            return reply({"events": [], "open": 0, "write": False})
+        if request.method == "POST":
+            if not may_edit():
+                return reply({"error": tr("Kein Schreibrecht.")}, 403)
+            if not request.is_json:              # nur JSON: Formulare fremder Seiten (CSRF) werden abgewiesen
+                abort(415)
+            d = request.get_json(silent=True) or {}
+            who = current_user()
+            try:
+                if d.get("aktion") == "quittieren":
+                    ids = None if d.get("ids") == "alle" else [int(i) for i in d.get("ids") or []]
+                    n = log.acknowledge(ids, user=who)
+                    ev_cache.clear()
+                    return reply({"ok": True, "count": n})
+                if d.get("aktion") == "notiz":
+                    ts = float(d["ts"]) if d.get("ts") not in (None, "") else None
+                    eid = log.note(str(d.get("text", ""))[:2000], ts, user=who)
+                    ev_cache.clear()
+                    return reply({"ok": True, "id": eid})
+            except ValueError as e:
+                return reply({"error": str(e)}, 400)
+            except OSError as e:
+                return reply({"error": tr("Ereignisprotokoll nicht beschreibbar: {0}").format(e)}, 500)
+            abort(400)
+        try:
+            if log.changed_on_disk():
+                log.reload()
+            evs = [event_json(e) for e in log.events()]
+        except Exception as e:
+            return reply({"events": [], "open": 0, "write": may_edit(), "error": str(e)})
+        try:
+            if request.args.get("t0"):
+                t0, t1 = float(request.args["t0"]), float(request.args.get("t1") or time.time() + 1)
+            else:
+                t1 = time.time() + 1
+                t0 = t1 - min(max(float(request.args.get("tage", 7)), 0.01), 400) * 86400
+        except ValueError:
+            abort(400)
+        evs = [e for e in evs if e["ts"] is not None and t0 <= e["ts"] <= t1]
+        evs.sort(key=lambda e: e["ts"], reverse=True)
+        return reply({"events": evs[:500], "open": log.open_count(), "write": may_edit()})
 
     @app.route("/api/status")
     def api_status():
@@ -564,6 +836,19 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         except Exception:
             return {"open": 0, "list": []}
 
+    def _marks(rec, t0, t1):
+        """Ereignisse und Notizen im Zeitfenster (für senkrechte Marken in den Diagrammen), höchstens 100."""
+        log = getattr(rec, "events", None)
+        if log is None:
+            return []
+        try:
+            key = (id(log), log.version)
+            if ev_cache.get("mkey") != key:
+                ev_cache.update(mkey=key, marks=[event_json(e) for e in log.events()])
+            return [m for m in ev_cache["marks"] if m["ts"] is not None and t0 <= m["ts"] <= t1][:100]
+        except Exception:
+            return []
+
     def _plcs(rec):
         """Zustand der Steuerungen für die Status-LEDs der Webseite."""
         return [{"name": n, "state": s, "text": t, "read_ms": round(ms, 1)} for n, s, t, ms in rec.status_list()]
@@ -576,14 +861,16 @@ def web_settings(conn):
     return (conn.get("web_host", "0.0.0.0") or "0.0.0.0", int(conn.get("web_port", 8080) or 8080),
             conn.get("web_token", "") or "", int(conn.get("web_intervall_ms", 1000) or 1000),
             bool(int(conn.get("web_https", 0) or 0)), conn.get("web_zertifikat", "") or "",
-            conn.get("web_schluessel", "") or "", json.dumps(parse_users(conn.get("web_benutzer", "")), sort_keys=True))
+            conn.get("web_schluessel", "") or "", json.dumps(parse_users(conn.get("web_benutzer", "")), sort_keys=True),
+            json.dumps(parse_rights(conn.get("web_rechte", ""), parse_users(conn.get("web_benutzer", ""))),
+                       sort_keys=True))
 
 
 class WebServer:
     """Startet die Flask-Anwendung in einem eigenen Thread (werkzeug-Server, mehrere Anfragen gleichzeitig)."""
 
     def __init__(self, get_rec, host="0.0.0.0", port=8080, token="", refresh_ms=1000, https=False, cert="", key="",
-                 users=None, logos=None):
+                 users=None, logos=None, rights=None):
         """Flask-Anwendung anlegen (noch nicht gestartet); Benutzer als {Name: Hash} oder JSON-Text; ``logos``: Pfade
         der Logos für die Kopfzeilen (änderbar über ``set_logos``)."""
         self.logos = list(logos or [])
@@ -592,15 +879,16 @@ class WebServer:
         self.cert, self.key = cert, key
         self.users = parse_users(users) if not isinstance(users, dict) else dict(users)
         self.token = token
-        self.app = create_app(get_rec, token, refresh_ms, self.users, self.https, self.logos)
+        self.app = create_app(get_rec, token, refresh_ms, self.users, self.https, self.logos, rights)
         self.srv = None
         self.thread = None
 
     @classmethod
     def from_conn(cls, get_rec, conn):
         """Webserver mit den Einstellungen der Konfiguration (siehe ``web_settings``)."""
-        host, port, token, refresh, https, cert, key, users = web_settings(conn)
-        return cls(get_rec, host, port, token, refresh, https, cert, key, json.loads(users), logo_paths(conn))
+        host, port, token, refresh, https, cert, key, users, rights = web_settings(conn)
+        return cls(get_rec, host, port, token, refresh, https, cert, key, json.loads(users), logo_paths(conn),
+                   json.loads(rights))
 
     def set_logos(self, conn):
         """Logos nach einer Änderung der Konfiguration übernehmen (ohne Neustart des Servers)."""
@@ -666,27 +954,37 @@ header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px 
 .row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
 h1{font-size:17px;margin:0;font-weight:600}
 .leds{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--mute)}
-.evbadge{background:#c62828;color:#fff;border-radius:10px;padding:0 8px;font-weight:600;cursor:help}
+.evbadge{background:#c62828;color:#fff;border-radius:10px;padding:0 8px;font-weight:600;cursor:pointer}
 .led{display:inline-block;width:11px;height:11px;border-radius:50%;background:var(--off);margin-right:5px;
  vertical-align:-1px;box-shadow:0 0 0 1px rgba(0,0,0,.25) inset}
 .led.ok{background:var(--ok);box-shadow:0 0 6px var(--ok)}.led.error{background:var(--err)}
 .led.connecting{background:var(--warn)}
 .ctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
-button,select{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;
+.sep{width:1px;height:24px;background:var(--line);margin:0 2px}
+button,select,input{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 10px;
  font:inherit;min-height:34px}
+input[type=datetime-local]{padding:4px 6px;max-width:210px}
 button:active{background:var(--line)}
 button.on{border-color:var(--accent);color:var(--accent)}
+button:disabled{opacity:.45}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 label.chk{display:flex;gap:5px;align-items:center;color:var(--mute)}
 nav{display:flex;gap:6px;overflow-x:auto;margin-top:8px}
 nav button{white-space:nowrap}
 nav button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#rulerbar{display:none;margin-top:6px;font-size:13px;gap:6px 16px;flex-wrap:wrap;color:var(--mute)}
+#rulerbar b{color:var(--fg);font-weight:600}
 main{padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.card.act{border-color:var(--accent)}
 .hd{display:flex;align-items:center;gap:8px;margin:0 0 6px}
 .card h2{font-size:14px;margin:0;font-weight:600;flex:1;min-width:0}
+.own{font-size:12px;color:var(--accent);display:none}
 button.fs{min-height:28px;padding:2px 7px;line-height:0;color:var(--mute)}
 button.fs svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .cv{position:relative;height:300px}
+.cv canvas{touch-action:pan-y}
+.zr{position:absolute;border:1px dashed var(--accent);background:rgba(74,163,255,.12);pointer-events:none;display:none}
 @media (max-width:600px){.cv{height:240px}}
 /* Vollbild eines Diagramms: Kopfzeile (Zeitfenster, Live …) bleibt sichtbar, das Diagramm füllt den Rest */
 body.max{overflow:hidden}
@@ -697,12 +995,29 @@ body.max .card:not(.max){display:none}
 .legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:13px}
 .it{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;-webkit-user-select:none}
 .sw{width:16px;height:4px;border-radius:2px;flex:none}
-.it canvas{flex:none}
 .it.off{opacity:.4}.it.dim{opacity:.55}.it.hl .nm{font-weight:700}
 .msg{padding:30px;text-align:center;color:var(--mute);grid-column:1/-1}
 .info{font-size:12px;color:var(--mute)}
 img.logo{height:30px;max-width:180px;object-fit:contain;background:#fff;border-radius:5px;padding:2px 5px;flex:none}
 #logout{color:var(--mute);text-decoration:none;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+/* Dialoge (Export, Ereignisse) */
+.dlg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.45);display:none;align-items:flex-start;
+ justify-content:center;padding:40px 10px;overflow:auto}
+.dlg.open{display:flex}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;width:100%;max-width:620px}
+.box h3{margin:0 0 12px;font-size:16px}
+.box .r{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:8px 0}
+.box .btns{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:14px}
+.box .err{color:var(--err);min-height:1.2em;font-size:13px}
+#evlist{max-height:60vh;overflow:auto;border-top:1px solid var(--line);margin-top:8px}
+.ev{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line);
+ font-size:13px}
+.ev .tx{flex:1;min-width:200px}
+.ev .st{color:var(--mute);font-size:12px}
+.prio{border-radius:8px;padding:0 7px;font-size:12px;color:#fff;background:#5c6bc0}
+.prio.p-Alarm{background:#c62828}.prio.p-Warnung{background:#ef6c00}.prio.p-Info{background:#1e88e5}
+.prio.p-Notiz{background:#607d8b}
+.ev button{min-height:28px;padding:2px 8px;font-size:13px}
 </style>
 </head>
 <body>
@@ -715,11 +1030,46 @@ img.logo{height:30px;max-width:180px;object-fit:contain;background:#fff;border-r
   <button id="fwd" title="{{T:Vorwärts}}">▶</button>
   <button id="live" class="on">{{T:Live}}</button>
   <button id="pause" title="{{T:Anzeige anhalten}}">⏸</button>
+  <input type="datetime-local" id="goto" step="1" title="{{T:Gehe zu Datum und Uhrzeit (auch ältere Daten aus der Datenbank)}}">
+  <span class="sep"></span>
+  <button id="zreset" title="{{T:Zoom zurücksetzen: alle Diagramme wieder live, Y-Achsen automatisch}}">⟲ {{T:Zoom}}</button>
+  <button id="sync" title="{{T:Zeitachsen angleichen: alle Diagramme auf den Zeitbereich des markierten Diagramms}}" disabled>⇔ {{T:Angleichen}}</button>
+  <button id="rulers" title="{{T:Lineale ein/aus: Werte an zwei Zeitpunkten und Differenz (Lineal ziehen oder ins Diagramm klicken)}}">┆ {{T:Lineale}}</button>
+  <span class="sep"></span>
+  <button id="export" title="{{T:Werte als CSV/Excel speichern oder PDF-Bericht erstellen}}">⇩ {{T:Export}}</button>
+  <button id="events" title="{{T:Ereignisse und Notizen}}">🔔 {{T:Ereignisse}}</button>
   <label class="chk"><input type="checkbox" id="boolplot"> {{T:Bool im Diagramm}}</label>
  </div>
+ <div class="row" id="rulerbar"></div>
  <nav id="tabs"></nav>
 </header>
 <main id="main"><div class="msg">{{T:Lade …}}</div></main>
+
+<div class="dlg" id="dlgExport"><div class="box">
+ <h3>{{T:Export}}</h3>
+ <div class="r"><label class="chk"><input type="radio" name="xr" value="view" checked> {{T:Angezeigter Zeitbereich}}</label>
+  <label class="chk"><input type="radio" name="xr" value="rulers" id="xrRulers"> {{T:Zwischen den Linealen}}</label>
+  <label class="chk"><input type="radio" name="xr" value="free"> {{T:Von – bis}}</label></div>
+ <div class="r"><input type="datetime-local" id="xFrom" step="1"> – <input type="datetime-local" id="xTo" step="1"></div>
+ <div class="r"><label class="chk"><input type="checkbox" id="xShown" checked> {{T:Nur angezeigte Kurven (sonst alle aufgezeichneten Variablen)}}</label></div>
+ <div class="r">{{T:Format}}: <label class="chk"><input type="radio" name="xf" value="xlsx" checked> Excel</label>
+  <label class="chk"><input type="radio" name="xf" value="csv"> CSV</label></div>
+ <div class="err" id="xErr"></div>
+ <div class="btns"><button id="xClose">{{T:Schließen}}</button><button id="xReport">{{T:PDF-Bericht}}</button>
+  <button id="xGo" class="pri">{{T:Werte herunterladen}}</button></div>
+</div></div>
+
+<div class="dlg" id="dlgEvents"><div class="box">
+ <h3>{{T:Ereignisse und Notizen}}</h3>
+ <div class="r"><select id="evDays"><option value="1">{{T:letzter Tag}}</option><option value="7" selected>{{T:letzte 7 Tage}}</option>
+  <option value="30">{{T:letzte 30 Tage}}</option><option value="365">{{T:letztes Jahr}}</option></select>
+  <label class="chk"><input type="checkbox" id="evOpen"> {{T:nur offene}}</label><span style="flex:1"></span>
+  <button id="evNote" class="w">✎ {{T:Notiz …}}</button><button id="evAckAll" class="w">✓ {{T:Alle quittieren}}</button></div>
+ <div class="err" id="evErr"></div>
+ <div id="evlist"></div>
+ <div class="btns"><button id="evClose">{{T:Schließen}}</button></div>
+</div></div>
+
 <script>
 (function(){
 'use strict';
@@ -730,16 +1080,27 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem('plc_'+k);l
 function css(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
 function hexA(c,a){var m=/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c);
  return m?'rgba('+parseInt(m[1],16)+','+parseInt(m[2],16)+','+parseInt(m[3],16)+','+a+')':c;}
-function fmtVal(v,dt){if(v===null||v===undefined)return '—';
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function fmtVal(v,dt){if(v===null||v===undefined||v!==v)return '—';
  return (dt==='REAL'||dt==='LREAL')?v.toFixed(3):String(Math.round(v));}
 function pad(n,l){n=String(n);while(n.length<(l||2))n='0'+n;return n;}
 function fmtT(ms,withMs){var d=new Date(ms);var s=pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
  return withMs?s+'.'+pad(d.getMilliseconds(),3):s;}
 function fmtD(ms){var d=new Date(ms);return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()+' '+fmtT(ms,true);}
+function fmtTick(ms,span){var d=new Date(ms);
+ return span>2*86400000?pad(d.getDate())+'.'+pad(d.getMonth()+1)+'. '+pad(d.getHours())+':'+pad(d.getMinutes()):fmtT(ms,false);}
+function fmtDur(s){s=Math.abs(s);if(s<120)return (Math.round(s*1000)/1000)+' s';if(s<7200)return (Math.round(s/6)/10)+' min';
+ if(s<172800)return (Math.round(s/360)/10)+' h';return (Math.round(s/8640)/10)+' {{J:Tage}}';}
+function localInput(ms){var d=new Date(ms);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+
+ pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());}
+function fromInput(v){var t=v?new Date(v).getTime():NaN;return isNaN(t)?null:t/1000;}
 
 var cfg=null, ver=null, cos=[], curPage=0, endT=null, paused=false, lastRes=null, busy=false, timer=null, maxCo=null;
 var winS=parseInt(store('win')||'60',10), boolPlot=store('bool')==='1';
-var WINS=[[10,'10 s'],[30,'30 s'],[60,'1 min'],[300,'5 min'],[900,'15 min'],[3600,'1 h'],[21600,'6 h'],[86400,'24 h']];
+var active=null;                 /* zuletzt bedientes Diagramm (für „Angleichen“) */
+var rulers=null;                 /* [Zeit 1, Zeit 2] in ms oder null */
+var WINS=[[10,'10 s'],[30,'30 s'],[60,'1 min'],[300,'5 min'],[900,'15 min'],[3600,'1 h'],[21600,'6 h'],[86400,'24 h'],
+ [604800,'{{J:7 Tage}}']];
 
 function msg(t){$('main').innerHTML='<div class="msg">'+t+'</div>';}
 
@@ -756,7 +1117,7 @@ function loadChartJs(cb){
 /* ---------- Aufbau ---------- */
 function destroyAll(){
  if(maxCo){maxCo=null;document.body.classList.remove('max');}
- cos.forEach(function(c){if(c.chart)c.chart.destroy();});cos=[];}
+ cos.forEach(function(c){if(c.chart)c.chart.destroy();});cos=[];active=null;}
 function build(){
  destroyAll();
  $('proj').textContent=cfg.project?('PLC Datenlogger – '+cfg.project):'PLC Datenlogger';
@@ -768,22 +1129,24 @@ function build(){
  var main=$('main');main.innerHTML='';
  cfg.charts.forEach(function(ch){
   var card=document.createElement('div');card.className='card';
-  card.innerHTML='<div class="hd"><h2></h2><button class="fs"></button></div>'+
-   '<div class="cv"><canvas></canvas></div><div class="legend"></div>';
+  card.innerHTML='<div class="hd"><h2></h2><span class="own" title="{{J:Eigener Zeitbereich (Mausrad, Bereich aufziehen) – „Angleichen“ bzw. „Zoom“ setzt zurück}}">⏱ {{J:eigene Zeitachse}}</span><button class="fs"></button></div>'+
+   '<div class="cv"><canvas></canvas><div class="zr"></div></div><div class="legend"></div>';
   card.querySelector('h2').textContent=ch.name;
   main.appendChild(card);
-  var co={ch:ch,card:card,hidden:{},hl:null,items:{},chart:null,btn:card.querySelector('button.fs')};
+  var co={ch:ch,card:card,hidden:{},hl:null,items:{},chart:null,btn:card.querySelector('button.fs'),
+   own:null,ownRes:null,yz:null,marks:[],res:null};
   co.btn.onclick=function(){if(maxCo===co)exitMax(false);else enterMax(co);};
   card.querySelector('.cv').addEventListener('dblclick',function(){if(maxCo===co)exitMax(false);else enterMax(co);});
   fsIcon(co);
-  makeChart(co);makeLegend(co);cos.push(co);
+  makeChart(co);makeLegend(co);attachZoom(co);cos.push(co);
  });
  showPage(Math.min(curPage,cfg.pages.length-1));
+ $('export').disabled=false;
+ $('events').style.display=cfg.events?'':'none';
+ document.querySelectorAll('.w').forEach(function(b){b.style.display=cfg.write?'':'none';});
 }
 
-/* ---------- Vollbild eines Diagramms ----------
-   Das Diagramm füllt das Fenster unterhalb der Kopfzeile; wo der Browser es erlaubt, zusätzlich echtes Vollbild
-   (ohne Adressleiste). Zurück: Knopf, Doppelklick, Esc oder die Zurück-Geste/-Taste des Browsers. */
+/* ---------- Vollbild eines Diagramms ---------- */
 var ICON_MAX='<svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 var ICON_MIN='<svg viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
 function fsIcon(co){var on=maxCo===co;co.btn.innerHTML=on?ICON_MIN:ICON_MAX;
@@ -819,8 +1182,8 @@ function showPage(pi){
 }
 function makeChart(co){
  var ch=co.ch, fg=css('--fg'), grid=hexA(fg,0.12);
- var scales={x:{type:'linear',ticks:{color:fg,maxTicksLimit:6,callback:function(v){return fmtT(v,false);}},
-  grid:{color:grid}}};
+ var scales={x:{type:'linear',ticks:{color:fg,maxTicksLimit:6,callback:function(v){
+  var sc=co.chart&&co.chart.scales.x;return fmtTick(v,sc?sc.max-sc.min:0);}},grid:{color:grid}}};
  var axisColor={};
  ch.vars.forEach(function(v){if(v.dtype!=='BOOL'&&axisColor[v.axis]===undefined)axisColor[v.axis]=v.color;});
  ch.axes.forEach(function(a,k){
@@ -835,7 +1198,7 @@ function makeChart(co){
   return {label:v.name,_vi:v.i,_dt:v.dtype,data:[],borderColor:v.color,borderWidth:2,pointRadius:0,pointHitRadius:8,
    tension:0,spanGaps:false,yAxisID:b?'yb':'y'+Math.min(v.axis,ch.axes.length-1),stepped:b?'after':false,
    fill:b?'origin':false,backgroundColor:b?hexA(v.color,0.22):v.color,hidden:b&&!boolPlot};});
- co.chart=new Chart(co.card.querySelector('canvas'),{type:'line',plugins:[boolLanes],data:{datasets:ds},options:{
+ co.chart=new Chart(co.card.querySelector('canvas'),{type:'line',plugins:[boolLanes,overlay],data:{datasets:ds},options:{
   animation:false,parsing:false,normalized:true,responsive:true,maintainAspectRatio:false,
   interaction:{mode:'nearest',intersect:false,axis:'x'},
   plugins:{legend:{display:false},tooltip:{callbacks:{title:function(it){return it.length?fmtD(it[0].parsed.x):'';},
@@ -861,7 +1224,7 @@ function makeLegend(co){
  });
 }
 function toggleHl(co,vi){co.hl=co.hl===vi?null:vi;style(co);}
-function toggleHide(co,vi){if(co.hidden[vi])delete co.hidden[vi];else co.hidden[vi]=1;style(co);}
+function toggleHide(co,vi){if(co.hidden[vi])delete co.hidden[vi];else co.hidden[vi]=1;style(co);legendValues(co);}
 function style(co){
  co.chart.data.datasets.forEach(function(d){
   var v=co.items[d._vi].v,isB=v.dtype==='BOOL';
@@ -875,10 +1238,9 @@ function style(co){
   it.el.className='it'+(co.hidden[k]?' off':'')+(co.hl!==null&&co.hl!==+k?' dim':'')+(co.hl===+k?' hl':'');});
  co.chart.update('none');
 }
-/* BOOL-Signale: je BOOL-Variable eine Zeile im oberen Teil des Diagramms - Name links, rechts davon über die Diagrammbreite
-   eine Linie auf der Grundlinie (Wert 0) bzw. ein nach oben gehender Streifen (Wert 1), wie ein digitales Signal. */
+/* BOOL-Signale: je BOOL-Variable eine Zeile im oberen Teil des Diagramms (wie ein digitales Signal). */
 var boolLanes={id:'boolLanes',afterDatasetsDraw:function(chart){
- var co=null;cos.forEach(function(c){if(c.chart===chart)co=c;});if(!co)return;
+ var co=coOf(chart);if(!co)return;
  var rows=chart.data.datasets.filter(function(d){var it=co.items[d._vi];return it&&it.v.dtype==='BOOL'&&!co.hidden[d._vi];});
  if(!rows.length)return;
  var ctx=chart.ctx,ca=chart.chartArea,xs=chart.scales.x,rowH=20,hh=10;
@@ -900,72 +1262,303 @@ var boolLanes={id:'boolLanes',afterDatasetsDraw:function(chart){
   }
   ctx.restore();});
  ctx.restore();}};
+/* Ereignis-Marken und Lineale über den Kurven */
+var PRIOCOL={'Alarm':'#e53935','Warnung':'#fb8c00','Info':'#1e88e5','Notiz':'#90a4ae'};
+var overlay={id:'overlay',afterDraw:function(chart){
+ var co=coOf(chart);if(!co)return;
+ var ctx=chart.ctx,ca=chart.chartArea,xs=chart.scales.x;
+ ctx.save();ctx.beginPath();ctx.rect(ca.left,ca.top,ca.right-ca.left,ca.bottom-ca.top);ctx.clip();
+ ctx.font='11px sans-serif';var free=-1e9;
+ (co.marks||[]).slice().sort(function(a,b){return a.ts-b.ts;}).forEach(function(m){
+  var x=xs.getPixelForValue(m.ts*1000);if(x<ca.left||x>ca.right)return;
+  var col=m.notiz?PRIOCOL.Notiz:(PRIOCOL[m.prio_de]||PRIOCOL[m.prio]||'#7e57c2');
+  ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(x,ca.top);ctx.lineTo(x,ca.bottom);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=col;var lab=(m.notiz?'✎ ':'')+(m.notiz?m.text:m.trigger);
+  if(lab.length>24)lab=lab.slice(0,23)+'…';
+  if(x>=free){ctx.fillText(lab,x+3,ca.bottom-4);free=x+ctx.measureText(lab).width+10;}});
+ if(rulers){rulers.forEach(function(t,k){
+  var x=xs.getPixelForValue(t);if(x<ca.left-1||x>ca.right+1)return;
+  ctx.strokeStyle=k?'#ab47bc':'#26a69a';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(x,ca.top);ctx.lineTo(x,ca.bottom);ctx.stroke();
+  ctx.fillStyle=ctx.strokeStyle;ctx.fillRect(x-8,ca.top,16,15);ctx.fillStyle='#fff';ctx.font='bold 11px sans-serif';
+  ctx.fillText(String(k+1),x-3,ca.top+11);});}
+ ctx.restore();}};
+function coOf(chart){for(var i=0;i<cos.length;i++)if(cos[i].chart===chart)return cos[i];return null;}
+
+/* ---------- Zoom, Verschieben, Lineale (Maus, Mausrad, zwei Finger) ---------- */
+function range(co){var sc=co.chart.scales.x;return [sc.min,sc.max];}
+function setActive(co){if(active&&active!==co)active.card.classList.remove('act');active=co;
+ if(co)co.card.classList.add('act');$('sync').disabled=!cos.some(function(c){return c.own;});}
+function setOwn(co,t0,t1){
+ if(!(t1>t0))return;
+ if(t1-t0<0.05*1000)t1=t0+50;
+ co.own={t0:t0,t1:t1};co.card.querySelector('.own').style.display='inline';
+ var sc=co.chart.options.scales;sc.x.min=t0;sc.x.max=t1;co.chart.update('none');
+ setActive(co);fetchOwn(co);
+}
+function clearOwn(co){co.own=null;co.ownRes=null;co.yz=null;co.card.querySelector('.own').style.display='none';
+ co.chart.options.scales&&Object.keys(co.chart.options.scales).forEach(function(k){
+  if(k.charAt(0)==='y'&&k!=='yb'){var a=co.ch.axes[+k.slice(1)];var s=co.chart.options.scales[k];
+   if(a&&a.auto){delete s.min;delete s.max;s.grace='5%';}else if(a){s.min=a.min;s.max=a.max;}}});}
+function rulerAt(co,px){if(!rulers)return -1;var xs=co.chart.scales.x,best=-1,bd=10;
+ rulers.forEach(function(t,k){var d=Math.abs(xs.getPixelForValue(t)-px);if(d<bd){bd=d;best=k;}});return best;}
+function attachZoom(co){
+ var cv=co.card.querySelector('canvas'),zr=co.card.querySelector('.zr'),pts={},drag=null,pinch=null;
+ function pos(e){var r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
+ cv.addEventListener('wheel',function(e){
+  e.preventDefault();var p=pos(e),xs=co.chart.scales.x,r=range(co),c=xs.getValueForPixel(p.x);
+  var f=e.deltaY>0?1.25:0.8;setOwn(co,c-(c-r[0])*f,c+(r[1]-c)*f);},{passive:false});
+ cv.addEventListener('pointerdown',function(e){
+  var p=pos(e);pts[e.pointerId]=p;setActive(co);
+  var ids=Object.keys(pts);
+  if(ids.length===2){drag=null;zr.style.display='none';var a=pts[ids[0]],b=pts[ids[1]],r=range(co);
+   pinch={d:Math.abs(a.x-b.x)||1,c:(a.x+b.x)/2,r:r};return;}
+  var k=rulerAt(co,p.x);
+  if(k>=0){drag={ruler:k};cv.setPointerCapture(e.pointerId);e.preventDefault();return;}
+  if(e.pointerType==='mouse'&&e.button===0){drag={x:p.x,y:p.y,mx:p.x,my:p.y};cv.setPointerCapture(e.pointerId);}
+  else if(e.pointerType!=='mouse')drag={tap:p,x:p.x};
+ });
+ cv.addEventListener('pointermove',function(e){
+  if(!(e.pointerId in pts))return;var p=pos(e);pts[e.pointerId]=p;
+  var ids=Object.keys(pts),xs=co.chart.scales.x,ca=co.chart.chartArea;
+  if(pinch&&ids.length===2){e.preventDefault();var a=pts[ids[0]],b=pts[ids[1]];
+   var d=Math.abs(a.x-b.x)||1,c=(a.x+b.x)/2,f=pinch.d/d,r=pinch.r;
+   var span=(r[1]-r[0])*f,tc=r[0]+(pinch.c-ca.left)/(ca.right-ca.left)*(r[1]-r[0]);
+   var shift=(c-pinch.c)/(ca.right-ca.left)*span;
+   var t0=tc-(pinch.c-ca.left)/(ca.right-ca.left)*span-shift;
+   co.own={t0:t0,t1:t0+span};var sc=co.chart.options.scales;sc.x.min=t0;sc.x.max=t0+span;co.chart.update('none');return;}
+  if(!drag)return;
+  if(drag.ruler!==undefined){e.preventDefault();rulers[drag.ruler]=xs.getValueForPixel(Math.min(Math.max(p.x,ca.left),ca.right));
+   drawRulers();return;}
+  if(drag.mx!==undefined){drag.mx=p.x;drag.my=p.y;
+   zr.style.display='block';zr.style.left=Math.min(drag.x,p.x)+'px';zr.style.top=Math.min(drag.y,p.y)+'px';
+   zr.style.width=Math.abs(p.x-drag.x)+'px';zr.style.height=Math.abs(p.y-drag.y)+'px';}
+ });
+ function up(e){
+  var had=e.pointerId in pts;delete pts[e.pointerId];
+  if(pinch){if(Object.keys(pts).length<2){var o=co.own;pinch=null;if(o)setOwn(co,o.t0,o.t1);}return;}
+  if(!had||!drag)return;var d=drag;drag=null;zr.style.display='none';
+  if(d.ruler!==undefined){drawRulers();return;}
+  var xs=co.chart.scales.x,p=pos(e);
+  if(d.mx!==undefined&&Math.abs(d.mx-d.x)>8){
+   var t0=xs.getValueForPixel(Math.min(d.x,d.mx)),t1=xs.getValueForPixel(Math.max(d.x,d.mx));
+   if(Math.abs(d.my-d.y)>8){co.yz={};var sc=co.chart.options.scales;
+    Object.keys(co.chart.scales).forEach(function(k){if(k.charAt(0)!=='y'||k==='yb')return;var s=co.chart.scales[k];
+     sc[k].min=s.getValueForPixel(Math.max(d.y,d.my));sc[k].max=s.getValueForPixel(Math.min(d.y,d.my));sc[k].grace=0;});}
+   setOwn(co,t0,t1);return;}
+  /* Klick/Tippen ohne Ziehen: mit Linealen das nähere Lineal an diese Stelle */
+  if(rulers&&(d.mx===undefined||Math.abs(d.mx-d.x)<=8)){
+   var t=xs.getValueForPixel(p.x),k=Math.abs(t-rulers[0])<=Math.abs(t-rulers[1])?0:1;rulers[k]=t;drawRulers();}
+ }
+ cv.addEventListener('pointerup',up);
+ cv.addEventListener('pointercancel',function(e){delete pts[e.pointerId];drag=null;pinch=null;zr.style.display='none';});
+}
+
+/* ---------- Lineale ---------- */
+function valueAt(d,t){var a=d.data;if(!a.length)return null;var lo=0,hi=a.length-1;
+ if(t<a[0].x||t>a[hi].x+60000)return null;
+ while(lo<hi){var m=(lo+hi+1)>>1;if(a[m].x<=t)lo=m;else hi=m-1;}return a[lo].y;}
+function drawRulers(){
+ cos.forEach(function(co){co.chart.draw();legendValues(co);});
+ var bar=$('rulerbar');
+ if(!rulers){bar.style.display='none';return;}
+ bar.style.display='flex';
+ bar.innerHTML='<span><b style="color:#26a69a">1</b> '+fmtD(rulers[0])+'</span><span><b style="color:#ab47bc">2</b> '+
+  fmtD(rulers[1])+'</span><span>Δt <b>'+fmtDur((rulers[1]-rulers[0])/1000)+'</b></span>';
+}
+function legendValues(co){
+ var res=co.own?co.ownRes:lastRes;
+ Object.keys(co.items).forEach(function(k){var it=co.items[k],v=it.v,txt;
+  if(rulers){var d=co.chart.data.datasets.filter(function(x){return x._vi===+k;})[0];
+   var a=d?valueAt(d,rulers[0]):null,b=d?valueAt(d,rulers[1]):null;
+   txt=v.name+': '+fmtVal(a,v.dtype)+' | '+fmtVal(b,v.dtype)+' | Δ '+
+    (a===null||b===null?'—':fmtVal(b-a,v.dtype==='BOOL'?'INT':v.dtype));}
+  else txt=v.name+': '+fmtVal(res&&res.values?res.values[k]:null,v.dtype);
+  it.nm.textContent=txt+(co.hidden[k]?' ({{J:aus}})':'');});
+}
+function toggleRulers(){
+ if(rulers){rulers=null;$('rulers').className='';drawRulers();return;}
+ var co=active||cos.filter(function(c){return c.card.style.display!=='none';})[0];if(!co)return;
+ var r=range(co);rulers=[r[0]+(r[1]-r[0])/3,r[0]+2*(r[1]-r[0])/3];
+ paused=true;$('pause').className='on';$('rulers').className='on';drawRulers();
+}
 
 /* ---------- Daten ---------- */
 function leds(plcs,ev){
  var h='';(plcs||[]).forEach(function(p){
-  h+='<span title="'+(p.text+(p.read_ms?(' – '+'{{J:Zyklus {0} ms}}'.replace('{0}',p.read_ms)):'')).replace(/"/g,'&quot;')+
-   '"><i class="led '+p.state+'"></i>'+p.name.replace(/</g,'&lt;')+'</span>';});
+  h+='<span title="'+esc(p.text+(p.read_ms?(' – '+'{{J:Zyklus {0} ms}}'.replace('{0}',p.read_ms)):''))+
+   '"><i class="led '+p.state+'"></i>'+esc(p.name)+'</span>';});
  if(ev&&ev.open){
   var tip=ev.list.map(function(e){return e.zeit+'  '+e.prio+'  '+e.trigger+(e.text?(': '+e.text):'');}).join('\n');
-  h+='<span class="evbadge" title="'+(tip+'\n{{J:(Quittieren im Ereignis-Viewer des Loggers)}}').replace(/"/g,'&quot;')
-   .replace(/</g,'&lt;')+'">'+'{{J:🔔 {0} offen}}'.replace('{0}',ev.open)+'</span>';}
+  h+='<span class="evbadge" id="evbadge" title="'+esc(tip+'\n{{J:(Klicken: Ereignisliste)}}')+'">'+
+   '{{J:🔔 {0} offen}}'.replace('{0}',ev.open)+'</span>';}
  $('leds').innerHTML=h;
+ var b=$('evbadge');if(b)b.onclick=openEvents;
+}
+function fill(co,res){
+ co.res=res;co.marks=res.marks||[];
+ var sc=co.chart.options.scales;sc.x.min=res.t0*1000;sc.x.max=res.t1*1000;
+ co.chart.data.datasets.forEach(function(d){
+  var s=res.series[d._vi],a=[];
+  if(s){for(var i=0;i<s.x.length;i++)a.push({x:(res.t0+s.x[i])*1000,y:s.y[i]});}
+  d.data=a;});
+ style(co);legendValues(co);
 }
 function apply(res){
  lastRes=res;leds(res.plcs,res.events);
  if(res.empty){$('info').textContent='{{J:noch keine Daten}}';return;}
- $('info').textContent=(res.live?'{{J:Live}} ':'{{J:Verlauf}} ')+fmtD(res.t1*1000)+(res.running?'':' · {{J:gestoppt}}');
- cos.forEach(function(co){
-  var sc=co.chart.options.scales;sc.x.min=res.t0*1000;sc.x.max=res.t1*1000;
-  co.chart.data.datasets.forEach(function(d){
-   var s=res.series[d._vi],a=[];
-   if(s){for(var i=0;i<s.x.length;i++)a.push({x:(res.t0+s.x[i])*1000,y:s.y[i]});}
-   d.data=a;});
-  style(co);
-  Object.keys(co.items).forEach(function(k){var it=co.items[k],v=it.v;
-   it.nm.textContent=v.name+': '+fmtVal(res.values[k],v.dtype)+(co.hidden[k]?' ({{J:aus}})':'');});
- });
+ var src=res.source&&res.source.indexOf('datenbank')>=0?' · {{J:Datenbank}}':'';
+ $('info').textContent=(res.live?'{{J:Live}} ':'{{J:Verlauf}} ')+fmtD(res.t1*1000)+src+(res.running?'':' · {{J:gestoppt}}')+
+  (res.db_error?' · ⚠ '+res.db_error:'');
+ cos.forEach(function(co){if(!co.own)fill(co,res);});
 }
-function fetchJson(u){return fetch(api(u),{cache:'no-store'}).then(function(r){
+function fetchJson(u,opt){return fetch(api(u),opt||{cache:'no-store'}).then(function(r){
  if(r.status===401){if(r.headers.get('X-Login')){location.href='login';throw new Error('{{J:Anmeldung erforderlich}}');}
   throw new Error('{{J:Zugriff verweigert – Zugriffscode in der Adresse fehlt (?token=…)}}');}
- if(!r.ok)throw new Error('{{J:Serverfehler}} '+r.status);return r.json();});}
+ return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.error?j.error:'{{J:Serverfehler}} '+r.status);return j;},
+  function(){throw new Error('{{J:Serverfehler}} '+r.status);});});}
 function loadConfig(){
  return fetchJson('/api/config').then(function(c){
   if(c.version===null){cfg=null;ver=null;destroyAll();msg(c.message||'{{J:Keine Aufzeichnung aktiv}}');leds([]);return;}
   cfg=c;ver=c.version;build();
   clearInterval(timer);timer=setInterval(tick,Math.max(c.refresh_ms||1000,200));});
 }
+function points(co){var c=co||maxCo||cos.filter(function(x){return x.card.style.display!=='none';})[0]||cos[0];
+ return Math.min(Math.round(Math.max(c?c.card.querySelector('canvas').clientWidth:400,200)),2500);}
 function refresh(){
- if(busy)return;busy=true;
- /* Punktzahl nach der Breite des (vergrößerten bzw. ersten sichtbaren) Diagramms */
- var vis=maxCo||cos.filter(function(c){return c.card.style.display!=='none';})[0]||cos[0];
- var w=Math.max(vis?vis.card.querySelector('canvas').clientWidth:400,200);
- var u='/api/data?window='+winS+'&max='+Math.min(Math.round(w),2500)+(endT!==null?'&end='+endT:'');
+ if(busy||!cfg)return;busy=true;
+ var u='/api/data?window='+winS+'&max='+points()+(endT!==null?'&end='+endT:'');
  fetchJson(u).then(function(res){
   busy=false;
   if(res.version!==ver){return loadConfig();}
   apply(res);
  }).catch(function(e){busy=false;$('info').textContent='⚠ '+e.message;});
 }
+function fetchOwn(co){
+ var o=co.own;if(!o)return;
+ var only=co.ch.vars.map(function(v){return v.i;}).join(',')||'-';
+ var u='/api/data?window='+((o.t1-o.t0)/1000)+'&end='+(o.t1/1000)+'&max='+points(co)+'&only='+only;
+ co.ownSeq=(co.ownSeq||0)+1;var seq=co.ownSeq;
+ fetchJson(u).then(function(res){if(seq!==co.ownSeq||!co.own||res.version!==ver)return;co.ownRes=res;
+  if(!res.empty)fill(co,res);var sc=co.chart.options.scales;sc.x.min=o.t0;sc.x.max=o.t1;co.chart.update('none');})
+  .catch(function(e){$('info').textContent='⚠ '+e.message;});
+}
 function tick(){
  if(!cfg){loadConfig().catch(function(e){msg('⚠ '+e.message);});return;}
  if(!paused&&endT===null)refresh();
 }
+function setWindow(s){
+ winS=s;var sel=$('win'),found=false;
+ for(var i=0;i<sel.options.length;i++){if(+sel.options[i].value===s){sel.selectedIndex=i;found=true;}}
+ var cust=$('wincustom');
+ if(!found){if(!cust){cust=document.createElement('option');cust.id='wincustom';sel.appendChild(cust);}
+  cust.value=s;cust.textContent=fmtDur(s);cust.selected=true;}else if(cust)cust.remove();
+}
+function goTo(tSec,keepRulers){
+ /* Zeitpunkt in die Mitte des Zeitfensters; alle Diagramme dorthin, Anzeige angehalten */
+ cos.forEach(clearOwn);setActive(null);
+ endT=tSec+winS/2;paused=true;$('pause').className='on';$('live').className='';
+ if(!keepRulers&&rulers){rulers=null;$('rulers').className='';drawRulers();}
+ refresh();
+}
+
+/* ---------- Export und Bericht ---------- */
+function shownVars(){var out=[];cos.forEach(function(co){co.ch.vars.forEach(function(v){
+ if(!co.hidden[v.i]&&out.indexOf(v.i)<0)out.push(v.i);});});return out;}
+function openExport(){
+ var co=active||cos.filter(function(c){return c.card.style.display!=='none';})[0];
+ var r=co?range(co):[Date.now()-60000,Date.now()];
+ $('xFrom').value=localInput(r[0]);$('xTo').value=localInput(r[1]);
+ $('xrRulers').disabled=!rulers;if(!rulers&&$('xrRulers').checked)document.querySelector('input[name=xr][value=view]').checked=true;
+ $('xErr').textContent='';$('dlgExport').classList.add('open');
+}
+function exportRange(){
+ var mode=document.querySelector('input[name=xr]:checked').value,co=active||cos.filter(function(c){return c.card.style.display!=='none';})[0];
+ var a,b;
+ if(mode==='rulers'&&rulers){a=Math.min(rulers[0],rulers[1])/1000;b=Math.max(rulers[0],rulers[1])/1000;}
+ else if(mode==='free'){a=fromInput($('xFrom').value);b=fromInput($('xTo').value);}
+ else{var r=range(co);a=r[0]/1000;b=r[1]/1000;}
+ if(a===null||b===null||!(b>a)){$('xErr').textContent='{{J:Bitte einen gültigen Zeitbereich wählen.}}';return null;}
+ var u='t0='+a.toFixed(3)+'&t1='+b.toFixed(3);
+ if($('xShown').checked){var sv=shownVars();if(!sv.length){$('xErr').textContent='{{J:Keine Kurve angezeigt.}}';return null;}
+  u+='&vars='+sv.join(',');}
+ return u;
+}
+function download(url,name,openIt){
+ $('xErr').textContent='{{J:Wird erstellt …}}';
+ fetch(api(url),{cache:'no-store'}).then(function(r){
+  if(!r.ok)return r.json().then(function(j){throw new Error(j.error||r.status);},function(){throw new Error('{{J:Serverfehler}} '+r.status);});
+  var cd=r.headers.get('Content-Disposition')||'',m=/filename="([^"]+)"/.exec(cd);
+  return r.blob().then(function(b){var a=document.createElement('a');a.href=URL.createObjectURL(b);
+   if(openIt)a.target='_blank';else a.download=m?m[1]:name;document.body.appendChild(a);a.click();
+   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},60000);$('xErr').textContent='';});
+ }).catch(function(e){$('xErr').textContent='⚠ '+e.message;});
+}
+
+/* ---------- Ereignisse ---------- */
+function openEvents(){$('dlgEvents').classList.add('open');loadEvents();}
+function loadEvents(){
+ $('evErr').textContent='';
+ fetchJson('/api/ereignisse?tage='+$('evDays').value).then(function(j){
+  var only=$('evOpen').checked,h='';
+  document.querySelectorAll('.w').forEach(function(b){b.style.display=j.write?'':'none';});
+  (j.events||[]).forEach(function(e){
+   if(only&&!e.offen)return;
+   var st=e.notiz?'{{J:Notiz}}'+(e.benutzer?' – '+e.benutzer:''):e.offen?'{{J:offen}}':
+    (e.quittiert?'{{J:quittiert}} '+e.quittiert.slice(11)+(e.benutzer?' – '+e.benutzer:''):(e.pflicht?'':'{{J:ohne Quittierpflicht}}'));
+   if(e.gegangen&&!e.notiz)st+=(st?' · ':'')+'{{J:gegangen}} '+e.gegangen.slice(11);
+   h+='<div class="ev"><span>'+esc(e.zeit)+'</span><span class="prio p-'+esc(e.notiz?'Notiz':e.prio_de)+'">'+esc(e.notiz?'{{J:Notiz}}':e.prio)+
+    '</span><span class="tx"><b>'+esc(e.notiz?'':e.trigger)+'</b> '+esc(e.text||'')+' <span class="st">'+esc(st)+'</span></span>'+
+    '<button data-go="'+e.ts+'" title="{{J:Im Diagramm anzeigen}}">⌖</button>'+
+    (j.write&&e.offen?'<button data-ack="'+e.id+'">✓ {{J:Quittieren}}</button>':'')+'</div>';});
+  $('evlist').innerHTML=h||'<div class="msg">{{J:Keine Ereignisse im Zeitraum.}}</div>';
+  $('evlist').querySelectorAll('button[data-go]').forEach(function(b){b.onclick=function(){
+   var t=+b.getAttribute('data-go');$('dlgEvents').classList.remove('open');
+   rulers=[t*1000,t*1000+Math.max(winS*100,1000)];$('rulers').className='on';goTo(t,true);};});
+  $('evlist').querySelectorAll('button[data-ack]').forEach(function(b){b.onclick=function(){ack([+b.getAttribute('data-ack')]);};});
+ }).catch(function(e){$('evErr').textContent='⚠ '+e.message;});
+}
+function post(u,body){return fetchJson(u,{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify(body)});}
+function ack(ids){post('/api/ereignisse',{aktion:'quittieren',ids:ids}).then(function(){loadEvents();refresh();})
+ .catch(function(e){$('evErr').textContent='⚠ '+e.message;});}
+function note(){
+ var t=window.prompt(rulers?'{{J:Notiz zum Zeitpunkt von Lineal 1:}}':'{{J:Notiz (Zeitpunkt jetzt):}}');
+ if(!t)return;
+ post('/api/ereignisse',{aktion:'notiz',text:t,ts:rulers?rulers[0]/1000:null}).then(function(){loadEvents();refresh();})
+  .catch(function(e){$('evErr').textContent='⚠ '+e.message;});
+}
 
 /* ---------- Bedienung ---------- */
 function init(){
- var sel=$('win');WINS.forEach(function(w){var o=document.createElement('option');o.value=w[0];o.textContent=w[1];
-  if(w[0]===winS)o.selected=true;sel.appendChild(o);});
- if(!WINS.some(function(w){return w[0]===winS;})){winS=60;sel.value='60';}
- sel.onchange=function(){winS=+sel.value;store('win',String(winS));refresh();};
+ var sel=$('win');WINS.forEach(function(w){var o=document.createElement('option');o.value=w[0];o.textContent=w[1];sel.appendChild(o);});
+ if(!WINS.some(function(w){return w[0]===winS;}))winS=60;
+ setWindow(winS);
+ sel.onchange=function(){winS=+sel.value;store('win',String(winS));setWindow(winS);refresh();};
  $('back').onclick=function(){var base=endT!==null?endT:(lastRes?lastRes.t1:0);endT=base-winS/2;
   $('live').className='';refresh();};
  $('fwd').onclick=function(){if(endT===null)return;endT+=winS/2;
-  if(lastRes&&endT>=lastRes.last){endT=null;$('live').className='on';}refresh();};
+  if(lastRes&&lastRes.last!==null&&endT>=lastRes.last){endT=null;$('live').className='on';}refresh();};
  $('live').onclick=function(){endT=null;paused=false;$('pause').className='';$('live').className='on';refresh();};
  $('pause').onclick=function(){paused=!paused;$('pause').className=paused?'on':'';};
+ $('goto').onchange=function(){var t=fromInput($('goto').value);if(t!==null)goTo(t,false);};
+ $('zreset').onclick=function(){cos.forEach(clearOwn);setActive(null);
+  endT=null;paused=false;$('pause').className='';$('live').className='on';refresh();};
+ $('sync').onclick=function(){var src=active&&active.own?active:cos.filter(function(c){return c.own;})[0];if(!src)return;
+  var o=src.own;cos.forEach(clearOwn);setWindow(Math.max((o.t1-o.t0)/1000,1));endT=o.t1/1000;paused=true;
+  $('pause').className='on';$('live').className='';setActive(src);$('sync').disabled=true;refresh();};
+ $('rulers').onclick=toggleRulers;
+ $('export').onclick=openExport;$('export').disabled=true;
+ $('xClose').onclick=function(){$('dlgExport').classList.remove('open');};
+ $('xGo').onclick=function(){var u=exportRange();if(u){var f=document.querySelector('input[name=xf]:checked').value;
+  download('/api/export?'+u+'&format='+f,'export.'+f,false);}};
+ $('xReport').onclick=function(){var u=exportRange();if(u)download('/api/bericht?'+u,'bericht.pdf',true);};
+ $('events').onclick=openEvents;$('evClose').onclick=function(){$('dlgEvents').classList.remove('open');};
+ $('evDays').onchange=loadEvents;$('evOpen').onchange=loadEvents;
+ $('evAckAll').onclick=function(){if(window.confirm('{{J:Alle offenen Ereignisse quittieren?}}'))ack('alle');};
+ $('evNote').onclick=note;
+ document.querySelectorAll('.dlg').forEach(function(d){d.addEventListener('click',function(e){if(e.target===d)d.classList.remove('open');});});
  var bp=$('boolplot');bp.checked=boolPlot;
  bp.onchange=function(){boolPlot=bp.checked;store('bool',boolPlot?'1':'0');cos.forEach(style);};
  tick();
@@ -974,10 +1567,14 @@ function init(){
 loadChartJs(init);
 window.addEventListener('resize',function(){if(maxCo)headerHeight();cos.forEach(function(c){if(c.chart)c.chart.resize();});});
 /* Vollbild verlassen: Esc (ohne echtes Vollbild), Ende des echten Vollbilds (Esc/F11 des Browsers), Zurück-Geste */
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&maxCo&&!document.fullscreenElement)exitMax(false);});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){
+ var open=document.querySelector('.dlg.open');if(open){open.classList.remove('open');return;}
+ if(maxCo&&!document.fullscreenElement)exitMax(false);}});
 document.addEventListener('fullscreenchange',function(){if(!document.fullscreenElement&&maxCo)exitMax(false);
  else if(maxCo){headerHeight();resizeAll();}});
 window.addEventListener('popstate',function(){if(maxCo)exitMax(true);});
+window.__plc={cos:function(){return cos;},rulers:function(){return rulers;},setOwn:function(i,a,b){setOwn(cos[i],a,b);},
+ state:function(){return {endT:endT,winS:winS,paused:paused,cfg:cfg,last:lastRes};}};
 })();
 </script>
 </body>

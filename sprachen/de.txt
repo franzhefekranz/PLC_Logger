@@ -1183,6 +1183,9 @@
 @ {0} Benutzer: {1}
 > 
 
+@ ✎ = Schreibrecht (Ereignisse quittieren, Notizen, Prozessbild bearbeiten)
+> 
+
 @ ab {0} über {1}
 > 
 
@@ -4387,16 +4390,25 @@
 
 # ---------------- plc_web.py
 
+@ Datenbank: {0}
+> 
+
 @ Zugriffscode
 > 
 
-@ Nur angemeldete Benutzer dürfen das Prozessbild ändern.
+@ Nur Benutzer mit Schreibrecht dürfen das Prozessbild ändern.
 > 
 
 @ Layout ungültig
 > 
 
 @ Keine Aufzeichnung aktiv
+> 
+
+@ Kein Schreibrecht.
+> 
+
+@ Ereignisprotokoll nicht beschreibbar: {0}
 > 
 
 @ Zeitfenster
@@ -4414,10 +4426,79 @@
 @ Anzeige anhalten
 > 
 
+@ Gehe zu Datum und Uhrzeit (auch ältere Daten aus der Datenbank)
+> 
+
+@ Zoom zurücksetzen: alle Diagramme wieder live, Y-Achsen automatisch
+> 
+
+@ Zoom
+> 
+
+@ Zeitachsen angleichen: alle Diagramme auf den Zeitbereich des markierten Diagramms
+> 
+
+@ Angleichen
+> 
+
+@ Lineale ein/aus: Werte an zwei Zeitpunkten und Differenz (Lineal ziehen oder ins Diagramm klicken)
+> 
+
+@ Lineale
+> 
+
+@ Werte als CSV/Excel speichern oder PDF-Bericht erstellen
+> 
+
+@ Export
+> 
+
 @ Lade …
 > 
 
+@ Angezeigter Zeitbereich
+> 
+
+@ Zwischen den Linealen
+> 
+
+@ Von – bis
+> 
+
+@ Nur angezeigte Kurven (sonst alle aufgezeichneten Variablen)
+> 
+
+@ Werte herunterladen
+> 
+
+@ letzter Tag
+> 
+
+@ letzte 7 Tage
+> 
+
+@ letzte 30 Tage
+> 
+
+@ letztes Jahr
+> 
+
+@ Notiz …
+> 
+
+@ Tage
+> 
+
+@ 7 Tage
+> 
+
 @ Chart.js konnte nicht geladen werden. Datei <code>web_static/chart.umd.js</code> neben das Programm legen (siehe Bedienungsanleitung).
+> 
+
+@ Eigener Zeitbereich (Mausrad, Bereich aufziehen) – „Angleichen“ bzw. „Zoom“ setzt zurück
+> 
+
+@ eigene Zeitachse
 > 
 
 @ Normale Darstellung (Esc)
@@ -4429,7 +4510,7 @@
 @ Zyklus {0} ms
 > 
 
-@ (Quittieren im Ereignis-Viewer des Loggers)
+@ (Klicken: Ereignisliste)
 > 
 
 @ noch keine Daten
@@ -4442,6 +4523,33 @@
 > 
 
 @ Serverfehler
+> 
+
+@ Bitte einen gültigen Zeitbereich wählen.
+> 
+
+@ Keine Kurve angezeigt.
+> 
+
+@ Wird erstellt …
+> 
+
+@ quittiert
+> 
+
+@ ohne Quittierpflicht
+> 
+
+@ Im Diagramm anzeigen
+> 
+
+@ Notiz zum Zeitpunkt von Lineal 1:
+> 
+
+@ Notiz (Zeitpunkt jetzt):
+> 
+
+@ Alle offenen Ereignisse quittieren?
 > 
 
 @ Anmelden
@@ -4482,13 +4590,16 @@
 @ Webserver – Benutzer
 > 
 
+@ Häkchen = Schreibrecht: Ereignisse quittieren, Notizen eintragen, Prozessbild bearbeiten. Ohne Häkchen nur ansehen und exportieren.
+> 
+
 @ Hinzufügen …
 > 
 
 @ Passwort ändern …
 > 
 
-@ Ohne Benutzer ist keine Anmeldung nötig (nur der Zugriffscode schützt, falls eingetragen). Für Anmeldungen über das Netz HTTPS einschalten, sonst ist das Passwort mitlesbar.
+@ Häkchen = Schreibrecht (Ereignisse quittieren, Notizen, Prozessbild bearbeiten); ohne Häkchen nur ansehen und exportieren. Ohne Benutzer ist keine Anmeldung nötig (nur der Zugriffscode schützt, falls eingetragen). Für Anmeldungen über das Netz HTTPS einschalten, sonst ist das Passwort mitlesbar.
 > 
 
 @ Benutzer hinzufügen

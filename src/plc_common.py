@@ -464,7 +464,7 @@ _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "st
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl", "puffer"}
 _FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude", "aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s"}
 _INDEX_LIST_KEYS = {"nicht_aufzeichnen", "nicht_anzeigen"}                    # Block: Elementindizes als Zahlenliste
-_JSON_KEYS = {"treiberdaten", "web_benutzer", "benachrichtigung", "opcua_server"}                  # Text mit JSON-Inhalt -> verschachteltes Objekt
+_JSON_KEYS = {"treiberdaten", "web_benutzer", "web_rechte", "benachrichtigung", "opcua_server"}                  # Text mit JSON-Inhalt -> verschachteltes Objekt
 
 
 class ConfigFormatError(ValueError):
@@ -713,6 +713,8 @@ def default_connection() -> dict:
             "web_intervall_ms": 1000, "headless": 0,
             # HTTPS (eigenes oder selbstsigniertes Zertifikat) und Anmeldung (JSON {Benutzer: Passwort-Hash}).
             "web_https": 0, "web_zertifikat": "", "web_schluessel": "", "web_benutzer": "",
+            # Rechte der Benutzer (JSON {Benutzer: "lesen"|"schreiben"}; ohne Eintrag: schreiben).
+            "web_rechte": "",
             # Aufzeichnungsziele: CSV-Datei (abschaltbar) und optional eine Datenbank (siehe *_db.py).
             "csv_aktiv": 1, "db_typ": "", "db_host": "localhost", "db_port": 0, "db_name": "datenlogger",
             "db_user": "", "db_passwort": "", "db_tabelle": "messwerte", "db_datei": "datenlogger.db",
@@ -744,7 +746,7 @@ CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "kundenlogo", "icon", "csv_n
                  "archiv_ordner", "projekt", "seite_anordnung", "web_host", "web_token",
                  "db_typ", "db_host", "db_name", "db_user", "db_passwort", "db_tabelle", "db_datei",
                  "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung",
-                 "web_zertifikat", "web_schluessel", "web_benutzer",
+                 "web_zertifikat", "web_schluessel", "web_benutzer", "web_rechte",
                  "bericht_zeitraum", "bericht_schichten", "bericht_beginn", "bericht_ordner", "benachrichtigung",
                  "opcua_server")
 CONN_FLOAT_KEYS = ("aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s")

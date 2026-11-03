@@ -2933,7 +2933,9 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
   Gegebenenfalls muss die Firewall den Port freigeben.
 * **Zugriffscode:** Ist im Reiter ein Code eingetragen, wird die Seite mit
   ``http://…:8080/?token=CODE`` aufgerufen. Ohne Code und ohne Anmeldung kann jeder
-  im Netzwerk zusehen; die Seite ist nur lesend, es gibt keine Steuerfunktion.
+  im Netzwerk zusehen. Steuerfunktionen gibt es keine; mit Schreibrecht lassen sich
+  Ereignisse quittieren, Notizen eintragen und das Prozessbild bearbeiten (siehe
+  `HTTPS und Anmeldung`_).
 * **HTTPS und Anmeldung:** siehe unten.
 * **Prozessbild:** Kacheln mit Werten, Zeigern und Lampen unter ``/prozess``, siehe
   `Prozessbild`_.
@@ -2947,7 +2949,8 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
 * **Bedienung:** *Live* zeigt das letzte Zeitfenster; mit **◀ ▶** blättert man in
   der Zeit zurück (Verlauf), **Pause** hält die Anzeige an. Antippen eines
   Legendeneintrags hebt eine Kurve hervor, langes Drücken oder Doppelklick blendet
-  sie aus.
+  sie aus. Zoom, Lineale, Verlauf aus der Datenbank, Export und Ereignisse: siehe
+  `Auswerten im Browser`_.
 * **Vollbild:** Der Knopf rechts über einem Diagramm (oder ein Doppelklick ins
   Diagramm) vergrößert es auf das ganze Fenster; die Kopfzeile mit Zeitfenster,
   **◀ ▶**, *Live* und *Pause* bleibt sichtbar und bedienbar. Wo der Browser es
@@ -2969,6 +2972,43 @@ Netzwerk öffnen, z. B. mit einem Tablet oder Smartphone – auch im Headless-Be
 
 Der Server überträgt nur die sichtbaren Daten, auf die Bildschirmbreite reduziert
 (Minimum und Maximum je Abschnitt bleiben erhalten), und komprimiert sie.
+
+.. _web-auswerten:
+
+Auswerten im Browser
+----------------------------------------------------------------------
+
+Die Webseite bietet die wichtigsten Auswertungen des Loggers – am PC, Tablet oder
+Smartphone, ohne Installation. Ein Logger zeichnet auf (z. B. headless auf einem
+Raspberry Pi), beliebig viele Browser zeigen dieselben Daten an.
+
+* **Zoom:** Mit dem **Mausrad** über einem Diagramm (bzw. mit **zwei Fingern** auf dem
+  Tablet) wird die Zeitachse dieses Diagramms gedehnt oder gestaucht, mit zwei Fingern
+  auch verschoben. **Bereich aufziehen** mit der Maus zoomt auf den gewählten Ausschnitt –
+  zieht man auch in der Höhe, werden die Y-Achsen mit gezoomt. Das Diagramm hat dann eine
+  **eigene Zeitachse** (Hinweis über dem Diagramm) und folgt *Live* nicht mehr.
+  **⇔ Angleichen** übernimmt den Zeitbereich des markierten Diagramms (blauer Rahmen) für
+  alle, **⟲ Zoom** setzt alle Diagramme zurück (live, Y-Achsen wie eingestellt).
+* **Lineale:** **┆ Lineale** blendet zwei senkrechte Lineale ein und hält die Anzeige an.
+  Lineal ziehen oder ins Diagramm klicken/tippen setzt das nähere Lineal. Die Legende zeigt
+  je Variable die Werte an Lineal 1 und 2 und die Differenz, die Zeile unter den Knöpfen
+  beide Zeitpunkte und den Abstand.
+* **Verlauf aus der Datenbank:** Der Logger hält die letzten Messwerte im Speicher (bis
+  300 000 Zeilen). Ist eine Datenbank eingestellt, holt der Server ältere Zeiträume von
+  dort – mit **◀**, dem Zeitfenster bis **7 Tage** oder dem Feld **Datum/Uhrzeit** (springt
+  zu diesem Zeitpunkt). Die Kopfzeile zeigt dann *Datenbank*. Lange Zeiträume liest der
+  Server als Mittelwerte; der Browser braucht keinen Zugang zur Datenbank. Lücken (Logger
+  gestoppt) bleiben im Diagramm offen.
+* **Export:** **⇩ Export** speichert die Werte des angezeigten Zeitbereichs, zwischen den
+  Linealen oder eines freien Zeitraums als **Excel**- oder **CSV**-Datei (Rohdaten, auch
+  aus der Datenbank), wahlweise nur die angezeigten Kurven. **PDF-Bericht** erstellt für
+  denselben Zeitraum den Bericht wie im Logger (Statistik, Diagramme, Ereignisse).
+* **Ereignisse:** **🔔 Ereignisse** (oder ein Klick auf die rote Anzeige *offen*) listet
+  Ereignisse und Notizen des letzten Tags bis Jahres, wahlweise nur offene. **⌖** springt
+  zur Stelle im Diagramm (Lineal 1 am Zeitpunkt). Mit Schreibrecht: **✓ Quittieren**
+  (einzeln oder alle) und **✎ Notiz …** (zum Zeitpunkt von Lineal 1, sonst jetzt); die
+  Quittierung trägt den angemeldeten Benutzer ein. Ereignisse und Notizen erscheinen als
+  gestrichelte Marken in den Diagrammen.
 
 .. _https-anmeldung:
 
@@ -3006,6 +3046,13 @@ Anmeldeseite; die Anmeldung gilt 12 Stunden bzw. bis **⎋ Abmelden** (rechts ob
 Seite). Nach fünf Fehlversuchen ist die Adresse eine Minute gesperrt. Ein zusätzlich
 eingetragener Zugriffscode erlaubt weiterhin den Zugriff ohne Anmeldung
 (``?token=CODE``, z. B. für ein fest installiertes Anzeigegerät).
+
+**Schreibrecht:** Das Häkchen vor dem Benutzernamen gibt Schreibrecht – Ereignisse
+quittieren, Notizen eintragen, Prozessbild bearbeiten. Ohne Häkchen darf der Benutzer nur
+ansehen und exportieren. Neue Benutzer haben zunächst kein Schreibrecht; Benutzer aus
+älteren Konfigurationen behalten es. Der Zugriffscode allein gibt nur Leserecht, sobald
+Benutzer eingerichtet sind; ohne Benutzer darf jeder mit Zugang schreiben. Neben
+**Benutzer …** kennzeichnet ✎ die Benutzer mit Schreibrecht.
 
 .. note::
 
@@ -3071,7 +3118,7 @@ Layout, **Abbrechen** verwirft die Änderungen.
 * Ohne gespeichertes Layout zeigt die Seite einen Vorschlag (BOOL als Lampe, sonst
   Zahlenwert).
 * **Wer darf bearbeiten:** Sind Benutzer eingerichtet (`HTTPS und Anmeldung`_), nur
-  angemeldete Benutzer – wer die Seite nur mit Zugriffscode aufruft, kann sie ansehen,
+  angemeldete Benutzer mit Schreibrecht – wer die Seite nur mit Zugriffscode aufruft, kann sie ansehen,
   aber nicht ändern (gut für ein fest installiertes Anzeigegerät). Ohne Anmeldung darf
   jeder mit Zugang zur Seite bearbeiten.
 
@@ -3479,7 +3526,7 @@ Ein **Trigger** überwacht eine Bedingung über die Variablen, z. B.
 ``{Temperatur} > 80``. Sobald sie erfüllt ist, schreibt der Logger einen Eintrag
 mit Zeitstempel in das **Ereignisprotokoll** (eine Textdatei). Die Zahl der noch
 nicht quittierten Ereignisse steht in der Statusleiste des Loggers; quittiert wird
-im **Ereignis-Viewer**.
+im **Ereignis-Viewer** oder im Browser (`Auswerten im Browser`_).
 
 Trigger anlegen
 ----------------------------------------------------------------------

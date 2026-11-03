@@ -361,6 +361,7 @@ class ConfigWindow(QMainWindow):
         self.ed_web_key = QLineEdit()
         self.ed_web_key.setPlaceholderText(tr("leer = im Zertifikat enthalten"))
         self.web_users = {}
+        self.web_rights = {}
         self.lbl_web_users = QLabel("")
         btn_users = QPushButton(tr("Benutzer …"))
         btn_users.setToolTip(tr("Anmeldung mit Benutzer und Passwort einrichten"))
@@ -1790,8 +1791,11 @@ class ConfigWindow(QMainWindow):
     def _update_web_users(self):
         """Anzeige der Web-Benutzer neben dem Knopf „Benutzer …“."""
         n = len(self.web_users)
+        names = [u + (" ✎" if getattr(self, "web_rights", {}).get(u, "schreiben") == "schreiben" else "")
+                 for u in sorted(self.web_users)]
         self.lbl_web_users.setText(tr("keine (ohne Anmeldung)") if not n else
-                                   tr("{0} Benutzer: {1}").format(n, ", ".join(sorted(self.web_users))[:60]))
+                                   tr("{0} Benutzer: {1}").format(n, ", ".join(names)[:60]))
+        self.lbl_web_users.setToolTip(tr("✎ = Schreibrecht (Ereignisse quittieren, Notizen, Prozessbild bearbeiten)"))
 
     def _update_notify(self):
         """Kurztext der Benachrichtigungen neben dem Knopf (aus bzw. ab welcher Priorität über welche Kanäle)."""
@@ -1828,9 +1832,10 @@ class ConfigWindow(QMainWindow):
         werden.
         """
         from plc_web_dialog import WebUsersDialog
-        dlg = WebUsersDialog(self, self.web_users)
+        dlg = WebUsersDialog(self, self.web_users, self.web_rights)
         if dlg.exec():
             self.web_users = dlg.users
+            self.web_rights = dlg.rights
             self._update_web_users()
             if self.web_users and not self.chk_https.isChecked():
                 self.statusBar().showMessage(tr("Tipp: HTTPS einschalten, sonst werden Passwörter unverschlüsselt "
@@ -1929,6 +1934,8 @@ class ConfigWindow(QMainWindow):
         self.ed_web_cert.setEnabled(self.chk_https.isChecked())
         self.ed_web_key.setEnabled(self.chk_https.isChecked())
         self.web_users = parse_users(conn.get("web_benutzer", ""))
+        from plc_webauth import parse_rights
+        self.web_rights = parse_rights(conn.get("web_rechte", ""), self.web_users)
         self._update_web_users()
         import plc_notify as nf
         self.notify_settings = nf.settings(conn.get("benachrichtigung", ""))
@@ -1991,6 +1998,8 @@ class ConfigWindow(QMainWindow):
                 "web_zertifikat": self.ed_web_cert.text().strip(),
                 "web_schluessel": self.ed_web_key.text().strip(),
                 "web_benutzer": json.dumps(self.web_users, ensure_ascii=False) if self.web_users else "",
+                "web_rechte": json.dumps({u: r for u, r in self.web_rights.items() if u in self.web_users},
+                                         ensure_ascii=False) if self.web_users else "",
                 "benachrichtigung": json.dumps(self.notify_settings, ensure_ascii=False)
                 if self.notify_settings and self.notify_settings.get("aktiv") or any(
                     (self.notify_settings or {}).get(k, {}).get("aktiv") for k in ("email", "webhook", "ntfy",

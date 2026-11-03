@@ -423,9 +423,13 @@ def test_config_window(qt_log, demo_config):
     w.refresh_tree()
     w.sp_bar_w.setValue(8)
     w.ed_customer_logo.setText("kunde.png")
+    w.web_users, w.web_rights = {"chef": "h1", "gast": "h2"}, {"chef": "schreiben", "gast": "lesen", "alt": "lesen"}
+    w._update_web_users()
+    assert "chef ✎" in w.lbl_web_users.text() and "gast ✎" not in w.lbl_web_users.text()
     assert w._write(demo_config), qt_log.messages
     doc = json.load(open(demo_config, encoding="utf-8"))
     assert doc["einstellungen"]["projekt"] == "Testanlage"
+    assert doc["einstellungen"]["web_rechte"] == {"chef": "schreiben", "gast": "lesen"}
     assert int(doc["einstellungen"]["balken_breite"]) == 8 and doc["einstellungen"]["kundenlogo"] == "kunde.png"
     _close(w)
 
@@ -515,6 +519,20 @@ def test_about_help_and_dialogs(qt_log, demo_config, tmp_path, monkeypatch):
     wait(50)
     ev.close()
     WebUsersDialog(None, {}).show()
+    # Schreibrecht je Benutzer: Häkchen in der Liste; ohne Eintrag schreiben, neue Benutzer nur lesen
+    from PySide6.QtCore import Qt
+    wd = WebUsersDialog(None, {"chef": "h1", "gast": "h2"}, {"gast": "lesen"})
+    states = {wd.lst.item(i).text(): wd.lst.item(i).checkState() for i in range(wd.lst.count())}
+    assert states == {"chef": Qt.CheckState.Checked, "gast": Qt.CheckState.Unchecked}
+    next(wd.lst.item(i) for i in range(wd.lst.count()) if wd.lst.item(i).text() == "chef").setCheckState(
+        Qt.CheckState.Unchecked)
+    assert wd.rights == {"chef": "lesen", "gast": "lesen"}
+    import plc_web_dialog
+    monkeypatch.setattr(plc_web_dialog.QInputDialog, "getText", staticmethod(lambda *a, **k: ("neu", True)))
+    monkeypatch.setattr(wd, "_set_password", lambda name: wd.users.__setitem__(name, "h3") or True)
+    wd.add()
+    assert wd.rights["neu"] == "lesen" and wd.lst.count() == 3
+    wd.close()
     # Startbild des IO-Checks: Prüfstände und Konfigurationen, Demo-Knopf, kein „Neue Konfiguration“
     import plc_common
     from plc_splash import StartWindow

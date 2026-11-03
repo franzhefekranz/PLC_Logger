@@ -1054,3 +1054,86 @@ def test_netpanel_logger_state(tmp_path):
     plc_headless.write_status({"pid": 4711, "projekt": "Kessel", "start": time.time()}, run)
     state, text = logger_state("", "plc-datenlogger", [run], lambda n: "inactive")
     assert state == "active" and "headless" in text and "Kessel" in text
+
+
+def test_web_client_history_export_events_rights(tmp_path):
+    """Web-Client: Verlauf vor dem Speicher aus der Datenbank (mit Lücke), Export CSV/Excel, PDF-Bericht, Ereignisse
+    quittieren und Notiz nur mit Schreibrecht, Rechte je Benutzer."""
+    pytest.importorskip("flask")
+    import time
+
+    import plc_web
+    from plc_common import Plc, default_connection
+    from plc_events import Trigger
+    from plc_recorder import Recorder, demo_config
+    from plc_webauth import hash_password, parse_rights
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    from demo_db import fill
+    assert parse_rights('{"gast": "lesen"}', ["chef", "gast"]) == {"chef": "schreiben", "gast": "lesen"}
+    conn = default_connection()
+    conn.update(csv_ordner=str(tmp_path), csv_aktiv=0, projekt="Test", db_typ="sqlite",
+                db_datei=str(tmp_path / "t.db"))
+    fill(conn, seconds=600, step=2.0, end=time.time() - 300)                 # ältere Werte nur in der Datenbank
+    charts, variables = demo_config()
+    rec = Recorder(conn, [Plc(name="SPS 1")], charts, variables, demo=True)
+    rec.start()
+    try:
+        time.sleep(1.5)
+        rec.events.come(Trigger(name="Übertemperatur", prio="Alarm"), "zu heiß", time.time() - 400)
+        users = {"chef": hash_password("pw", 1000), "gast": hash_password("pw", 1000)}
+        app = plc_web.create_app(lambda: rec, token="abc", users=users, rights={"gast": "lesen"})
+        c = app.test_client()
+        c.post("/login", data={"benutzer": "chef", "passwort": "pw"})
+        cfg = c.get("/api/config").get_json()
+        assert cfg["write"] and cfg["db"] and cfg["user"] == "chef" and len(cfg["vars"]) == len(variables)
+        # Verlauf: Fenster überwiegend vor dem Speicher -> Datenbank + Speicher, Lücke als null
+        d = c.get(f"/api/data?window=900&end={time.time():.3f}&max=400").get_json()
+        assert d["source"] == "datenbank+speicher" and not d["db_error"], d["source"]
+        assert None in d["series"]["0"]["y"]                                  # Lücke zwischen DB und Speicher
+        assert any(m["trigger"] == "Übertemperatur" for m in d["marks"])
+        d2 = c.get(f"/api/data?window=120&end={time.time() - 350:.3f}").get_json()
+        assert d2["source"] == "datenbank" and len(d2["series"]["0"]["x"]) > 10
+        # Export und Bericht
+        t1 = time.time()
+        r = c.get(f"/api/export?t0={t1 - 700:.3f}&t1={t1:.3f}&format=csv&vars=0,1")
+        assert r.status_code == 200 and "attachment" in r.headers["Content-Disposition"]
+        lines = r.get_data(as_text=True).splitlines()
+        assert lines[0].split(";")[2:] == ["Sinus", "Druck"] and len(lines) > 100
+        r = c.get(f"/api/export?t0={t1 - 700:.3f}&t1={t1:.3f}&format=xlsx")
+        assert r.status_code == 200 and r.data[:2] == b"PK"
+        r = c.get(f"/api/bericht?t0={t1 - 700:.3f}&t1={t1:.3f}")
+        assert r.status_code == 200 and r.data[:4] == b"%PDF"
+        assert c.get("/api/export?t0=5&t1=1").status_code == 400
+        assert c.get("/api/export?t0=1&t1=100").status_code == 404          # keine Werte
+        # Ereignisse: Liste, quittieren, Notiz
+        ev = c.get("/api/ereignisse?tage=1").get_json()
+        assert ev["write"] and ev["open"] >= 1
+        eid = next(e["id"] for e in ev["events"] if e["trigger"] == "Übertemperatur")
+        assert c.post("/api/ereignisse", data="x").status_code == 415
+        assert c.post("/api/ereignisse", json={"aktion": "quittieren", "ids": [eid]}).get_json()["count"] == 1
+        e = next(e for e in c.get("/api/ereignisse?tage=1").get_json()["events"] if e["id"] == eid)
+        assert not e["offen"] and e["benutzer"] == "chef"
+        assert c.post("/api/ereignisse", json={"aktion": "notiz", "text": "Filter", "ts": time.time() - 10}) \
+            .get_json()["ok"]
+        assert c.post("/api/ereignisse", json={"aktion": "notiz", "text": " "}).status_code == 400
+        # Gast: nur lesen; Zugriffscode ohne Anmeldung ebenfalls nur lesen
+        g = app.test_client()
+        g.post("/login", data={"benutzer": "gast", "passwort": "pw"})
+        assert not g.get("/api/config").get_json()["write"]
+        assert g.post("/api/ereignisse", json={"aktion": "quittieren", "ids": "alle"}).status_code == 403
+        assert g.get(f"/api/export?t0={t1 - 60:.3f}&t1={t1:.3f}").status_code == 200
+        assert app.test_client().post("/api/ereignisse?token=abc", json={"aktion": "notiz", "text": "x"}) \
+            .status_code == 403
+    finally:
+        rec.stop()
+
+
+def test_web_break_gaps():
+    import numpy as np
+
+    import plc_web
+    t = np.array([0.0, 1, 2, 3, 30, 31, 32])
+    y = np.vstack([t, t])
+    t2, y2 = plc_web.break_gaps(t, y)
+    assert len(t2) == 8 and np.isnan(y2[0, 4]) and t2[4] == 16.5
+    assert len(plc_web.break_gaps(np.array([0.0, 1, 2]), np.zeros((1, 3)))[0]) == 3

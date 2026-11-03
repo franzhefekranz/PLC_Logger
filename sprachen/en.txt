@@ -1183,6 +1183,9 @@
 @ {0} Benutzer: {1}
 > {0} users: {1}
 
+@ ✎ = Schreibrecht (Ereignisse quittieren, Notizen, Prozessbild bearbeiten)
+> ✎ = write access (acknowledge events, notes, edit process view)
+
 @ ab {0} über {1}
 > from {0} via {1}
 
@@ -4387,17 +4390,26 @@
 
 # ---------------- plc_web.py
 
+@ Datenbank: {0}
+> Database: {0}
+
 @ Zugriffscode
 > access code
 
-@ Nur angemeldete Benutzer dürfen das Prozessbild ändern.
-> Only logged-in users may change the process view.
+@ Nur Benutzer mit Schreibrecht dürfen das Prozessbild ändern.
+> Only users with write access may change the process view.
 
 @ Layout ungültig
 > Invalid layout
 
 @ Keine Aufzeichnung aktiv
 > No recording active
+
+@ Kein Schreibrecht.
+> No write access.
+
+@ Ereignisprotokoll nicht beschreibbar: {0}
+> Event log not writable: {0}
 
 @ Zeitfenster
 > Time window
@@ -4414,11 +4426,80 @@
 @ Anzeige anhalten
 > Pause display
 
+@ Gehe zu Datum und Uhrzeit (auch ältere Daten aus der Datenbank)
+> Go to date and time (also older data from the database)
+
+@ Zoom zurücksetzen: alle Diagramme wieder live, Y-Achsen automatisch
+> Reset zoom: all charts live again, Y axes automatic
+
+@ Zoom
+> Zoom
+
+@ Zeitachsen angleichen: alle Diagramme auf den Zeitbereich des markierten Diagramms
+> Align time axes: all charts to the time range of the selected chart
+
+@ Angleichen
+> Align
+
+@ Lineale ein/aus: Werte an zwei Zeitpunkten und Differenz (Lineal ziehen oder ins Diagramm klicken)
+> Rulers on/off: values at two points in time and difference (drag a ruler or click into the chart)
+
+@ Lineale
+> Rulers
+
+@ Werte als CSV/Excel speichern oder PDF-Bericht erstellen
+> Save values as CSV/Excel or create a PDF report
+
+@ Export
+> Export
+
 @ Lade …
 > Loading …
 
+@ Angezeigter Zeitbereich
+> Displayed time range
+
+@ Zwischen den Linealen
+> Between the rulers
+
+@ Von – bis
+> From – to
+
+@ Nur angezeigte Kurven (sonst alle aufgezeichneten Variablen)
+> Only displayed curves (otherwise all recorded variables)
+
+@ Werte herunterladen
+> Download values
+
+@ letzter Tag
+> last day
+
+@ letzte 7 Tage
+> last 7 days
+
+@ letzte 30 Tage
+> last 30 days
+
+@ letztes Jahr
+> last year
+
+@ Notiz …
+> Note …
+
+@ Tage
+> days
+
+@ 7 Tage
+> 7 days
+
 @ Chart.js konnte nicht geladen werden. Datei <code>web_static/chart.umd.js</code> neben das Programm legen (siehe Bedienungsanleitung).
 > Chart.js could not be loaded. Place the file <code>web_static/chart.umd.js</code> next to the program (see user manual).
+
+@ Eigener Zeitbereich (Mausrad, Bereich aufziehen) – „Angleichen“ bzw. „Zoom“ setzt zurück
+> Own time range (mouse wheel, drag a range) – “Align” or “Zoom” resets it
+
+@ eigene Zeitachse
+> own time axis
 
 @ Normale Darstellung (Esc)
 > Normal view (Esc)
@@ -4429,8 +4510,8 @@
 @ Zyklus {0} ms
 > cycle {0} ms
 
-@ (Quittieren im Ereignis-Viewer des Loggers)
-> (acknowledge in the event viewer of the logger)
+@ (Klicken: Ereignisliste)
+> (click: event list)
 
 @ noch keine Daten
 > no data yet
@@ -4443,6 +4524,33 @@
 
 @ Serverfehler
 > Server error
+
+@ Bitte einen gültigen Zeitbereich wählen.
+> Please choose a valid time range.
+
+@ Keine Kurve angezeigt.
+> No curve displayed.
+
+@ Wird erstellt …
+> Creating …
+
+@ quittiert
+> acknowledged
+
+@ ohne Quittierpflicht
+> no acknowledgement required
+
+@ Im Diagramm anzeigen
+> Show in the chart
+
+@ Notiz zum Zeitpunkt von Lineal 1:
+> Note at the time of ruler 1:
+
+@ Notiz (Zeitpunkt jetzt):
+> Note (time: now):
+
+@ Alle offenen Ereignisse quittieren?
+> Acknowledge all open events?
 
 @ Anmelden
 > Log in
@@ -4482,14 +4590,17 @@
 @ Webserver – Benutzer
 > Web server – users
 
+@ Häkchen = Schreibrecht: Ereignisse quittieren, Notizen eintragen, Prozessbild bearbeiten. Ohne Häkchen nur ansehen und exportieren.
+> Tick = write access: acknowledge events, enter notes, edit the process view. Without tick only view and export.
+
 @ Hinzufügen …
 > Add …
 
 @ Passwort ändern …
 > Change password …
 
-@ Ohne Benutzer ist keine Anmeldung nötig (nur der Zugriffscode schützt, falls eingetragen). Für Anmeldungen über das Netz HTTPS einschalten, sonst ist das Passwort mitlesbar.
-> Without users no login is needed (only the access code protects, if set). For logins over the network switch on HTTPS, otherwise the password can be read.
+@ Häkchen = Schreibrecht (Ereignisse quittieren, Notizen, Prozessbild bearbeiten); ohne Häkchen nur ansehen und exportieren. Ohne Benutzer ist keine Anmeldung nötig (nur der Zugriffscode schützt, falls eingetragen). Für Anmeldungen über das Netz HTTPS einschalten, sonst ist das Passwort mitlesbar.
+> Tick = write access (acknowledge events, notes, edit process view); without tick only view and export. Without users no login is needed (only the access code protects, if entered). For logins over the network switch on HTTPS, otherwise the password can be read.
 
 @ Benutzer hinzufügen
 > Add user

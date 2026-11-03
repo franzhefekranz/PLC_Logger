@@ -2846,7 +2846,8 @@ tablet or smartphone – also in headless operation.
   to allow the port.
 * **Access code:** If a code is entered in the tab, the page is opened with
   ``http://…:8080/?token=CODE``. Without code and without login anybody in the network
-  can watch; the page is read-only, there is no control function.
+  can watch. There are no control functions; with write access events can be
+  acknowledged, notes entered and the process view edited (see `HTTPS and login`_).
 * **HTTPS and login:** see below.
 * **Process view:** tiles with values, gauges and lamps under ``/prozess``, see
   `Process view`_.
@@ -2859,7 +2860,8 @@ tablet or smartphone – also in headless operation.
   to the screen size.
 * **Operation:** *Live* shows the latest time window; **◀ ▶** pages back in time
   (history), **Pause** stops the display. Tapping a legend entry highlights a curve, a
-  long press or double-click hides it.
+  long press or double-click hides it. Zoom, rulers, history from the database, export
+  and events: see `Analysing in the browser`_.
 * **Full screen:** The button at the top right of a chart (or a double-click into the
   chart) enlarges it to the whole window; the header with time window, **◀ ▶**, *Live*
   and *Pause* stays visible and usable. Where the browser allows it, it also switches to
@@ -2880,6 +2882,41 @@ tablet or smartphone – also in headless operation.
 
 The server transfers only the visible data, reduced to the screen width (minimum and
 maximum per section are kept), and compresses it.
+
+.. _web-auswerten:
+
+Analysing in the browser
+----------------------------------------------------------------------
+
+The web page offers the most important analyses of the logger – on PC, tablet or
+smartphone, without installation. One logger records (e.g. headless on a Raspberry Pi),
+any number of browsers show the same data.
+
+* **Zoom:** The **mouse wheel** over a chart (or **two fingers** on a tablet) stretches or
+  compresses the time axis of this chart, two fingers also move it. **Dragging a range**
+  with the mouse zooms to the chosen section – dragging vertically as well zooms the Y
+  axes too. The chart then has an **own time axis** (note above the chart) and no longer
+  follows *Live*. **⇔ Align** applies the time range of the selected chart (blue frame) to
+  all, **⟲ Zoom** resets all charts (live, Y axes as configured).
+* **Rulers:** **┆ Rulers** shows two vertical rulers and pauses the display. Dragging a
+  ruler or clicking/tapping into the chart sets the nearer ruler. The legend shows the
+  values at ruler 1 and 2 and the difference per variable, the line below the buttons
+  both points in time and the distance.
+* **History from the database:** The logger keeps the latest values in memory (up to
+  300,000 rows). If a database is configured, the server fetches older periods from
+  there – with **◀**, the time window up to **7 days** or the **date/time** field (jumps to
+  this point in time). The header then shows *Database*. Long periods are read as averages;
+  the browser needs no access to the database. Gaps (logger stopped) stay open in the
+  chart.
+* **Export:** **⇩ Export** saves the values of the displayed time range, between the
+  rulers or of a free period as an **Excel** or **CSV** file (raw data, also from the
+  database), optionally only the displayed curves. **PDF report** creates the report for
+  the same period as in the logger (statistics, charts, events).
+* **Events:** **🔔 Events** (or a click on the red *open* badge) lists events and notes of
+  the last day up to year, optionally only open ones. **⌖** jumps to the point in the chart
+  (ruler 1 at that time). With write access: **✓ Acknowledge** (single or all) and **✎
+  Note …** (at the time of ruler 1, otherwise now); the acknowledgement records the
+  logged-in user. Events and notes appear as dashed marks in the charts.
 
 .. _https-anmeldung:
 
@@ -2916,6 +2953,12 @@ least one user is configured, the browser first shows a login page; the login is
 for 12 hours or until **⎋ Log out** (top right of the page). After five failed attempts
 the address is blocked for one minute. An additionally configured access code still
 allows access without login (``?token=CODE``, e.g. for a permanently installed display).
+
+**Write access:** The tick in front of the user name grants write access – acknowledge
+events, enter notes, edit the process view. Without the tick the user may only view and
+export. New users initially have no write access; users from older configurations keep it.
+Once users are set up, the access code alone only grants read access; without users,
+anybody with access may write. Next to **Users …**, ✎ marks the users with write access.
 
 .. note::
 
@@ -2980,7 +3023,7 @@ layout, **Abbrechen** (cancel) discards the changes.
   not change it. Tiles refer to the **name** of a variable – if a variable is renamed,
   the tile shows "Variable fehlt" (variable missing) and has to be assigned again.
 * Without a saved layout the page shows a suggestion (BOOL as lamp, otherwise value).
-* **Who may edit:** if users are set up (`HTTPS and login`_), only logged-in users –
+* **Who may edit:** if users are set up (`HTTPS and login`_), only logged-in users with write access –
   whoever opens the page with the access code only can view it but not change it (good
   for a permanently installed display). Without login anybody with access to the page may
   edit.
@@ -3376,7 +3419,7 @@ Triggers and event log
 A **trigger** monitors a condition on the variables, e.g. ``{Temperatur} > 80``. As
 soon as it is met, the logger writes an entry with timestamp to the **event log** (a
 text file). The number of events not yet acknowledged is shown in the logger's status
-bar; acknowledgement is done in the **event viewer**.
+bar; acknowledgement is done in the **event viewer** or in the browser (`Analysing in the browser`_).
 
 Creating triggers
 ----------------------------------------------------------------------

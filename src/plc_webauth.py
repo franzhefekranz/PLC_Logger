@@ -41,6 +41,29 @@ def check_password(stored, password):
         return False
 
 
+READ, WRITE = "lesen", "schreiben"
+
+
+def parse_rights(text, users=()):
+    """Einstellung web_rechte (JSON {Name: "lesen"|"schreiben"}) -> {Name: Recht} für alle ``users``.
+
+    Benutzer ohne Eintrag haben Schreibrecht (so verhielten sich Konfigurationen vor der Rechteverwaltung: jeder
+    angemeldete Benutzer durfte das Prozessbild bearbeiten)."""
+    if isinstance(text, dict):
+        d = text
+    else:
+        try:
+            d = json.loads(text or "{}")
+        except ValueError:
+            d = {}
+        if not isinstance(d, dict):
+            d = {}
+    out = {str(k): (READ if str(v).strip().lower() == READ else WRITE) for k, v in d.items() if k}
+    for u in users:
+        out.setdefault(u, WRITE)
+    return {u: r for u, r in out.items() if not users or u in users}
+
+
 def parse_users(text):
     """Einstellung web_benutzer (JSON {Name: Hash}) -> dict; ungültig/leer -> {}."""
     if isinstance(text, dict):

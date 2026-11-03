@@ -14,6 +14,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Web-Client: Auswerten im Browser** – Zoom je Diagramm (Mausrad, Bereich aufziehen mit Y-Zoom, zwei Finger auf dem
+  Tablet) mit „Angleichen“ und „Zoom zurücksetzen“; zwei Lineale mit Werten und Differenz; Verlauf vor dem Speicher
+  des Loggers aus der Datenbank (Zeitfenster bis 7 Tage, Sprung zu Datum/Uhrzeit, Lücken bleiben offen); Export des
+  Zeitbereichs als Excel/CSV und PDF-Bericht; Ereignisliste mit Sprung ins Diagramm, Quittieren und Notizen,
+  Ereignis-Marken in den Diagrammen. Neue Schnittstellen `/api/export`, `/api/bericht`, `/api/ereignisse`.
+* **Schreibrecht je Web-Benutzer** (Häkchen im Dialog *Benutzer …*, Einstellung `web_rechte`): Quittieren, Notizen und
+  Prozessbild bearbeiten nur mit Schreibrecht, sonst ansehen und exportieren. Neue Benutzer zunächst ohne, bisherige
+  Benutzer behalten es; der Zugriffscode allein gibt nur Leserecht, sobald Benutzer eingerichtet sind.
+
 ## [3.9.0] – 2026-11-03
 
 ### Neu

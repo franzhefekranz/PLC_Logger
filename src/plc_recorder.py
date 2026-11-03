@@ -981,6 +981,11 @@ class Recorder:
         with self.lock:
             return self.tbuf[:self.n].copy(), self.ybuf[:, :self.n].copy()
 
+    def first_time(self):
+        """Zeit der ältesten Zeile im Speicher oder None ohne Daten."""
+        with self.lock:
+            return float(self.tbuf[0]) if self.n else None
+
     def last_row(self):
         """Letzte Zeile -> (Zeit, Werte) oder (None, None) ohne Daten."""
         with self.lock:
