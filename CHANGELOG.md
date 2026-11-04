@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.12.0] – 2026-11-04
+
 ### Neu
 
 * **Ereignisse in der Datenbank** – Trigger-Ereignisse (kommt, geht, quittiert mit Benutzer) und Notizen werden
@@ -504,7 +506,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.11.2...HEAD
+[Unveröffentlicht]: ../../compare/v3.12.0...HEAD
+[3.12.0]: ../../releases/tag/v3.12.0
 [3.11.2]: ../../releases/tag/v3.11.2
 [3.11.1]: ../../releases/tag/v3.11.1
 [3.11.0]: ../../releases/tag/v3.11.0
