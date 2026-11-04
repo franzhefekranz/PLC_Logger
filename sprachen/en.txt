@@ -452,6 +452,9 @@
 @ Benutzer oder Passwort falsch.
 > Wrong user or password.
 
+@ Der Logger unter {0} unterstützt die Betriebsart Client noch nicht (404). Bitte dort mindestens Version 3.11 installieren.
+> The logger at {0} does not support client mode yet (404). Please install at least version 3.11 there.
+
 @ Der Logger zeichnet gerade nicht auf.
 > The logger is not recording at the moment.
 

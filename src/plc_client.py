@@ -112,6 +112,9 @@ class Connection:
 
     def __init__(self, url, user="", password="", token="", pins=None):
         self.url = normalize_url(url)
+        # Adresse mit Zugriffscode (wie „Webserver-Adresse …“ sie kopiert): …/?token=…
+        q = urllib.parse.parse_qs(urllib.parse.urlsplit((url or "").strip()).query)
+        token = token.strip() or (q.get("token") or [""])[0]
         self.user, self.password, self.token = user.strip(), password, token.strip()
         self.pins = dict(pins or {})
         self.konfig = None
@@ -201,7 +204,15 @@ class Connection:
     def connect(self):
         """Anmelden und die Konfiguration holen -> konfig (dict). Fehler: ClientError (bzw. Unterklassen)."""
         self.login()
-        k = self.get_json("api/konfig")
+        try:
+            k = self.get_json("api/konfig")
+        except LoginRequired:
+            raise
+        except ClientError as e:
+            if str(e).startswith("404"):          # Webserver da, Schnittstelle fehlt: Logger am Server zu alt
+                raise ClientError(tr("Der Logger unter {0} unterstützt die Betriebsart Client noch nicht (404). "
+                                     "Bitte dort mindestens Version 3.11 installieren.").format(self.url)) from None
+            raise
         if not isinstance(k, dict) or k.get("version") is None:
             raise ClientError((k or {}).get("message") or tr("Der Logger zeichnet gerade nicht auf."))
         self.konfig = k

@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* **Client:** Adresse mit Zugriffscode (`…/?token=…`, wie *Webserver-Adresse …* sie kopiert) wird angenommen; ein
+  Logger mit älterer Version am Server ergibt eine verständliche Meldung statt „404“.
+
 ## [3.11.0] – 2026-11-03
 
 ### Neu

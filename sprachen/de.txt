@@ -452,6 +452,9 @@
 @ Benutzer oder Passwort falsch.
 > 
 
+@ Der Logger unter {0} unterstützt die Betriebsart Client noch nicht (404). Bitte dort mindestens Version 3.11 installieren.
+> 
+
 @ Der Logger zeichnet gerade nicht auf.
 > 
 

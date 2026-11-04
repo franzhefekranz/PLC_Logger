@@ -1226,6 +1226,8 @@ def test_client_remote_recorder(tmp_path, monkeypatch):
         srv.stop()
         rec.stop()
     assert pc.normalize_url("logger:8080") == "http://logger:8080/"
+    assert pc.Connection("http://pi:8080/?token=abc").token == "abc"
+    assert pc.Connection("http://pi:8080/?token=abc").url == "http://pi:8080/"
     with pytest.raises(pc.ClientError):
         pc.normalize_url("")
 
