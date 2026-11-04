@@ -3342,6 +3342,9 @@ Haken **CSV-Datei schreiben** im Reiter *Aufzeichnung* ein oder aus.
    * - Nur Änderungen schreiben
      - Ein Wert wird nur geschrieben, wenn er sich geändert hat, spätestens aber
        jede Minute. Spart bei langsam veränderlichen Werten viel Platz.
+   * - Ereignisse und Notizen mitschreiben
+     - Ereignisse der Trigger und Notizen zusätzlich in die Datenbank schreiben (Standard:
+       ein, siehe unten *Ereignisse in der Datenbank*).
    * - Löschen nach, Höchstens belegen
      - Alte Werte automatisch löschen (siehe `Alte Aufzeichnungen aufräumen
        <aufraeumen_>`__): nach *n Tagen* (SQLite, MariaDB, PostgreSQL/TimescaleDB,
@@ -3466,6 +3469,35 @@ Für VictoriaMetrics und Prometheus (PromQL, z. B. in Grafana):
    avg_over_time(messwerte_wert{variable="Temperatur"}[1m])       # Minutenmittel
    last_over_time(messwerte_wert{projekt="Anlage 1"}[1h])         # letzter Wert je Variable
 
+**Ereignisse in der Datenbank:** Mit *Ereignisse und Notizen mitschreiben* stehen die
+Ereignisse der Trigger und die Notizen zusätzlich zum Ereignisprotokoll (Datei) in der
+Datenbank – etwa für eigene Auswertungen oder als Markierungen in Grafana.
+
+* **SQLite, MariaDB, PostgreSQL/TimescaleDB, QuestDB, InfluxDB 3:** Tabelle
+  *Tabelle* + ``_ereignisse`` (also ``messwerte_ereignisse``), ein Datensatz je Ereignis
+  mit ``zeit`` (gekommen, UTC), ``projekt``, ``id``, ``trigger_name``, ``prioritaet``,
+  ``meldung``, ``gegangen``, ``quittiert``, ``benutzer`` (quittiert von bzw. Verfasser der
+  Notiz), ``notiz`` und ``quittierpflicht`` (InfluxDB: Zeitspalte ``time``, gegangen/quittiert
+  als Text, dazu ``dauer_s``). Geht oder wird ein Ereignis quittiert, wird der Datensatz
+  aktualisiert. Beim Start gleicht der Logger alle Ereignisse des Protokolls ab – auch
+  ältere und solche, die inzwischen im Ereignis-Viewer quittiert wurden.
+* **VictoriaMetrics, Prometheus:** Metriken *Tabelle* + ``_ereignisse_aktiv`` (1 beim
+  Kommen, 0 beim Gehen; Notizen 1) und ``_ereignisse_quittiert`` (1, Label ``benutzer``)
+  mit den Labels ``projekt``, ``id``, ``trigger_name``, ``prioritaet`` und ``meldung``.
+  Geschrieben werden nur neue Übergänge; beim Start die der letzten 10 Minuten.
+* Ein Projektname sollte je Logger eindeutig sein: der Datensatz ist über Projekt, ID und
+  Zeit bestimmt.
+
+.. code-block:: sql
+
+   -- Offene (nicht quittierte) Alarme
+   SELECT zeit, trigger_name, meldung FROM messwerte_ereignisse
+    WHERE quittierpflicht = 1 AND quittiert IS NULL AND prioritaet = 'Alarm' ORDER BY zeit;
+
+   -- Häufigste Ereignisse der letzten 30 Tage (PostgreSQL)
+   SELECT trigger_name, count(*) FROM messwerte_ereignisse
+    WHERE notiz = 0 AND zeit > now() - interval '30 days' GROUP BY 1 ORDER BY 2 DESC;
+
 **Betrieb:**
 
 * Geschrieben wird in einem eigenen Thread etwa einmal pro Sekunde in Stapeln; die
@@ -3493,7 +3525,9 @@ Für VictoriaMetrics und Prometheus (PromQL, z. B. in Grafana):
   Dashboard – so dient ein Dashboard mehreren Anlagen mit gleicher Konfiguration.
   Möglich mit VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB und
   InfluxDB 3 (nicht SQLite). Nach Änderungen an Diagrammen erneut exportieren und beim
-  Import überschreiben.
+  Import überschreiben. Mit *Ereignisse und Notizen mitschreiben* enthält das Dashboard
+  die Markierung **Ereignisse**: Trigger und Notizen als senkrechte Linie bzw. Bereich
+  (kommt bis geht) in allen Diagrammen, Priorität als Tag (oben im Dashboard abschaltbar).
 * **Aktualität in Grafana:** Das Dashboard fragt alle **5 s** neu ab (kleinste Vorgabe
   von Grafana). VictoriaMetrics zeigt in Abfragen die **letzten 30 s** noch nicht an.
   Für die laufende Anzeige ist der Webserver des Loggers gedacht; wer Grafana trotzdem

@@ -794,6 +794,14 @@ def test_grafana_dashboard_layout():
     sql = plc_grafana.dashboard(dict(conn, db_typ="timescale"), charts, variables)
     q = [p for p in sql["panels"] if p["type"] == "timeseries"][2]["targets"][0]["rawSql"]
     assert "variable = 'Ven''til[0]'" in q and "$__timeFilter(zeit)" in q
+    # Ereignisse als Markierungen (Annotationen), abschaltbar mit db_ereignisse = 0
+    an = d["annotations"]["list"][0]
+    assert an["target"]["expr"] == 'anlage_ereignisse_aktiv{projekt="$projekt"} > 0' and an["tagKeys"] == "prioritaet"
+    assert "FROM anlage_ereignisse" in sql["annotations"]["list"][0]["target"]["rawSql"]
+    for typ in ("mariadb", "questdb", "influxdb3"):
+        t = plc_grafana.dashboard(dict(conn, db_typ=typ), charts, variables)["annotations"]["list"][0]["target"]
+        assert "anlage_ereignisse" in t["rawSql"] and "$projekt" in t["rawSql"]
+    assert plc_grafana.dashboard(dict(conn, db_ereignisse=0), charts, variables)["annotations"]["list"] == []
     with pytest.raises(ValueError):
         plc_grafana.dashboard(dict(conn, db_typ="sqlite"), charts, variables)
 
@@ -825,7 +833,8 @@ def test_grafana_dashboard_import_real(tmp_path):
     charts, variables = demo_config()
     conn = {"db_typ": "victoriametrics", "db_host": vm.hostname, "db_port": vm.port, "db_tabelle": table,
             "projekt": "Kunde A", "seite_anordnung": "raster"}
-    w = plc_db.DbWriter(conn, [v.name for v in variables], interval_s=0.1)
+    log = _event_log_with_history(tmp_path / "ev.csv")
+    w = plc_db.DbWriter(conn, [v.name for v in variables], interval_s=0.1, events=log)
     w.start()
     now = time.time()
     for k in range(120):
@@ -854,6 +863,14 @@ def test_grafana_dashboard_import_real(tmp_path):
                     if f.get("labels", {}).get("variable"):
                         found.add(f["labels"]["variable"])
     assert found == {v.name for v in variables}, found
+    # Annotation (Ereignisse): Abfrage liefert die Trigger
+    an = got["annotations"]["list"][0]
+    r = api("/api/ds/query", {"queries": [{"refId": "Anno", "datasource": {"uid": ds["uid"]}, "range": True,
+                                           "expr": an["expr"].replace("$projekt", "Kunde A"), "interval": "60s"}],
+                              "from": str(int((now - 600) * 1000)), "to": str(int(now * 1000))})
+    trig = {f.get("labels", {}).get("trigger_name") for ref in r["results"].values() for frame in ref.get("frames", [])
+            for f in frame["schema"]["fields"]}
+    assert {"Übertemperatur", "Druck", "Notiz"} <= trig, r
     values = api(f"/api/datasources/uid/{ds['uid']}/resources/api/v1/label/projekt/values")
     assert "Kunde A" in values.get("data", []), values
 
@@ -1243,3 +1260,209 @@ def test_logger_args_client():
     assert a.client == "https://pi:8080/" and a.benutzer == "chef"
     assert parse_args(["--client"]).client == ""
     assert parse_args([]).client is None
+
+
+def _event_log_with_history(path):
+    """Ereignisprotokoll mit einem quittierten, einem offenen Ereignis und einer Notiz."""
+    import time
+    from plc_events import EventLog, Trigger
+    log = EventLog(str(path))
+    t = time.time()
+    trig = Trigger(name="Übertemperatur", prio="Alarm")
+    e1 = log.come(trig, 'Temperatur "hoch": 81,3 °C', t - 300)
+    log.go(e1, trig, t - 200)
+    log.acknowledge([e1], user="chef")
+    log.come(Trigger(name="Druck", prio="Warnung"), "Druck niedrig", t - 100)
+    log.note("Filter gewechselt", t - 50, user="mm")
+    return log
+
+
+def test_db_events_sqlite(tmp_path):
+    """Ereignisse in der Datenbank (SQLite): alle Ereignisse beim Start, danach Gehen/Quittieren als Aktualisierung,
+    nach einem Neustart keine doppelten Zeilen; abschaltbar."""
+    import time
+    import sqlite3
+
+    import plc_db
+    from plc_events import Trigger
+    log = _event_log_with_history(tmp_path / "ev.csv")
+    conn = {"db_typ": "sqlite", "db_datei": str(tmp_path / "w.db"), "db_tabelle": "anlage", "projekt": "Kessel"}
+    w = plc_db.DbWriter(conn, ["A"], events=log, interval_s=0.05)
+    w.start()
+    w.put(time.time(), [1.0])
+    time.sleep(0.6)
+    q = "SELECT id, trigger_name, prioritaet, meldung, gegangen IS NOT NULL, quittiert IS NOT NULL, benutzer, notiz, " \
+        "projekt FROM anlage_ereignisse ORDER BY zeit"
+    with sqlite3.connect(conn["db_datei"]) as c:
+        rows = c.execute(q).fetchall()
+    assert [(r[1], r[4], r[5], r[6], r[7], r[8]) for r in rows] == [
+        ("Übertemperatur", 1, 1, "chef", 0, "Kessel"), ("Druck", 0, 0, "", 0, "Kessel"),
+        ("Notiz", 0, 0, "mm", 1, "Kessel")]
+    assert rows[0][3] == 'Temperatur "hoch": 81,3 °C'
+    eid = rows[1][0]
+    log.go(eid, Trigger(name="Druck", prio="Warnung"))
+    log.acknowledge([eid], user="gast")
+    time.sleep(0.5)
+    w.stop()
+    assert w.events_written >= 4 and "Ereignisse" in w.status()[1]
+    with sqlite3.connect(conn["db_datei"]) as c:
+        rows = c.execute(q).fetchall()
+    assert len(rows) == 3 and rows[1][4] == 1 and rows[1][6] == "gast"
+    # Neustart: wieder alle abgeglichen, keine Dubletten
+    w2 = plc_db.DbWriter(conn, ["A"], events=plc_db_reload(log), interval_s=0.05)
+    w2.start()
+    time.sleep(0.4)
+    w2.stop()
+    with sqlite3.connect(conn["db_datei"]) as c:
+        assert c.execute("SELECT COUNT(*) FROM anlage_ereignisse").fetchone()[0] == 3
+    # ohne Ereignisprotokoll (db_ereignisse = 0): nichts
+    import plc_recorder
+    from plc_common import Plc, default_connection
+    cfg = default_connection()
+    cfg.update(csv_ordner=str(tmp_path), csv_aktiv=0, db_typ="sqlite", db_datei=str(tmp_path / "x.db"), db_ereignisse=0)
+    charts, variables = plc_recorder.demo_config()
+    rec = plc_recorder.Recorder(cfg, [Plc(name="S")], charts, variables, demo=True)
+    rec.start()
+    assert rec.db.events is None
+    rec.stop()
+
+
+def plc_db_reload(log):
+    """Neues EventLog derselben Datei (wie nach einem Neustart des Loggers)."""
+    from plc_events import EventLog
+    return EventLog(log.path)
+
+
+class _FakeHttp:
+    """Ersatz für die HTTP-Verbindung der Datenbanken: geschriebene Zeilen/Serien und SQL-Befehle merken."""
+
+    def __init__(self):
+        self.lines, self.series, self.sql = [], [], []
+
+    def write(self, text):
+        self.lines.extend(text.splitlines())
+
+    def write_series(self, series):
+        self.series.extend(series)
+
+    def exec(self, sql):
+        self.sql.append(sql)
+        return {}
+
+
+def test_db_events_line_protocols(tmp_path):
+    """Ereignisse für QuestDB, InfluxDB 3 (ganzer Datensatz, Text maskiert), VictoriaMetrics und Prometheus (nur neue
+    Übergänge als Metrik aktiv/quittiert)."""
+    import plc_db
+    log = _event_log_with_history(tmp_path / "ev.csv")
+    recs = plc_db.event_records(log.events(), "Kessel A")
+    items = [(r, None) for r in sorted(recs.values(), key=lambda r: r["zeit"])]
+    base = {"typ": "", "tabelle": "anlage", "host": "x", "port": 1, "user": "", "passwort": "", "name": "db",
+            "projekt": "Kessel A"}
+    q = plc_db.QuestDbBackend(dict(base, typ="questdb"))
+    q.con = _FakeHttp()
+    q.insert_events(items)
+    assert "DEDUP UPSERT KEYS(zeit, projekt, id)" in q.con.sql[0] and "anlage_ereignisse" in q.con.sql[0]
+    first = q.con.lines[0]
+    assert first.startswith("anlage_ereignisse,projekt=Kessel\\ A,trigger_name=Übertemperatur,prioritaet=Alarm ")
+    assert 'meldung="Temperatur \\"hoch\\": 81,3 °C"' in first and "quittiert=" in first and " id=" in first
+    i = plc_db.InfluxDb3Backend(dict(base, typ="influxdb3"))
+    i.con = _FakeHttp()
+    i.insert_events(items)
+    assert len(i.con.lines) == 3 and ",id=" in i.con.lines[0] and "dauer_s=100.0" in i.con.lines[0]
+    assert 'gegangen="20' in i.con.lines[0] and "notiz=true" in i.con.lines[2]
+    v = plc_db.VictoriaMetricsBackend(dict(base, typ="victoriametrics"))
+    v.con = _FakeHttp()
+    v.insert_events(items)
+    assert not v.events_idempotent
+    # quittiertes Ereignis: kommt (1), geht (0), quittiert; offenes: kommt; Notiz: 1
+    assert [re.split(r"(?<!\\) ", ln)[1] for ln in v.con.lines] == ["aktiv=1.0", "aktiv=0.0", "quittiert=1.0", "aktiv=1.0",
+                                                       "aktiv=1.0"]
+    assert ",benutzer=chef" in v.con.lines[2]
+    v.con.lines.clear()
+    v.insert_events([(items[1][0], items[1][0])])                    # unverändert: nichts Neues
+    assert v.con.lines == []
+    p = plc_db.PrometheusBackend(dict(base, typ="prometheus"))
+    p.con = _FakeHttp()
+    p.insert_events(items)
+    names = sorted({dict(lb)["__name__"] for lb, _s in p.con.series})
+    assert names == ["anlage_ereignisse_aktiv", "anlage_ereignisse_quittiert"]
+    assert sum(len(s) for _lb, s in p.con.series) == 5
+    assert plc_db.event_table("x" * 70) == "x" * 52 + "_ereignisse"
+
+
+@pytest.mark.parametrize("typ,env", [("mariadb", "PLC_TEST_MARIADB"), ("timescale", "PLC_TEST_POSTGRES"),
+                                     ("questdb", "PLC_TEST_QUESTDB"), ("influxdb3", "PLC_TEST_INFLUXDB3"),
+                                     ("victoriametrics", "PLC_TEST_VICTORIAMETRICS"),
+                                     ("prometheus", "PLC_TEST_PROMETHEUS")])
+def test_db_events_real_servers(tmp_path, typ, env):
+    """Echte Datenbankserver (Workflow „Tests“ unter Linux): Ereignisse schreiben, ändern und wieder lesen."""
+    import time
+    url = os.environ.get(env)
+    if not url:
+        pytest.skip(f"kein Server ({env})")
+    import urllib.parse
+
+    import plc_db
+    from plc_events import Trigger
+    u = urllib.parse.urlparse(url)
+    table = "ev_" + typ
+    conn = {"db_typ": typ, "db_host": u.hostname, "db_port": u.port, "db_user": urllib.parse.unquote(u.username or ""),
+            "db_passwort": urllib.parse.unquote(u.password or ""), "db_name": (u.path or "/").strip("/") or "datenlogger",
+            "db_tabelle": table, "projekt": "Test " + typ}
+    log = _event_log_with_history(tmp_path / "ev.csv")
+    w = plc_db.DbWriter(conn, ["A"], events=log, interval_s=0.1)
+    w.start()
+    w.put(time.time(), [1.0])
+    time.sleep(1.5)
+    eid = next(e.id for e in log.events() if e.trigger == "Druck")
+    log.go(eid, Trigger(name="Druck", prio="Warnung"))
+    log.acknowledge([eid], user="gast")
+    time.sleep(1.5)
+    w.stop()
+    assert w.state[0] != plc_db.ST_ERROR, w.state
+    assert w.events_written >= 4, (w.events_written, w.state)
+    s = plc_db.db_settings(conn)
+    b = plc_db.BACKENDS[typ](s)
+    b.connect()
+    try:
+        te = plc_db.event_table(table)
+        if typ in ("mariadb", "timescale"):
+            q = (f"SELECT trigger_name, benutzer, gegangen IS NOT NULL FROM {te} WHERE projekt = %s ORDER BY zeit")
+            with b.con.cursor() as cur:
+                cur.execute(q if typ == "timescale" else q.replace(te, f"`{te}`"), (conn["projekt"],))
+                rows = [tuple(r) for r in cur.fetchall()]
+            assert rows == [("Übertemperatur", "chef", True), ("Druck", "gast", True), ("Notiz", "mm", False)] or \
+                [(a, b_, bool(c)) for a, b_, c in rows] == [("Übertemperatur", "chef", True), ("Druck", "gast", True),
+                                                            ("Notiz", "mm", False)], rows
+        elif typ in ("questdb", "influxdb3"):
+            deadline = time.time() + 20
+            while True:
+                cur = b.con.cursor()
+                try:
+                    cur.execute(f"SELECT trigger_name, benutzer FROM {te} WHERE projekt = ? ORDER BY zeit",
+                                (conn["projekt"],))
+                    rows = [tuple(r) for r in cur.fetchall()]
+                except Exception:
+                    rows = []
+                finally:
+                    cur.close()
+                if rows == [("Übertemperatur", "chef"), ("Druck", "gast"), ("Notiz", "mm")] or time.time() > deadline:
+                    break
+                time.sleep(1)
+            assert rows == [("Übertemperatur", "chef"), ("Druck", "gast"), ("Notiz", "mm")], rows
+        else:
+            if typ == "victoriametrics":
+                import urllib.request
+                urllib.request.urlopen(url.rstrip("/") + "/internal/force_flush").read()
+            metric = f"{te}_quittiert"
+            deadline = time.time() + 20
+            while True:
+                d = b.con.get_json("/api/v1/query", {"query": f'last_over_time({metric}{{projekt="{conn["projekt"]}"}}[1h])'})
+                users = sorted(r["metric"].get("benutzer") for r in d["data"]["result"])
+                if users == ["chef", "gast"] or time.time() > deadline:
+                    break
+                time.sleep(1)
+            assert users == ["chef", "gast"], d          # beide Quittierungen jünger als 10 min: mitgeschrieben
+    finally:
+        b.close()

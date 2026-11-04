@@ -107,6 +107,65 @@ def describe(s):
 
 
 # ---------------------------------------------------------------------------------------
+# Ereignisse (Trigger, Notizen) in der Datenbank
+# ---------------------------------------------------------------------------------------
+# Je Ereignis ein Datensatz (zeit, projekt, id, trigger_name, prioritaet, meldung, gegangen, quittiert, benutzer,
+# notiz, quittierpflicht). SQL-Datenbanken, QuestDB und InfluxDB 3 speichern ihn in der Tabelle <tabelle>_ereignisse
+# und überschreiben ihn bei Änderungen (gegangen, quittiert); VictoriaMetrics und Prometheus bekommen je Übergang einen
+# Wert der Metriken <tabelle>_ereignisse_aktiv (1 = gekommen, 0 = gegangen; Notizen 1) und
+# <tabelle>_ereignisse_quittiert (1, Label benutzer).
+EVENT_SUFFIX = "_ereignisse"
+EVENT_BATCH = 500
+EVENT_RETRY_S = 60.0
+
+
+def event_table(table):
+    """Name der Ereignistabelle zur Messwerttabelle (höchstens 63 Zeichen wie bei PostgreSQL)."""
+    return table[:63 - len(EVENT_SUFFIX)] + EVENT_SUFFIX
+
+
+def _local_utc(text):
+    """Zeit aus dem Ereignisprotokoll (Ortszeit „JJJJ-MM-TT hh:mm:ss.mmm“) -> datetime in UTC; leer -> None."""
+    text = (text or "").strip()
+    if not text:
+        return None
+    for fmt in ("%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"):
+        try:
+            return datetime.datetime.strptime(text, fmt).astimezone(datetime.timezone.utc)
+        except ValueError:
+            continue
+    return None
+
+
+def event_records(events, project=""):
+    """Ereignisse (plc_events.Event) -> {(id, zeit): Datensatz} für ``insert_events``."""
+    out = {}
+    for e in events:
+        z = _local_utc(e.zeit)
+        if z is None:
+            continue
+        out[(e.id, e.zeit)] = {"zeit": z, "projekt": project or "", "id": int(e.id), "trigger": e.trigger or "",
+                               "prio": e.prio or "", "meldung": e.text or "", "gegangen": _local_utc(e.gegangen),
+                               "quittiert": _local_utc(e.quittiert), "benutzer": e.benutzer or "",
+                               "notiz": bool(e.notiz), "pflicht": bool(e.pflicht)}
+    return out
+
+
+_EVENT_COLS = ("zeit, projekt, id, trigger_name, prioritaet, meldung, gegangen, quittiert, benutzer, notiz, "
+               "quittierpflicht")
+_EVENT_COLS_SQL = ("zeit {ts} NOT NULL, projekt {key} NOT NULL DEFAULT '', id {int} NOT NULL, trigger_name {txt}, "
+                   "prioritaet {txt}, meldung {txt}, gegangen {ts}, quittiert {ts}, benutzer {txt}, notiz {int}, "
+                   "quittierpflicht {int}")
+_EVENT_UPDATE = ("trigger_name", "prioritaet", "meldung", "gegangen", "quittiert", "benutzer", "notiz",
+                 "quittierpflicht")
+
+
+def _last_change(rec):
+    """Jüngster Zeitpunkt eines Datensatzes (Kommen, Gehen oder Quittieren)."""
+    return max(z for z in (rec["zeit"], rec["gegangen"], rec["quittiert"]) if z is not None)
+
+
+# ---------------------------------------------------------------------------------------
 # Anbindungen je Datenbanktyp
 # ---------------------------------------------------------------------------------------
 class Storage:
@@ -147,8 +206,12 @@ def _metric_sum(text, names):
 
 class _Backend:
     """Gemeinsame Schnittstelle: connect() legt bei Bedarf die Tabelle an, insert() schreibt Zeilen
-    (zeit als datetime in UTC, projekt, variable, wert), close() trennt."""
+    (zeit als datetime in UTC, projekt, variable, wert), insert_events() Ereignisse, close() trennt.
+
+    ``events_idempotent``: ein erneut gesendetes Ereignis überschreibt den Datensatz (beim Start werden deshalb alle
+    Ereignisse des Protokolls abgeglichen); sonst entstünden doppelte Werte (nur neue Übergänge senden)."""
     note = ""
+    events_idempotent = True
 
     def __init__(self, s):
         """Einstellungen ``s`` (siehe ``db_settings``) übernehmen; der Tabellenname wird geprüft, weil er direkt in
@@ -159,6 +222,23 @@ class _Backend:
         if not check_table_name(s["tabelle"]):
             raise ValueError(tr("Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)").format(s['tabelle']))
         self.t = s["tabelle"]
+        self.te = event_table(self.t)
+        self._events_ready = False
+
+    def prepare_events(self):
+        """Vor dem ersten Abgleich (z. B. Tabelle anlegen, ``events_idempotent`` bestimmen); Standard: nichts."""
+
+    def insert_events(self, items):
+        """Ereignisse schreiben: [(Datensatz, zuletzt geschriebener Datensatz oder None)] (siehe ``event_records``)."""
+        raise NotImplementedError(tr("{0}: Ereignisse werden nicht in die Datenbank geschrieben").format(
+            DB_TYPES.get(self.s["typ"], self.s["typ"])))
+
+    @staticmethod
+    def _event_values(r, conv):
+        """Spaltenwerte eines Datensatzes in der Reihenfolge von _EVENT_COLS; Zeiten über ``conv``."""
+        return (conv(r["zeit"]), r["projekt"], r["id"], r["trigger"], r["prio"], r["meldung"],
+                conv(r["gegangen"]) if r["gegangen"] else None, conv(r["quittiert"]) if r["quittiert"] else None,
+                r["benutzer"], int(r["notiz"]), int(r["pflicht"]))
 
     def close(self):
         """Verbindung schließen (Fehler beim Schließen sind ohne Bedeutung)."""
@@ -196,6 +276,19 @@ class SqliteBackend(_Backend):
         cur.execute(f"CREATE TABLE IF NOT EXISTS {self.t} (zeit TEXT NOT NULL, projekt TEXT, "
                     f"variable TEXT NOT NULL, wert REAL)")
         cur.execute(f"CREATE INDEX IF NOT EXISTS {self.t}_variable_zeit ON {self.t} (variable, zeit)")
+        self.con.commit()
+
+    def insert_events(self, items):
+        """Ereignisse einfügen bzw. aktualisieren (Schlüssel projekt, id, zeit)."""
+        if not self._events_ready:
+            cols = _EVENT_COLS_SQL.format(ts="TEXT", txt="TEXT", key="TEXT", int="INTEGER")
+            self.con.execute(f"CREATE TABLE IF NOT EXISTS {self.te} ({cols}, PRIMARY KEY (projekt, id, zeit))")
+            self.con.commit()
+            self._events_ready = True
+        upd = ", ".join(f"{c} = excluded.{c}" for c in _EVENT_UPDATE)
+        self.con.executemany(f"INSERT INTO {self.te} ({_EVENT_COLS}) VALUES ({', '.join('?' * 11)}) "
+                             f"ON CONFLICT (projekt, id, zeit) DO UPDATE SET {upd}",
+                             [self._event_values(r, self._iso) for r, _prev in items])
         self.con.commit()
 
     def insert(self, rows):
@@ -279,6 +372,20 @@ class MariaDbBackend(_Backend):
             cur.executemany(f"INSERT INTO `{self.t}` (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)", data)
         self.con.commit()
 
+    def insert_events(self, items):
+        """Ereignisse einfügen bzw. aktualisieren (Primärschlüssel projekt, id, zeit)."""
+        with self.con.cursor() as cur:
+            if not self._events_ready:
+                cols = _EVENT_COLS_SQL.format(ts="DATETIME(3)", txt="TEXT", key="VARCHAR(100)", int="INT")
+                cur.execute(f"CREATE TABLE IF NOT EXISTS `{self.te}` ({cols}, PRIMARY KEY (projekt, id, zeit)) "
+                            "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4")
+                self._events_ready = True
+            upd = ", ".join(f"{c} = VALUES({c})" for c in _EVENT_UPDATE)
+            cur.executemany(f"INSERT INTO `{self.te}` ({_EVENT_COLS}) VALUES ({', '.join(['%s'] * 11)}) "
+                            f"ON DUPLICATE KEY UPDATE {upd}",
+                            [self._event_values(r, lambda z: z.replace(tzinfo=None)) for r, _prev in items])
+        self.con.commit()
+
     def storage(self):
         """Größe aus information_schema (Daten + Indizes); Zeilenzahl ist dort eine Schätzung von InnoDB."""
         with self.con.cursor() as cur:
@@ -338,6 +445,20 @@ class TimescaleBackend(_Backend):
         """Zeilen in einer Transaktion einfügen."""
         with self.con.cursor() as cur:
             cur.executemany(f'INSERT INTO "{self.t}" (zeit, projekt, variable, wert) VALUES (%s, %s, %s, %s)', rows)
+        self.con.commit()
+
+    def insert_events(self, items):
+        """Ereignisse einfügen bzw. aktualisieren (Primärschlüssel projekt, id, zeit; normale Tabelle, keine
+        Hypertable – es sind wenige Zeilen)."""
+        with self.con.cursor() as cur:
+            if not self._events_ready:
+                cols = _EVENT_COLS_SQL.format(ts="TIMESTAMPTZ", txt="TEXT", key="TEXT", int="INTEGER")
+                cur.execute(f'CREATE TABLE IF NOT EXISTS "{self.te}" ({cols}, PRIMARY KEY (projekt, id, zeit))')
+                self._events_ready = True
+            upd = ", ".join(f"{c} = EXCLUDED.{c}" for c in _EVENT_UPDATE)
+            cur.executemany(f'INSERT INTO "{self.te}" ({_EVENT_COLS}) VALUES ({", ".join(["%s"] * 11)}) '
+                            f"ON CONFLICT (projekt, id, zeit) DO UPDATE SET {upd}",
+                            [self._event_values(r, lambda z: z) for r, _prev in items])
         self.con.commit()
 
     def storage(self):
@@ -436,6 +557,43 @@ def _ilp_lines(table, rows):
         proj = f",projekt={_ilp_tag(p)}" if p else ""   # leerer Projektname: Tag weglassen (NULL bzw. ohne Label)
         out.append(f"{table}{proj},variable={_ilp_tag(v) or '_'} wert={float(w)!r} {ns}\n")
     return "".join(out)
+
+
+def _ilp_str(text):
+    """Textfeld im InfluxDB Line Protocol: in Anführungszeichen, \\ und " maskiert (Zeilenumbruch -> Leerzeichen)."""
+    text = str(text).replace("\r", " ").replace("\n", " ")
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def _ns(z):
+    """datetime (UTC) -> Nanosekunden seit 1970 (ganzzahlig)."""
+    return (z - _EPOCH) // _US * 1000
+
+
+def _iso_utc(z):
+    """datetime -> ISO-Text in UTC mit Millisekunden („2026-11-04T10:15:00.250Z“)."""
+    return z.astimezone(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.") + f"{z.microsecond // 1000:03d}Z"
+
+
+def _event_tags(r):
+    """Tags/Labels eines Ereignisses (Projekt leer: weggelassen)."""
+    tags = [("projekt", r["projekt"]), ("id", str(r["id"])), ("trigger_name", r["trigger"] or "_"),
+            ("prioritaet", r["prio"] or "_")]
+    return [(k, v) for k, v in tags if v != ""]
+
+
+def _event_transitions(r, prev):
+    """Neue Übergänge eines Ereignisses seit ``prev`` (für Metrik-Datenbanken): [(Metrik-Feld, Zeit, Wert, Labels)].
+    Feld "aktiv": 1 beim Kommen (Notiz: 1), 0 beim Gehen; Feld "quittiert": 1 mit Label benutzer."""
+    out = []
+    text = [("meldung", (r["meldung"] or "")[:200])] if r["meldung"] else []
+    if prev is None:
+        out.append(("aktiv", r["zeit"], 1.0, text))
+    if r["gegangen"] and not (prev and prev["gegangen"]):
+        out.append(("aktiv", r["gegangen"], 0.0, text))
+    if r["quittiert"] and not (prev and prev["quittiert"]):
+        out.append(("quittiert", r["quittiert"], 1.0, [("benutzer", r["benutzer"] or "_")]))
+    return out
 
 
 def _sql_literal(v):
@@ -754,6 +912,38 @@ class QuestDbBackend(_Backend):
         """Zeilen im Line Protocol über HTTP schreiben."""
         self.con.write(_ilp_lines(self.t, rows))
 
+    def prepare_events(self):
+        """Ereignistabelle anlegen (mit Deduplizierung über zeit, projekt, id; ältere QuestDB ohne)."""
+        if self._events_ready:
+            return
+        table = (f"CREATE TABLE IF NOT EXISTS {self.te} (zeit TIMESTAMP, projekt SYMBOL, id LONG, "
+                 "trigger_name SYMBOL, prioritaet SYMBOL, meldung STRING, gegangen TIMESTAMP, quittiert TIMESTAMP, "
+                 "benutzer STRING, notiz BOOLEAN, quittierpflicht BOOLEAN) TIMESTAMP(zeit) PARTITION BY MONTH")
+        try:
+            self.con.exec(table + " WAL DEDUP UPSERT KEYS(zeit, projekt, id)")
+        except RuntimeError:
+            self.con.exec(table)
+            self.events_idempotent = False
+        self._events_ready = True
+
+    def insert_events(self, items):
+        """Ereignisse im Line Protocol; die Tabelle (mit Deduplizierung über zeit, projekt, id) ersetzt den Datensatz.
+        Ohne Deduplizierung (QuestDB vor 7.3) werden nur neue Ereignisse geschrieben."""
+        self.prepare_events()
+        lines = []
+        for r, prev in items:
+            if prev is not None and not self.events_idempotent:
+                continue
+            tags = "".join(f",{k}={_ilp_tag(v)}" for k, v in _event_tags(r) if k != "id")
+            f = [f"id={r['id']}i", f"meldung={_ilp_str(r['meldung'])}", f"benutzer={_ilp_str(r['benutzer'])}",
+                 f"notiz={'t' if r['notiz'] else 'f'}", f"quittierpflicht={'t' if r['pflicht'] else 'f'}"]
+            for k in ("gegangen", "quittiert"):
+                if r[k] is not None:
+                    f.append(f"{k}={_ns(r[k]) // 1000}t")          # Zeitstempel-Feld in Mikrosekunden
+            lines.append(f"{self.te}{tags} {','.join(f)} {_ns(r['zeit'])}\n")
+        if lines:
+            self.con.write("".join(lines))
+
     def storage(self):
         """table_storage() (ab QuestDB 8.2): Plattenplatz und Zeilen der Tabelle; sonst nur die Zeilenzahl."""
         try:
@@ -803,6 +993,22 @@ class InfluxDb3Backend(_Backend):
         """Zeilen im Line Protocol schreiben."""
         self.con.write(_ilp_lines(self.t, rows))
 
+    def insert_events(self, items):
+        """Ereignisse im Line Protocol (Tags projekt, id, trigger_name, prioritaet); gleiche Serie und gleiche Zeit
+        überschreiben den Datensatz. Gegangen/quittiert als ISO-Text (UTC), dazu die Dauer in Sekunden."""
+        lines = []
+        for r, _prev in items:
+            tags = "".join(f",{k}={_ilp_tag(v)}" for k, v in _event_tags(r))
+            f = [f"meldung={_ilp_str(r['meldung'])}", f"benutzer={_ilp_str(r['benutzer'])}",
+                 f"notiz={'true' if r['notiz'] else 'false'}", f"quittierpflicht={'true' if r['pflicht'] else 'false'}"]
+            for k in ("gegangen", "quittiert"):
+                if r[k] is not None:
+                    f.append(f"{k}={_ilp_str(_iso_utc(r[k]))}")
+            if r["gegangen"] is not None:
+                f.append(f"dauer_s={(r['gegangen'] - r['zeit']).total_seconds()!r}")
+            lines.append(f"{self.te}{tags} {','.join(f)} {_ns(r['zeit'])}\n")
+        self.con.write("".join(lines))
+
     def storage(self):
         """Parquet-Dateien der Tabelle (system.parquet_files); noch nicht gespeicherte Werte (WAL) zählen nicht mit."""
         cur = self.con.cursor()
@@ -829,6 +1035,19 @@ class VictoriaMetricsBackend(_Backend):
     def insert(self, rows):
         """Zeilen im Line Protocol schreiben (Metrik ``<tabelle>_wert``)."""
         self.con.write(_ilp_lines(self.t, rows))
+
+    events_idempotent = False
+
+    def insert_events(self, items):
+        """Neue Übergänge als Werte der Metriken <tabelle>_ereignisse_aktiv / _quittiert (Line Protocol)."""
+        lines = []
+        for r, prev in items:
+            base = _event_tags(r)
+            for field, z, val, extra in _event_transitions(r, prev):
+                tags = "".join(f",{k}={_ilp_tag(v)}" for k, v in base + extra)
+                lines.append(f"{self.te}{tags} {field}={val!r} {_ns(z)}\n")
+        if lines:
+            self.con.write("".join(lines))
 
     def storage(self):
         """Ganze Datenbank aus den eigenen Kennzahlen (/metrics: Größe, Werte, freier Platz; /flags: Aufbewahrung),
@@ -919,6 +1138,18 @@ class PrometheusBackend(_Backend):
         series = [([("__name__", metric), ("projekt", p or ""), ("variable", v or "_")], sorted(samples))
                   for (p, v), samples in groups.items()]
         self.con.write_series(series)
+
+    events_idempotent = False
+
+    def insert_events(self, items):
+        """Neue Übergänge als Werte der Metriken <tabelle>_ereignisse_aktiv / _quittiert (Remote Write)."""
+        groups = {}
+        for r, prev in items:
+            for field, z, val, extra in _event_transitions(r, prev):
+                labels = tuple([("__name__", f"{self.te}_{field}")] + _event_tags(r) + extra)
+                groups.setdefault(labels, []).append(((z - _EPOCH) // _MS, val))
+        if groups:
+            self.con.write_series([(list(lb), sorted(samples)) for lb, samples in groups.items()])
 
     def storage(self):
         """Gesamtgröße aus den eigenen Kennzahlen von Prometheus (/metrics: Blöcke, WAL, Head-Chunks)."""
@@ -1028,8 +1259,9 @@ class DbWriter(threading.Thread):
     ``put(ts, row)`` (aus dem Sammler-Thread) nimmt eine Zeile entgegen; ``stop()`` schreibt den Rest und beendet.
     ``status()`` liefert (Zustand, Text) für die Status-LED; Meldungen gehen an ``emit``."""
 
-    def __init__(self, conn, names, emit=None, interval_s=1.0):
-        """Schreib-Thread anlegen (noch nicht gestartet). ``names``: Variablennamen in der Reihenfolge der Messzeilen.
+    def __init__(self, conn, names, emit=None, interval_s=1.0, events=None):
+        """Schreib-Thread anlegen (noch nicht gestartet). ``names``: Variablennamen in der Reihenfolge der Messzeilen;
+        ``events``: Ereignisprotokoll (plc_events.EventLog), dessen Ereignisse mitgeschrieben werden (None = keine).
         """
         super().__init__(name="db-writer", daemon=True)
         self.s = db_settings(conn)
@@ -1050,6 +1282,11 @@ class DbWriter(threading.Thread):
         cs = cleanup_settings(conn)
         self.clean_days, self.clean_mb = cs["db_tage"], cs["db_mb"]
         self._next_clean = 0.0          # Aufräumen: beim ersten erfolgreichen Schreiben, dann stündlich
+        self.events = events
+        self.events_written = 0
+        self._ev_version = None         # zuletzt abgeglichene Version des Ereignisprotokolls
+        self._ev_sent = None            # {(id, zeit): Datensatz} wie zuletzt geschrieben (None = noch nicht abgeglichen)
+        self._ev_retry = 0.0            # nach einem Fehler erst wieder ab diesem Zeitpunkt (monotonic)
 
     # ---- aus dem Sammler-Thread
     def put(self, ts, row):
@@ -1099,6 +1336,8 @@ class DbWriter(threading.Thread):
             extra += tr(", {0} verworfen (Puffer voll)").format(self.dropped)
         if self.rejected:
             extra += tr(", {0} vom Server abgelehnt").format(self.rejected)
+        if self.events_written:
+            extra += tr(", {0} Ereignisse").format(self.events_written)
         return st, text + extra
 
     # ---- Thread
@@ -1109,6 +1348,8 @@ class DbWriter(threading.Thread):
         while True:
             stopping = self.stop_evt.wait(self.interval)
             ok = self._flush()
+            if ok:
+                self._sync_events()
             if stopping:
                 break
             if ok and (self.clean_days or self.clean_mb) and time.monotonic() >= self._next_clean:
@@ -1156,6 +1397,56 @@ class DbWriter(threading.Thread):
                 self._set(ST_ERROR, f"Schreibfehler: {e}")
                 self.backend.close()
                 return False
+
+    def _sync_events(self):
+        """Ereignisse abgleichen: geänderte bzw. neue Ereignisse des Protokolls schreiben (gegangen, quittiert, Notizen).
+
+        Beim ersten Abgleich: Datenbanken, die einen Datensatz überschreiben, bekommen alle Ereignisse (auch ältere);
+        bei den übrigen (VictoriaMetrics, Prometheus) nur, was sich in den letzten 10 Minuten geändert hat – sonst
+        entstünden nach jedem Neustart doppelte Werte. Fehler beim Schreiben der Ereignisse halten die Messwerte nicht
+        auf (Meldung, neuer Versuch nach einer Minute)."""
+        log = self.events
+        if log is None or self.backend is None or time.monotonic() < self._ev_retry:
+            return
+        try:
+            if log.changed_on_disk():              # z. B. im Ereignis-Viewer quittiert
+                log.reload()
+            version = log.version
+            if version == self._ev_version:
+                return
+            recs = event_records(log.events(), self.s["projekt"])
+        except Exception as e:
+            self.emit(tr("⚠ [Datenbank] Ereignisprotokoll nicht lesbar: {0}").format(e))
+            self._ev_retry = time.monotonic() + EVENT_RETRY_S
+            return
+        b = self.backend
+        try:
+            if self._ev_sent is None:
+                b.prepare_events()
+                self._ev_sent = {}
+                if not b.events_idempotent:
+                    cut = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(minutes=10)
+                    self._ev_sent = {k: r for k, r in recs.items() if _last_change(r) < cut}
+            todo = [(k, r, self._ev_sent.get(k)) for k, r in sorted(recs.items(), key=lambda kv: kv[1]["zeit"])
+                    if self._ev_sent.get(k) != r]
+            for i in range(0, len(todo), EVENT_BATCH):
+                part = todo[i:i + EVENT_BATCH]
+                try:
+                    b.insert_events([(r, prev) for _k, r, prev in part])
+                    self.events_written += len(part)
+                except RejectedBatch as e:             # z. B. Prometheus: zu alt – nicht wiederholen
+                    self.emit(tr("⚠ [Datenbank] {0} Ereignisse abgelehnt: {1}").format(len(part), e))
+                for k, r, _prev in part:
+                    self._ev_sent[k] = r
+        except NotImplementedError as e:
+            self.emit(tr("[Datenbank] {0}").format(e))
+            self.events = None
+            return
+        except Exception as e:
+            self.emit(tr("⚠ [Datenbank] Ereignisse nicht geschrieben: {0}").format(e))
+            self._ev_retry = time.monotonic() + EVENT_RETRY_S
+            return
+        self._ev_version = version
 
     def _cleanup(self):
         """Alte Werte nach den Einstellungen löschen (im Schreib-Thread, mit dessen Verbindung); Ergebnis melden."""

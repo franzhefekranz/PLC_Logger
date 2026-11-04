@@ -3245,6 +3245,9 @@ the tick **Write CSV file** in the tab *Recording*.
    * - Write changes only
      - A value is only written if it has changed, but at least every minute. Saves a lot
        of space for slowly changing values.
+   * - Also write events and notes
+     - Additionally write trigger events and notes to the database (default: on, see
+       *Events in the database* below).
    * - Delete after, Use at most
      - Delete old values automatically (see `Cleaning up old recordings
        <aufraeumen_>`__): after *n days* (SQLite, MariaDB, PostgreSQL/TimescaleDB,
@@ -3365,6 +3368,36 @@ For VictoriaMetrics and Prometheus (PromQL, e.g. in Grafana):
    avg_over_time(messwerte_wert{variable="Temperatur"}[1m])       # minute average
    last_over_time(messwerte_wert{projekt="Anlage 1"}[1h])         # latest value per variable
 
+**Events in the database:** With *Also write events and notes* the trigger events and the
+notes are stored in the database in addition to the event log (file) – e.g. for your own
+evaluations or as annotations in Grafana.
+
+* **SQLite, MariaDB, PostgreSQL/TimescaleDB, QuestDB, InfluxDB 3:** table *table* +
+  ``_ereignisse`` (i.e. ``messwerte_ereignisse``), one record per event with ``zeit``
+  (came, UTC), ``projekt``, ``id``, ``trigger_name``, ``prioritaet`` (priority),
+  ``meldung`` (message), ``gegangen`` (went), ``quittiert`` (acknowledged), ``benutzer``
+  (acknowledged by or author of the note), ``notiz`` (note) and ``quittierpflicht``
+  (acknowledgement required) (InfluxDB: time column ``time``, went/acknowledged as text,
+  plus ``dauer_s``). When an event goes or is acknowledged, the record is updated. On
+  start the logger synchronises all events of the log – including older ones and those
+  acknowledged in the event viewer in the meantime.
+* **VictoriaMetrics, Prometheus:** metrics *table* + ``_ereignisse_aktiv`` (1 when coming,
+  0 when going; notes 1) and ``_ereignisse_quittiert`` (1, label ``benutzer``) with the
+  labels ``projekt``, ``id``, ``trigger_name``, ``prioritaet`` and ``meldung``. Only new
+  transitions are written; on start those of the last 10 minutes.
+* A project name should be unique per logger: a record is identified by project, ID and
+  time.
+
+.. code-block:: sql
+
+   -- Open (not acknowledged) alarms
+   SELECT zeit, trigger_name, meldung FROM messwerte_ereignisse
+    WHERE quittierpflicht = 1 AND quittiert IS NULL AND prioritaet = 'Alarm' ORDER BY zeit;
+
+   -- Most frequent events of the last 30 days (PostgreSQL)
+   SELECT trigger_name, count(*) FROM messwerte_ereignisse
+    WHERE notiz = 0 AND zeit > now() - interval '30 days' GROUP BY 1 ORDER BY 2 DESC;
+
 **Operation:**
 
 * Writing is done in a separate thread about once per second in batches; display and
@@ -3391,7 +3424,10 @@ For VictoriaMetrics and Prometheus (PromQL, e.g. in Grafana):
   time range (*Window [s]*) and a selection **Project** at the top of the dashboard – so
   one dashboard serves several plants with the same configuration. Possible with
   VictoriaMetrics, Prometheus, TimescaleDB/PostgreSQL, MariaDB, QuestDB and InfluxDB 3
-  (not SQLite). After changes to charts, export again and overwrite on import.
+  (not SQLite). After changes to charts, export again and overwrite on import. With
+  *Also write events and notes* the dashboard contains the annotation **Ereignisse**
+  (events): triggers and notes as a vertical line or region (comes to goes) in all charts,
+  priority as tag (can be switched off at the top of the dashboard).
 * **Up-to-dateness in Grafana:** the dashboard queries again every **5 s** (smallest
   default of Grafana). VictoriaMetrics does not show the **last 30 s** in queries yet. The
   logger's web server is meant for the live display; if you still want Grafana faster,

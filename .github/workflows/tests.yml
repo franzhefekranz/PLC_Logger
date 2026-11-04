@@ -56,6 +56,29 @@ jobs:
             -e GF_SERVER_HTTP_ADDR=127.0.0.1 grafana/grafana-oss:latest >/dev/null
           for i in $(seq 1 60); do curl -sf http://127.0.0.1:3000/api/health >/dev/null && break; sleep 2; done
           curl -sf http://127.0.0.1:3000/api/health && echo "PLC_TEST_GRAFANA=http://admin:plc-test@127.0.0.1:3000" >> "$GITHUB_ENV"
+      - name: Weitere Datenbanken (MariaDB, PostgreSQL/TimescaleDB, QuestDB, InfluxDB 3; nur Linux)
+        if: runner.os == 'Linux'
+        run: |
+          docker run -d --name mariadb --network host -e MARIADB_ROOT_PASSWORD=plc -e MARIADB_DATABASE=datenlogger \
+            mariadb:11 >/dev/null
+          docker run -d --name pg --network host -e POSTGRES_PASSWORD=plc -e POSTGRES_DB=datenlogger \
+            timescale/timescaledb:latest-pg16 >/dev/null
+          docker run -d --name questdb --network host questdb/questdb:latest >/dev/null
+          docker run -d --name influx --network host influxdb:3-core influxdb3 serve --node-id ci \
+            --object-store memory --without-auth --http-bind 127.0.0.1:8181 >/dev/null
+          for i in $(seq 1 60); do docker exec mariadb mariadb-admin ping -uroot -pplc --silent >/dev/null 2>&1 && break; sleep 2; done
+          docker exec mariadb mariadb-admin ping -uroot -pplc --silent >/dev/null 2>&1 && \
+            echo "PLC_TEST_MARIADB=mysql://root:plc@127.0.0.1:3306/datenlogger" >> "$GITHUB_ENV"
+          for i in $(seq 1 60); do docker exec pg pg_isready -U postgres -h 127.0.0.1 >/dev/null 2>&1 && break; sleep 2; done
+          sleep 3
+          docker exec pg pg_isready -U postgres -h 127.0.0.1 >/dev/null 2>&1 && \
+            echo "PLC_TEST_POSTGRES=postgres://postgres:plc@127.0.0.1:5432/datenlogger" >> "$GITHUB_ENV"
+          for i in $(seq 1 60); do curl -sf "http://127.0.0.1:9000/exec?query=select%201" >/dev/null && break; sleep 2; done
+          curl -sf "http://127.0.0.1:9000/exec?query=select%201" >/dev/null && \
+            echo "PLC_TEST_QUESTDB=http://127.0.0.1:9000" >> "$GITHUB_ENV"
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8181/health >/dev/null && break; sleep 2; done
+          curl -sf http://127.0.0.1:8181/health >/dev/null && \
+            echo "PLC_TEST_INFLUXDB3=http://127.0.0.1:8181/datenlogger" >> "$GITHUB_ENV" || docker logs influx | tail -20
       - name: Python-Pakete
         run: |
           python -m pip install -q --upgrade pip

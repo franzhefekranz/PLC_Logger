@@ -458,7 +458,8 @@ _GROUPS = (("steuerungen", "Steuerungen", "Steuerung"), ("diagramme", "Diagramme
            ("variablen", "Variablen", "Var"), ("bloecke", "Bloecke", "Block"), ("trigger", "Trigger", "Trigger"))
 # Schlüssel mit festem Typ in der JSON-Datei (alle übrigen bleiben Text)
 _BOOL_KEYS = {"aktiv", "auto", "y_auto", "wert_anzeigen", "balken", "aufzeichnen", "anzeigen", "pid_aktiv", "gehen",
-              "quittieren", "web_aktiv", "web_https", "headless", "csv_aktiv", "bericht_aktiv", "archiv_beenden", "db_nur_aenderungen"}
+              "quittieren", "web_aktiv", "web_https", "headless", "csv_aktiv", "bericht_aktiv", "archiv_beenden", "db_nur_aenderungen",
+              "db_ereignisse"}
 _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "start", "fenster_s", "max_records",
              "raster_spalten", "web_port", "web_intervall_ms", "db_port", "rack", "slot", "port", "unit",
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl", "puffer"}
@@ -719,6 +720,8 @@ def default_connection() -> dict:
             "csv_aktiv": 1, "db_typ": "", "db_host": "localhost", "db_port": 0, "db_name": "datenlogger",
             "db_user": "", "db_passwort": "", "db_tabelle": "messwerte", "db_datei": "datenlogger.db",
             "db_nur_aenderungen": 0,
+            # Ereignisse und Notizen zusätzlich in die Datenbank (Tabelle bzw. Metrik <db_tabelle>_ereignisse).
+            "db_ereignisse": 1,
             # Aufräumen alter Aufzeichnungen (siehe *_cleanup.py): Tage bzw. MB, 0 = aus.
             "aufr_csv_tage": 0, "aufr_csv_mb": 0, "aufr_db_tage": 0, "aufr_db_mb": 0,
             # Ereignisprotokoll der Trigger (leer = <CSV-Ordner>/<CSV-Name>_ereignisse.csv, siehe *_events.py).
@@ -740,7 +743,7 @@ def default_connection() -> dict:
 # Welche Schlüssel des Abschnitts [Verbindung] Zahlen bzw. Text sind (zum Lesen mit passendem Typ).
 CONN_INT_KEYS = ("fenster_s", "balken", "balken_breite", "max_records", "archiv_beenden",
                  "raster_spalten", "web_aktiv", "web_port", "web_intervall_ms", "headless", "web_https",
-                 "csv_aktiv", "db_port", "db_nur_aenderungen", "bericht_aktiv",
+                 "csv_aktiv", "db_port", "db_nur_aenderungen", "db_ereignisse", "bericht_aktiv",
                  "aufr_csv_tage", "aufr_csv_mb", "aufr_db_tage", "aufr_db_mb")
 CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "kundenlogo", "icon", "csv_name",
                  "archiv_ordner", "projekt", "seite_anordnung", "web_host", "web_token",

@@ -581,7 +581,9 @@ class Recorder:
         if self.csv_on and self.gate is None:
             self.open_csv()
         if self.db_conf["typ"]:
-            self.db = DbWriter(self.conn, self.store_names, self.emit)
+            # Ereignisse (Trigger, Notizen) mitschreiben, außer abgeschaltet (Einstellung db_ereignisse)
+            ev = self.events if int(self.conn.get("db_ereignisse", 1) or 0) else None
+            self.db = DbWriter(self.conn, self.store_names, self.emit, events=ev)
             self.db.start()
         from plc_cleanup import CleanupThread, settings as cleanup_settings
         cs = cleanup_settings(self.conn)

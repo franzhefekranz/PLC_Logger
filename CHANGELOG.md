@@ -14,6 +14,19 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Ereignisse in der Datenbank** – Trigger-Ereignisse (kommt, geht, quittiert mit Benutzer) und Notizen werden
+  zusätzlich in die Datenbank geschrieben (Einstellung *Ereignisse und Notizen mitschreiben*, Standard ein):
+  SQLite, MariaDB, PostgreSQL/TimescaleDB, QuestDB und InfluxDB 3 in die Tabelle `<Tabelle>_ereignisse` (ein Datensatz
+  je Ereignis, wird bei Gehen/Quittieren aktualisiert; beim Start Abgleich des ganzen Protokolls), VictoriaMetrics und
+  Prometheus als Metriken `<Tabelle>_ereignisse_aktiv` / `_quittiert`. Das exportierte Grafana-Dashboard zeigt sie als
+  Markierungen *Ereignisse* in allen Diagrammen.
+
+### Build
+
+* Workflow *Tests*: zusätzlich MariaDB, PostgreSQL/TimescaleDB, QuestDB und InfluxDB 3 als echte Server (Linux).
+
 ## [3.11.2] – 2026-11-04
 
 ### Behoben

@@ -26,7 +26,7 @@ import hashlib
 import json
 import math
 
-from plc_db import vm_metric
+from plc_db import event_table, vm_metric
 from plc_i18n import tr
 
 # Datenbanktyp -> (Grafana-Plugin der Datenquelle, Name in der Auswahl)
@@ -76,6 +76,29 @@ def _query(db_type, table, var_name):
         sql = (f"SELECT $__timeGroupAlias(zeit, $__interval), avg(wert) AS {q}{name}{q} FROM {table} "
                f"WHERE {where} AND $__timeFilter(zeit) GROUP BY 1 ORDER BY 1")
     return {"rawSql": sql, "rawQuery": True, "format": "time_series", "editorMode": "code"}
+
+
+def _annotation(db_type, table):
+    """Ereignisse und Notizen aus der Datenbank (Tabelle bzw. Metrik <tabelle>_ereignisse) als Markierungen in allen
+    Diagrammen: Text „Trigger: Meldung“, Priorität als Tag, kommt…geht als Bereich."""
+    te = event_table(table)
+    ds = {"type": DS_PLUGINS[db_type][0], "uid": DS}
+    a = {"name": tr("Ereignisse"), "enable": True, "iconColor": "rgba(255, 96, 96, 1)", "datasource": ds}
+    if db_type in ("victoriametrics", "prometheus"):
+        a.update(expr=f'{te}_aktiv{{projekt="$projekt"}} > 0', step="60s", titleFormat="{{trigger_name}}",
+                 textFormat="{{meldung}}", tagKeys="prioritaet", useValueForTime=False,
+                 target={"expr": f'{te}_aktiv{{projekt="$projekt"}} > 0', "refId": "Anno", "interval": "60s"})
+        return a
+    if db_type == "influxdb3":
+        sql = (f"SELECT time, concat(trigger_name, ': ', meldung) AS text, prioritaet AS tags FROM {te} "
+               "WHERE projekt = '$projekt' AND $__timeFilter(time) ORDER BY 1")
+        a["target"] = {"query": sql, "rawQuery": True, "rawSql": sql, "format": "table", "refId": "Anno"}
+        return a
+    text = ("trigger_name || ': ' || meldung" if db_type == "timescale" else "concat(trigger_name, ': ', meldung)")
+    sql = (f"SELECT zeit AS time, coalesce(gegangen, zeit) AS timeend, {text} AS text, prioritaet AS tags "
+           f"FROM {te} WHERE projekt = '$projekt' AND $__timeFilter(zeit) ORDER BY 1")
+    a["target"] = {"rawSql": sql, "rawQuery": True, "format": "table", "editorMode": "code", "refId": "Anno"}
+    return a
 
 
 def _project_variable(db_type, table, project):
@@ -218,7 +241,8 @@ def dashboard(conn, charts, variables, title=""):
         "schemaVersion": 39, "version": 1, "refresh": "5s", "graphTooltip": 1,
         "time": {"from": f"now-{window}s", "to": "now"},
         "templating": {"list": [_project_variable(db_type, table, project)]},
-        "annotations": {"list": []}, "panels": panels,
+        "annotations": {"list": [_annotation(db_type, table)] if int(conn.get("db_ereignisse", 1) or 0) else []},
+        "panels": panels,
     }
 
 
