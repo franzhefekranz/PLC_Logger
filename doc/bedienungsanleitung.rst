@@ -5537,7 +5537,9 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
      polkit.addRule(function(action, subject) {
          if (subject.isInGroup("netdev") &&
              (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
-              action.id.indexOf("org.freedesktop.timedate1.") == 0)) {
+              action.id.indexOf("org.freedesktop.timedate1.") == 0 ||
+              action.id.indexOf("org.freedesktop.login1.power-off") == 0 ||
+              action.id.indexOf("org.freedesktop.login1.reboot") == 0)) {
              return polkit.Result.YES;
          }
      });
@@ -5546,8 +5548,8 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
 
      sudo usermod -aG netdev benutzer          # danach ab- und wieder anmelden
 
-  Den Logger-Dienst umstellen (Seite *Logger*) und Herunterfahren gehen weiterhin nur als
-  root.
+  Damit gehen auch **Neu starten** und **Herunterfahren**. Den Logger-Dienst umstellen
+  (Seite *Logger*) geht weiterhin nur als root.
 * Bild um 180° drehen: ``Environment=QT_QPA_EGLFS_ROTATION=180`` ergänzen. Startet das Panel
   nicht (``journalctl -u plc-netzwerk``), ``Environment=QT_QPA_PLATFORM=linuxfb`` ergänzen. Ohne Grafiktreiber (kein ``/dev/dri/card…``) nimmt das Panel ``linuxfb`` von
   selbst. Von Hand (ohne Dienst): ``sudo plc-netzwerk`` – an der Textkonsole, per SSH oder aus
