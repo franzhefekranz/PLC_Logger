@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* **Netzwerk-Panel ohne root:** „System policy prevents Wi-Fi scans“ – statt eines Fehlers zeigt die WLAN-Seite die
+  zuletzt bekannten Netze; fehlende Berechtigungen erklärt ein Hinweis (Dienst/sudo oder polkit-Regel, siehe Anleitung).
+
 ## [3.12.0] – 2026-11-04
 
 ### Neu

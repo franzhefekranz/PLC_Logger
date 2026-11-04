@@ -5526,6 +5526,28 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
 
      sudo systemctl daemon-reload && sudo systemctl enable --now plc-netzwerk
 
+* **„System policy prevents Wi-Fi scans“** bzw. *keine Berechtigung*: Das Panel läuft ohne
+  root – etwa von Hand ohne ``sudo`` oder über den Desktop bzw. xrdp gestartet. Am besten als
+  Dienst (oben) bzw. mit ``sudo plc-netzwerk --fenster`` starten. Soll es als normaler
+  Benutzer laufen, erlaubt eine polkit-Regel den Mitgliedern der Gruppe ``netdev`` das
+  Einstellen von Netzwerk und Uhrzeit (Datei ``/etc/polkit-1/rules.d/50-plc-netzwerk.rules``):
+
+  .. code-block:: javascript
+
+     polkit.addRule(function(action, subject) {
+         if (subject.isInGroup("netdev") &&
+             (action.id.indexOf("org.freedesktop.NetworkManager.") == 0 ||
+              action.id.indexOf("org.freedesktop.timedate1.") == 0)) {
+             return polkit.Result.YES;
+         }
+     });
+
+  .. code-block:: console
+
+     sudo usermod -aG netdev benutzer          # danach ab- und wieder anmelden
+
+  Den Logger-Dienst umstellen (Seite *Logger*) und Herunterfahren gehen weiterhin nur als
+  root.
 * Bild um 180° drehen: ``Environment=QT_QPA_EGLFS_ROTATION=180`` ergänzen. Startet das Panel
   nicht (``journalctl -u plc-netzwerk``), ``Environment=QT_QPA_PLATFORM=linuxfb`` ergänzen. Ohne Grafiktreiber (kein ``/dev/dri/card…``) nimmt das Panel ``linuxfb`` von
   selbst. Von Hand (ohne Dienst): ``sudo plc-netzwerk`` – an der Textkonsole, per SSH oder aus

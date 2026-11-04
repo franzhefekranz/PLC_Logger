@@ -3499,6 +3499,9 @@
 @ gestoppt
 > stopped
 
+@ keine Berechtigung: das Panel als Dienst (root) bzw. mit sudo starten oder die polkit-Regel aus der Anleitung einrichten
+> no permission: start the panel as a service (root) or with sudo, or set up the polkit rule from the manual
+
 @ PLC Datenlogger – Netzwerk
 > PLC data logger – network
 
@@ -3627,6 +3630,9 @@
 
 @ Kein WLAN gefunden.
 > No WLAN found.
+
+@ neu suchen nicht erlaubt
+> scanning again not allowed
 
 @ WLAN „{0}“
 > WLAN “{0}”

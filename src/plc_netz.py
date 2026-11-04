@@ -110,6 +110,13 @@ def normalize_address(address):
     return str(ipaddress.IPv4Interface(address.strip()).with_prefixlen)
 
 
+def is_policy_error(err):
+    """Fehlermeldung von nmcli/timedatectl wegen fehlender Berechtigung (polkit)?"""
+    t = str(err).lower()
+    return any(k in t for k in ("policy", "not authorized", "insufficient privileges", "nicht autorisiert",
+                                "interactive authentication required", "access denied"))
+
+
 class Netz:
     """Zugriff auf NetworkManager (nmcli) bzw. ``ip`` (nur lesen)."""
 
@@ -184,12 +191,21 @@ class Netz:
         return out
 
     def wifi_list(self, rescan=True):
-        """Sichtbare WLANs, stärkstes zuerst, jede SSID einmal."""
+        """Sichtbare WLANs, stärkstes zuerst, jede SSID einmal.
+
+        Verweigert NetworkManager das neue Suchen („System policy prevents Wi-Fi scans“: Panel ohne root und ohne
+        passende polkit-Regel gestartet), kommt die zuletzt bekannte Liste; ``scan_denied`` enthält dann die Meldung."""
         args = ["nmcli", "-t", "-f", "ACTIVE,SSID,SIGNAL,SECURITY", "device", "wifi", "list"]
-        if rescan:
-            args += ["--rescan", "yes"]
+        self.scan_denied = ""
+        try:
+            out = self.run(args + (["--rescan", "yes"] if rescan else []))
+        except RuntimeError as e:
+            if not rescan or not is_policy_error(e):
+                raise
+            self.scan_denied = str(e)
+            out = self.run(args + ["--rescan", "no"])
         best = {}
-        for line in self.run(args).splitlines():
+        for line in out.splitlines():
             parts = _split(line)
             if len(parts) < 4 or not parts[1]:
                 continue

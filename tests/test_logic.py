@@ -928,6 +928,15 @@ def test_netz_nmcli_read_and_set():
     assert mod[mod.index("ipv4.method") + 1] == "auto"
     n.wifi_connect("Gast", "", "wlan0")
     assert fake.calls[-1] == ["nmcli", "device", "wifi", "connect", "Gast", "ifname", "wlan0"]
+    # Suchen verweigert (Panel ohne root): zuletzt bekannte Liste, Meldung in scan_denied
+
+    def denied(args, timeout=30):
+        if "--rescan" in args and args[args.index("--rescan") + 1] == "yes":
+            raise RuntimeError("Error: System policy prevents Wi-Fi scans.")
+        return fake(args)
+    n2 = plc_netz.Netz(run=denied)
+    assert len(n2.wifi_list()) == 3 and "policy" in n2.scan_denied
+    assert plc_netz.is_policy_error("Error: Insufficient privileges.") and not plc_netz.is_policy_error("timeout")
     n.power("poweroff")
     assert fake.calls[-1] == ["systemctl", "poweroff"]
     with pytest.raises(ValueError):

@@ -492,6 +492,12 @@ class LoggerControl:
         self._stop_headless()
 
 
+def RIGHTS_HINT():
+    """Hinweis, wenn NetworkManager bzw. systemd eine Aktion verweigern (Panel ohne root gestartet)."""
+    return tr("keine Berechtigung: das Panel als Dienst (root) bzw. mit sudo starten oder die polkit-Regel aus der "
+              "Anleitung einrichten")
+
+
 class NetPanel(QWidget):
     """Hauptfenster des Panels mit den Seiten Übersicht, IP-Einstellung, WLAN und WLAN-Passwort."""
 
@@ -922,6 +928,9 @@ class NetPanel(QWidget):
             self.list_wifi.addItem(it)
         self.lbl_wifi_msg.setText(tr("{0} Netze gefunden").format(len(self.wifis)) if self.wifis
                                   else tr("Kein WLAN gefunden."))
+        if getattr(self.netz, "scan_denied", ""):
+            self._msg(self.lbl_wifi_msg, self.lbl_wifi_msg.text() + " – " + tr("neu suchen nicht erlaubt") + "\n"
+                      + RIGHTS_HINT(), False)
 
     def toggle_wifi(self):
         on = self.btn_wifi_on.isChecked()
@@ -1394,6 +1403,8 @@ class NetPanel(QWidget):
     # ------------------------------------------------------------------ Hilfen
     @staticmethod
     def _msg(label, text, ok):
+        if not ok and plc_netz.is_policy_error(text) and RIGHTS_HINT() not in text:
+            text += "\n" + RIGHTS_HINT()                 # z. B. „System policy prevents …“
         label.setObjectName("ok" if ok else "fehler")
         label.setStyleSheet("")                     # neuen Objektnamen anwenden
         label.setText(text)
