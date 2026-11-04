@@ -5228,7 +5228,7 @@ Der Pfad ``~/PLCDatenlogger/…`` bleibt dabei gleich – Dienste und Starter br
 
 .. code-block:: console
 
-   VER=3.11.1
+   VER=3.11.2
    wget https://github.com/franzhefekranz/PLC_Logger/releases/download/v$VER/plc-datenlogger_${VER}_arm64.deb
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
