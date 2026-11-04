@@ -274,6 +274,13 @@ class Netz:
     def set_timezone(self, tz):
         self.run(["timedatectl", "set-timezone", tz])
 
+    def power(self, action):
+        """Rechner herunterfahren (``"poweroff"``) oder neu starten (``"reboot"``); Dienste wie der Logger werden dabei
+        ordnungsgemäß beendet (CSV schließen, archivieren)."""
+        if action not in ("poweroff", "reboot"):
+            raise ValueError(action)
+        self.run(["systemctl", action])
+
 
 def local_naive(dt):
     """Zeitpunkt -> Ortszeit ohne Zeitzone (zeitzonenbehaftete Werte werden umgerechnet), auf Sekunden gerundet."""

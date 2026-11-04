@@ -178,6 +178,13 @@ def test_netpanel_touch(qapp, demo_config):
     w.show()
     assert "192.168.0.50/24" in w.lbl_info.text() and w.web_url() == "http://192.168.0.50:8081/"
     assert w.qr.matrix
+    from plc_common import APP_VERSION
+    assert APP_VERSION in w.lbl_version.text()
+    w.show_power()                                               # Ausschalten: Seite ist die Rückfrage
+    assert w.stack.currentWidget() is w.page_power
+    w.power("reboot")
+    assert ["systemctl", "reboot"] in fake.calls and not w.btn_poweroff.isEnabled()
+    w.show_home()
     w.show_ip("ethernet")
     assert w.stack.currentWidget() is w.page_ip and w.btn_manual.isChecked() and w.ed_addr.text() == "192.168.0.50/24"
     w.ed_addr.clear()

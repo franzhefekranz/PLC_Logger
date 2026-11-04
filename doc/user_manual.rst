@@ -5269,14 +5269,17 @@ shows host name, time, Ethernet and WLAN with IP addresses, the state of the log
 and the address of the web server with a QR code (to open it on a tablet). The buttons
 **Ethernet** and **WLAN** set DHCP or a fixed address (IP/prefix, gateway, DNS), search for
 WLANs and connect with a password – input via the on-screen keyboard. The settings are kept
-after a reboot.
+after a reboot. Next to the host name at the top the installed version is shown. **⏻** opens
+the page *Power off* with **Restart** and **Shut down** (the logger service is stopped
+properly); only unplug once the green LED has stopped blinking.
 
 .. figure:: images/en/netzpanel.png
    :alt: Network panel, overview
    :width: 60%
    :align: center
 
-   Network panel (800 × 480): overview with IP addresses, logger service and web server.
+   Network panel (800 × 480): overview with IP addresses, logger service and web server; at the
+   top host name, installed version and time.
 
 **Logger** lists the configuration files in the folder ``PLCDatenlogger`` (in the users' home
 folders and next to the file given at start) with their project name. Choose one and **Start

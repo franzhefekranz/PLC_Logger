@@ -911,6 +911,10 @@ def test_netz_nmcli_read_and_set():
     assert mod[mod.index("ipv4.method") + 1] == "auto"
     n.wifi_connect("Gast", "", "wlan0")
     assert fake.calls[-1] == ["nmcli", "device", "wifi", "connect", "Gast", "ifname", "wlan0"]
+    n.power("poweroff")
+    assert fake.calls[-1] == ["systemctl", "poweroff"]
+    with pytest.raises(ValueError):
+        n.power("rm -rf")
     assert plc_netz.check_ipv4("192.168.0.50/24", "192.168.0.1", "1.1.1.1") == ""
     assert plc_netz.check_ipv4("192.168.0.50") and plc_netz.check_ipv4("192.168.0.0/24")
     assert plc_netz.check_ipv4("192.168.0.50/24", "10.0.0.1") and plc_netz.check_ipv4("1.2.3.4/8", "", "x")

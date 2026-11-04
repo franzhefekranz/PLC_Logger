@@ -3493,6 +3493,9 @@
 @ Logger
 > Logger
 
+@ Herunterfahren / Neu starten
+> Shut down / restart
+
 @ DHCP (automatisch)
 > DHCP (automatic)
 
@@ -3630,6 +3633,24 @@
 
 @ Logger beendet (startet nicht mehr beim Booten).
 > Logger stopped (no longer starts at boot).
+
+@ Ausschalten
+> Power off
+
+@ Der Logger wird dabei ordnungsgemäß beendet (aktuelle CSV-Datei wird geschlossen). Nach dem Herunterfahren erst ausstecken, wenn die grüne LED des Raspberry Pi nicht mehr blinkt.
+> The logger is stopped properly (the current CSV file is closed). After shutting down, only unplug once the green LED of the Raspberry Pi has stopped blinking.
+
+@ Neu starten
+> Restart
+
+@ Herunterfahren
+> Shut down
+
+@ Fahre herunter …
+> Shutting down …
+
+@ Starte neu …
+> Restarting …
 
 @ Abdunkeln nach (min, 0 = nie)
 > Dim after (min, 0 = never)

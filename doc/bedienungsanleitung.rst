@@ -5395,14 +5395,18 @@ Desktop. Es zeigt Rechnername, Uhrzeit, Ethernet und WLAN mit IP-Adressen, den Z
 Logger-Dienstes und die Adresse des Webservers mit QR-Code (zum Öffnen am Tablet). Die
 Schaltflächen **Ethernet** und **WLAN** stellen DHCP oder eine feste Adresse (IP/Präfix,
 Gateway, DNS) ein, suchen WLANs und verbinden mit Passwort – Eingabe über die
-Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten.
+Bildschirmtastatur. Die Einstellungen bleiben nach einem Neustart erhalten. Oben neben dem
+Rechnernamen steht die installierte Version. **⏻** öffnet die Seite *Ausschalten* mit
+**Neu starten** und **Herunterfahren** (der Logger-Dienst wird dabei ordnungsgemäß beendet);
+erst ausstecken, wenn die grüne LED nicht mehr blinkt.
 
 .. figure:: images/netzpanel.png
    :alt: Netzwerk-Panel, Übersicht
    :width: 60%
    :align: center
 
-   Netzwerk-Panel (800 × 480): Übersicht mit IP-Adressen, Logger-Dienst und Webserver.
+   Netzwerk-Panel (800 × 480): Übersicht mit IP-Adressen, Logger-Dienst und Webserver; oben
+   Rechnername, installierte Version und Uhrzeit.
 
 **Logger** listet die Konfigurationsdateien im Ordner ``PLCDatenlogger`` (im Home-Ordner
 der Benutzer und neben der beim Start angegebenen Datei) mit ihrem Projektnamen. Eine wählen

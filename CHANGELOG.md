@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Netzwerk-Panel:** zeigt oben die installierte Version (z. B. vor einem Update oder für die Betriebsart Client
+  prüfen).
+* **Netzwerk-Panel: Ausschalten** – Knopf ⏻ mit *Neu starten* und *Herunterfahren* (Logger-Dienst wird dabei
+  ordnungsgemäß beendet).
+
 ### Behoben
 
 * **Client:** Adresse mit Zugriffscode (`…/?token=…`, wie *Webserver-Adresse …* sie kopiert) wird angenommen; ein

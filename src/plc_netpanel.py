@@ -41,6 +41,7 @@ QWidget { background: #1b2a41; color: #f0f0f0; }
 QPushButton { background: #2f4566; border: 1px solid #4a6a96; border-radius: 8px; padding: 6px 10px; }
 QPushButton:pressed, QPushButton:checked { background: #e08a1e; color: #111; }
 QPushButton:disabled { color: #7a8aa0; }
+QPushButton#gefahr { background: #8e2b2b; border-color: #c24a4a; }
 QLineEdit { background: #f5f5f5; color: #111; border-radius: 6px; padding: 4px 8px; }
 QLineEdit:focus { border: 3px solid #e08a1e; }
 QListWidget { background: #24385a; border-radius: 8px; }
@@ -535,8 +536,9 @@ class NetPanel(QWidget):
         self.page_tz = self._build_timezone()
         self.page_display = self._build_display()
         self.page_logger = self._build_logger()
+        self.page_power = self._build_power()
         for p in (self.page_home, self.page_ip, self.page_wifi, self.page_pw, self.page_time, self.page_tz,
-                  self.page_display, self.page_logger):
+                  self.page_display, self.page_logger, self.page_power):
             self.stack.addWidget(p)
         # Abdunkeln: ohne Hintergrundbeleuchtung deckt ein schwarzes Bild alles ab (ein Antippen schaltet ein).
         self.black = QWidget(self)
@@ -586,7 +588,13 @@ class NetPanel(QWidget):
         self.lbl_host = QLabel()
         self.lbl_host.setObjectName("titel")
         self.lbl_clock = QLabel()
+        # Installierte Version (gilt auch für den Logger: dieselbe Installation) – z. B. vor einem Update prüfen
+        from plc_common import APP_VERSION
+        self.lbl_version = QLabel(tr("Version {0}").format(APP_VERSION))
+        self.lbl_version.setStyleSheet("color:#9e9e9e")
         top.addWidget(self.lbl_host, 1)
+        top.addWidget(self.lbl_version)
+        top.addSpacing(16)
         top.addWidget(self.lbl_clock)
         v.addLayout(top)
         mid = QHBoxLayout()
@@ -612,6 +620,10 @@ class NetPanel(QWidget):
         row.addWidget(self.btn_display)
         self.btn_logger = self._button(tr("Logger"), self.show_logger)
         row.addWidget(self.btn_logger)
+        self.btn_power = self._button("⏻", self.show_power)
+        self.btn_power.setToolTip(tr("Herunterfahren / Neu starten"))
+        self.btn_power.setMaximumWidth(80)
+        row.addWidget(self.btn_power)
         v.addLayout(row)
         return w
 
@@ -1036,6 +1048,51 @@ class NetPanel(QWidget):
             self._msg(self.lbl_logger_msg, tr("Logger beendet (startet nicht mehr beim Booten)."), True)
             QTimer.singleShot(2000, lambda: self.lbl_logger_state.setText(self._logger_state_text()))
         self._run(self.logger_ctl.stop, done)
+
+    # ------------------------------------------------------------------ Ausschalten
+    def _build_power(self):
+        w = QWidget()
+        v = QVBoxLayout(w)
+        t = QLabel(tr("Ausschalten"))
+        t.setObjectName("titel")
+        v.addWidget(t)
+        info = QLabel(tr("Der Logger wird dabei ordnungsgemäß beendet (aktuelle CSV-Datei wird geschlossen). "
+                         "Nach dem Herunterfahren erst ausstecken, wenn die grüne LED des Raspberry Pi nicht mehr "
+                         "blinkt."))
+        info.setWordWrap(True)
+        v.addWidget(info)
+        self.lbl_power_msg = QLabel()
+        self.lbl_power_msg.setWordWrap(True)
+        v.addWidget(self.lbl_power_msg)
+        v.addStretch(1)
+        row = QHBoxLayout()
+        row.addWidget(self._button(tr("Zurück"), self.show_home))
+        self.btn_reboot = self._button(tr("Neu starten"), lambda: self.power("reboot"))
+        self.btn_poweroff = self._button(tr("Herunterfahren"), lambda: self.power("poweroff"))
+        self.btn_poweroff.setObjectName("gefahr")
+        row.addWidget(self.btn_reboot)
+        row.addWidget(self.btn_poweroff)
+        v.addLayout(row)
+        return w
+
+    def show_power(self):
+        self.lbl_power_msg.setText("")
+        for b in (self.btn_reboot, self.btn_poweroff):
+            b.setEnabled(True)
+        self.stack.setCurrentWidget(self.page_power)
+
+    def power(self, action):
+        """Herunterfahren bzw. neu starten (die Seite selbst ist die Rückfrage)."""
+        self._msg(self.lbl_power_msg, tr("Fahre herunter …") if action == "poweroff" else tr("Starte neu …"), True)
+        for b in (self.btn_reboot, self.btn_poweroff):
+            b.setEnabled(False)
+
+        def done(err):
+            if err:
+                self._msg(self.lbl_power_msg, tr("Fehler: {0}").format(err), False)
+                for b in (self.btn_reboot, self.btn_poweroff):
+                    b.setEnabled(True)
+        self._run(lambda: self.netz.power(action), done)
 
     # ------------------------------------------------------------------ Display (Abdunkeln)
     def _build_display(self):
