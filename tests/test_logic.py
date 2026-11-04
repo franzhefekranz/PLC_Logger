@@ -1440,11 +1440,12 @@ def test_db_events_real_servers(tmp_path, typ, env):
             while True:
                 cur = b.con.cursor()
                 try:
-                    cur.execute(f"SELECT trigger_name, benutzer FROM {te} WHERE projekt = ? ORDER BY zeit",
+                    tcol = "time" if typ == "influxdb3" else "zeit"
+                    cur.execute(f"SELECT trigger_name, benutzer FROM {te} WHERE projekt = ? ORDER BY {tcol}",
                                 (conn["projekt"],))
                     rows = [tuple(r) for r in cur.fetchall()]
-                except Exception:
-                    rows = []
+                except Exception as e:
+                    rows = [("Fehler", str(e))]
                 finally:
                     cur.close()
                 if rows == [("Übertemperatur", "chef"), ("Druck", "gast"), ("Notiz", "mm")] or time.time() > deadline:
@@ -1456,7 +1457,7 @@ def test_db_events_real_servers(tmp_path, typ, env):
                 import urllib.request
                 urllib.request.urlopen(url.rstrip("/") + "/internal/force_flush").read()
             metric = f"{te}_quittiert"
-            deadline = time.time() + 20
+            deadline = time.time() + 60          # VictoriaMetrics zeigt die letzten 30 s noch nicht an
             while True:
                 d = b.con.get_json("/api/v1/query", {"query": f'last_over_time({metric}{{projekt="{conn["projekt"]}"}}[1h])'})
                 users = sorted(r["metric"].get("benutzer") for r in d["data"]["result"])
