@@ -316,20 +316,27 @@ class StartWindow(QWidget):
         row.addWidget(btn_browse)
         if kind != "iocheck":                        # IO-Check: neuer Prüfstand = Konfiguration öffnen
             row.addWidget(btn_new)
+        row.addStretch(1)
+        # Zweite Reihe: Demo und Betriebsart Client (in einer Reihe wären die Beschriftungen abgeschnitten).
+        row2 = QHBoxLayout()
         if kind in ("logger", "iocheck"):
             btn_demo = QPushButton(tr("Demo"))
             btn_demo.setToolTip(tr("Mit simulierten Werten starten (ohne Steuerung)"))
             btn_demo.clicked.connect(self.demo)
-            row.addWidget(btn_demo)
+            row2.addWidget(btn_demo)
         if kind == "logger":
             btn_client = QPushButton(tr("Mit Logger verbinden …"))
             btn_client.setToolTip(tr("Betriebsart Client: die Aufzeichnung eines anderen Loggers anzeigen (z. B. "
                                      "headless auf einem Raspberry Pi) – ohne eigene Konfiguration"))
             btn_client.clicked.connect(self.client)
-            row.addWidget(btn_client)
-        row.addStretch(1)
+            row2.addWidget(btn_client)
+        row2.addStretch(1)
+        rows = QVBoxLayout()
+        rows.setContentsMargins(0, 0, 0, 0)
+        rows.addLayout(row)
+        rows.addLayout(row2)
         self.buttons = QWidget()
-        self.buttons.setLayout(row)
+        self.buttons.setLayout(rows)
         rl.addWidget(self.buttons)
 
         self.chk_skip = QCheckBox(tr("Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)"))

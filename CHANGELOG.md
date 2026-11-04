@@ -14,6 +14,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* **Startbild:** Knöpfe in zwei Reihen – „Demo“ und „Mit Logger verbinden …“ waren abgeschnitten.
+
 ## [3.11.1] – 2026-11-04
 
 ### Neu
