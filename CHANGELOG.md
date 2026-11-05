@@ -16,6 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **OPC-UA-Server startete nicht**, wenn ein Variablen- oder Steuerungsname einen Doppelpunkt enthält (Allen-Bradley
+  `Program:Main.x`): „Error parsing string …“. Browse-Namen werden jetzt immer im eigenen Namensraum angelegt.
 * **Netzwerk-Panel:** Docker-Netze (`veth…`) und andere virtuelle Schnittstellen werden nicht mehr als Ethernet
   angezeigt; das Ein/Aus-Symbol ist gezeichnet (das Zeichen ⏻ fehlte in der Schrift des Raspberry Pi).
 * **Netzwerk-Panel ohne root:** „System policy prevents Wi-Fi scans“ – statt eines Fehlers zeigt die WLAN-Seite die

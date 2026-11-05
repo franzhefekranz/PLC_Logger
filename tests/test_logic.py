@@ -529,7 +529,10 @@ def test_opcua_server_with_recorder(tmp_path):
                 web_benutzer={"pruefer": hash_password("geheim", 1000)},
                 opcua_server={"aktiv": True, "host": "127.0.0.1", "port": port, "intervall_ms": 100,
                               "anonym": False, "benutzer": "web"})
-    rec = Recorder(conn, [Plc(name="SPS 1")], charts, variables, demo=True)
+    # Namen mit Doppelpunkt (Allen-Bradley „Program:Main.x“): Browse-Name darf nicht als „ns:Name“ gelesen werden
+    vs = [v for v in variables if not v.formula]
+    vs[-1].name = "Program:My_Test.root"
+    rec = Recorder(conn, [Plc(name="Linie:1")], charts, variables, demo=True)
     rec.start()
     try:
         assert rec.opcua is not None, list(rec.messages)
@@ -557,7 +560,8 @@ def test_opcua_server_with_recorder(tmp_path):
             assert isinstance(m, float)
             folders = [n.read_browse_name().Name
                        for n in c.get_node(f"ns={ns};s=PLC Datenlogger").get_children()]
-            assert folders[:2] == ["SPS 1", "Berechnet"] and "Status" in folders
+            assert folders[:2] == ["Linie:1", "Berechnet"] and "Status" in folders
+            assert c.get_node(f"ns={ns};s=Program:My_Test.root").read_browse_name().Name == "Program:My_Test.root"
             assert c.get_node(f"ns={ns};s=Status:0").read_value() is True
         finally:
             c.disconnect()

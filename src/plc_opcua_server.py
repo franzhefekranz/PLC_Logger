@@ -245,15 +245,18 @@ class OpcUaServer:
         server.set_identity_tokens(tokens)
         idx = await server.register_namespace(NS_URI)
 
-        # Adressraum
-        root = await server.nodes.objects.add_folder(ua.NodeId("PLC Datenlogger", idx), "PLC Datenlogger")
+        # Adressraum. Browse-Namen immer als QualifiedName: ein Text mit Doppelpunkt („Program:Main.x“ bei
+        # Allen-Bradley) würde asyncua sonst als „Namensraum:Name“ lesen.
+        def qn(name):
+            return ua.QualifiedName(str(name), idx)
+        root = await server.nodes.objects.add_folder(ua.NodeId("PLC Datenlogger", idx), qn("PLC Datenlogger"))
         folders = {}
 
         async def folder(key, name):              # NodeId fest (Ordner:<key>), Anzeigename ggf. übersetzt
             """Ordner unter „PLC Datenlogger“ einmal anlegen (feste NodeId ``Ordner:<key>``, Anzeigename übersetzbar).
             """
             if key not in folders:
-                folders[key] = await root.add_folder(ua.NodeId(f"Ordner:{key}", idx), name)
+                folders[key] = await root.add_folder(ua.NodeId(f"Ordner:{key}", idx), qn(name))
             return folders[key]
 
         self.nodes = []                           # (Index der Variable, NodeId, Variant-Typ)
@@ -264,7 +267,7 @@ class OpcUaServer:
             key = v.name if v.name not in used else f"{v.name}#{i}"
             used.add(key)
             vt = ua.VariantType.Boolean if v.dtype == "BOOL" and not v.formula else ua.VariantType.Double
-            node = await parent.add_variable(ua.NodeId(key, idx), v.name,
+            node = await parent.add_variable(ua.NodeId(key, idx), qn(v.name),
                                              ua.Variant(False if vt == ua.VariantType.Boolean else 0.0, vt))
             desc = v.formula and tr("Berechnet: {0}").format(v.formula) or f"{v.address} ({v.dtype})"
             try:
@@ -278,18 +281,19 @@ class OpcUaServer:
             self.nodes.append((i, node.nodeid, vt))
         ev_nodes = {}
         if self.trigger_names:
-            ev_folder = await root.add_folder(ua.NodeId("Ordner:Ereignisse", idx), tr("Ereignisse"))
+            ev_folder = await root.add_folder(ua.NodeId("Ordner:Ereignisse", idx), qn(tr("Ereignisse")))
             for name in self.trigger_names:
-                ev_nodes[name] = (await ev_folder.add_variable(ua.NodeId(f"Ereignis:{name}", idx), name, False)).nodeid
-        st_folder = await root.add_folder(ua.NodeId("Ordner:Status", idx), "Status")
+                ev_nodes[name] = (await ev_folder.add_variable(ua.NodeId(f"Ereignis:{name}", idx), qn(name),
+                                                              False)).nodeid
+        st_folder = await root.add_folder(ua.NodeId("Ordner:Status", idx), qn("Status"))
         st_nodes = []
         for k, plc in enumerate(self.plcs):
-            ok = await st_folder.add_variable(ua.NodeId(f"Status:{k}", idx), plc.name, False)
-            txt = await st_folder.add_variable(ua.NodeId(f"Status:{k}:Text", idx), f"{plc.name}_Text", "")
+            ok = await st_folder.add_variable(ua.NodeId(f"Status:{k}", idx), qn(plc.name), False)
+            txt = await st_folder.add_variable(ua.NodeId(f"Status:{k}:Text", idx), qn(f"{plc.name}_Text"), "")
             st_nodes.append((ok.nodeid, txt.nodeid))
-        ts_node = (await st_folder.add_variable(ua.NodeId("Status:Zeitstempel", idx), tr("Zeitstempel"),
+        ts_node = (await st_folder.add_variable(ua.NodeId("Status:Zeitstempel", idx), qn(tr("Zeitstempel")),
                                                 ua.Variant(datetime.now(timezone.utc), ua.VariantType.DateTime))).nodeid
-        rec_node = (await st_folder.add_variable(ua.NodeId("Status:Aufzeichnung", idx), tr("Aufzeichnung"),
+        rec_node = (await st_folder.add_variable(ua.NodeId("Status:Aufzeichnung", idx), qn(tr("Aufzeichnung")),
                                                  True)).nodeid
 
         self.loop = asyncio.get_running_loop()
