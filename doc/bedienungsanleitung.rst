@@ -1640,7 +1640,7 @@ CPU von S7-PLCSIM Advanced:
    * - ``tia``
      - **Mit Steuerung:** S7-1516-3 PN/DP, Firmware 2.9: Merker erfolgreich gelesen (Rückmeldung aus
        dem SPS-Forum); optimierte DBs an einer echten CPU noch nicht erprobt.
-       **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt: ohne PUT/GET,
+       **Mit S7-PLCSIM Advanced** (simulierte S7-1500, unter Windows) erfolgreich erprobt: ohne PUT/GET,
        mit TLS, Variablenliste aus der CPU, Lesen aus zwei optimierten DBs, Ringpuffer
        über seinen Namen, verschiedene Zugriffsstufen der CPU ohne Passwort (lesen bzw.
        Meldung). Noch nicht erprobt: Anmeldung mit Passwort, S7-1200.
@@ -1650,8 +1650,8 @@ CPU von S7-PLCSIM Advanced:
      - Automatisch gegen den Modbus-TCP-Server von pymodbus (alle vier Tabellen, Bits,
        REAL/DINT, Wortfolge).
    * - ``opcua``
-     - **Über das Netz gegen den OPC-UA-Server des Loggers** (Raspberry Pi als Server, PC als
-       Client): Auswahldialog, zyklisch lesen, Subscription, Wiederverbinden nach Ausfall des
+     - **Über das Netz gegen den OPC-UA-Server des Loggers** (Raspberry Pi als Server, Kubuntu
+       in einer virtuellen Maschine als Client): Auswahldialog, zyklisch lesen, Subscription, Wiederverbinden nach Ausfall des
        Servers, Basic256Sha256 (signieren und verschlüsseln) mit Anmeldung. Noch nicht erprobt:
        Array als Block, Server einer echten Steuerung. Automatisch gegen einen OPC-UA-Server
        von asyncua (Zahlen, BOOL, Array als Block).

@@ -1600,7 +1600,7 @@ CPU of S7-PLCSIM Advanced:
    * - ``tia``
      - **With a PLC:** S7-1516-3 PN/DP, firmware 2.9: memory bits/words (M) read successfully
        (feedback from the SPS-Forum); optimized DBs on a real CPU not yet tried.
-       **With S7-PLCSIM Advanced** (simulated S7-1500) tried successfully: without
+       **With S7-PLCSIM Advanced** (simulated S7-1500, on Windows) tried successfully: without
        PUT/GET, with TLS, variable list from the CPU, reading from two optimized DBs, ring
        buffer by its name, different access levels of the CPU without password (reading
        or message). Not yet tried: login with password, S7-1200.
@@ -1611,7 +1611,7 @@ CPU of S7-PLCSIM Advanced:
        REAL/DINT, word order).
    * - ``opcua``
      - **Over the network against the logger's own OPC UA server** (Raspberry Pi as server,
-       PC as client): selection dialog, cyclic read, subscription, reconnect after a server
+       Kubuntu in a virtual machine as client): selection dialog, cyclic read, subscription, reconnect after a server
        failure, Basic256Sha256 (sign and encrypt) with login. Not yet tried: array as block,
        the server of a real PLC. Automatically against an OPC UA server of asyncua (numbers,
        BOOL, array as block).

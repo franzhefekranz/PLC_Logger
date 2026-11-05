@@ -52,13 +52,13 @@ can be mixed in **one** recording.
 | Driver | Controllers / protocol | Tested |
 |---|---|---|
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ real PLC · 🧪 PLCSIM via NetToPLCsim · CI: snap7 server |
-| `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) | ✅ real S7-1516-3 PN/DP FW 2.9, M area (user report) · 🧪 S7-PLCSIM Advanced · CI: s7commplus emulator |
+| `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) | ✅ real S7-1516-3 PN/DP FW 2.9, M area (user report) · 🧪 S7-PLCSIM Advanced (Windows) · CI: s7commplus emulator |
 | `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ untested |
 | `s5as511` | Siemens S5 via the PG interface (AS511) | ⬜ untested |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ real PLC (Windows, Linux, Raspberry Pi, macOS) |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ untested |
 | `ads` | Beckhoff TwinCAT 2/3 via ADS, with symbol browser | ⬜ untested |
-| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), cyclic or subscription | 🧪 over the network against the logger's own OPC UA server (read, subscription, reconnect, Basic256Sha256 with login) · CI: asyncua server |
+| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), cyclic or subscription | 🧪 over the network against the logger's own OPC UA server (Raspberry Pi → Kubuntu VM; read, subscription, reconnect, Basic256Sha256 with login) · CI: asyncua server |
 | `modbus` | Modbus TCP | 🧪 CI: pymodbus server |
 | `modbus_rtu` | Modbus RTU serial, several devices per port (pymodbus) | ⬜ untested |
 | `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC protocol) | ⬜ untested |

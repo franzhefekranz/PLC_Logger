@@ -22,13 +22,13 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 | Treiber | Steuerungen / Protokoll | Getestet |
 |---|---|---|
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ echte SPS · 🧪 PLCSIM über NetToPLCsim · CI: snap7-Server |
-| `tia` | Siemens S7-1200/1500 symbolisch, auch optimierte Bausteine (s7commplus) | ✅ echte S7-1516-3 PN/DP FW 2.9, Merker (Rückmeldung) · 🧪 S7-PLCSIM Advanced · CI: s7commplus-Emulator |
+| `tia` | Siemens S7-1200/1500 symbolisch, auch optimierte Bausteine (s7commplus) | ✅ echte S7-1516-3 PN/DP FW 2.9, Merker (Rückmeldung) · 🧪 S7-PLCSIM Advanced (Windows) · CI: s7commplus-Emulator |
 | `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ ungetestet |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ echte SPS (Windows, Linux, Raspberry Pi, macOS) |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ ungetestet |
 | `modbus` | Modbus TCP | 🧪 CI: pymodbus-Server |
 | `modbus_rtu` | Modbus RTU seriell, mehrere Geräte je Schnittstelle (pymodbus) | ⬜ ungetestet |
-| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), zyklisch oder Subscription | 🧪 im Netz gegen den OPC-UA-Server des Loggers (Lesen, Subscription, Wiederverbinden, Basic256Sha256 mit Anmeldung) · CI: asyncua-Server |
+| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), zyklisch oder Subscription | 🧪 im Netz gegen den OPC-UA-Server des Loggers (Raspberry Pi → Kubuntu-VM; Lesen, Subscription, Wiederverbinden, Basic256Sha256 mit Anmeldung) · CI: asyncua-Server |
 | `ads` | Beckhoff TwinCAT 2/3 über ADS, mit Symbolauswahl | ⬜ ungetestet |
 | `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC-Protokoll) | ⬜ ungetestet |
 | `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) | ⬜ ungetestet |
