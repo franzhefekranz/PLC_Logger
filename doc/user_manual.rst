@@ -1597,7 +1597,7 @@ CPU of S7-PLCSIM Advanced:
        24.04); the ring buffer only against a
        simulated libplctag.
    * - ``tia``
-     - **With a PLC:** S7-1516, firmware 2.9: memory bits/words (M) read successfully
+     - **With a PLC:** S7-1516-3 PN/DP, firmware 2.9: memory bits/words (M) read successfully
        (feedback from the SPS-Forum); optimized DBs on a real CPU not yet tried.
        **With S7-PLCSIM Advanced** (simulated S7-1500) tried successfully: without
        PUT/GET, with TLS, variable list from the CPU, reading from two optimized DBs, ring

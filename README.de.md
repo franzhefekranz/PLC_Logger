@@ -22,7 +22,7 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 | Treiber | Steuerungen / Protokoll | Getestet |
 |---|---|---|
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ echte SPS · CI: snap7-Server |
-| `tia` | Siemens S7-1200/1500 symbolisch, auch optimierte Bausteine (s7commplus) | ✅ echte S7-1516 FW 2.9, Merker (Rückmeldung) · 🧪 S7-PLCSIM Advanced · CI: s7commplus-Emulator |
+| `tia` | Siemens S7-1200/1500 symbolisch, auch optimierte Bausteine (s7commplus) | ✅ echte S7-1516-3 PN/DP FW 2.9, Merker (Rückmeldung) · 🧪 S7-PLCSIM Advanced · CI: s7commplus-Emulator |
 | `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ ungetestet |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ echte SPS |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ ungetestet |
