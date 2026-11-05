@@ -1590,11 +1590,12 @@ CPU of S7-PLCSIM Advanced:
      - Tested
    * - ``s7``
      - **With a controller** (S7-300/400, also ring buffer; Windows and Raspberry Pi with
-       Ubuntu 24.04); automatically against the S7
-       server of python-snap7 (single values, bits, blocks, ring buffer).
+       Ubuntu 24.04); on Linux (Ubuntu Studio) with PLCSIM via NetToPLCsim; automatically
+       against the S7 server of python-snap7 (single values, bits, blocks, ring buffer).
    * - ``clx``
      - **With a controller** (normal reading and blocks; Windows and Raspberry Pi with Ubuntu
-       24.04; ControlLogix also with the macOS app on a Mac Neo); the ring buffer only against a
+       24.04; ControlLogix also on Linux (Ubuntu Studio) and with the macOS app on a Mac
+       Neo); the ring buffer only against a
        simulated libplctag.
    * - ``tia``
      - **With a PLC:** S7-1516-3 PN/DP, firmware 2.9: memory bits/words (M) read successfully

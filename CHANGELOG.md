@@ -16,6 +16,7 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Geändert
 
+* **Teststand:** unter Linux (Ubuntu Studio) erfolgreich mit ControlLogix sowie S7 mit PLCSIM über NetToPLCsim.
 * **Teststand:** macOS-App auf einem Mac Neo mit einer ControlLogix erfolgreich getestet – nicht mehr „Vorschau“.
 * **Teststand:** Treiber `tia` an einer echten S7-1516-3 PN/DP (Firmware 2.9) erfolgreich getestet, Merker gelesen
   (Rückmeldung aus dem SPS-Forum).

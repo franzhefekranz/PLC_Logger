@@ -1630,11 +1630,12 @@ CPU von S7-PLCSIM Advanced:
      - Geprüft
    * - ``s7``
      - **Mit Steuerung** (S7-300/400, auch Ringpuffer; Windows und Raspberry Pi mit Ubuntu
-       24.04); automatisch gegen den S7-Server von
+       24.04); unter Linux (Ubuntu Studio) mit PLCSIM über NetToPLCsim; automatisch gegen den S7-Server von
        python-snap7 (Einzelwerte, Bits, Blöcke, Ringpuffer).
    * - ``clx``
      - **Mit Steuerung** (normales Lesen und Blöcke; Windows und Raspberry Pi mit Ubuntu
-       24.04; ControlLogix auch mit der macOS-App auf einem Mac Neo); der Ringpuffer nur gegen eine
+       24.04; ControlLogix auch unter Linux (Ubuntu Studio) und mit der macOS-App auf einem
+       Mac Neo); der Ringpuffer nur gegen eine
        nachgebildete libplctag.
    * - ``tia``
      - **Mit Steuerung:** S7-1516-3 PN/DP, Firmware 2.9: Merker erfolgreich gelesen (Rückmeldung aus

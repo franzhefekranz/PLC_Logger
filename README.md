@@ -51,11 +51,11 @@ can be mixed in **one** recording.
 
 | Driver | Controllers / protocol | Tested |
 |---|---|---|
-| `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ real PLC · CI: snap7 server |
+| `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ real PLC · 🧪 PLCSIM via NetToPLCsim · CI: snap7 server |
 | `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) | ✅ real S7-1516-3 PN/DP FW 2.9, M area (user report) · 🧪 S7-PLCSIM Advanced · CI: s7commplus emulator |
 | `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ untested |
 | `s5as511` | Siemens S5 via the PG interface (AS511) | ⬜ untested |
-| `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ real PLC (Windows, Raspberry Pi, macOS) |
+| `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ real PLC (Windows, Linux, Raspberry Pi, macOS) |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ untested |
 | `ads` | Beckhoff TwinCAT 2/3 via ADS, with symbol browser | ⬜ untested |
 | `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), cyclic or subscription | 🧪 over the network against the logger's own OPC UA server (read, subscription, reconnect, Basic256Sha256 with login) · CI: asyncua server |
@@ -70,7 +70,7 @@ can be mixed in **one** recording.
 ⬜ implemented from the protocol documentation, not yet tested with hardware – **feedback very welcome**
 ([Discussions](../../discussions)). Databases: all seven tested automatically against real servers (SQLite, MariaDB,
 PostgreSQL/TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics, Prometheus) plus Grafana. Packages for Windows, Linux
-and macOS are built and tested automatically on every release; in use on Windows and a Raspberry Pi 4 (Ubuntu 24.04),
+and macOS are built and tested automatically on every release; in use on Windows, Linux (Ubuntu Studio) and a Raspberry Pi 4 (Ubuntu 24.04),
 the macOS app tested on a Mac Neo with a ControlLogix.
 
 Your controller is missing? A driver is a single Python file in the `treiber` folder of the data folder (template
