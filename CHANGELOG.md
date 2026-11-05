@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.12.1] – 2026-11-05
+
 ### Behoben
 
 * **Aus Steuerung wählen (OPC UA, Beckhoff ADS):** „Auswahl übernehmen“ tat nichts – die angehakten Variablen
@@ -522,7 +524,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.12.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.12.1...HEAD
+[3.12.1]: ../../releases/tag/v3.12.1
 [3.12.0]: ../../releases/tag/v3.12.0
 [3.11.2]: ../../releases/tag/v3.11.2
 [3.11.1]: ../../releases/tag/v3.11.1
