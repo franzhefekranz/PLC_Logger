@@ -1637,10 +1637,11 @@ CPU von S7-PLCSIM Advanced:
        24.04); der Ringpuffer nur gegen eine
        nachgebildete libplctag.
    * - ``tia``
-     - **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt: ohne PUT/GET,
+     - **Mit Steuerung:** S7-1516 erfolgreich getestet (Rückmeldung aus dem SPS-Forum).
+       **Mit S7-PLCSIM Advanced** (simulierte S7-1500) erfolgreich erprobt: ohne PUT/GET,
        mit TLS, Variablenliste aus der CPU, Lesen aus zwei optimierten DBs, Ringpuffer
        über seinen Namen, verschiedene Zugriffsstufen der CPU ohne Passwort (lesen bzw.
-       Meldung). Noch nicht erprobt: Anmeldung mit Passwort, echte CPU.
+       Meldung). Noch nicht erprobt: Anmeldung mit Passwort, S7-1200.
        Automatisch: Ringpuffer mit absoluter Adresse gegen den S7CommPlus-Emulator von
        s7commplus, mit Namen (optimiert) gegen eine nachgebildete Steuerung.
    * - ``modbus``

@@ -1597,10 +1597,11 @@ CPU of S7-PLCSIM Advanced:
        24.04); the ring buffer only against a
        simulated libplctag.
    * - ``tia``
-     - **With S7-PLCSIM Advanced** (simulated S7-1500) tried successfully: without
+     - **With a PLC:** S7-1516 tested successfully (feedback from the SPS-Forum).
+       **With S7-PLCSIM Advanced** (simulated S7-1500) tried successfully: without
        PUT/GET, with TLS, variable list from the CPU, reading from two optimized DBs, ring
        buffer by its name, different access levels of the CPU without password (reading
-       or message). Not yet tried: login with password, real CPU.
+       or message). Not yet tried: login with password, S7-1200.
        Automatically: ring buffer with absolute address against the S7CommPlus emulator of
        s7commplus, with a name (optimized) against a simulated controller.
    * - ``modbus``

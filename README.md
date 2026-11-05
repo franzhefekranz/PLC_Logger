@@ -52,7 +52,7 @@ can be mixed in **one** recording.
 | Driver | Controllers / protocol | Tested |
 |---|---|---|
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ real PLC · CI: snap7 server |
-| `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) | 🧪 S7-PLCSIM Advanced · CI: s7commplus emulator |
+| `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) | ✅ real S7-1516 (user report) · 🧪 S7-PLCSIM Advanced · CI: s7commplus emulator |
 | `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ untested |
 | `s5as511` | Siemens S5 via the PG interface (AS511) | ⬜ untested |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ real PLC |
