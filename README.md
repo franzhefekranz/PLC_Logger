@@ -44,22 +44,28 @@ can be mixed in **one** recording.
 
 ## Supported controllers
 
-| Driver | Controllers / protocol |
-|---|---|
-| `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) |
-| `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) |
-| `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) |
-| `s5as511` | Siemens S5 via the PG interface (AS511) |
-| `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) |
-| `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) |
-| `ads` | Beckhoff TwinCAT 2/3 via ADS, with symbol browser |
-| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), cyclic or subscription |
-| `modbus` | Modbus TCP |
-| `modbus_rtu` | Modbus RTU serial, several devices per port (pymodbus) |
-| `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC protocol) |
-| `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) |
-| `kvhostlink` | KEYENCE KV (Host Link) |
-| `toyopuc` | JTEKT TOYOPUC (Computer Link) |
+| Driver | Controllers / protocol | Tested |
+|---|---|---|
+| `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ real PLC · CI: snap7 server |
+| `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) | 🧪 PLCSIM (NetToPLCsim) · CI: s7commplus emulator |
+| `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ untested |
+| `s5as511` | Siemens S5 via the PG interface (AS511) | ⬜ untested |
+| `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ real PLC |
+| `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ untested |
+| `ads` | Beckhoff TwinCAT 2/3 via ADS, with symbol browser | ⬜ untested |
+| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), cyclic or subscription | 🧪 CI: asyncua server |
+| `modbus` | Modbus TCP | 🧪 CI: pymodbus server |
+| `modbus_rtu` | Modbus RTU serial, several devices per port (pymodbus) | ⬜ untested |
+| `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC protocol) | ⬜ untested |
+| `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) | ⬜ untested |
+| `kvhostlink` | KEYENCE KV (Host Link) | ⬜ untested |
+| `toyopuc` | JTEKT TOYOPUC (Computer Link) | ⬜ untested |
+
+✅ tested with a real controller · 🧪 tested against a simulator or emulator (automatically on every push) ·
+⬜ implemented from the protocol documentation, not yet tested with hardware – **feedback very welcome**
+([Discussions](../../discussions)). Databases: all seven tested automatically against real servers (SQLite, MariaDB,
+PostgreSQL/TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics, Prometheus) plus Grafana. Packages for Windows, Linux
+and macOS are built and tested automatically on every release; in use on a Raspberry Pi 4 (Ubuntu 24.04).
 
 Your controller is missing? A driver is a single Python file in the `treiber` folder of the data folder (template
 `src/plc_treiber/_vorlage.py`, chapter *Developing drivers* of the manual). Pull requests welcome.

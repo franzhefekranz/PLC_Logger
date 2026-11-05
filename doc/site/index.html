@@ -121,21 +121,22 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
   <section id="drivers">
     <h2>Supported controllers</h2>
     <table>
-      <tr><th>Driver</th><th>Controllers / protocol</th></tr>
-      <tr><td><code>s7</code></td><td>Siemens S7-300/400/1200/1500, PUT/GET</td></tr>
-      <tr><td><code>tia</code></td><td>Siemens S7-1200/1500 symbolic, also optimized blocks, without PUT/GET</td></tr>
-      <tr><td><code>logo</code></td><td>Siemens LOGO! 0BA7/0BA8</td></tr>
-      <tr><td><code>s5as511</code></td><td>Siemens S5 via the PG interface (AS511)</td></tr>
-      <tr><td><code>clx</code></td><td>Allen-Bradley ControlLogix, CompactLogix, Micro800</td></tr>
-      <tr><td><code>pccc</code></td><td>Allen-Bradley MicroLogix 1100/1400, SLC 500</td></tr>
-      <tr><td><code>ads</code></td><td>Beckhoff TwinCAT 2/3 via ADS, with symbol browser</td></tr>
-      <tr><td><code>opcua</code></td><td>OPC UA – Beckhoff, B&amp;R, Codesys, Siemens, Omron, Kepware …, cyclic or subscription</td></tr>
-      <tr><td><code>modbus</code> / <code>modbus_rtu</code></td><td>Modbus TCP, Modbus RTU serial (several devices per port)</td></tr>
-      <tr><td><code>slmp</code></td><td>Mitsubishi MELSEC iQ-R, iQ-F, Q, L</td></tr>
-      <tr><td><code>fins</code></td><td>Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP)</td></tr>
-      <tr><td><code>kvhostlink</code></td><td>KEYENCE KV (Host Link)</td></tr>
-      <tr><td><code>toyopuc</code></td><td>JTEKT TOYOPUC (Computer Link)</td></tr>
+      <tr><th>Driver</th><th>Controllers / protocol</th><th>Tested</th></tr>
+      <tr><td><code>s7</code></td><td>Siemens S7-300/400/1200/1500, PUT/GET</td><td>✅ real PLC</td></tr>
+      <tr><td><code>tia</code></td><td>Siemens S7-1200/1500 symbolic, also optimized blocks, without PUT/GET</td><td>🧪 PLCSIM, emulator</td></tr>
+      <tr><td><code>logo</code></td><td>Siemens LOGO! 0BA7/0BA8</td><td>⬜</td></tr>
+      <tr><td><code>s5as511</code></td><td>Siemens S5 via the PG interface (AS511)</td><td>⬜</td></tr>
+      <tr><td><code>clx</code></td><td>Allen-Bradley ControlLogix, CompactLogix, Micro800</td><td>✅ real PLC</td></tr>
+      <tr><td><code>pccc</code></td><td>Allen-Bradley MicroLogix 1100/1400, SLC 500</td><td>⬜</td></tr>
+      <tr><td><code>ads</code></td><td>Beckhoff TwinCAT 2/3 via ADS, with symbol browser</td><td>⬜</td></tr>
+      <tr><td><code>opcua</code></td><td>OPC UA – Beckhoff, B&amp;R, Codesys, Siemens, Omron, Kepware …, cyclic or subscription</td><td>🧪 asyncua server</td></tr>
+      <tr><td><code>modbus</code> / <code>modbus_rtu</code></td><td>Modbus TCP, Modbus RTU serial (several devices per port)</td><td>🧪 pymodbus server (TCP) · ⬜ RTU</td></tr>
+      <tr><td><code>slmp</code></td><td>Mitsubishi MELSEC iQ-R, iQ-F, Q, L</td><td>⬜</td></tr>
+      <tr><td><code>fins</code></td><td>Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP)</td><td>⬜</td></tr>
+      <tr><td><code>kvhostlink</code></td><td>KEYENCE KV (Host Link)</td><td>⬜</td></tr>
+      <tr><td><code>toyopuc</code></td><td>JTEKT TOYOPUC (Computer Link)</td><td>⬜</td></tr>
     </table>
+    <p class="small">✅ tested with a real controller · 🧪 tested against a simulator/emulator on every push · ⬜ implemented from the protocol documentation, not yet tested with hardware – feedback very welcome. All seven databases and Grafana are tested against real servers.</p>
     <p class="small">Missing a controller? A driver is a single Python file – see <a href="en/user_manual.html#developing-drivers">Developing drivers</a>.</p>
   </section>
 
