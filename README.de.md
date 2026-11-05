@@ -24,7 +24,7 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ echte SPS · CI: snap7-Server |
 | `tia` | Siemens S7-1200/1500 symbolisch, auch optimierte Bausteine (s7commplus) | ✅ echte S7-1516-3 PN/DP FW 2.9, Merker (Rückmeldung) · 🧪 S7-PLCSIM Advanced · CI: s7commplus-Emulator |
 | `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ ungetestet |
-| `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ echte SPS |
+| `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ echte SPS (Windows, Raspberry Pi, macOS) |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ ungetestet |
 | `modbus` | Modbus TCP | 🧪 CI: pymodbus-Server |
 | `modbus_rtu` | Modbus RTU seriell, mehrere Geräte je Schnittstelle (pymodbus) | ⬜ ungetestet |
@@ -40,7 +40,8 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 ⬜ nach Protokolldokumentation umgesetzt, noch nicht an Hardware getestet – **Rückmeldungen sehr willkommen**
 ([Discussions](../../discussions)). Datenbanken: alle sieben automatisch gegen echte Server getestet (SQLite, MariaDB,
 PostgreSQL/TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics, Prometheus), dazu Grafana. Die Pakete für Windows, Linux
-und macOS werden bei jedem Release automatisch gebaut und getestet; im Einsatz auf einem Raspberry Pi 4 (Ubuntu 24.04).
+und macOS werden bei jedem Release automatisch gebaut und getestet; im Einsatz unter Windows und auf einem Raspberry Pi 4
+(Ubuntu 24.04), die macOS-App mit einer ControlLogix auf einem Mac Neo getestet.
 
 Weitere Treiber: eine Python-Datei im Ordner `treiber` des Datenordners genügt (Vorlage `src/plc_treiber/_vorlage.py`,
 Kapitel „Treiber entwickeln“ der Anleitung).

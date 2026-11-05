@@ -1594,7 +1594,7 @@ CPU of S7-PLCSIM Advanced:
        server of python-snap7 (single values, bits, blocks, ring buffer).
    * - ``clx``
      - **With a controller** (normal reading and blocks; Windows and Raspberry Pi with Ubuntu
-       24.04); the ring buffer only against a
+       24.04; ControlLogix also with the macOS app on a Mac Neo); the ring buffer only against a
        simulated libplctag.
    * - ``tia``
      - **With a PLC:** S7-1516-3 PN/DP, firmware 2.9: memory bits/words (M) read successfully
@@ -5558,8 +5558,9 @@ configuration program, IO check and event viewer, plus the manual and the PLC te
 
 .. note::
 
-   The macOS version is a **preview**: it is built and tested automatically, but has not yet
-   been operated on a Mac. Feedback (e.g. via GitHub) is welcome.
+   The macOS version is built and tested automatically; it has been tried successfully on a
+   Mac Neo (Apple Silicon) with a ControlLogix. Further feedback (e.g. via GitHub) is
+   welcome.
 
 **Installing:** open the DMG and drag **PLC Datenlogger** onto **Programme**
 (Applications). The app is not signed and notarized by Apple; macOS therefore blocks it at

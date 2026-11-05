@@ -1634,7 +1634,7 @@ CPU von S7-PLCSIM Advanced:
        python-snap7 (Einzelwerte, Bits, Blöcke, Ringpuffer).
    * - ``clx``
      - **Mit Steuerung** (normales Lesen und Blöcke; Windows und Raspberry Pi mit Ubuntu
-       24.04); der Ringpuffer nur gegen eine
+       24.04; ControlLogix auch mit der macOS-App auf einem Mac Neo); der Ringpuffer nur gegen eine
        nachgebildete libplctag.
    * - ``tia``
      - **Mit Steuerung:** S7-1516-3 PN/DP, Firmware 2.9: Merker erfolgreich gelesen (Rückmeldung aus
@@ -5684,8 +5684,9 @@ SPS-Vorlagen.
 
 .. note::
 
-   Die macOS-Fassung ist eine **Vorschau**: Sie wird automatisch gebaut und getestet, wurde aber
-   noch nicht auf einem Mac bedient. Rückmeldungen (z. B. über GitHub) sind willkommen.
+   Die macOS-Fassung wird automatisch gebaut und getestet; auf einem Mac Neo (Apple Silicon)
+   wurde sie mit einer ControlLogix erfolgreich erprobt. Weitere Rückmeldungen (z. B. über
+   GitHub) sind willkommen.
 
 **Installieren:** DMG öffnen und **PLC Datenlogger** auf **Programme** ziehen. Die App ist
 nicht bei Apple signiert und notarisiert; macOS blockiert sie deshalb beim ersten Start.

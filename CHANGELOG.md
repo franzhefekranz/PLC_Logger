@@ -16,6 +16,7 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Geändert
 
+* **Teststand:** macOS-App auf einem Mac Neo mit einer ControlLogix erfolgreich getestet – nicht mehr „Vorschau“.
 * **Teststand:** Treiber `tia` an einer echten S7-1516-3 PN/DP (Firmware 2.9) erfolgreich getestet, Merker gelesen
   (Rückmeldung aus dem SPS-Forum).
 * **Teststand** in Anleitung, README und Webseite: Treiber `opcua` und der OPC-UA-Server im Netz erprobt (Raspberry Pi
