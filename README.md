@@ -1,86 +1,106 @@
 # PLC Logger
 
-**PLC Datenlogger** – liest zyklisch Werte aus Steuerungen vieler Hersteller, zeichnet sie als CSV und/oder in einer
-Datenbank (SQLite, MariaDB, TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics) auf und zeigt sie als y-t-Diagramme an: in der Oberfläche (PySide6, pyqtgraph), im Browser (Webserver) oder
-ohne Oberfläche (Headless). Mit Trigger und Ereignisprotokoll (Marken an der Zeitachse), Aufzeichnung per Trigger
-mit Vor- und Nachlauf, PID-Regler-Optimierung, XY-Diagramm und FFT, PDF-Berichten je Schicht/Tag/Woche/Monat,
-Lesemodus für die Datenbank, Webserver mit HTTPS und Anmeldung, IO-Check für die Inbetriebnahme (Signalliste,
-Matrix, Vertauschungen, Analog-Prüfpunkte), Sprachumschaltung (Deutsch/Englisch).
+🇬🇧 English · 🇩🇪 [Deutsch](README.de.md)
 
-Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung mischen. Eingebaute Treiber:
+[![Release](https://img.shields.io/github/v/release/franzhefekranz/PLC_Logger)](https://github.com/franzhefekranz/PLC_Logger/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/franzhefekranz/PLC_Logger/total)](https://github.com/franzhefekranz/PLC_Logger/releases)
+[![Tests](https://github.com/franzhefekranz/PLC_Logger/actions/workflows/tests.yml/badge.svg)](https://github.com/franzhefekranz/PLC_Logger/actions/workflows/tests.yml)
+[![License: LGPL v3](https://img.shields.io/badge/license-LGPL--3.0--or--later-blue)](LICENSE)
 
-| Treiber | Steuerungen / Protokoll |
+**Free data logger for PLCs of many manufacturers – Siemens S7 / TIA, Allen-Bradley, Beckhoff, Modbus, OPC UA,
+Mitsubishi, Omron and more.** Reads variables cyclically, records them to CSV and/or a database and shows them as live
+trend charts – on the desktop, in the browser, or headless on a Raspberry Pi. Controllers of different manufacturers
+can be mixed in **one** recording.
+
+![Main window: live trends with trigger events](doc/images/en/logger_hauptfenster.png)
+
+## Highlights
+
+* **14 built-in drivers**, more as a single Python file (see below).
+* **Recording** to CSV (millisecond timestamps, size limit with ZIP archive) and/or **SQLite, MariaDB/MySQL, PostgreSQL/TimescaleDB, QuestDB,
+  InfluxDB 3, VictoriaMetrics, Prometheus** – with a ready-made **Grafana** dashboard export.
+* **Live trends** with zoom, rulers, value table, bar graphs, Bool signals, several pages and charts.
+* **Triggers and event log**: alarms/warnings with acknowledgement, notes, marks on the time axis,
+  **notifications** by e-mail, Teams, Slack, webhook, ntfy push or Telegram.
+* **Recording by trigger** with pre- and post-trigger (like an oscilloscope).
+* **Analysis**: XY chart, FFT, **PID controller tuning** from recorded step responses, formulas (computed variables).
+* **PDF reports** per shift, day, week or month.
+* **Web server** (HTTPS, users with read/write rights): full analysis in the browser on PC, tablet and phone,
+  process view, CSV/Excel export.
+* **Client mode**: a second logger (or the browser) shows the recording of a headless logger – no own configuration.
+* **OPC UA server**: provides the recorded values to SCADA/HMI systems.
+* **IO check for commissioning**: signal list, matrix, swapped wires, analog test points, protocol – also on the phone.
+* **Raspberry Pi**: headless service, touchscreen panel for network, Wi-Fi, time (from the PLC), display dimming.
+* **Demo mode** without a PLC, English and German user interface.
+
+<p align="center">
+  <img src="doc/images/en/web_tablet.png" width="49%" alt="Web client in the browser">
+  <img src="doc/images/en/iocheck_matrix.png" width="49%" alt="IO check matrix">
+</p>
+<p align="center">
+  <img src="doc/images/en/pid_optimierung.png" width="49%" alt="PID controller tuning">
+  <img src="doc/images/en/grafana_dashboard.png" width="49%" alt="Grafana dashboard">
+</p>
+
+## Supported controllers
+
+| Driver | Controllers / protocol |
 |---|---|
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) |
-| `tia` | Siemens S7-1200/1500 symbolisch, auch optimierte Bausteine (s7commplus) |
+| `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) |
 | `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) |
+| `s5as511` | Siemens S5 via the PG interface (AS511) |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) |
+| `ads` | Beckhoff TwinCAT 2/3 via ADS, with symbol browser |
+| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), cyclic or subscription |
 | `modbus` | Modbus TCP |
-| `modbus_rtu` | Modbus RTU seriell, mehrere Geräte je Schnittstelle (pymodbus) |
-| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), zyklisch oder Subscription |
-| `ads` | Beckhoff TwinCAT 2/3 über ADS, mit Symbolauswahl |
-| `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC-Protokoll) |
+| `modbus_rtu` | Modbus RTU serial, several devices per port (pymodbus) |
+| `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC protocol) |
 | `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) |
 | `kvhostlink` | KEYENCE KV (Host Link) |
 | `toyopuc` | JTEKT TOYOPUC (Computer Link) |
-| `s5as511` | Siemens S5 über die PG-Schnittstelle (AS511) |
 
-Weitere Treiber: eine Python-Datei im Ordner `treiber` des Datenordners genügt (Vorlage `src/plc_treiber/_vorlage.py`,
-Kapitel „Treiber entwickeln“ der Anleitung).
+Your controller is missing? A driver is a single Python file in the `treiber` folder of the data folder (template
+`src/plc_treiber/_vorlage.py`, chapter *Developing drivers* of the manual). Pull requests welcome.
 
-## Ordner
+## Try it in 2 minutes
 
-| Ordner | Inhalt |
-|---|---|
-| `src/` | Programmdateien (`plc_*.py`) und das Treiberpaket `plc_treiber/` |
-| `doc/` | Bedienungsanleitung (`bedienungsanleitung.rst`), englisches User Manual (`user_manual.rst`) und ihre Bilder (`images/`) |
-| `sprachen/` | Sprachdateien |
-| `tools/` | Hilfsprogramme (Version, Sprachdateien, PDF-Anleitung, Wiki, Bilder der Anleitung, Icon, INI-Umwandlung) |
-| `tests/` | automatische Tests (pytest) |
-| `docker/` | Testumgebung mit TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics und Grafana |
+1. Download the installer or package for your system from the
+   **[latest release](https://github.com/franzhefekranz/PLC_Logger/releases/latest)**:
+   Windows (installer or portable ZIP), Linux (AppImage, `.deb` for x86_64 and arm64/Raspberry Pi), macOS (`.dmg`).
+2. Start *PLC Datenlogger* and click **Demo** in the start window – simulated values, no PLC needed.
+3. Then create your own configuration with **New configuration …**: add a controller, pick variables (symbol
+   browser for TIA, ADS and OPC UA, network scan), start.
 
-Im Projektordner liegen außerdem Icon, Logo, `plctag.dll` und die Build-Skripte. Beim Start aus dem Quelltext
-ist der Projektordner der Datenordner (Konfiguration, Aufzeichnungen, Logdatei).
-
-Aufbau des Programms (Module, Datenfluss, Threads, Treiber-Schnittstelle): [`ARCHITEKTUR.md`](ARCHITEKTUR.md).
-
-## Start
+From source:
 
 ```console
-pip install -r requirements.txt     # nur die Bibliotheken der benötigten Treiber sind nötig
-python src/plc_config.py            # Konfiguration
-python src/plc_logger.py            # Logger  (--demo: ohne Steuerung)
+pip install -r requirements.txt     # only the libraries of the drivers you need are required
+python src/plc_logger.py --demo     # logger with simulated values
+python src/plc_config.py            # configuration program
 ```
 
-Ausführliche Anleitung: im [Wiki](../../wiki) (wird automatisch aus [`doc/bedienungsanleitung.rst`](doc/bedienungsanleitung.rst) erzeugt).
-English: [User Manual](../../wiki/en-Home) ([`doc/user_manual.rst`](doc/user_manual.rst)).
+## Documentation
 
-## Bauen
+* **[User manual (web)](https://franzhefekranz.github.io/PLC_Logger/en/)** ·
+  [Bedienungsanleitung (Web)](https://franzhefekranz.github.io/PLC_Logger/de/) – also as PDF in every release and
+  via F1 in the program.
+* [Wiki](../../wiki/en-Home) · [Architecture](ARCHITEKTUR.md) (German) · [Changelog](CHANGELOG.md) (German)
+* Questions, ideas, show your setup: **[Discussions](../../discussions)** · Bugs: [Issues](../../issues)
 
-* **Windows:** `build.bat` → `.exe`, Installer (Inno Setup 7 oder 6) und portables ZIP.
-* **macOS:** `build_macos.sh` → App als `.dmg` für Apple Silicon bzw. Intel.
-* **Linux:** `build_appimage.sh` → AppImage und Debian-Paket (`.deb`, auch für Raspberry Pi) für x86_64 bzw. arm64.
-* **Anleitung als PDF:** `build.bat doc` bzw. `./build_appimage.sh doc` (nur die Anleitung, HTML und PDF deutsch/englisch),
-  oder von Hand `pip install -r doc/requirements.txt`, dann `python tools/build_doc.py`
-  → `dist/PLC_Datenlogger_Bedienungsanleitung_<Version>.pdf` (Sphinx mit rinohtype, kein LaTeX nötig).
-* **GitHub Actions:** *Actions › Windows* bzw. *Actions › AppImages › Run workflow*, oder ein Tag `v*`
-  (dann zusätzlich als GitHub-Release).
+## Building
 
-## Versionen
+* **Windows:** `build.bat` → `.exe`, installer (Inno Setup) and portable ZIP.
+* **macOS:** `build_macos.sh` → app as `.dmg` for Apple Silicon or Intel.
+* **Linux:** `build_appimage.sh` → AppImage and Debian package (also for Raspberry Pi) for x86_64 or arm64.
+* **GitHub Actions:** a tag `v*` builds all packages and publishes them as a GitHub release.
 
-Aktuelle Version und Änderungen: [`CHANGELOG.md`](CHANGELOG.md). Die Nummer (`HAUPT.NEBEN.FEHLER`) steht nur in
-`APP_VERSION` in `src/plc_common.py`. Neue Version: `python tools/bump_version.py neben --tag`, dann
-`git push && git push origin v<Version>` – der Tag startet die Workflows, die Installer, ZIP, AppImages, .deb-Pakete und macOS-.dmg als
-GitHub-Release veröffentlichen.
+The project language (code comments, commits) is German; the user interface and the manual are available in English
+and German.
 
-Die früheren Einzelprogramme (S7, TIA und CLX Datenlogger) liegen im Branch
-[`einzelanwendungen`](../../tree/einzelanwendungen).
+## License
 
-## Lizenz
-
-Copyright (C) 2026 Michael Taxis. Der PLC Datenlogger steht unter der
-[GNU Lesser General Public License v3.0 oder später](LICENSE) (`LGPL-3.0-or-later`; die LGPL v3 baut auf der
-[GPL v3](COPYING) auf). Die Lizenzen der mitgelieferten Komponenten (u. a. Qt/PySide6, asyncua und psycopg unter
-LGPL-3.0, libplctag unter MPL-2.0/LGPL-2.0, die übrigen unter MIT/BSD/Apache) stehen in
-[`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+Copyright (C) 2026 Michael Taxis. PLC Logger is licensed under the
+[GNU Lesser General Public License v3.0 or later](LICENSE) (`LGPL-3.0-or-later`, building on the [GPL v3](COPYING)).
+Licenses of the bundled components: [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).

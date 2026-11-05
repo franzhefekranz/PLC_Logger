@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC Logger – free data logger for Siemens S7, Allen-Bradley, Beckhoff, Modbus, OPC UA</title>
+<meta name="description" content="Free, open-source data logger for PLCs: Siemens S7/TIA (also optimized blocks), LOGO!, S5, Allen-Bradley, Beckhoff TwinCAT, OPC UA, Modbus, Mitsubishi, Omron, KEYENCE. CSV, SQL and time-series databases, Grafana, web client, Raspberry Pi.">
+<meta property="og:title" content="PLC Logger – free data logger for PLCs">
+<meta property="og:description" content="Siemens S7/TIA, Allen-Bradley, Beckhoff, OPC UA, Modbus and more – live trends, databases, Grafana, browser, Raspberry Pi.">
+<meta property="og:image" content="https://franzhefekranz.github.io/PLC_Logger/social.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="icon.png">
+<style>
+:root{--bg:#0f141b;--panel:#171e27;--line:#26303c;--text:#e3e8ee;--muted:#9aa7b4;--accent:#ff8a1f;--blue:#3d9bff;--green:#3fbf6f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line)}
+nav{display:flex;align-items:center;gap:18px;height:60px}
+nav .brand{display:flex;align-items:center;gap:10px;white-space:nowrap;color:var(--text);font-weight:650;font-size:18px;margin-right:auto}
+nav .brand img{height:28px;border-radius:5px}
+nav a.l{color:var(--muted);font-size:15px}
+.hero{padding:56px 0 28px;display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+h1{font-size:40px;line-height:1.15;margin:0 0 16px;letter-spacing:-.5px}
+h1 span{color:var(--accent)}
+.lead{color:var(--muted);font-size:18px;margin:0 0 26px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-block;padding:11px 20px;border-radius:8px;font-weight:600;border:1px solid var(--line);color:var(--text)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1205}
+.btn:hover{text-decoration:none;filter:brightness(1.08)}
+.small{color:var(--muted);font-size:14px;margin-top:14px}
+.shot{width:100%;border-radius:10px;border:1px solid var(--line);box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:30px 0 8px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:14px;color:var(--muted)}
+.chip b{color:var(--text);font-weight:600}
+section{padding:42px 0;border-top:1px solid var(--line)}
+h2{font-size:26px;margin:0 0 22px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 18px 14px}
+.card h3{margin:0 0 6px;font-size:17px}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
+figure{margin:0}figure img{width:100%;border-radius:8px;border:1px solid var(--line)}
+figcaption{color:var(--muted);font-size:14px;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+td,th{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+code{font-family:ui-monospace,Consolas,monospace;font-size:14px;background:#0b1016;border:1px solid var(--line);border-radius:4px;padding:1px 5px}
+pre{background:#0b1016;border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow:auto;font-size:14px}
+footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);font-size:14px}
+@media (max-width:860px){.hero{grid-template-columns:1fr;padding-top:34px}h1{font-size:31px}.grid{grid-template-columns:1fr}.gallery{grid-template-columns:1fr}nav a.l.hide{display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><nav>
+  <a class="brand" href="./"><img src="icon.png" alt="">PLC Logger</a>
+  <a class="l hide" href="#features">Features</a>
+  <a class="l hide" href="#drivers">Drivers</a>
+  <a class="l" href="en/">Manual</a>
+  <a class="l" href="de/">Deutsch</a>
+  <a class="l" href="https://github.com/franzhefekranz/PLC_Logger">GitHub</a>
+</nav></div></header>
+
+<main class="wrap">
+  <div class="hero">
+    <div>
+      <h1>Record and analyse your <span>PLC data</span> – free and open source</h1>
+      <p class="lead">Siemens S7 and TIA (also optimized blocks), Allen-Bradley, Beckhoff, OPC UA, Modbus, Mitsubishi, Omron and
+        more – mixed in one recording. Live trends on the desktop, in the browser or headless on a Raspberry Pi; CSV, SQL and
+        time-series databases, Grafana.</p>
+      <div class="btns">
+        <a class="btn primary" href="https://github.com/franzhefekranz/PLC_Logger/releases/latest">Download v@VERSION@</a>
+        <a class="btn" href="en/">User manual</a>
+        <a class="btn" href="https://github.com/franzhefekranz/PLC_Logger">Source on GitHub</a>
+      </div>
+      <p class="small">Windows · Linux (AppImage, .deb, Raspberry Pi) · macOS · English and German · LGPL-3.0</p>
+    </div>
+    <img class="shot" src="images/logger_hauptfenster.png" alt="Main window with live trends and trigger events">
+  </div>
+  <div class="chips">
+    <span class="chip"><b>Siemens</b> S7-300/400/1200/1500, TIA symbolic, LOGO!, S5</span>
+    <span class="chip"><b>Allen-Bradley</b> Logix, Micro800, MicroLogix, SLC</span>
+    <span class="chip"><b>Beckhoff</b> TwinCAT ADS</span>
+    <span class="chip"><b>OPC UA</b></span>
+    <span class="chip"><b>Modbus</b> TCP / RTU</span>
+    <span class="chip"><b>Mitsubishi</b> MELSEC</span>
+    <span class="chip"><b>Omron</b> FINS</span>
+    <span class="chip"><b>KEYENCE</b> KV</span>
+    <span class="chip"><b>JTEKT</b> TOYOPUC</span>
+  </div>
+
+  <section id="features">
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card"><h3>Live trends</h3><p>Several charts and pages, zoom, rulers, value table, bar graphs, Bool signals, offline view of recordings.</p></div>
+      <div class="card"><h3>Databases &amp; Grafana</h3><p>CSV plus SQLite, MariaDB/MySQL, PostgreSQL/TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics, Prometheus – with a generated Grafana dashboard.</p></div>
+      <div class="card"><h3>Triggers &amp; alarms</h3><p>Event log with acknowledgement and notes, marks on the time axis, notifications via e-mail, Teams, Slack, webhook, ntfy or Telegram.</p></div>
+      <div class="card"><h3>Recording by trigger</h3><p>Pre- and post-trigger like an oscilloscope – only the interesting part is stored.</p></div>
+      <div class="card"><h3>Analysis</h3><p>XY chart, FFT, PID controller tuning from recorded step responses, computed variables with formulas, PDF reports per shift/day/week/month.</p></div>
+      <div class="card"><h3>In the browser</h3><p>Built-in web server with HTTPS and users: charts, rulers, export, events and process view on PC, tablet and phone.</p></div>
+      <div class="card"><h3>Headless &amp; Raspberry Pi</h3><p>Runs as a service; touchscreen panel for network, Wi-Fi, time from the PLC and display dimming. Desktop clients connect over the network.</p></div>
+      <div class="card"><h3>IO check</h3><p>Commissioning aid: signal list, matrix, swapped wires, analog test points and protocol – also on the phone.</p></div>
+      <div class="card"><h3>OPC UA server</h3><p>Provides the recorded values to SCADA and HMI systems.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Screenshots</h2>
+    <div class="gallery">
+      <figure><img src="images/web_tablet.png" alt="" loading="lazy"><figcaption>Web client in the browser</figcaption></figure>
+      <figure><img src="images/grafana_dashboard.png" alt="" loading="lazy"><figcaption>Generated Grafana dashboard</figcaption></figure>
+      <figure><img src="images/pid_optimierung.png" alt="" loading="lazy"><figcaption>PID controller tuning</figcaption></figure>
+      <figure><img src="images/iocheck_matrix.png" alt="" loading="lazy"><figcaption>IO check for commissioning</figcaption></figure>
+      <figure><img src="images/config_variablen.png" alt="" loading="lazy"><figcaption>Configuration program</figcaption></figure>
+      <figure><img src="images/netzpanel.png" alt="" loading="lazy"><figcaption>Raspberry Pi touchscreen panel</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="drivers">
+    <h2>Supported controllers</h2>
+    <table>
+      <tr><th>Driver</th><th>Controllers / protocol</th></tr>
+      <tr><td><code>s7</code></td><td>Siemens S7-300/400/1200/1500, PUT/GET</td></tr>
+      <tr><td><code>tia</code></td><td>Siemens S7-1200/1500 symbolic, also optimized blocks, without PUT/GET</td></tr>
+      <tr><td><code>logo</code></td><td>Siemens LOGO! 0BA7/0BA8</td></tr>
+      <tr><td><code>s5as511</code></td><td>Siemens S5 via the PG interface (AS511)</td></tr>
+      <tr><td><code>clx</code></td><td>Allen-Bradley ControlLogix, CompactLogix, Micro800</td></tr>
+      <tr><td><code>pccc</code></td><td>Allen-Bradley MicroLogix 1100/1400, SLC 500</td></tr>
+      <tr><td><code>ads</code></td><td>Beckhoff TwinCAT 2/3 via ADS, with symbol browser</td></tr>
+      <tr><td><code>opcua</code></td><td>OPC UA – Beckhoff, B&amp;R, Codesys, Siemens, Omron, Kepware …, cyclic or subscription</td></tr>
+      <tr><td><code>modbus</code> / <code>modbus_rtu</code></td><td>Modbus TCP, Modbus RTU serial (several devices per port)</td></tr>
+      <tr><td><code>slmp</code></td><td>Mitsubishi MELSEC iQ-R, iQ-F, Q, L</td></tr>
+      <tr><td><code>fins</code></td><td>Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP)</td></tr>
+      <tr><td><code>kvhostlink</code></td><td>KEYENCE KV (Host Link)</td></tr>
+      <tr><td><code>toyopuc</code></td><td>JTEKT TOYOPUC (Computer Link)</td></tr>
+    </table>
+    <p class="small">Missing a controller? A driver is a single Python file – see <a href="en/user_manual.html#developing-drivers">Developing drivers</a>.</p>
+  </section>
+
+  <section>
+    <h2>Try it in two minutes</h2>
+    <p>Download the package for your system from the <a href="https://github.com/franzhefekranz/PLC_Logger/releases/latest">latest release</a>, start <b>PLC Datenlogger</b> and click <b>Demo</b> – simulated values, no PLC needed. Or from source:</p>
+<pre>pip install -r requirements.txt
+python src/plc_logger.py --demo</pre>
+    <p class="small">Questions, ideas or want to show your setup? <a href="https://github.com/franzhefekranz/PLC_Logger/discussions">Discussions</a> · Bugs: <a href="https://github.com/franzhefekranz/PLC_Logger/issues">Issues</a></p>
+  </section>
+</main>
+
+<footer><div class="wrap">PLC Logger v@VERSION@ · © 2026 Michael Taxis · <a href="https://github.com/franzhefekranz/PLC_Logger/blob/main/LICENSE">LGPL-3.0-or-later</a> · <a href="de/">Bedienungsanleitung (deutsch)</a></div></footer>
+</body>
+</html>

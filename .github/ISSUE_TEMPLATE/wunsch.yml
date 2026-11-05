@@ -1,0 +1,11 @@
+name: Wunsch / Feature request
+description: Neue Funktion oder neuer Treiber / new feature or driver
+labels: [enhancement]
+body:
+  - type: textarea
+    id: wish
+    attributes:
+      label: Was soll der Logger können? / What should the logger do?
+      description: Wofür brauchen Sie es? Welche Steuerung? / What do you need it for? Which PLC?
+    validations:
+      required: true

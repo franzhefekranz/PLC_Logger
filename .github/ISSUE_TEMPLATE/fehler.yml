@@ -1,0 +1,36 @@
+name: Fehler / Bug report
+description: Etwas funktioniert nicht wie beschrieben / something does not work as documented
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Hilfe › Info bzw. Netzwerk-Panel oben / Help › About or top of the network panel
+      placeholder: "3.12.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options: [Windows, Linux, Raspberry Pi, macOS]
+    validations:
+      required: true
+  - type: input
+    id: plc
+    attributes:
+      label: Steuerung und Treiber / PLC and driver
+      placeholder: "z. B. S7-1500, Treiber tia / e.g. CompactLogix, driver clx"
+  - type: textarea
+    id: what
+    attributes:
+      label: Was ist passiert, was sollte passieren? / What happened, what did you expect?
+      description: Schritte zum Nachstellen / steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Meldungen / log (plc_logger.log)
+      render: text

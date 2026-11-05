@@ -19,6 +19,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **Netzwerk-Panel ohne root:** „System policy prevents Wi-Fi scans“ – statt eines Fehlers zeigt die WLAN-Seite die
   zuletzt bekannten Netze; fehlende Berechtigungen erklärt ein Hinweis (Dienst/sudo oder polkit-Regel, siehe Anleitung).
 
+### Build
+
+* **Projekt-Webseite** auf GitHub Pages (Startseite und Anleitung als HTML, deutsch/englisch; Workflow *Webseite*),
+  englisches README (deutsches in `README.de.md`), Vorlagen für Issues, Vorschaubild `doc/site/social.png`.
+
 ## [3.12.0] – 2026-11-04
 
 ### Neu

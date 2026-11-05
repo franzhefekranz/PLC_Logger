@@ -1,0 +1,61 @@
+# Projekt-Webseite auf GitHub Pages: Startseite (doc/site/index.html) und die Anleitung als HTML
+# (deutsch unter /de/, englisch unter /en/). https://franzhefekranz.github.io/PLC_Logger/
+# Start: bei Änderungen an der Anleitung, ihren Bildern oder der Startseite auf main, oder von Hand (Actions › Webseite).
+name: Webseite
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["doc/**", "src/plc_common.py", ".github/workflows/pages.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Anleitung als HTML, Startseite
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          pip install -q -r doc/requirements.txt
+          for lang in de en; do
+            PLC_DOC_LANG=$lang python -m sphinx -b html -E -q -d build/doctrees_$lang doc _site/$lang
+          done
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=bedienungsanleitung.html"><link rel="canonical" href="bedienungsanleitung.html">' > _site/de/index.html
+          printf '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=user_manual.html"><link rel="canonical" href="user_manual.html">' > _site/en/index.html
+          ver=$(python -c "import re;print(re.search(r'APP_VERSION\s*=\s*\"([^\"]+)\"',open('src/plc_common.py',encoding='utf-8').read()).group(1))")
+          sed "s/@VERSION@/$ver/g" doc/site/index.html > _site/index.html
+          cp doc/site/social.png _site/ 2>/dev/null || true
+          cp icons/logger.png _site/icon.png
+          mkdir -p _site/images
+          for f in logger_hauptfenster web_tablet grafana_dashboard pid_optimierung iocheck_matrix config_variablen netzpanel; do
+            cp doc/images/en/$f.png _site/images/
+          done
+          touch _site/.nojekyll
+          ls _site _site/en | head -40
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
