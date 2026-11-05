@@ -13,7 +13,7 @@ Matrix, Vertauschungen, Analog-Prüfpunkte), Sprachumschaltung (Deutsch/Englisch
 
 <p align="center">
   <img src="doc/images/raspberry_pi.jpg" width="70%" alt="Headless-Logger auf einem Raspberry Pi 4 mit Touch-Panel">
-  <br><sub>Headless auf einem Raspberry Pi 4 mit 4,3"-Touchscreen: Netzwerk, WLAN, Uhrzeit, Logger-Dienst und
+  <br><sub>Headless auf einem Raspberry Pi 4 mit Touchscreen: Netzwerk, WLAN, Uhrzeit, Logger-Dienst und
   Webadresse auf einen Blick</sub>
 </p>
 

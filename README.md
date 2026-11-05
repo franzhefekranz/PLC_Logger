@@ -35,7 +35,7 @@ can be mixed in **one** recording.
 
 <p align="center">
   <img src="doc/images/raspberry_pi.jpg" width="70%" alt="Headless logger on a Raspberry Pi 4 with touchscreen panel">
-  <br><sub>Headless on a Raspberry Pi 4 with a 4.3" touchscreen: network, Wi-Fi, time, logger service and web address
+  <br><sub>Headless on a Raspberry Pi 4 with a touchscreen: network, Wi-Fi, time, logger service and web address
   at a glance</sub>
 </p>
 <p align="center">
