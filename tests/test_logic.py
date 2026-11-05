@@ -1476,3 +1476,19 @@ def test_db_events_real_servers(tmp_path, typ, env):
             assert users == ["chef", "gast"], d          # beide Quittierungen jünger als 10 min: mitgeschrieben
     finally:
         b.close()
+
+
+def test_netz_hides_virtual_interfaces():
+    """Docker-Netze (veth…, docker0, br-…) meldet nmcli als „ethernet“ – das Panel zeigt sie nicht."""
+    import plc_netz
+
+    def run(args, timeout=30):
+        if args[:2] == ["nmcli", "--version"] or args[-1] == "--version":
+            return "nmcli tool, version 1.46"
+        if args[-1] == "device" and "DEVICE,TYPE,STATE,CONNECTION" in args:
+            return ("eth0:ethernet:connected:LAN\nveth78c6166:ethernet:connected:veth78c6166\n"
+                    "docker0:bridge:connected:docker0\nwlan0:wifi:connected:Werkstatt\nlo:loopback:unmanaged:\n")
+        return ""
+    n = plc_netz.Netz(run=run)
+    n.has_nm = lambda: True
+    assert [d.name for d in n.devices()] == ["eth0", "wlan0"]

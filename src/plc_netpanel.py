@@ -492,6 +492,24 @@ class LoggerControl:
         self._stop_headless()
 
 
+def power_icon(size, color="#e8eef5"):
+    """Ein/Aus-Symbol (Kreisbogen mit senkrechtem Strich) als QIcon – unabhängig von der Schrift."""
+    from PySide6.QtCore import QRectF, Qt
+    from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+    pm = QPixmap(size, size)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    pen = QPen(QColor(color), max(2.0, size / 11))
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    p.setPen(pen)
+    m = size * 0.18
+    p.drawArc(QRectF(m, m, size - 2 * m, size - 2 * m), 120 * 16, -240 * 16)     # offen nach oben
+    p.drawLine(int(size / 2), int(size * 0.12), int(size / 2), int(size * 0.5))
+    p.end()
+    return QIcon(pm)
+
+
 def RIGHTS_HINT():
     """Hinweis, wenn NetworkManager bzw. systemd eine Aktion verweigern (Panel ohne root gestartet)."""
     return tr("keine Berechtigung: das Panel als Dienst (root) bzw. mit sudo starten oder die polkit-Regel aus der "
@@ -626,7 +644,9 @@ class NetPanel(QWidget):
         row.addWidget(self.btn_display)
         self.btn_logger = self._button(tr("Logger"), self.show_logger)
         row.addWidget(self.btn_logger)
-        self.btn_power = self._button("⏻", self.show_power)
+        self.btn_power = self._button("", self.show_power)
+        self.btn_power.setIcon(power_icon(40))       # gezeichnet: das Zeichen ⏻ fehlt in vielen Schriften
+        self.btn_power.setIconSize(QSize(40, 40))
         self.btn_power.setToolTip(tr("Herunterfahren / Neu starten"))
         self.btn_power.setMaximumWidth(80)
         row.addWidget(self.btn_power)

@@ -16,6 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Netzwerk-Panel:** Docker-Netze (`veth…`) und andere virtuelle Schnittstellen werden nicht mehr als Ethernet
+  angezeigt; das Ein/Aus-Symbol ist gezeichnet (das Zeichen ⏻ fehlte in der Schrift des Raspberry Pi).
 * **Netzwerk-Panel ohne root:** „System policy prevents Wi-Fi scans“ – statt eines Fehlers zeigt die WLAN-Seite die
   zuletzt bekannten Netze; fehlende Berechtigungen erklärt ein Hinweis (Dienst/sudo oder polkit-Regel, siehe Anleitung).
 

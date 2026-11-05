@@ -58,7 +58,7 @@ jobs:
           python-version: "3.12"
       - name: Abhängigkeiten
         run: |
-          python -m pip install PySide6-Essentials pyqtgraph numpy Flask cryptography openpyxl asyncua python-snap7 pymupdf playwright
+          python -m pip install PySide6-Essentials pyqtgraph numpy Flask cryptography openpyxl asyncua python-snap7 pymupdf playwright pillow
           python -m playwright install chromium
       - name: Bilder erzeugen
         shell: bash

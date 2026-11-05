@@ -110,6 +110,11 @@ def normalize_address(address):
     return str(ipaddress.IPv4Interface(address.strip()).with_prefixlen)
 
 
+# Virtuelle Schnittstellen (Docker, Brücken, VPN, Container), die das Panel nicht anzeigt
+VIRTUAL_PREFIXES = ("veth", "docker", "br-", "virbr", "vnet", "tun", "tap", "wg", "zt", "tailscale", "lxc", "cni",
+                    "flannel", "podman")
+
+
 def is_policy_error(err):
     """Fehlermeldung von nmcli/timedatectl wegen fehlender Berechtigung (polkit)?"""
     t = str(err).lower()
@@ -151,6 +156,8 @@ class Netz:
             parts = _split(line)
             if len(parts) < 4 or parts[1] not in ("ethernet", "wifi"):
                 continue
+            if parts[0].startswith(VIRTUAL_PREFIXES):       # Docker-Netze (veth…) meldet nmcli als „ethernet“
+                continue
             d = Device(parts[0], parts[1], parts[2], parts[3])
             try:
                 show = self.run(["nmcli", "-t", "-f", "IP4.ADDRESS,IP4.GATEWAY,IP4.DNS", "device", "show", d.name])
@@ -183,7 +190,7 @@ class Netz:
         out = []
         for it in data:
             name = it.get("ifname", "")
-            if name == "lo" or name.startswith(("docker", "br-", "veth")):
+            if name == "lo" or name.startswith(VIRTUAL_PREFIXES):
                 continue
             typ = "wifi" if name.startswith(("wl", "wlan")) else "ethernet"
             addrs = [f"{a['local']}/{a['prefixlen']}" for a in it.get("addr_info", []) if a.get("family") == "inet"]

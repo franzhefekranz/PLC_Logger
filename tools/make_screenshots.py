@@ -266,6 +266,52 @@ def s_logger_online():
                          min(view.height() + 12, pm.height())))
 
 
+@shot("demo")
+def s_demo_gif():
+    """Animiertes GIF für README und Webseite (nur englisch, demo.gif) mit dem Logger der übrigen Bilder: live, dann
+    offline mit wanderndem Lineal (die Aufzeichnung läuft weiter), zurück auf online."""
+    if CTX.get("lang") != "en":
+        return
+    import io
+
+    from PIL import Image
+    from PySide6.QtCore import QBuffer, QIODevice, Qt
+    w = CTX["w"]
+    size = w.size()
+    w.resize(1280, 760)
+    wait(1500)
+    frames, durations = [], []
+
+    def grab(ms):
+        img = w.grab().toImage().scaledToWidth(880, Qt.TransformationMode.SmoothTransformation)
+        buf = QBuffer()
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        img.save(buf, "PNG")
+        frames.append(Image.open(io.BytesIO(bytes(buf.data()))).convert("RGB"))
+        durations.append(ms)
+    for _ in range(30):                          # live: 30 Bilder im Abstand von 250 ms
+        wait(250)
+        grab(250)
+    w.act_online.setChecked(False)
+    wait(800)
+    t0, t1 = float(w.t[0]), float(w.t[-1])
+    w.set_rulers(1, t0 + (t1 - t0) * 0.7)
+    for k in range(14):                          # offline: Lineal L1 wandert, Werte und Delta laufen mit
+        w.set_rulers(0, t0 + (t1 - t0) * (0.2 + 0.025 * k))
+        w.update_offline_values()
+        wait(150)
+        grab(180)
+    durations[-1] = 2500
+    w.act_online.setChecked(True)
+    w.resize(size)
+    pal = [f.quantize(colors=96, method=Image.Quantize.MEDIANCUT) for f in frames]
+    path = os.path.join(CTX["out"], "demo.gif")
+    pal[0].save(path, save_all=True, append_images=pal[1:], duration=durations, loop=0, optimize=True, disposal=1)
+    print(f"Bild: demo.gif ({frames[0].width} x {frames[0].height}, {len(frames)} Bilder, "
+          f"{os.path.getsize(path) // 1024} KiB)", flush=True)
+    wait(800)
+
+
 @shot("screenshot_menue")
 def s_menus():
     """Menüs „Screenshot“ und „Sprache“ geöffnet."""
@@ -889,7 +935,7 @@ def s_web():
 # Ablauf
 # ---------------------------------------------------------------------------------------------------------------------
 _LOGGER = {"logger_online"}
-NEEDS = {n: _LOGGER for n in ("screenshot_menue", "anordnung_raster", "logger_offline", "ereignis_viewer",
+NEEDS = {n: _LOGGER for n in ("demo", "screenshot_menue", "anordnung_raster", "logger_offline", "ereignis_viewer",
                                "ereignis_diagramm", "export_dialog", "xy_diagramm", "pid_optimierung", "pdf_bericht",
                                "datenbank")}
 NEEDS["web_tablet"] = {"logger_online", "iocheck_fenster"}
