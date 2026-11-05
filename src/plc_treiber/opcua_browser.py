@@ -222,7 +222,7 @@ class OpcUaBrowserDialog(QDialog):
                 ch = it.child(i)
                 o = ch.data(0, ROLE) or {}
                 name = f"{path}.{ch.text(0)}" if path else ch.text(0)
-                if o.get("scalar_ok") and ch.isEnabled() and ch.checkState(0) == Qt.CheckState.Checked:
+                if o.get("scalar_ok") and not ch.isDisabled() and ch.checkState(0) == Qt.CheckState.Checked:
                     self.result_vars.append((name, o["nodeid"], o["dtype"]))
                 walk(ch, name)
         walk(self.tree.invisibleRootItem(), "")

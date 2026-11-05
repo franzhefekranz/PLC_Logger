@@ -16,6 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Aus Steuerung wählen (OPC UA, Beckhoff ADS):** „Auswahl übernehmen“ tat nichts – die angehakten Variablen
+  wurden wegen eines Programmfehlers (AttributeError) nicht übernommen.
 * **OPC-UA-Server startete nicht**, wenn ein Variablen- oder Steuerungsname einen Doppelpunkt enthält (Allen-Bradley
   `Program:Main.x`): „Error parsing string …“. Browse-Namen werden jetzt immer im eigenen Namensraum angelegt.
 * **Netzwerk-Panel:** Docker-Netze (`veth…`) und andere virtuelle Schnittstellen werden nicht mehr als Ethernet

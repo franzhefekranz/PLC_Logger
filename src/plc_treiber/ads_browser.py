@@ -190,7 +190,7 @@ class AdsBrowserDialog(QDialog):
             for i in range(it.childCount()):
                 ch = it.child(i)
                 o = ch.data(0, ROLE) or {}
-                if o.get("kind") == "var" and ch.isEnabled() and ch.checkState(0) == Qt.CheckState.Checked:
+                if o.get("kind") == "var" and not ch.isDisabled() and ch.checkState(0) == Qt.CheckState.Checked:
                     self.result_vars.append((o["name"].lstrip(".").replace(".", "_"), o["name"], o["dtype"]))
                 walk(ch)
         walk(self.tree.invisibleRootItem())

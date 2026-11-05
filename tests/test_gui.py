@@ -805,3 +805,45 @@ def test_logger_client_mode(qt_log, demo_config, tmp_path):
     finally:
         srv.stop()
         rec.stop()
+
+
+def test_opcua_browser_dialog_take(qt_log, tmp_path):
+    """Auswahldialog OPC UA gegen den eigenen OPC-UA-Server: Ordner aufklappen, Variablen anhaken, übernehmen
+    (früher brach „Auswahl übernehmen“ mit einem AttributeError ab)."""
+    pytest.importorskip("asyncua")
+    import socket
+
+    from PySide6.QtCore import Qt
+
+    from plc_common import Plc, default_connection
+    from plc_recorder import Recorder, demo_config
+    from plc_treiber.opcua_browser import OpcUaBrowserDialog
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    port = s.getsockname()[1]
+    s.close()
+    charts, variables = demo_config()
+    conn = default_connection()
+    conn.update(csv_ordner=str(tmp_path), csv_aktiv=0,
+                opcua_server={"aktiv": True, "host": "127.0.0.1", "port": port, "anonym": True})
+    rec = Recorder(conn, [Plc(name="Linie1")], charts, variables, demo=True)
+    rec.start()
+    try:
+        wait(1200)
+        plc = Plc(name="Pi", driver="opcua")
+        plc.params.update(endpoint=f"opc.tcp://127.0.0.1:{port}/plc-datenlogger/")
+        d = OpcUaBrowserDialog(None, plc, {"ns=2;s=Pumpe"}, ["Diagramm 1"])
+        root = d.tree.invisibleRootItem()
+        top = next(root.child(i) for i in range(root.childCount()) if root.child(i).text(0) == "PLC Datenlogger")
+        d.on_expand(top)
+        line = next(top.child(i) for i in range(top.childCount()) if top.child(i).text(0) == "Linie1")
+        d.on_expand(line)
+        items = {line.child(i).text(0): line.child(i) for i in range(line.childCount())}
+        assert items["Pumpe"].isDisabled()                      # schon in der Liste
+        items["Druck"].setCheckState(0, Qt.CheckState.Checked)
+        items["Istwert"].setCheckState(0, Qt.CheckState.Checked)
+        d.take()
+        assert sorted(a for _n, a, _t in d.result_vars) == ["ns=2;s=Druck", "ns=2;s=Istwert"]
+        assert d.result_vars[0][0].startswith("PLC Datenlogger.Linie1.") and d.result_vars[0][2] == "LREAL"
+    finally:
+        rec.stop()
