@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* **Teststand** in Anleitung, README und Webseite: Treiber `opcua` und der OPC-UA-Server im Netz erprobt (Raspberry Pi
+  als Server, PC als Client: Lesen, Subscription, Wiederverbinden, Basic256Sha256 mit Anmeldung).
+
 ## [3.12.1] – 2026-11-05
 
 ### Behoben

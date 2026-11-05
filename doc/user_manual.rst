@@ -1607,7 +1607,11 @@ CPU of S7-PLCSIM Advanced:
      - Automatically against the Modbus TCP server of pymodbus (all four tables, bits,
        REAL/DINT, word order).
    * - ``opcua``
-     - Automatically against an OPC UA server of asyncua (numbers, BOOL, array as block).
+     - **Over the network against the logger's own OPC UA server** (Raspberry Pi as server,
+       PC as client): selection dialog, cyclic read, subscription, reconnect after a server
+       failure, Basic256Sha256 (sign and encrypt) with login. Not yet tried: array as block,
+       the server of a real PLC. Automatically against an OPC UA server of asyncua (numbers,
+       BOOL, array as block).
    * - ``logo``, ``pccc``, ``modbus_rtu``, ``ads``, ``slmp``, ``fins``, ``kvhostlink``,
        ``toyopuc``, ``s5as511``
      - Not yet tried with a controller or a simulator. Experience reports and error

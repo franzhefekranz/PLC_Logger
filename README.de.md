@@ -28,7 +28,7 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ ungetestet |
 | `modbus` | Modbus TCP | 🧪 CI: pymodbus-Server |
 | `modbus_rtu` | Modbus RTU seriell, mehrere Geräte je Schnittstelle (pymodbus) | ⬜ ungetestet |
-| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), zyklisch oder Subscription | 🧪 CI: asyncua-Server |
+| `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), zyklisch oder Subscription | 🧪 im Netz gegen den OPC-UA-Server des Loggers (Lesen, Subscription, Wiederverbinden, Basic256Sha256 mit Anmeldung) · CI: asyncua-Server |
 | `ads` | Beckhoff TwinCAT 2/3 über ADS, mit Symbolauswahl | ⬜ ungetestet |
 | `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC-Protokoll) | ⬜ ungetestet |
 | `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) | ⬜ ungetestet |
