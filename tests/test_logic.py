@@ -869,11 +869,16 @@ def test_grafana_dashboard_import_real(tmp_path):
     assert found == {v.name for v in variables}, found
     # Annotation (Ereignisse): Abfrage liefert die Trigger
     an = got["annotations"]["list"][0]
-    r = api("/api/ds/query", {"queries": [{"refId": "Anno", "datasource": {"uid": ds["uid"]}, "range": True,
-                                           "expr": an["expr"].replace("$projekt", "Kunde A"), "interval": "60s"}],
-                              "from": str(int((now - 600) * 1000)), "to": str(int(now * 1000))})
-    trig = {f.get("labels", {}).get("trigger_name") for ref in r["results"].values() for frame in ref.get("frames", [])
-            for f in frame["schema"]["fields"]}
+    deadline = time.time() + 45                    # neue Serien erscheinen bei VictoriaMetrics mit Verzögerung
+    while True:
+        r = api("/api/ds/query", {"queries": [{"refId": "Anno", "datasource": {"uid": ds["uid"]}, "range": True,
+                                               "expr": an["expr"].replace("$projekt", "Kunde A"), "interval": "60s"}],
+                                  "from": str(int((now - 600) * 1000)), "to": str(int(time.time() * 1000))})
+        trig = {f.get("labels", {}).get("trigger_name") for ref in r["results"].values()
+                for frame in ref.get("frames", []) for f in frame["schema"]["fields"]}
+        if {"Übertemperatur", "Druck", "Notiz"} <= trig or time.time() > deadline:
+            break
+        time.sleep(3)
     assert {"Übertemperatur", "Druck", "Notiz"} <= trig, r
     values = api(f"/api/datasources/uid/{ds['uid']}/resources/api/v1/label/projekt/values")
     assert "Kunde A" in values.get("data", []), values
