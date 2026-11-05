@@ -16,7 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Geändert
 
-* **Teststand:** Treiber `tia` an einer echten S7-1516 erfolgreich getestet (Rückmeldung aus dem SPS-Forum).
+* **Teststand:** Treiber `tia` an einer echten S7-1516 (Firmware 2.9) erfolgreich getestet, Merker gelesen
+  (Rückmeldung aus dem SPS-Forum).
 * **Teststand** in Anleitung, README und Webseite: Treiber `opcua` und der OPC-UA-Server im Netz erprobt (Raspberry Pi
   als Server, PC als Client: Lesen, Subscription, Wiederverbinden, Basic256Sha256 mit Anmeldung).
 
