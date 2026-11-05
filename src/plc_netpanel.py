@@ -504,7 +504,7 @@ def power_icon(size, color="#e8eef5"):
     pen.setCapStyle(Qt.PenCapStyle.RoundCap)
     p.setPen(pen)
     m = size * 0.18
-    p.drawArc(QRectF(m, m, size - 2 * m, size - 2 * m), 120 * 16, -240 * 16)     # offen nach oben
+    p.drawArc(QRectF(m, m, size - 2 * m, size - 2 * m), 60 * 16, -300 * 16)      # Lücke oben (60°…120°)
     p.drawLine(int(size / 2), int(size * 0.12), int(size / 2), int(size * 0.5))
     p.end()
     return QIcon(pm)

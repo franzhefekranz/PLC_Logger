@@ -12,7 +12,7 @@ Mitsubishi, Omron and more.** Reads variables cyclically, records them to CSV an
 trend charts – on the desktop, in the browser, or headless on a Raspberry Pi. Controllers of different manufacturers
 can be mixed in **one** recording.
 
-![Main window: live trends with trigger events](doc/images/en/logger_hauptfenster.png)
+![Demo mode: live trends with trigger marks, then offline with rulers](doc/images/en/demo.gif)
 
 ## Highlights
 
@@ -33,6 +33,11 @@ can be mixed in **one** recording.
 * **Raspberry Pi**: headless service, touchscreen panel for network, Wi-Fi, time (from the PLC), display dimming.
 * **Demo mode** without a PLC, English and German user interface.
 
+<p align="center">
+  <img src="doc/images/raspberry_pi.jpg" width="70%" alt="Headless logger on a Raspberry Pi 4 with touchscreen panel">
+  <br><sub>Headless on a Raspberry Pi 4 with a 4.3" touchscreen: network, Wi-Fi, time, logger service and web address
+  at a glance</sub>
+</p>
 <p align="center">
   <img src="doc/images/en/web_tablet.png" width="49%" alt="Web client in the browser">
   <img src="doc/images/en/iocheck_matrix.png" width="49%" alt="IO check matrix">

@@ -9,6 +9,14 @@ mit Vor- und Nachlauf, PID-Regler-Optimierung, XY-Diagramm und FFT, PDF-Berichte
 Lesemodus für die Datenbank, Webserver mit HTTPS und Anmeldung, IO-Check für die Inbetriebnahme (Signalliste,
 Matrix, Vertauschungen, Analog-Prüfpunkte), Sprachumschaltung (Deutsch/Englisch).
 
+![Demo-Modus: Live-Trends mit Trigger-Marken, dann offline mit Linealen](doc/images/en/demo.gif)
+
+<p align="center">
+  <img src="doc/images/raspberry_pi.jpg" width="70%" alt="Headless-Logger auf einem Raspberry Pi 4 mit Touch-Panel">
+  <br><sub>Headless auf einem Raspberry Pi 4 mit 4,3"-Touchscreen: Netzwerk, WLAN, Uhrzeit, Logger-Dienst und
+  Webadresse auf einen Blick</sub>
+</p>
+
 Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung mischen. Eingebaute Treiber:
 
 | Treiber | Steuerungen / Protokoll | Getestet |

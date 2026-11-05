@@ -44,6 +44,7 @@ jobs:
           for f in logger_hauptfenster web_tablet grafana_dashboard pid_optimierung iocheck_matrix config_variablen netzpanel; do
             cp doc/images/en/$f.png _site/images/
           done
+          cp doc/images/en/demo.gif doc/images/raspberry_pi.jpg _site/images/
           touch _site/.nojekyll
           ls _site _site/en | head -40
       - uses: actions/upload-pages-artifact@v3
