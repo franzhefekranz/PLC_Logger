@@ -5169,7 +5169,7 @@ the line ``RequiresMountsFor=/data`` in the logger's service (step 4).
 
 .. code-block:: console
 
-   VER=3.12.2
+   VER=3.13.0
    wget https://github.com/franzhefekranz/PLC_Logger/releases/download/v$VER/plc-datenlogger_${VER}_arm64.deb
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
