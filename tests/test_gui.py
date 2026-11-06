@@ -979,7 +979,7 @@ def test_iocheck_edit_texts_and_update_list(qt_log, demo_config, tmp_path, monke
     sig = w.project.signals[1]
     idx = w.model.index(w.model.signals.index(sig), d.COL["bmk"])
     assert w.model.flags(idx) & Qt.ItemFlag.ItemIsEditable
-    assert not w.model.flags(w.model.index(0, d.COL["address"])) & Qt.ItemFlag.ItemIsEditable
+    assert not w.model.flags(w.model.index(0, d.COL["kind"])) & Qt.ItemFlag.ItemIsEditable
     assert w.model.setData(idx, " -B2.1 ")
     assert io.IoProject.load(w.project.path).signals[1].bmk == "-B2.1"    # sofort gespeichert
     # geänderte Liste: E0.0 neues BMK, E0.2 entfällt, E0.3 neu
