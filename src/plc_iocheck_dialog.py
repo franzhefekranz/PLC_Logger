@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
                                QDoubleSpinBox, QFileDialog, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
                                QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTableView, QTableWidget,
-                               QStyle, QStyledItemDelegate, QTableWidgetItem, QTabWidget, QToolBar,
+                               QStyle, QStyledItemDelegate, QTableWidgetItem, QTabWidget, QToolBar, QToolButton,
                                QVBoxLayout, QWidget)
 
 import plc_iocheck as io
@@ -750,10 +750,25 @@ class IoCheckWindow(QMainWindow):
         act(tr("Speichern"), lambda: self.save_project(), tr("Prüfstand speichern (*.iocheck.json)"), "Ctrl+S")
         act(tr("Speichern unter …"), lambda: self.save_project(as_new=True))
         act(tr("Ergebnis exportieren …"), self.export_result, tr("Prüfergebnis als CSV oder Excel speichern"))
-        act(tr("Protokoll (PDF) …"), self.make_protocol,
-            tr("Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern"))
+        self.act_protocol = act(tr("Protokoll (PDF) …"), self.make_protocol,
+                                tr("Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und "
+                                   "Unterschriftsfeldern; Pfeil: Hoch- oder Querformat"))
+        # Seitenformat des Protokolls (persönliche Einstellung, Standard: hoch) – Menü am Pfeil des Knopfs
+        menu = QMenu(self)
+        self.act_landscape = menu.addAction(tr("Querformat"))
+        self.act_landscape.setCheckable(True)
+        self.act_landscape.setChecked(io.protocol_landscape())
+        self.act_landscape.toggled.connect(lambda on: self._save_setting(iocheck_querformat=bool(on)))
+        self.act_protocol.setMenu(menu)
+        btn = tb.widgetForAction(self.act_protocol)
+        if isinstance(btn, QToolButton):
+            btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         act(tr("📱 Mobil …"), self.show_mobile,
             tr("IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)"))
+        self.act_checker = act("", self.edit_checker,
+                               tr("Name oder Kürzel, der beim Abhaken am PC als Prüfer eingetragen wird (Vorgabe: "
+                                  "angemeldeter Benutzer des Rechners); am Smartphone gilt der Anmeldename"))
+        self._show_checker()
         tb.addSeparator()
         self.act_run = act(tr("▶ Lesen starten"), self.toggle_reading, tr("Signale zyklisch aus den Steuerungen lesen"),
                            "F5")
@@ -983,6 +998,31 @@ class IoCheckWindow(QMainWindow):
         self._update_title()
         if was_running:
             self.start_reading()
+
+    @staticmethod
+    def _save_setting(**changes):
+        """Persönliche Einstellung speichern (Fehler beim Schreiben sind unkritisch)."""
+        try:
+            from plc_common import save_settings
+            save_settings(**changes)
+        except Exception:
+            pass
+
+    def _show_checker(self):
+        """Aktuellen Prüfer im Knopf der Werkzeugleiste anzeigen."""
+        self.act_checker.setText(tr("Prüfer: {0}").format(io.user_name() or "—"))
+
+    def edit_checker(self):
+        """Prüfer festlegen: Klartextname oder Kürzel; leer = angemeldeter Benutzer des Rechners."""
+        from plc_common import load_settings
+        current = str(load_settings().get("iocheck_pruefer") or "")
+        name, ok = QInputDialog.getText(
+            self, tr("Prüfer"),
+            tr("Name oder Kürzel des Prüfers (für Liste und Protokoll).\nLeer lassen: angemeldeter Benutzer „{0}“.")
+            .format(io.system_user() or "—"), QLineEdit.EchoMode.Normal, current)
+        if ok:
+            self._save_setting(iocheck_pruefer=name.strip())
+            self._show_checker()
 
     def _toggle_moved(self, on):
         """Seitenleiste „Was hat sich bewegt?“ zeigen/verbergen und die Wahl merken."""

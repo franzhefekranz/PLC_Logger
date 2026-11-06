@@ -189,6 +189,49 @@ def test_iocheck_project_roundtrip_and_protocol(tmp_path):
     assert rows[0][1] == "E0" and rows[0][2][1] is q.signals[1]
 
 
+def test_iocheck_checker_name_and_protocol_layout(tmp_path, monkeypatch):
+    """Prüfer: eingestellter Name/Kürzel statt Anmeldename; Protokoll quer, Bemerkung mehrzeilig, „Geprüft am“ ohne
+    Uhrzeit."""
+    import zlib
+    from datetime import datetime
+    import plc_common
+    import plc_iocheck as io
+    import plc_report
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    monkeypatch.setenv("USERNAME", "mtaxis")
+    assert io.user_name() == "mtaxis" and not io.protocol_landscape()
+    plc_common.save_settings(iocheck_pruefer=" MT ", iocheck_querformat=True)
+    assert io.user_name() == "MT" and io.protocol_landscape()
+    s = io.IoSignal("E0.0", symbol="B0")
+    io.set_status(s, "fehler", remark="Kabel am Klemmenkasten vertauscht, Ader 3 und 4 getauscht, neu aufgelegt "
+                                      "und nachgemessen – danach in Ordnung")
+    assert s.checker == "MT"
+    assert io._short_date("2026-10-21 08:55:01") == "21.10.26"
+    lines = plc_report.wrap_text(s.remark, 7.2, 100)
+    assert len(lines) > 2 and all(plc_report.text_width(t, 7.2) <= 100 for t in lines)
+    assert " ".join(lines) == s.remark
+    assert plc_report.wrap_text("x" * 80, 7.2, 30)[0] and len(plc_report.wrap_text("x" * 80, 7.2, 30)) > 3
+
+    def pages(path):
+        data = open(path, "rb").read()
+        boxes = [tuple(float(v) for v in m.split()[2:4])
+                 for m in re.findall(rb"/MediaBox \[([^\]]+)\]", data)]
+        text = b""
+        for m in re.finditer(rb"stream\n(.*?)\nendstream", data, re.S):
+            try:
+                text += zlib.decompress(m.group(1))
+            except zlib.error:
+                pass
+        return boxes, text
+    boxes, text = pages(io.write_protocol(str(tmp_path / "quer.pdf"), [s], "Anlage"))
+    assert boxes[0][0] > boxes[0][1]                       # gespeicherte Wahl: quer
+    assert b"nachgemessen" in text
+    today = datetime.now().strftime("%d.%m.%y")
+    assert today.encode() in text and (today + " ").encode() + datetime.now().strftime("%H").encode() not in text
+    boxes, _t = pages(io.write_protocol(str(tmp_path / "hoch.pdf"), [s], "Anlage", landscape=False))
+    assert boxes[0][0] < boxes[0][1]
+
+
 def test_iocheck_scan_addresses():
     """Adressbereich: 10 Bits ab E0.0 enden bei E1.1."""
     import plc_iocheck as io

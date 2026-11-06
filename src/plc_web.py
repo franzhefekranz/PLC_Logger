@@ -905,14 +905,17 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
 
     @app.route("/api/io/protokoll.pdf")
     def api_io_protocol():
-        """IO-Check: Abnahmeprotokoll als PDF erzeugen und im Browser anzeigen."""
+        """IO-Check: Abnahmeprotokoll als PDF erzeugen und im Browser anzeigen (``?quer=1``/``0``: Quer-/Hochformat,
+        sonst die am PC gespeicherte Wahl)."""
         b = _io_bridge
         if b is None or not b.signals:
             abort(404)
         import tempfile
         from plc_iocheck import write_protocol
         path = os.path.join(tempfile.gettempdir(), f"io-protokoll-{os.getpid()}.pdf")
-        write_protocol(path, b.signals, b.title, b.source, b.plcs, getattr(b, "logos", ()))
+        quer = request.args.get("quer")
+        write_protocol(path, b.signals, b.title, b.source, b.plcs, getattr(b, "logos", ()),
+                       None if quer is None else quer not in ("0", "", "false"))
         with open(path, "rb") as f:
             data = f.read()
         return Response(data, mimetype="application/pdf",

@@ -4155,8 +4155,12 @@ search field, filters for group, type and status and the progress (“312 of 480
 305 OK, 4 faults, 3 skipped”).
 
 * **✓ OK** (Ctrl+1), **✗ Fault …** (Ctrl+2, asks for a remark), **– Skipped**
-  (Ctrl+3), **Reset** (Ctrl+0) – for the selected rows. Time and checker (Windows or
-  Linux user) are entered.
+  (Ctrl+3), **Reset** (Ctrl+0) – for the selected rows. Time and checker are entered.
+* **Checked by: …** in the toolbar sets who is entered when signals are checked off on
+  the PC: full name (e.g. “John Smith”) or initials (“JS”). The default is the Windows or
+  Linux user logged in; an empty field restores it. The setting applies to all test
+  progress files of this user; on smartphone and tablet the login name in the web
+  server is used.
 * The **remark** can be edited directly in the table by double-click.
 * **Check off signals automatically** (optional, off): a signal with status *open*
   becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and
@@ -4314,7 +4318,9 @@ Acceptance protocol (PDF)
 
    First page of an acceptance protocol.
 
-**Protocol (PDF) …** creates the acceptance protocol and opens it:
+**Protocol (PDF) …** creates the acceptance protocol and opens it. The arrow on the
+button offers **Landscape** (A4 landscape, more room for symbol, comment and remark); the
+choice is remembered and also applies to **PDF** on the mobile page.
 
 * Header: project, test progress file, controllers, test period and result (checked in
   %, OK, faults, skipped, open); above it the customer logo and logo of the configuration.
@@ -4322,7 +4328,8 @@ Acceptance protocol (PDF)
   signals (PC user or login name in the web server).
 * **Faults and open signals** – the remaining items.
 * **All signals** per group with address, symbol, comment, device tag, type, status,
-  check time, checker and remark or test points of the analog values.
+  check date (without time), checker and remark or test points of the analog values.
+  Comment and remark are printed on several lines, other long entries are shortened (“…”).
 * **Confirmation:** signature fields for the checker and the acceptance (customer).
 
 From scan ranges only edited signals appear. The protocol is created without additional

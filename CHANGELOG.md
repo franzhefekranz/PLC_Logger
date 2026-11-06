@@ -14,6 +14,18 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** Prüfer änderbar – **Prüfer: …** in der Werkzeugleiste nimmt einen Klartextnamen oder ein Kürzel auf
+  (Vorgabe weiterhin der angemeldete Windows-/Linux-Benutzer). Vorschlag aus dem SPS-Forum.
+* **IO-Check:** Abnahmeprotokoll wahlweise im **Querformat** (Pfeil am Knopf *Protokoll (PDF) …*, gemerkt, gilt auch
+  für die Mobilseite).
+
+### Geändert
+
+* **IO-Check-Protokoll:** Kommentar und Bemerkung werden mehrzeilig gedruckt statt abgeschnitten; „Geprüft am“ zeigt
+  nur das Datum.
+
 ## [3.13.0] – 2026-11-06
 
 ### Neu

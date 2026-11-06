@@ -893,3 +893,28 @@ def test_color_scheme_and_iocheck_selection(qt_log, demo_config, tmp_path):
         plc_i18n.apply_color_scheme(scheme="system")
         app.setStyle(style)
         app.setPalette(pal)
+
+
+def test_iocheck_checker_and_protocol_format(qt_log, demo_config, tmp_path, monkeypatch):
+    """IO-Check: Prüfer (Name/Kürzel) über den Knopf der Werkzeugleiste ändern und wieder auf den Anmeldenamen
+    zurücksetzen; Querformat des Protokolls im Menü des Protokoll-Knopfs, gespeichert."""
+    import plc_common
+    import plc_iocheck as io
+    import plc_iocheck_dialog as d
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    monkeypatch.setenv("USERNAME", "mtaxis")
+    w = d.IoCheckWindow(config_path=demo_config, demo=True)
+    assert w.act_checker.text().endswith("mtaxis") and not w.act_landscape.isChecked()
+    monkeypatch.setattr(d.QInputDialog, "getText", staticmethod(lambda *a, **k: ("  Max Mustermann ", True)))
+    w.act_checker.trigger()
+    assert io.user_name() == "Max Mustermann" and w.act_checker.text().endswith("Max Mustermann")
+    s = io.IoSignal("E0.0")
+    io.set_status(s, "ok")
+    assert s.checker == "Max Mustermann"
+    monkeypatch.setattr(d.QInputDialog, "getText", staticmethod(lambda *a, **k: ("", True)))
+    w.edit_checker()
+    assert io.user_name() == "mtaxis"
+    w.act_landscape.setChecked(True)
+    assert plc_common.load_settings()["iocheck_querformat"] is True and io.protocol_landscape()
+    assert w.act_protocol.menu() is not None
+    w.close()

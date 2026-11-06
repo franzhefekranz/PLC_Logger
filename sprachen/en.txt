@@ -3199,14 +3199,20 @@
 @ Protokoll (PDF) …
 > Protocol (PDF) …
 
-@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern
-> Acceptance protocol with summary, fault list, all signals and signature fields
+@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat
+> Acceptance protocol with summary, fault list, all signals and signature fields; arrow: portrait or landscape
+
+@ Querformat
+> Landscape
 
 @ 📱 Mobil …
 > 📱 Mobile …
 
 @ IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)
 > IO check on smartphone/tablet: show the address of the web page (starts the web server if needed)
+
+@ Name oder Kürzel, der beim Abhaken am PC als Prüfer eingetragen wird (Vorgabe: angemeldeter Benutzer des Rechners); am Smartphone gilt der Anmeldename
+> Name or initials entered as “Checked by” when signals are checked off on the PC (default: user logged in to the computer); on the phone the login name is used
 
 @ ▶ Lesen starten
 > ▶ Start reading
@@ -3294,6 +3300,12 @@
 
 @ Alle Gruppen
 > All groups
+
+@ Prüfer: {0}
+> Checked by: {0}
+
+@ Name oder Kürzel des Prüfers (für Liste und Protokoll).\nLeer lassen: angemeldeter Benutzer „{0}“.
+> Name or initials of the tester (for list and protocol).\nLeave empty: logged-in user “{0}”.
 
 @ (nicht gespeichert)
 > (not saved)

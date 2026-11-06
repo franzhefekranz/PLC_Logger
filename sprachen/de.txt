@@ -3199,13 +3199,19 @@
 @ Protokoll (PDF) …
 > 
 
-@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern
+@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat
+> 
+
+@ Querformat
 > 
 
 @ 📱 Mobil …
 > 
 
 @ IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)
+> 
+
+@ Name oder Kürzel, der beim Abhaken am PC als Prüfer eingetragen wird (Vorgabe: angemeldeter Benutzer des Rechners); am Smartphone gilt der Anmeldename
 > 
 
 @ ▶ Lesen starten
@@ -3293,6 +3299,12 @@
 > 
 
 @ Alle Gruppen
+> 
+
+@ Prüfer: {0}
+> 
+
+@ Name oder Kürzel des Prüfers (für Liste und Protokoll).\nLeer lassen: angemeldeter Benutzer „{0}“.
 > 
 
 @ (nicht gespeichert)

@@ -462,11 +462,13 @@ def load_image(path):
 
 
 class PdfWriter:
-    """Mehrseitiges PDF (A4 hoch, Koordinaten in Punkt, Ursprung links unten)."""
+    """Mehrseitiges PDF (A4 hoch oder quer, Koordinaten in Punkt, Ursprung links unten)."""
     W, H = 595.28, 841.89
 
-    def __init__(self):
-        """Leeres Dokument; ``pages`` hält je Seite die Liste der Zeichenbefehle."""
+    def __init__(self, landscape=False):
+        """Leeres Dokument; ``pages`` hält je Seite die Liste der Zeichenbefehle; ``landscape``: A4 quer."""
+        if landscape:
+            self.W, self.H = PdfWriter.H, PdfWriter.W
         self.pages = []
         self.cur = None
         self.images = []                                  # eingebettete Bilder (PdfImage), Namen /Im0, /Im1 …
@@ -622,10 +624,11 @@ def _fmt_dur(s):
 class _Doc:
     """Seitenaufbau mit Kopf-/Fußzeile und fortlaufender Schreibposition."""
 
-    def __init__(self, title, subtitle, logos=()):
+    def __init__(self, title, subtitle, logos=(), landscape=False):
         """Dokument mit Titel (Kopfzeile links) und Untertitel (rechts) beginnen; ``logos``: Bilddateien (Kundenlogo,
-        Logo), die oben auf jeder Seite stehen (links bzw. rechts; nicht lesbare Dateien entfallen)."""
-        self.pdf = PdfWriter()
+        Logo), die oben auf jeder Seite stehen (links bzw. rechts; nicht lesbare Dateien entfallen); ``landscape``:
+        A4 quer."""
+        self.pdf = PdfWriter(landscape)
         self.title, self.subtitle = title, subtitle
         self.logos = [img for img in (load_image(p) for p in logos if p) if img is not None]
         self.page_no = 0
@@ -636,7 +639,8 @@ class _Doc:
         """Neue Seite mit Kopfzeile, Linie, Fußzeile und Seitennummer; Schreibposition unter den Kopf."""
         self.pdf.new_page()
         self.page_no += 1
-        p, W, H = self.pdf, PdfWriter.W, PdfWriter.H
+        p = self.pdf
+        W, H = p.W, p.H
         top = H
         if self.logos:                                    # Logos oben: das erste links, ein zweites rechts
             lh = 30.0
@@ -666,10 +670,38 @@ class _Doc:
         self.y -= 14
 
 
-def _table(doc, cols, rows, widths, aligns, size=8):
-    """Tabelle mit Kopfzeile; bricht auf neue Seiten um (Kopf wird wiederholt)."""
+def wrap_text(text, size, width):
+    """Text in Zeilen umbrechen, die höchstens ``width`` Punkt breit sind (an Leerzeichen, zu lange Wörter hart);
+    vorhandene Zeilenumbrüche bleiben erhalten."""
+    lines = []
+    for para in str(text).splitlines() or [""]:
+        cur = ""
+        for word in para.split():
+            while text_width(word, size) > width and len(word) > 1:      # Wort länger als die Spalte
+                k = len(word) - 1
+                while k > 1 and text_width(word[:k], size) > width:
+                    k -= 1
+                if cur:
+                    lines.append(cur)
+                    cur = ""
+                lines.append(word[:k])
+                word = word[k:]
+            test = f"{cur} {word}" if cur else word
+            if cur and text_width(test, size) > width:
+                lines.append(cur)
+                cur = word
+            else:
+                cur = test
+        lines.append(cur)
+    return lines
+
+
+def _table(doc, cols, rows, widths, aligns, size=8, wrap=()):
+    """Tabelle mit Kopfzeile; bricht auf neue Seiten um (Kopf wird wiederholt). Zu lange Zellen werden gekürzt, in den
+    Spalten ``wrap`` (Indizes) dagegen mehrzeilig umgebrochen (die Zeile wird entsprechend höher)."""
     p = doc.pdf
     rh = size + 5
+    lh = size + 1.6                                       # Abstand der Textzeilen in einer umgebrochenen Zelle
 
     def header():
         """Kopfzeile der Tabelle mit grauem Hintergrund zeichnen."""
@@ -681,21 +713,31 @@ def _table(doc, cols, rows, widths, aligns, size=8):
         doc.y -= rh
     doc.need(rh * 2)
     header()
+    max_lines = max(1, int((doc.pdf.H - 160) / lh))     # eine Zeile passt immer auf eine Seite
     for k, row in enumerate(rows):
-        if doc.y - rh < 40:
+        cells = []
+        for j, (cell, w) in enumerate(zip(row, widths)):
+            text, color = cell if isinstance(cell, tuple) else (cell, TXT)
+            if j in wrap:
+                lines = wrap_text(text, size, w - 6)[:max_lines]
+            else:
+                s = str(text).replace("\n", " ")
+                while s and text_width(s, size) > w - 6:      # zu lang: kürzen
+                    s = s[:-2] + "…" if len(s) > 2 else ""
+                lines = [s]
+            cells.append((lines, color))
+        extra = (max(len(c[0]) for c in cells) - 1) * lh if cells else 0
+        if doc.y - rh - extra < 40:
             doc.new_page()
             header()
         if k % 2:
-            p.rect(MARGIN, doc.y - 3, sum(widths), rh, fill="#f6f8fa")
+            p.rect(MARGIN, doc.y - 3 - extra, sum(widths), rh + extra, fill="#f6f8fa")
         x = MARGIN
-        for cell, w, a in zip(row, widths, aligns):
-            text, color = cell if isinstance(cell, tuple) else (cell, TXT)
-            s = str(text)
-            while s and text_width(s, size) > w - 6:          # zu lang: kürzen
-                s = s[:-2] + "…" if len(s) > 2 else ""
-            p.text(x + (w - 3 if a == "right" else 3), doc.y + 1, s, size, color=color, align=a)
+        for (lines, color), w, a in zip(cells, widths, aligns):
+            for n, s in enumerate(lines):
+                p.text(x + (w - 3 if a == "right" else 3), doc.y + 1 - n * lh, s, size, color=color, align=a)
             x += w
-        doc.y -= rh
+        doc.y -= rh + extra
     doc.y -= 6
 
 
@@ -710,7 +752,7 @@ def _chart(doc, chart, var_idx, acc, variables, height=230):
     p.text(MARGIN, doc.y, chart.name, 9.5, bold=True, color=TXT)
     doc.y -= 8
     n_ax = max(1, len(chart.axes))
-    left, right = MARGIN + 46, PdfWriter.W - MARGIN - (46 if n_ax > 1 else 8)
+    left, right = MARGIN + 46, p.W - MARGIN - (46 if n_ax > 1 else 8)
     top, bottom = doc.y, doc.y - height
     w, h = right - left, top - bottom
     p.rect(left, bottom, w, h, stroke="#9aa5b1", width=0.6)

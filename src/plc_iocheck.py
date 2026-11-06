@@ -129,9 +129,20 @@ def canon_address(address: str) -> str:
     return f"{area}{'' if width == 'X' else width}{byte}" + (f".{bit}" if width == "X" else "")
 
 
-def user_name() -> str:
-    """Angemeldeter Benutzer des Rechners (Prüfer, wenn am PC abgehakt wird)."""
+def system_user() -> str:
+    """Angemeldeter Benutzer des Rechners (Windows-/Linux-Anmeldename)."""
     return os.environ.get("USERNAME") or os.environ.get("USER") or ""
+
+
+def user_name() -> str:
+    """Prüfer, wenn am PC abgehakt wird: der im IO-Check eingestellte Name bzw. das Kürzel (Einstellung
+    ``iocheck_pruefer``), sonst der angemeldete Benutzer des Rechners."""
+    try:
+        from plc_common import load_settings
+        name = str(load_settings().get("iocheck_pruefer") or "").strip()
+    except Exception:
+        name = ""
+    return name or system_user()
 
 
 def now_text() -> str:
@@ -1020,23 +1031,35 @@ def protocol_signals(signals):
     return [s for s in signals if not s.scanned or s.status != "offen" or s.remark]
 
 
-def _short_time(text):
-    """'2026-10-21 08:55:01' -> '21.10.26 08:55'."""
+def _short_date(text):
+    """'2026-10-21 08:55:01' -> '21.10.26' (Datum für die Spalte „Geprüft am“ im Protokoll)."""
     try:
-        return datetime.strptime(text[:16], "%Y-%m-%d %H:%M").strftime("%d.%m.%y %H:%M")
+        return datetime.strptime(text[:10], "%Y-%m-%d").strftime("%d.%m.%y")
     except ValueError:
-        return text[:16]
+        return text[:10]
 
 
-def write_protocol(path, signals, project="", source="", plcs=(), logos=()):
+def protocol_landscape() -> bool:
+    """Gespeicherte Wahl „Protokoll im Querformat“ (Einstellung ``iocheck_querformat``, Standard: hoch)."""
+    try:
+        from plc_common import load_settings
+        return bool(load_settings().get("iocheck_querformat", False))
+    except Exception:
+        return False
+
+
+def write_protocol(path, signals, project="", source="", plcs=(), logos=(), landscape=None):
     """Abnahmeprotokoll als PDF: Zusammenfassung, Prüfer, Fehler/offene Signale, alle Signale je Gruppe,
-    Unterschriftsfelder. Prüfer = Benutzer am PC bzw. Anmeldename im Webserver; ``logos``: Bilddateien für den
-    Seitenkopf (Kundenlogo, Logo)."""
-    from plc_report import MARGIN, PdfWriter, _Doc, _table
+    Unterschriftsfelder. Prüfer = eingestellter Name am PC bzw. Anmeldename im Webserver; ``logos``: Bilddateien für
+    den Seitenkopf (Kundenlogo, Logo); ``landscape``: A4 quer (None: gespeicherte Wahl). Kommentar und Bemerkung
+    werden mehrzeilig gedruckt, „Geprüft am“ nur mit Datum."""
+    from plc_report import MARGIN, _Doc, _table
+    if landscape is None:
+        landscape = protocol_landscape()
     sigs = protocol_signals(signals)
     txt, mute, head = "#1b2430", "#5b6878", "#0d47a1"
     colors = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#b26a00"}
-    doc = _Doc(tr("IO-Check – Abnahmeprotokoll"), project or os.path.basename(source), logos)
+    doc = _Doc(tr("IO-Check – Abnahmeprotokoll"), project or os.path.basename(source), logos, landscape)
     p = doc.pdf
     pr = progress(sigs)
     done = pr["ok"] + pr["fehler"] + pr["uebersprungen"]
@@ -1087,7 +1110,12 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=()):
 
     cols = [tr("Adresse"), tr("Symbol"), tr("Kommentar"), tr("BMK"), tr("Typ"), tr("Status"), tr("Geprüft am"),
             tr("Prüfer"), tr("Bemerkung")]
-    widths = [46, 62, 98, 44, 20, 46, 56, 52, 91]
+    widths = [46, 62, 98, 44, 20, 46, 46, 52, 101]       # A4 hoch: 515 pt
+    extra = doc.pdf.W - 2 * MARGIN - sum(widths)          # quer: mehr Platz für Symbol, Kommentar, BMK, Bemerkung
+    if extra > 0:
+        for j, part in ((1, 0.15), (2, 0.35), (3, 0.05), (7, 0.05), (8, 0.40)):
+            widths[j] += extra * part
+    wrap = (2, 8)                                         # Kommentar und Bemerkung mehrzeilig
 
     def row(s):
         note = s.remark
@@ -1095,13 +1123,13 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=()):
         if pts:
             note = f"{note}; {pts}" if note else pts
         return [s.address, s.symbol, s.comment, s.bmk, s.kind, (tr(STATUS[s.status]), colors[s.status]),
-                _short_time(s.checked_at), s.checker, note]
+                _short_date(s.checked_at), s.checker, note]
 
     bad = [s for s in sigs if s.status in ("fehler", "offen")]
     doc.heading(tr("Fehler und offene Signale"))
     if bad:
         _table(doc, cols, [row(s) for s in sorted(bad, key=lambda s: (s.status != "fehler", s.group, s.address))],
-               widths, ["left"] * 9, size=7.2)
+               widths, ["left"] * 9, size=7.2, wrap=wrap)
     else:
         p.text(MARGIN, doc.y, tr("Keine – alle Signale geprüft und in Ordnung bzw. übersprungen."), 8.5, color=mute)
         doc.y -= 14
@@ -1113,12 +1141,12 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=()):
             doc.need(40)
             p.text(MARGIN, doc.y, g, 9, bold=True, color=head)
             doc.y -= 12
-        _table(doc, cols, [row(s) for s in part], widths, ["left"] * 9, size=7.2)
+        _table(doc, cols, [row(s) for s in part], widths, ["left"] * 9, size=7.2, wrap=wrap)
 
     # Unterschriften
     doc.need(120)
     doc.heading(tr("Bestätigung"))
-    x2 = MARGIN + (PdfWriter.W - 2 * MARGIN) / 2 + 10
+    x2 = MARGIN + (p.W - 2 * MARGIN) / 2 + 10
     for x, label in ((MARGIN, tr("Prüfer")), (x2, tr("Abnahme (Auftraggeber)"))):
         y = doc.y - 50
         p.line(x, y, x + 220, y, color=txt, width=0.6)

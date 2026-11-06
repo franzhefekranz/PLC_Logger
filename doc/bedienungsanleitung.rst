@@ -4259,7 +4259,12 @@ geprüft – 305 OK, 4 Fehler, 3 übersprungen“).
 
 * **✓ OK** (Strg+1), **✗ Fehler …** (Strg+2, fragt nach einer Bemerkung),
   **– Übersprungen** (Strg+3), **Zurücksetzen** (Strg+0) – für die markierten Zeilen.
-  Zeit und Prüfer (Windows- bzw. Linux-Benutzer) werden eingetragen.
+  Zeit und Prüfer werden eingetragen.
+* **Prüfer: …** in der Werkzeugleiste legt fest, wer beim Abhaken am PC eingetragen
+  wird: Klartextname (z. B. „Max Mustermann“) oder Kürzel („MM“). Vorgabe ist der
+  angemeldete Windows- bzw. Linux-Benutzer; ein leeres Feld stellt ihn wieder her. Die
+  Einstellung gilt für alle Prüfstände dieses Benutzers; auf Smartphone und Tablet gilt
+  der Anmeldename im Webserver.
 * Die **Bemerkung** lässt sich per Doppelklick direkt in der Tabelle bearbeiten.
 * **Signale automatisch abhaken** (optional, aus): Ein Signal mit Status *offen* wird
   OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen)
@@ -4417,15 +4422,18 @@ Abnahmeprotokoll (PDF)
 
    Erste Seite eines Abnahmeprotokolls.
 
-**Protokoll (PDF) …** erzeugt das Abnahmeprotokoll und öffnet es:
+**Protokoll (PDF) …** erzeugt das Abnahmeprotokoll und öffnet es. Über den Pfeil am
+Knopf lässt sich **Querformat** wählen (A4 quer, mehr Platz für Symbol, Kommentar und
+Bemerkung); die Wahl wird gemerkt und gilt auch für **PDF** auf der Mobilseite.
 
 * Kopf: Projekt, Prüfstand, Steuerungen, Prüfzeitraum und Ergebnis (geprüft in %, OK,
   Fehler, übersprungen, offen); darüber Kundenlogo und Logo der Konfiguration.
 * **Zusammenfassung** je Signalart und je Gruppe, **Prüfer** mit Anzahl der geprüften
   Signale (PC-Benutzer bzw. Anmeldename im Webserver).
 * **Fehler und offene Signale** – die Restpunkte.
-* **Alle Signale** je Gruppe mit Adresse, Symbol, Kommentar, BMK, Typ, Status, Prüfzeit,
-  Prüfer und Bemerkung bzw. Messpunkten der Analogwerte.
+* **Alle Signale** je Gruppe mit Adresse, Symbol, Kommentar, BMK, Typ, Status, Prüfdatum
+  (ohne Uhrzeit), Prüfer und Bemerkung bzw. Messpunkten der Analogwerte. Kommentar und
+  Bemerkung werden mehrzeilig gedruckt, andere zu lange Einträge gekürzt („…“).
 * **Bestätigung:** Unterschriftsfelder für Prüfer und Abnahme (Auftraggeber).
 
 Aus Scan-Bereichen erscheinen nur bearbeitete Signale. Das Protokoll entsteht ohne
