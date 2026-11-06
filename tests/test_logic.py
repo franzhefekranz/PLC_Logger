@@ -1308,11 +1308,22 @@ def test_db_events_sqlite(tmp_path):
     w = plc_db.DbWriter(conn, ["A"], events=log, interval_s=0.05)
     w.start()
     w.put(time.time(), [1.0])
-    time.sleep(0.6)
     q = "SELECT id, trigger_name, prioritaet, meldung, gegangen IS NOT NULL, quittiert IS NOT NULL, benutzer, notiz, " \
         "projekt FROM anlage_ereignisse ORDER BY zeit"
-    with sqlite3.connect(conn["db_datei"]) as c:
-        rows = c.execute(q).fetchall()
+
+    def rows_when(cond, timeout=15):
+        """Zeilen der Ereignistabelle, sobald ``cond(rows)`` gilt (Schreib-Thread; Windows ist langsamer)."""
+        end = time.time() + timeout
+        while True:
+            try:
+                with sqlite3.connect(conn["db_datei"]) as c:
+                    rows = c.execute(q).fetchall()
+            except sqlite3.OperationalError:
+                rows = []
+            if cond(rows) or time.time() > end:
+                return rows
+            time.sleep(0.1)
+    rows = rows_when(lambda r: len(r) == 3)
     assert [(r[1], r[4], r[5], r[6], r[7], r[8]) for r in rows] == [
         ("Übertemperatur", 1, 1, "chef", 0, "Kessel"), ("Druck", 0, 0, "", 0, "Kessel"),
         ("Notiz", 0, 0, "mm", 1, "Kessel")]
@@ -1320,11 +1331,9 @@ def test_db_events_sqlite(tmp_path):
     eid = rows[1][0]
     log.go(eid, Trigger(name="Druck", prio="Warnung"))
     log.acknowledge([eid], user="gast")
-    time.sleep(0.5)
+    rows = rows_when(lambda r: len(r) == 3 and r[1][4] == 1 and r[1][6] == "gast")
     w.stop()
     assert w.events_written >= 4 and "Ereignisse" in w.status()[1]
-    with sqlite3.connect(conn["db_datei"]) as c:
-        rows = c.execute(q).fetchall()
     assert len(rows) == 3 and rows[1][4] == 1 and rows[1][6] == "gast"
     # Neustart: wieder alle abgeglichen, keine Dubletten
     w2 = plc_db.DbWriter(conn, ["A"], events=plc_db_reload(log), interval_s=0.05)
