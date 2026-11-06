@@ -1657,7 +1657,12 @@ CPU von S7-PLCSIM Advanced:
        Servers, Basic256Sha256 (signieren und verschlüsseln) mit Anmeldung. Noch nicht erprobt:
        Array als Block, Server einer echten Steuerung. Automatisch gegen einen OPC-UA-Server
        von asyncua (Zahlen, BOOL, Array als Block).
-   * - ``logo``, ``pccc``, ``modbus_rtu``, ``ads``, ``slmp``, ``fins``, ``kvhostlink``,
+   * - ``ads``
+     - **Mit TwinCAT 3.1.4026.25** auf demselben Rechner (Windows, Anmeldung beim lokalen
+       AMS-Router, ohne Route): Symbolauswahl, Lesen und Aufzeichnen, auch mit einem großen
+       Projekt (Rückmeldung aus dem SPS-Forum). Noch nicht erprobt: entfernte Steuerung über
+       eine Route, TwinCAT 2.
+   * - ``logo``, ``pccc``, ``modbus_rtu``, ``slmp``, ``fins``, ``kvhostlink``,
        ``toyopuc``, ``s5as511``
      - Noch weder mit Steuerung noch mit Simulator erprobt. Erfahrungen und Fehlermeldungen
        (z. B. über GitHub) sind willkommen.

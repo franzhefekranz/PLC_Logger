@@ -1617,7 +1617,12 @@ CPU of S7-PLCSIM Advanced:
        failure, Basic256Sha256 (sign and encrypt) with login. Not yet tried: array as block,
        the server of a real PLC. Automatically against an OPC UA server of asyncua (numbers,
        BOOL, array as block).
-   * - ``logo``, ``pccc``, ``modbus_rtu``, ``ads``, ``slmp``, ``fins``, ``kvhostlink``,
+   * - ``ads``
+     - **With TwinCAT 3.1.4026.25** on the same computer (Windows, registration with the
+       local AMS router, without route): symbol selection, reading and recording, also with a
+       large project (feedback from the SPS-Forum). Not yet tried: remote controller via a
+       route, TwinCAT 2.
+   * - ``logo``, ``pccc``, ``modbus_rtu``, ``slmp``, ``fins``, ``kvhostlink``,
        ``toyopuc``, ``s5as511``
      - Not yet tried with a controller or a simulator. Experience reports and error
        reports (e.g. via GitHub) are welcome.
