@@ -2110,6 +2110,18 @@ eine **Route** eingetragen ist: im TwinCAT-System-Manager bzw. XAE unter
 und seiner IP-Adresse anlegen. Ohne Route meldet der Treiber
 „ADS-Fehler 0x7: Zielrechner nicht gefunden“.
 
+**TwinCAT auf demselben Rechner** (Logger auf dem IPC bzw. dem Entwicklungsrechner mit
+TwinCAT-Laufzeit): *IP-Adresse* ``127.0.0.1``, *AMS-Net-ID der Steuerung* wie im
+TwinCAT-Router angezeigt, *Eigene AMS-Net-ID* **leer** – eine Route ist nicht nötig. Der
+Treiber meldet sich dann beim lokalen AMS-Router an und bekommt von ihm Absenderadresse und
+Port zugeteilt (wie die TwinCAT-eigenen Programme). Die eigene IP-Adresse statt ``127.0.0.1``
+geht auch. Voraussetzung ist *AMS TCP Loopback* im Router: ab TwinCAT 3.1 Build 4024.5
+eingeschaltet, bei älteren Versionen in der Registry unter
+``HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Beckhoff\TwinCAT3\System`` den DWORD-Wert
+``EnableAmsTcpLoopback`` = ``1`` anlegen und TwinCAT neu starten. Trägt man stattdessen die
+eigene IP-Adresse mit einer eigenen AMS-Net-ID ein, die zugleich die der Steuerung ist, kommt
+„Port gesperrt“ bzw. „Verbindung von der Steuerung getrennt“.
+
 .. list-table:: Verbindungsparameter
    :header-rows: 1
    :widths: 30 70

@@ -4930,8 +4930,8 @@
 @ Zielrechner nicht gefunden – Route in TwinCAT anlegen (AMS-Net-ID und IP dieses Rechners)
 > Target machine not found – add a route in TwinCAT (AMS Net ID and IP of this computer)
 
-@ Port gesperrt
-> Port disabled
+@ Port gesperrt – Route fehlt oder passt nicht zur eigenen AMS-Net-ID; läuft TwinCAT auf diesem Rechner: IP-Adresse 127.0.0.1 eintragen, eigene AMS-Net-ID leer lassen
+> Port disabled – route missing or not matching the own AMS Net ID; if TwinCAT runs on this computer: enter IP address 127.0.0.1, leave own AMS Net ID empty
 
 @ Dienst nicht unterstützt
 > Service not supported
@@ -4975,6 +4975,9 @@
 @ Ungültige ADS-Adresse „{0}“ (z. B. MAIN.fTemperatur, GVL.aWerte[3], %MW10, 0x4020:16)
 > Invalid ADS address “{0}” (e.g. MAIN.fTemperatur, GVL.aWerte[3], %MW10, 0x4020:16)
 
+@ Lokaler TwinCAT-Router nimmt keine Verbindung an – „AMS TCP Loopback“ einschalten (ab TwinCAT 3.1 Build 4024.5 Standard; sonst Registry HKLM\\SOFTWARE\\WOW6432Node\\Beckhoff\\TwinCAT3\\System, DWORD EnableAmsTcpLoopback = 1, TwinCAT neu starten)
+> Local TwinCAT router does not accept the connection – enable “AMS TCP loopback” (default from TwinCAT 3.1 build 4024.5; otherwise registry HKLM\\SOFTWARE\\WOW6432Node\\Beckhoff\\TwinCAT3\\System, DWORD EnableAmsTcpLoopback = 1, restart TwinCAT)
+
 @ Verbindung von der Steuerung getrennt
 > Connection closed by the controller
 
@@ -5001,6 +5004,9 @@
 
 @ IP-Adresse
 > IP address
+
+@ TwinCAT auf diesem Rechner: 127.0.0.1 (keine Route nötig, eigene AMS-Net-ID leer lassen)
+> TwinCAT on this computer: 127.0.0.1 (no route needed, leave own AMS Net ID empty)
 
 @ AMS-Net-ID der Steuerung
 > AMS Net ID of the controller

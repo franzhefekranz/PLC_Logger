@@ -2058,6 +2058,17 @@ also works via the ``opcua`` driver if the TF6100 server is licensed.)
 this computer** (parameter *Own AMS Net ID*, default: IP address + ``.1.1``) and its IP
 address. Without a route the driver reports “ADS error 0x7: target machine not found”.
 
+**TwinCAT on the same computer** (logger on the IPC or the engineering PC with TwinCAT
+runtime): *IP address* ``127.0.0.1``, *AMS Net ID of the controller* as shown in the TwinCAT
+router, *Own AMS Net ID* **empty** – no route is needed. The driver then registers with the
+local AMS router and gets its sender address and port assigned (like TwinCAT's own programs).
+The own IP address instead of ``127.0.0.1`` works too. Requirement is *AMS TCP loopback* in the
+router: enabled from TwinCAT 3.1 build 4024.5, for older versions create the DWORD value
+``EnableAmsTcpLoopback`` = ``1`` in the registry under
+``HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Beckhoff\TwinCAT3\System`` and restart TwinCAT.
+Entering the own IP address with an own AMS Net ID that is also the controller's leads to
+“port disabled” or “connection closed by the controller”.
+
 .. list-table:: Connection parameters
    :header-rows: 1
    :widths: 30 70

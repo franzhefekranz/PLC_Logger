@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **ADS: TwinCAT auf demselben Rechner** – mit IP-Adresse `127.0.0.1` (oder der eigenen) und leerer eigener AMS-Net-ID
+  meldet sich der Treiber beim lokalen AMS-Router an (AMS/TCP „Port verbinden“), eine Route ist nicht nötig.
+  Voraussetzung: AMS TCP Loopback (ab TwinCAT 3.1.4024.5 Standard).
+
 ### Geändert
 
 * **Teststand:** unter Linux (Ubuntu Studio) erfolgreich mit ControlLogix sowie S7 mit PLCSIM über NetToPLCsim.
@@ -22,6 +28,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   (Rückmeldung aus dem SPS-Forum).
 * **Teststand** in Anleitung, README und Webseite: Treiber `opcua` und der OPC-UA-Server im Netz erprobt (Raspberry Pi
   als Server, PC als Client: Lesen, Subscription, Wiederverbinden, Basic256Sha256 mit Anmeldung).
+
+### Behoben
+
+* **ADS:** große Symboltabellen im Auswahldialog – Zeitlimit beim Lesen der Tabelle mindestens 30 s; Meldungen des
+  Routers zwischen den Antworten werden übersprungen; „Port gesperrt“ mit Hinweis auf Route bzw. 127.0.0.1.
 
 ## [3.12.1] – 2026-11-05
 

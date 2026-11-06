@@ -1501,3 +1501,69 @@ def test_netz_hides_virtual_interfaces():
     n = plc_netz.Netz(run=run)
     n.has_nm = lambda: True
     assert [d.name for d in n.devices()] == ["eth0", "wlan0"]
+
+
+def test_ads_local_router_registration():
+    """ADS mit TwinCAT auf demselben Rechner: Anmeldung beim lokalen AMS-Router (0x1000), zugeteilte AMS-Net-ID/Port
+    als Absender, Router-Meldungen zwischen den Antworten werden übersprungen, Abmeldung beim Schließen."""
+    import socket
+    import struct
+    import threading
+
+    from plc_treiber.ads import AdsClient
+    seen = {"src": None, "close": False}
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen(1)
+    port = srv.getsockname()[1]
+
+    def router():
+        c, _ = srv.accept()
+
+        def recv(n):
+            b = b""
+            while len(b) < n:
+                ch = c.recv(n - len(b))
+                if not ch:
+                    raise ConnectionError
+                b += ch
+            return b
+        try:
+            while True:
+                cmd, length = struct.unpack("<HI", recv(6))
+                body = recv(length)
+                if cmd == 0x1000:                                   # Port anmelden -> Net-ID 10.0.0.5.1.1, Port 30001
+                    c.sendall(struct.pack("<HI", 0x1000, 8) + bytes([10, 0, 0, 5, 1, 1]) + struct.pack("<H", 30001))
+                elif cmd == 0x0001:
+                    seen["close"] = True
+                    return
+                else:                                                # ADS ReadState
+                    seen["src"] = (body[8:14], struct.unpack_from("<H", body, 14)[0])
+                    inv = struct.unpack_from("<I", body, 28)[0]
+                    hdr = body[8:16] + body[0:8] + struct.pack("<HHIII", 4, 0x0005, 8, 0, inv)
+                    c.sendall(struct.pack("<HI", 0x1001, 4) + b"\x00\x00\x00\x00")   # Router-Meldung
+                    c.sendall(struct.pack("<HI", 0, len(hdr) + 8) + hdr + struct.pack("<IHH", 0, 5, 0))
+        except ConnectionError:
+            pass
+        finally:
+            c.close()
+    t = threading.Thread(target=router, daemon=True)
+    t.start()
+    cl = AdsClient({"ip": "127.0.0.1", "tcp_port": port, "ams_netid": "172.22.15.10.1.1", "ams_port": 851})
+    cl.connect()
+    assert cl.local_router and cl.source == bytes([10, 0, 0, 5, 1, 1]) and cl.source_port == 30001
+    assert cl.read_state() == (5, 0)
+    assert seen["src"] == (bytes([10, 0, 0, 5, 1, 1]), 30001)
+    cl.close()
+    t.join(2)
+    srv.close()
+    assert seen["close"]
+    # entfernte Steuerung mit eigener AMS-Net-ID: keine Anmeldung
+    srv2 = socket.socket()
+    srv2.bind(("127.0.0.1", 0))
+    srv2.listen(1)
+    cl2 = AdsClient({"ip": "127.0.0.1", "tcp_port": srv2.getsockname()[1], "eigene_netid": "192.168.0.5.1.1"})
+    cl2.connect()
+    assert not cl2.local_router and cl2.source == bytes([192, 168, 0, 5, 1, 1])
+    cl2.close()
+    srv2.close()

@@ -11,6 +11,11 @@ Der Auswahldialog liest die Symboltabelle der Steuerung.
 Voraussetzung: In der Steuerung (TwinCAT-Router) eine Route zu diesem Rechner anlegen – AMS-Net-ID dieses Rechners
 (Einstellung „Eigene AMS-Net-ID“, Standard: eigene IP-Adresse + „.1.1“) und seine IP-Adresse. Ohne Route beantwortet
 die Steuerung keine Anfragen. Port: 851 = erste SPS-Laufzeit (TwinCAT 3), 801 = TwinCAT 2.
+
+Läuft TwinCAT auf DEMSELBEN Rechner (IP 127.0.0.1 bzw. die eigene IP-Adresse), braucht es keine Route: der Treiber
+meldet sich beim lokalen AMS-Router an (AMS/TCP-Befehl „Port verbinden“, 0x1000) und bekommt von ihm AMS-Net-ID und
+Port zugeteilt – wie die TwinCAT-eigenen Programme. Voraussetzung ist „AMS TCP Loopback“ im Router (ab TwinCAT 3.1
+Build 4024.5 eingeschaltet, sonst Registry-Wert EnableAmsTcpLoopback = 1).
 """
 import re
 import socket
@@ -21,6 +26,10 @@ from plc_i18n import N_, tr
 from plc_treiber.base import NAN, BrowseResult, Driver, Param, Reader
 
 AMS_PORT = 48898
+# AMS/TCP-Kopf, erstes Wort: 0 = ADS-Telegramm, sonst Befehl an den lokalen Router
+TCP_AMS, TCP_PORT_CLOSE, TCP_PORT_CONNECT = 0x0000, 0x0001, 0x1000
+LOCAL_HOSTS = ("127.0.0.1", "localhost", "::1")
+SYMBOL_UPLOAD_TIMEOUT_S = 30.0       # große Symboltabellen (mehrere MB) brauchen länger als das normale Zeitlimit
 CMD_READ, CMD_READWRITE, CMD_READSTATE = 2, 9, 4
 IG_SYM_INFOBYNAMEEX, IG_SUMUP_READ = 0xF009, 0xF080
 IG_SYM_UPLOAD, IG_SYM_UPLOADINFO2 = 0xF00B, 0xF00F
@@ -39,7 +48,8 @@ _INDEX_RE = re.compile(r"^(.*)\[(\d+)\]$")
 ERRORS = {
     0x6: N_("Zielport nicht gefunden (SPS-Laufzeit gestartet? Port 851/801)"),
     0x7: N_("Zielrechner nicht gefunden – Route in TwinCAT anlegen (AMS-Net-ID und IP dieses Rechners)"),
-    0x12: N_("Port gesperrt"), 0x701: N_("Dienst nicht unterstützt"), 0x702: N_("Indexgruppe ungültig"),
+    0x12: N_("Port gesperrt – Route fehlt oder passt nicht zur eigenen AMS-Net-ID; läuft TwinCAT auf diesem Rechner: "
+             "IP-Adresse 127.0.0.1 eintragen, eigene AMS-Net-ID leer lassen"), 0x701: N_("Dienst nicht unterstützt"), 0x702: N_("Indexgruppe ungültig"),
     0x703: N_("Indexoffset ungültig"), 0x705: N_("Datengröße passt nicht"), 0x706: N_("Daten ungültig"),
     0x710: N_("Symbol nicht gefunden"), 0x711: N_("Symbolversion ungültig (SPS neu geladen?)"),
     0x745: N_("Zeitüberschreitung"), 0x751: N_("Zu viele Unteranfragen"),
@@ -110,27 +120,71 @@ class AdsClient:
         self.sock = None
         self.invoke = 0
         self.lock = threading.Lock()
+        self.local_router = False         # beim lokalen AMS-Router angemeldet (TwinCAT auf diesem Rechner)
 
-    def connect(self):
-        """TCP-Verbindung öffnen; ohne eingestellte eigene AMS-Net-ID gilt die lokale IP-Adresse + .1.1 (sie muss zur
-        Route passen).
-        """
-        self.close()
-        s = socket.create_connection((self.host, self.port), timeout=self.timeout)
+    def _open(self, host):
+        s = socket.create_connection((host, self.port), timeout=self.timeout)
         s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         s.settimeout(self.timeout)
+        return s
+
+    def connect(self):
+        """TCP-Verbindung öffnen. Entfernte Steuerung: ohne eingestellte eigene AMS-Net-ID gilt die lokale IP-Adresse
+        + .1.1 (sie muss zur Route passen). TwinCAT auf diesem Rechner (127.0.0.1 oder die eigene IP-Adresse, keine
+        eigene AMS-Net-ID eingestellt): beim lokalen Router anmelden, er teilt AMS-Net-ID und Port zu.
+        """
+        self.close()
+        s = self._open(self.host)
+        local, peer = s.getsockname()[0], s.getpeername()[0]
+        same = self.host.strip().lower() in LOCAL_HOSTS or local == peer
+        if same and not self.source_text:
+            if self.host.strip().lower() not in LOCAL_HOSTS:     # eigene IP-Adresse: der Router erwartet Loopback
+                s.close()
+                s = self._open("127.0.0.1")
+            self.sock = s
+            self._register_port()
+            return
         self.sock = s
-        local = s.getsockname()[0]
         self.source = parse_netid(self.source_text or f"{local}.1.1")
 
+    def _register_port(self):
+        """Beim lokalen AMS-Router einen Port anmelden (AMS/TCP 0x1000, gewünschter Port 0 = beliebig); die Antwort
+        enthält die zugeteilte AMS-Net-ID und den Port, die als Absender dienen."""
+        hint = tr("Lokaler TwinCAT-Router nimmt keine Verbindung an – „AMS TCP Loopback“ einschalten (ab TwinCAT 3.1 "
+                  "Build 4024.5 Standard; sonst Registry HKLM\\SOFTWARE\\WOW6432Node\\Beckhoff\\TwinCAT3\\System, "
+                  "DWORD EnableAmsTcpLoopback = 1, TwinCAT neu starten)")
+        try:
+            self.sock.sendall(struct.pack("<HIH", TCP_PORT_CONNECT, 2, 0))
+            while True:
+                head = self._recv(6)
+                cmd, length = struct.unpack("<HI", head)
+                body = self._recv(length)
+                if cmd == TCP_PORT_CONNECT:
+                    break
+        except (OSError, ConnectionError):
+            self.close()
+            raise ConnectionError(hint) from None
+        if len(body) < 8:
+            self.close()
+            raise ConnectionError(hint)
+        self.source = body[:6]
+        self.source_port = struct.unpack_from("<H", body, 6)[0]
+        self.local_router = True
+
     def close(self):
-        """Verbindung schließen."""
+        """Verbindung schließen (beim lokalen Router vorher den Port abmelden)."""
         if self.sock is not None:
+            try:
+                if self.local_router:
+                    self.sock.sendall(struct.pack("<HIH", TCP_PORT_CLOSE, 2, self.source_port))
+            except OSError:
+                pass
             try:
                 self.sock.close()
             except OSError:
                 pass
             self.sock = None
+        self.local_router = False
 
     def _recv(self, n):
         """Genau n Bytes empfangen."""
@@ -158,8 +212,10 @@ class AdsClient:
             self.sock.sendall(struct.pack("<HI", 0, len(hdr) + len(data)) + hdr + data)
             while True:
                 head = self._recv(6)
-                length = struct.unpack_from("<I", head, 2)[0]
+                tcmd, length = struct.unpack("<HI", head)
                 body = self._recv(length)
+                if tcmd != TCP_AMS:                      # Meldung des lokalen Routers (z. B. Zustandsänderung)
+                    continue
                 if len(body) < 32:
                     raise ConnectionError(tr("Ungültige ADS-Antwort"))
                 rcmd, _flags, dlen, err, inv = struct.unpack_from("<HHIII", body, 16)
@@ -215,7 +271,12 @@ class AdsClient:
         """Symboltabelle -> [(Name, Typ, Größe, Kommentar)]."""
         info = self.read(IG_SYM_UPLOADINFO2, 0, 24)
         n_sym, size = struct.unpack_from("<II", info, 0)
-        data = self.read(IG_SYM_UPLOAD, 0, size)
+        self.sock.settimeout(max(self.timeout, SYMBOL_UPLOAD_TIMEOUT_S))
+        try:
+            data = self.read(IG_SYM_UPLOAD, 0, size)
+        finally:
+            if self.sock is not None:
+                self.sock.settimeout(self.timeout)
         out, pos = [], 0
         for _ in range(n_sym):
             if pos + 30 > len(data):
@@ -378,7 +439,8 @@ class AdsDriver(Driver):
     name = tr("Beckhoff TwinCAT (ADS)")
     description = tr("TwinCAT 2/3 über ADS (AMS/TCP), symbolisch oder Indexgruppe/-offset; Route erforderlich")
     params = [
-        Param("ip", tr("IP-Adresse"), "text", "192.168.0.10"),
+        Param("ip", tr("IP-Adresse"), "text", "192.168.0.10",
+              tip=tr("TwinCAT auf diesem Rechner: 127.0.0.1 (keine Route nötig, eigene AMS-Net-ID leer lassen)")),
         Param("ams_netid", tr("AMS-Net-ID der Steuerung"), "text", "",
               tip=tr("z. B. 5.12.34.56.1.1 (leer = IP-Adresse + .1.1)")),
         Param("ams_port", tr("AMS-Port"), "int", 851, minimum=1, maximum=65535,
