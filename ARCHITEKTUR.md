@@ -71,6 +71,7 @@ Headless-Betrieb und die Logik-Tests ohne PySide6.
 * `plc_notify` – Benachrichtigungen (E-Mail, Teams/Slack/Webhook, ntfy) mit Sperrzeit, Versand im eigenen Thread.
 * `plc_report` – PDF-Berichte (Schicht/Tag/Woche/Monat) ohne Zusatzbibliothek.
 * `plc_qr`, `plc_svg` – QR-Code und SVG-Export, beide ohne Zusatzbibliothek.
+* `plc_filedlg` – Datei- und Ordnerdialoge, die sich je Dialog den zuletzt benutzten Ordner merken.
 * `plc_netscan` – Netzwerk nach Steuerungen durchsuchen (EtherNet/IP-Rundruf, Portsuche, S7-Kennung); Fenster dazu
   `plc_netscan_dialog` (Konfigurationsprogramm).
 

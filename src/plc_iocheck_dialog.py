@@ -13,7 +13,7 @@ import time
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRectF, QSize, QSortFilterProxyModel, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence, QPainter, QPalette, QPen
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
-                               QDoubleSpinBox, QFileDialog, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
+                               QDoubleSpinBox, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
                                QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTableView, QTableWidget,
                                QStyle, QStyledItemDelegate, QStyleOptionViewItem, QTableWidgetItem, QTabWidget,
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 import plc_iocheck as io
 from plc_common import Plc, load_plcs
 from plc_i18n import is_dark, tr
+import plc_filedlg
 
 # Farben: Zeilen/Zellen je Prüfstatus, LEDs
 STATUS_BG = {"ok": "#c8e6c9", "fehler": "#ffcdd2", "uebersprungen": "#e0e0e0"}
@@ -1116,7 +1117,7 @@ class IoCheckWindow(QMainWindow):
         """IO-Liste importieren; bei vorhandener Liste fragen, ob ersetzt oder ergänzt wird (Ergänzen übernimmt nur neue
         Adressen).
         """
-        path, _f = QFileDialog.getOpenFileName(self, tr("IO-Liste importieren"), "",
+        path, _f = plc_filedlg.open_name(self, tr("IO-Liste importieren"), "",
                                                tr("Tabellen (*.xlsx *.xlsm *.ods *.csv *.txt);;Alle Dateien (*)"))
         if not path:
             return
@@ -1173,7 +1174,7 @@ class IoCheckWindow(QMainWindow):
         if not self._confirm_discard():
             return
         if not path:
-            path, _f = QFileDialog.getOpenFileName(self, tr("IO-Check öffnen"), "",
+            path, _f = plc_filedlg.open_name(self, tr("IO-Check öffnen"), "",
                                                    tr("IO-Check (*.iocheck.json);;Alle Dateien (*)"))
             if not path:
                 return
@@ -1206,7 +1207,7 @@ class IoCheckWindow(QMainWindow):
         """Prüfstand speichern (``as_new`` oder ohne Dateiname: Dateidialog) -> True bei Erfolg."""
         path = self.project.path
         if as_new or not path:
-            path, _f = QFileDialog.getSaveFileName(self, tr("IO-Check speichern"), path or "io-check" + io.EXTENSION,
+            path, _f = plc_filedlg.save_name(self, tr("IO-Check speichern"), path or "io-check" + io.EXTENSION,
                                                    tr("IO-Check (*.iocheck.json)"))
             if not path:
                 return False
@@ -1228,7 +1229,7 @@ class IoCheckWindow(QMainWindow):
 
     def export_result(self):
         """Ergebnis als Excel- oder CSV-Datei speichern."""
-        path, _f = QFileDialog.getSaveFileName(self, tr("Ergebnis exportieren"), "io-check-ergebnis.xlsx",
+        path, _f = plc_filedlg.save_name(self, tr("Ergebnis exportieren"), "io-check-ergebnis.xlsx",
                                                tr("Excel (*.xlsx);;CSV (*.csv)"))
         if not path:
             return
@@ -1301,7 +1302,7 @@ class IoCheckWindow(QMainWindow):
             QMessageBox.information(self, tr("IO-Check"), tr("Zuerst eine IO-Liste importieren oder Bereiche scannen."))
             return
         base = os.path.splitext(self.project.path.replace(io.EXTENSION, ""))[0] if self.project.path else "io-check"
-        path, _f = QFileDialog.getSaveFileName(self, tr("Protokoll (PDF)"), base + "_protokoll.pdf", tr("PDF (*.pdf)"))
+        path, _f = plc_filedlg.save_name(self, tr("Protokoll (PDF)"), base + "_protokoll.pdf", tr("PDF (*.pdf)"))
         if not path:
             return
         try:

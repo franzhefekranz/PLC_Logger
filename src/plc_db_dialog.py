@@ -12,13 +12,14 @@ import time
 from datetime import datetime, timedelta
 
 from PySide6.QtCore import QDateTime, Qt, QTimer
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDateTimeEdit, QDialog, QDialogButtonBox, QFormLayout,
                                QGridLayout, QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox,
                                QPushButton, QTreeWidget, QTreeWidgetItem, QVBoxLayout)
 
 from plc_common import BASE_DIR, load_settings, save_settings
 from plc_db import AUTO_POINTS, LoadCancelled, create_reader, db_settings, nice_raster
 from plc_i18n import N_, tr
+import plc_filedlg
 
 ALL_PROJECTS = "\x00alle"
 # Auflösung: Schlüssel -> (Text, Raster in s; -1 = automatisch, 0 = Rohdaten)
@@ -282,7 +283,7 @@ class DbLoadDialog(QDialog):
     def choose_file(self):
         """Andere SQLite-Datei wählen und verbinden."""
         start = os.path.dirname(db_settings(self.conn)["datei"]) or BASE_DIR
-        path, _ = QFileDialog.getOpenFileName(self, tr("SQLite-Datei wählen"), start,
+        path, _ = plc_filedlg.open_name(self, tr("SQLite-Datei wählen"), start,
                                               tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
         if path:
             self.sqlite_file = path

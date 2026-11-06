@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Dateidialoge merken sich den Ordner:** Speichern-, Öffnen- und Ordnerdialoge aller Programme öffnen im zuletzt
+  benutzten Ordner (je Dialog, sonst der zuletzt überhaupt benutzte) statt immer im Programm- bzw. Datenordner.
+  Wunsch aus dem SPS-Forum.
+
 ## [3.14.1] – 2026-11-06
 
 ### Geändert

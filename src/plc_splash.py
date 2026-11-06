@@ -18,12 +18,13 @@ import time
 
 from PySide6.QtCore import QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen, QPixmap
-from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QFileDialog, QHBoxLayout, QLabel, QListWidget,
+from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QHBoxLayout, QLabel, QListWidget,
                                QListWidgetItem, QProgressBar, QPushButton, QVBoxLayout, QWidget)
 
 from plc_branding import company_pixmap, default_pixmap, logo_pixmap
 from plc_common import APP_NAME, APP_VERSION, BASE_DIR, load_settings, recent_configs, save_settings
 from plc_i18n import tr
+import plc_filedlg
 
 START_TIME = time.time()
 FILE_FILTER = tr("Konfiguration (*.json);;Alle Dateien (*)")
@@ -426,7 +427,7 @@ class StartWindow(QWidget):
         start = os.path.dirname(self.current) if self.current else BASE_DIR
         flt = (tr("IO-Check oder Konfiguration (*.iocheck.json *.json);;Alle Dateien (*)") if self.kind == "iocheck"
                else FILE_FILTER)
-        p, _flt = QFileDialog.getOpenFileName(self, tr("Konfiguration öffnen"), start, flt)
+        p, _flt = plc_filedlg.open_name(self, tr("Konfiguration öffnen"), start, flt)
         if p:
             self._finish(os.path.abspath(p))
 
@@ -437,7 +438,7 @@ class StartWindow(QWidget):
         if self.kind == "config":
             self._finish("", new=True)
             return
-        p, _flt = QFileDialog.getSaveFileName(self, tr("Neue Konfiguration anlegen"), BASE_DIR, FILE_FILTER)
+        p, _flt = plc_filedlg.save_name(self, tr("Neue Konfiguration anlegen"), BASE_DIR, FILE_FILTER)
         if p:
             if os.path.splitext(p)[1].lower() != ".json":
                 p = os.path.splitext(p)[0] + ".json"

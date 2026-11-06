@@ -50,7 +50,7 @@ from PySide6.QtCore import QMimeData, QPoint, QPointF, QRectF, Qt, QTimer, Signa
 from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDrag, QGuiApplication, QImage,
                            QPainter, QPen)
 from PySide6.QtWidgets import (
-    QApplication, QGraphicsItem, QDockWidget, QFileDialog, QFrame, QGridLayout, QHBoxLayout, QHeaderView,
+    QApplication, QGraphicsItem, QDockWidget, QFrame, QGridLayout, QHBoxLayout, QHeaderView,
     QLabel, QMainWindow, QMessageBox, QScrollArea, QScrollBar, QSizePolicy,
     QSpinBox, QTableWidget, QMenu, QTableWidgetItem, QToolBar, QToolButton,
     QVBoxLayout, QWidget,
@@ -74,6 +74,7 @@ from plc_splash import LogoLabel
 from plc_svg import build_svg
 from plc_util import fmt_time, fmt_value, to_step
 from plc_i18n import tr
+import plc_filedlg
 
 
 # ---------------------------------------------------------------------------------------
@@ -1795,7 +1796,7 @@ class MainWindow(QMainWindow):
         from plc_report import report_dir
         os.makedirs(report_dir(self.conn), exist_ok=True)
         default = os.path.join(report_dir(self.conn), f"{stem}_bericht_{datetime.fromtimestamp(a):%Y%m%d_%H%M%S}.pdf")
-        path, _ = QFileDialog.getSaveFileName(self, tr("PDF-Bericht speichern"), default, tr("PDF-Datei (*.pdf)"))
+        path, _ = plc_filedlg.save_name(self, tr("PDF-Bericht speichern"), default, tr("PDF-Datei (*.pdf)"))
         if not path:
             return
         if not path.lower().endswith(".pdf"):
@@ -2080,7 +2081,7 @@ class MainWindow(QMainWindow):
     # Dialog 'Konfiguration laden': beliebiger Dateiname (JSON); die Wahl wird für den nächsten Start gemerkt.
     def load_config_file(self):
         start = os.path.dirname(self.config_path) or BASE_DIR
-        path, _ = QFileDialog.getOpenFileName(self, tr("Konfiguration laden"), start,
+        path, _ = plc_filedlg.open_name(self, tr("Konfiguration laden"), start,
                                               tr("Konfiguration (*.json);;Alle Dateien (*)"))
         if path:
             self.set_config(path)
@@ -2782,14 +2783,14 @@ class MainWindow(QMainWindow):
     # Gespeicherte Aufzeichnung (CSV oder ZIP-Archiv) laden und offline anzeigen.
     def load_csv(self):
         """Eine oder mehrere Aufzeichnungen (CSV/ZIP) laden; mehrere Dateien werden nach der Zeit aneinandergehängt."""
-        paths, _ = QFileDialog.getOpenFileNames(self, tr("CSV laden (mehrere Dateien = aneinanderhängen)"), self.csv_dir(),
+        paths, _ = plc_filedlg.open_names(self, tr("CSV laden (mehrere Dateien = aneinanderhängen)"), self.csv_dir(),
                                                 tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
         if paths:
             self._load_logs(paths, save=False)
 
     def join_csv(self):
         """Mehrere Aufzeichnungen aneinanderhängen, als neue CSV-Datei speichern und offline anzeigen."""
-        paths, _ = QFileDialog.getOpenFileNames(self, tr("CSV-Dateien zum Aneinanderhängen wählen"), self.csv_dir(),
+        paths, _ = plc_filedlg.open_names(self, tr("CSV-Dateien zum Aneinanderhängen wählen"), self.csv_dir(),
                                                 tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
         if paths:
             self._load_logs(paths, save=True)
@@ -2828,7 +2829,7 @@ class MainWindow(QMainWindow):
             stem = re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "log").strip("_") or "log"
             default = os.path.join(self.csv_dir(), "{0}_{1:%Y%m%d_%H%M%S}-{2:%Y%m%d_%H%M%S}.csv".format(
                 stem, datetime.fromtimestamp(t[0]), datetime.fromtimestamp(t[-1])))
-            out, _ = QFileDialog.getSaveFileName(self, tr("Zusammengefügte Aufzeichnung speichern"), default,
+            out, _ = plc_filedlg.save_name(self, tr("Zusammengefügte Aufzeichnung speichern"), default,
                                                  tr("CSV-Datei (*.csv)"))
             if out:
                 if not out.lower().endswith(".csv"):
@@ -2970,7 +2971,7 @@ class MainWindow(QMainWindow):
         res = dlg.result
         stem = re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "export").strip("_") or "export"
         default = os.path.join(self.csv_dir(), f"{stem}_{res['key']}_{datetime.now():%Y%m%d_%H%M%S}.xlsx")
-        path, flt = QFileDialog.getSaveFileName(self, tr("Werte exportieren"), default,
+        path, flt = plc_filedlg.save_name(self, tr("Werte exportieren"), default,
                                                 tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
         if not path:
             return
@@ -3033,7 +3034,7 @@ class MainWindow(QMainWindow):
         name = re.sub(r"[^\w\-]+", "_", title).strip("_") or f"Diagramm{ci + 1}"
         default = os.path.join(self._shot_dir, f"{name}_{datetime.now():%Y%m%d_%H%M%S}.png")
         # Speichern-Dialog; die Filterauswahl (PNG/SVG) bestimmt das Format, wenn keine Endung getippt wurde.
-        path, flt = QFileDialog.getSaveFileName(
+        path, flt = plc_filedlg.save_name(
             self, tr("Screenshot – {0}").format(title), default,
             tr("PNG-Bild (*.png);;SVG-Vektorgrafik (*.svg)"))
         if not path:

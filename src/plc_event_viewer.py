@@ -20,12 +20,13 @@ import getpass
 from PySide6.QtCore import QDateTime, Qt, QTimer, QUrl
 from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDialog,
-                               QDialogButtonBox, QFileDialog, QFormLayout, QPlainTextEdit,
+                               QDialogButtonBox, QFormLayout, QPlainTextEdit,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton,
                                QTableWidget, QTableWidgetItem, QVBoxLayout)
 
 from plc_events import NOTE, PRIORITIES, EventLog, event_log_path
 from plc_i18n import tr
+import plc_filedlg
 
 MAX_ROWS = 20000                     # mehr Zeilen werden nicht angezeigt (neueste zuerst)
 PRIO_COLORS = {"Alarm": "#f8d0d0", "Warnung": "#fbefc4", "Info": "#d9e8fb"}
@@ -373,7 +374,7 @@ class EventViewer(QDialog):
     def choose_file(self):
         """Andere Ereignisdatei wählen und anzeigen (nur im allein gestarteten Viewer)."""
         start = os.path.dirname(self.log.path)
-        path, _flt = QFileDialog.getOpenFileName(self, tr("Ereignisprotokoll öffnen"), start,
+        path, _flt = plc_filedlg.open_name(self, tr("Ereignisprotokoll öffnen"), start,
                                               tr("Ereignisprotokoll (*.csv);;Alle Dateien (*)"))
         if path:
             self.set_log(EventLog(path))

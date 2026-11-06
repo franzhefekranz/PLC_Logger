@@ -1331,6 +1331,15 @@ Der Titel des Fensters zeigt Projektname und Dateiname. Die zuletzt benutzte
 Datei wird gemerkt (Datei ``plc_last.txt``); Logger und Konfigurationsprogramm
 öffnen sie beim nächsten Start ohne Parameter wieder.
 
+**Ordner der Dateidialoge:** Alle Programme (Konfiguration, Logger, IO-Check,
+Ereignis-Viewer) merken sich je Dialog den zuletzt benutzten Ordner, z. B. für
+*Speichern unter*, Export, PDF-Protokoll oder IO-Liste. Der nächste Dialog öffnet
+dort statt im Programm- bzw. Datenordner; ein Dialog, der noch nie benutzt wurde,
+startet im zuletzt überhaupt benutzten Ordner. Liegt der Vorschlag in einem eigenen
+Ordner außerhalb des Datenordners (z. B. der Ordner des geöffneten Prüfstands oder ein
+CSV-Ordner auf einem Netzlaufwerk), bleibt es bei diesem. Gespeichert wird das in
+``plc_einstellungen.json``.
+
 .. note::
 
    Der Logger liest die Konfiguration bei jedem **Start**. Änderungen wirken

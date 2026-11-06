@@ -1292,6 +1292,14 @@ The window title shows project name and file name. The last used file is remembe
 (file ``plc_last.txt``); the logger and the configuration program open it again at the
 next start without parameters.
 
+**Folders of the file dialogs:** all programs (configuration, logger, IO check, event
+viewer) remember the last used folder per dialog, e.g. for *Save as*, export, PDF
+protocol or IO list. The next dialog opens there instead of in the program or data
+folder; a dialog that has never been used starts in the last used folder overall. If the
+suggestion lies in a folder of its own outside the data folder (e.g. the folder of the
+opened test progress file or a CSV folder on a network drive), it is kept. This is stored
+in ``plc_einstellungen.json``.
+
 .. note::
 
    The logger reads the configuration at every **start**. Changes therefore only take

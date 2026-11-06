@@ -63,6 +63,7 @@ from plc_events import EventLog, check_trigger, event_log_path, load_triggers, s
 from plc_db import DB_TYPES, DEFAULT_PORTS, HTTP_TYPES, METRIC_TYPES, check_table_name, test_connection as test_db
 from plc_i18n import N_, tr
 from plc_treiber import drivers, get_driver, load_errors
+import plc_filedlg
 from plc_treiber.base import BrowseContext
 
 # Benutzerdefinierte Datenrollen der Baumeinträge (QTreeWidgetItem.setData): ID der Variable, Art des Knotens,
@@ -878,7 +879,7 @@ class ConfigWindow(QMainWindow):
             """Ereignisdatei wählen (Speichern-Dialog ohne Überschreib-Rückfrage: die Datei wird nur fortgeschrieben).
             """
             start = self.ed_event_file.text() or event_log_path(self.collect_conn())
-            p, _ = QFileDialog.getSaveFileName(self, tr("Ereignisdatei"), start, tr("Ereignisprotokoll (*.csv)"),
+            p, _ = plc_filedlg.save_name(self, tr("Ereignisdatei"), start, tr("Ereignisprotokoll (*.csv)"),
                                                options=QFileDialog.Option.DontConfirmOverwrite)
             if p:
                 self.ed_event_file.setText(p if p.lower().endswith(".csv") else p + tr(".csv"))
@@ -935,7 +936,7 @@ class ConfigWindow(QMainWindow):
         btn = QPushButton("…")
         btn.setFixedWidth(30)
         btn.clicked.connect(lambda: self.ed_report_dir.setText(
-            QFileDialog.getExistingDirectory(self, tr("Ordner für Berichte"), self.ed_report_dir.text() or BASE_DIR)
+            plc_filedlg.directory(self, tr("Ordner für Berichte"), self.ed_report_dir.text() or BASE_DIR)
             or self.ed_report_dir.text()))
         dir_row = QHBoxLayout(); dir_row.addWidget(self.ed_report_dir); dir_row.addWidget(btn)
         self.cb_report_period.currentIndexChanged.connect(lambda _i: self._update_report_fields())
@@ -1020,7 +1021,7 @@ class ConfigWindow(QMainWindow):
 
         def pick_db_file():
             """SQLite-Datei wählen oder neu benennen."""
-            path, _ = QFileDialog.getSaveFileName(self, tr("SQLite-Datenbank"), self.ed_db_file.text() or BASE_DIR,
+            path, _ = plc_filedlg.save_name(self, tr("SQLite-Datenbank"), self.ed_db_file.text() or BASE_DIR,
                                                   tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
             if path:
                 self.ed_db_file.setText(path)
@@ -1155,7 +1156,7 @@ class ConfigWindow(QMainWindow):
 
         # Dateiauswahl für ein Eingabefeld (Logo/Icon): Dialog öffnen und den gewählten Pfad eintragen.
         def pick():
-            p, _ = QFileDialog.getOpenFileName(
+            p, _ = plc_filedlg.open_name(
                 self, title, edit.text() or BASE_DIR,
                 filt or tr("Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)"))
             if p:
@@ -1862,13 +1863,13 @@ class ConfigWindow(QMainWindow):
 
     def pick_arch_dir(self):
         """Archiv-Ordner wählen."""
-        d = QFileDialog.getExistingDirectory(self, tr("Archiv-Ordner wählen"), self.ed_arch.text() or BASE_DIR)
+        d = plc_filedlg.directory(self, tr("Archiv-Ordner wählen"), self.ed_arch.text() or BASE_DIR)
         if d:
             self.ed_arch.setText(d)
 
     def pick_dir(self):
         """CSV-Ordner wählen."""
-        d = QFileDialog.getExistingDirectory(self, tr("CSV-Ordner wählen"), self.ed_dir.text() or BASE_DIR)
+        d = plc_filedlg.directory(self, tr("CSV-Ordner wählen"), self.ed_dir.text() or BASE_DIR)
         if d:
             self.ed_dir.setText(d)
 
@@ -2054,7 +2055,7 @@ class ConfigWindow(QMainWindow):
         """Variablen der Tabelle (ohne Block-Elemente) als CSV- oder Excel-Datei speichern."""
         from plc_export import write_table
         stem = os.path.splitext(os.path.basename(self.path))[0] if self.path else "variablen"
-        path, flt = QFileDialog.getSaveFileName(self, tr("Variablen exportieren"),
+        path, flt = plc_filedlg.save_name(self, tr("Variablen exportieren"),
                                                 os.path.join(BASE_DIR, f"{stem}_variablen.xlsx"),
                                                 tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
         if not path:
@@ -2082,7 +2083,7 @@ class ConfigWindow(QMainWindow):
 
         Fehlende Diagramme und Y-Achsen werden angelegt; unbekannte Steuerungen fallen auf die erste zurück."""
         from plc_export import read_table
-        path, _ = QFileDialog.getOpenFileName(self, tr("Variablen importieren"), BASE_DIR,
+        path, _ = plc_filedlg.open_name(self, tr("Variablen importieren"), BASE_DIR,
                                               tr("Excel, ODS oder CSV (*.xlsx *.ods *.csv);;Alle Dateien (*)"))
         if not path:
             return
@@ -2419,7 +2420,7 @@ class ConfigWindow(QMainWindow):
     # „Speichern unter“: beliebiger Dateiname; die Endung ist immer .json.
     def save_as(self):
         start = self.path or os.path.join(BASE_DIR, "plc_config.json")
-        p, _ = QFileDialog.getSaveFileName(self, tr("Konfiguration speichern unter"), start, FILE_FILTER)
+        p, _ = plc_filedlg.save_name(self, tr("Konfiguration speichern unter"), start, FILE_FILTER)
         if not p:
             return False
         base, ext = os.path.splitext(p)
@@ -2469,7 +2470,7 @@ class ConfigWindow(QMainWindow):
                 return False
         else:
             start = os.path.dirname(self.path) if self.path else BASE_DIR
-            paths, _ = QFileDialog.getOpenFileNames(self, tr("INI-Datei(en) umwandeln"), start,
+            paths, _ = plc_filedlg.open_names(self, tr("INI-Datei(en) umwandeln"), start,
                                                     tr("INI-Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)"))
             if not paths:
                 return False
@@ -2498,7 +2499,7 @@ class ConfigWindow(QMainWindow):
     # „Öffnen“: Dateidialog für eine Konfigurationsdatei mit beliebigem Namen.
     def open_file(self):
         start = os.path.dirname(self.path) if self.path else BASE_DIR
-        p, _ = QFileDialog.getOpenFileName(self, tr("Konfiguration öffnen"), start, FILE_FILTER)
+        p, _ = plc_filedlg.open_name(self, tr("Konfiguration öffnen"), start, FILE_FILTER)
         if p:
             self.load_path(p)
 
@@ -2541,7 +2542,7 @@ class ConfigWindow(QMainWindow):
                 "InfluxDB 3 wählen – das Dashboard liest die Werte aus dieser Datenbank."))
             return
         stem = os.path.splitext(os.path.basename(self.path))[0]
-        path, _f = QFileDialog.getSaveFileName(self, tr("Grafana-Dashboard exportieren"),
+        path, _f = plc_filedlg.save_name(self, tr("Grafana-Dashboard exportieren"),
                                                os.path.join(os.path.dirname(self.path), f"{stem}_grafana.json"),
                                                tr("Grafana-Dashboard (*.json)"))
         if not path:

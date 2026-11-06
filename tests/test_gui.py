@@ -928,3 +928,32 @@ def test_iocheck_checker_and_protocol_format(qt_log, demo_config, tmp_path, monk
     assert plc_common.load_settings()["iocheck_querformat"] is True and io.protocol_landscape()
     assert w.act_protocol.menu() is not None
     w.close()
+
+
+def test_file_dialogs_remember_folder(qt_log, tmp_path, monkeypatch):
+    """Dateidialoge: Vorschlag ohne eigenen Ordner bzw. im Programm-/Datenordner -> zuletzt benutzter Ordner (je
+    Dialogtitel, sonst allgemein); ein bewusst vorgegebener Ordner bleibt."""
+    import plc_common
+    import plc_filedlg as fd
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    a, b, own = tmp_path / "a", tmp_path / "b", tmp_path / "eigen"
+    for d in (a, b, own):
+        d.mkdir()
+    assert fd.start_path("Export", "x.csv") == "x.csv"                       # noch nichts gemerkt
+    qt_log.file = str(a / "x.csv")
+    assert fd.save_name(None, "Export", "x.csv", "CSV (*.csv)")[0] == qt_log.file
+    assert fd.start_path("Export", "y.csv") == os.path.join(str(a), "y.csv")
+    assert fd.start_path("Export", os.path.join(plc_common.BASE_DIR, "y.csv")) == os.path.join(str(a), "y.csv")
+    assert fd.start_path("Export", str(own / "y.csv")) == str(own / "y.csv")
+    assert fd.start_path("Export", os.path.join(plc_common.BASE_DIR, "csv", "y.csv")) == os.path.join(str(a), "y.csv")
+    assert fd.start_path("Anderer Dialog", "") == str(a)                       # allgemein zuletzt benutzt
+    qt_log.file = str(b / "p.pdf")
+    fd.open_name(None, "Öffnen", "", "")
+    assert fd.start_path("Export", "z.csv") == os.path.join(str(a), "z.csv")  # je Dialog gemerkt
+    assert fd.start_path("Neu", "z.csv") == os.path.join(str(b), "z.csv")
+    qt_log.file = ""                                                            # abgebrochen: nichts merken
+    fd.save_name(None, "Export", "x.csv")
+    assert fd.start_path("Export", "") == str(a)
+    qt_log.file = str(own)
+    assert fd.directory(None, "Ordner", plc_common.BASE_DIR) == str(own)
+    assert fd.start_path("Ordner", "") == str(own)

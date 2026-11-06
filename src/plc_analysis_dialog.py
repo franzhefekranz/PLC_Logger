@@ -12,13 +12,14 @@ import os
 import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFileDialog, QFormLayout, QHBoxLayout, QLabel,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFormLayout, QHBoxLayout, QLabel,
                                QListWidget, QListWidgetItem, QMessageBox, QPushButton, QSplitter, QVBoxLayout,
                                QWidget)
 import pyqtgraph as pg  # nach PySide6 importieren
 
 from plc_analysis import WINDOWS, correlation, fmt_freq, spectrum, xy_pairs
 from plc_i18n import tr
+import plc_filedlg
 
 
 class _AnalysisBase(QDialog):
@@ -93,7 +94,7 @@ class _AnalysisBase(QDialog):
 
     def save_image(self):
         """Diagramm als PNG-Bild speichern."""
-        path, _ = QFileDialog.getSaveFileName(self, tr("Bild speichern"), os.path.join(self.base_dir, "analyse.png"),
+        path, _ = plc_filedlg.save_name(self, tr("Bild speichern"), os.path.join(self.base_dir, "analyse.png"),
                                               tr("PNG-Bild (*.png)"))
         if not path:
             return
@@ -109,7 +110,7 @@ class _AnalysisBase(QDialog):
         if not rows:
             QMessageBox.information(self, tr("Werte speichern"), tr("Es sind keine Werte vorhanden."))
             return
-        path, _ = QFileDialog.getSaveFileName(self, tr("Werte speichern"), os.path.join(self.base_dir, "analyse.csv"),
+        path, _ = plc_filedlg.save_name(self, tr("Werte speichern"), os.path.join(self.base_dir, "analyse.csv"),
                                               tr("CSV-Datei (*.csv)"))
         if not path:
             return
