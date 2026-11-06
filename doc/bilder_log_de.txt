@@ -1,0 +1,7 @@
+Bildschirm: 1024 x 720, Stil: windows11
+Bild: iocheck_fenster.png (1600 x 880)
+Bild: iocheck_analog.png (1115 x 252)
+Bild: iocheck_matrix.png (700 x 420)
+Bild: iocheck_scan.png (1139 x 829)
+Bild: iocheck_protokoll.png (PDF)
+Fertig.
