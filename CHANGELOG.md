@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.15.0] – 2026-11-06
+
 ### Neu
 
 * **Dateidialoge merken sich den Ordner:** Speichern-, Öffnen- und Ordnerdialoge aller Programme öffnen im zuletzt
@@ -620,7 +622,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.14.1...HEAD
+[Unveröffentlicht]: ../../compare/v3.15.0...HEAD
+[3.15.0]: ../../releases/tag/v3.15.0
 [3.14.1]: ../../releases/tag/v3.14.1
 [3.14.0]: ../../releases/tag/v3.14.0
 [3.13.0]: ../../releases/tag/v3.13.0
