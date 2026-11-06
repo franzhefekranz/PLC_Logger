@@ -52,7 +52,7 @@ def collect(pfx, folder):
     # Texte aus dem Sprachmodul selbst
     i18n = os.path.join(folder, f"{pfx}_i18n.py")
     for n in ast.walk(ast.parse(open(i18n, encoding="utf-8").read())):
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "tr" and n.args \
+        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id in ("tr", "N_") and n.args \
                 and isinstance(n.args[0], ast.Constant) and n.args[0].value not in where:
             where[n.args[0].value] = os.path.basename(i18n)
             keys.append(n.args[0].value)

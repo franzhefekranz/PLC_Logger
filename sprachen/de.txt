@@ -6549,6 +6549,15 @@
 
 # ---------------- plc_i18n.py
 
+@ Wie das System
+> 
+
+@ Hell
+> 
+
+@ Dunkel
+> 
+
 @ Farbschema
 > 
 
