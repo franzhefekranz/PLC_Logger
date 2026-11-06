@@ -16,8 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Geändert
 
-* **Teststand:** Treiber `tia` auch an einer S7-1511F-1 PN (Firmware 2.9, Windows 11) erfolgreich – Variablen lesen und
-  aufzeichnen (Rückmeldung aus dem SPS-Forum).
+* **Teststand:** Treiber `tia` auch an einer S7-1511F-1 PN (Firmware 2.9, Windows 11) erfolgreich – Variablen aus optimierten
+  DBs lesen und aufzeichnen; nur das F-Programm mit Passwort (Rückmeldung aus dem SPS-Forum).
 
 ## [3.12.2] – 2026-11-06
 
