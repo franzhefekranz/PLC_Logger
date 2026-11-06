@@ -4254,7 +4254,8 @@ Saving and result
 points, scan ranges, options). After the first save, every change is saved immediately –
 you can stop at any time and continue the next day with **Open …**. **Export result …**
 writes the list with status, check time, checker, remark and test points as Excel or CSV
-file.
+file; in Excel with the colours of the signal list (rows green/red/grey per status, status
+bold in colour).
 
 .. _io-mobil:
 
@@ -4352,6 +4353,12 @@ viewer and is stored in the file ``plc_einstellungen.json`` in the data folder. 
 standard texts of Qt (Yes/No/Cancel, file dialogs) also follow the chosen language, and
 **Help › User manual** (F1) opens the manual in the chosen language (English manual for
 all languages except German).
+
+**Colour scheme:** In the same menu under **Colour scheme** choose *Like the system*,
+*Light* or *Dark*. The choice takes effect immediately and applies to all programs (logger,
+configuration, IO check, event viewer, network panel). This is the way if the computer is
+set to dark mode but the program should appear light (or vice versa). Independently of this,
+the charts of the logger have their own dark background (screenshots optionally light).
 
 Data is not translated: names of variables, charts and triggers, the columns of the CSV
 files and of the event log (``KOMMT``, ``GEHT`` …), the keys of the configuration file,

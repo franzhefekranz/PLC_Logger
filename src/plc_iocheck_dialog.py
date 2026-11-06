@@ -11,16 +11,17 @@ import queue
 import time
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRectF, QSize, QSortFilterProxyModel, Qt, QTimer, Signal
-from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence, QPainter, QPen
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence, QPainter, QPalette, QPen
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox,
                                QDoubleSpinBox, QFileDialog, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
                                QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTableView, QTableWidget,
-                               QTableWidgetItem, QTabWidget, QToolBar, QVBoxLayout, QWidget)
+                               QStyle, QStyledItemDelegate, QTableWidgetItem, QTabWidget, QToolBar,
+                               QVBoxLayout, QWidget)
 
 import plc_iocheck as io
 from plc_common import Plc, load_plcs
-from plc_i18n import tr
+from plc_i18n import is_dark, tr
 
 # Farben: Zeilen/Zellen je Prüfstatus, LEDs
 STATUS_BG = {"ok": "#c8e6c9", "fehler": "#ffcdd2", "uebersprungen": "#e0e0e0"}
@@ -33,6 +34,32 @@ COLS = [("status", "Status"), ("value", "Wert"), ("address", "Adresse"), ("symbo
         ("comment", "Kommentar"), ("bmk", "BMK"), ("group", "Gruppe"), ("kind", "Typ"), ("plc", "Steuerung"),
         ("checked_at", "Geprüft am"), ("checker", "Prüfer"), ("remark", "Bemerkung")]
 COL = {k: i for i, (k, _t) in enumerate(COLS)}
+
+
+def status_fg(status):
+    """Schriftfarbe der Statusspalte; „offen“ (ohne Hintergrundfarbe) im dunklen Farbschema hell."""
+    if status == "offen" and is_dark():
+        return "#b0bec5"
+    return STATUS_FG[status]
+
+
+class SelectionDelegate(QStyledItemDelegate):
+    """Markierte Zeile auch auf farbigen Status-Zeilen erkennbar: viele Stile zeichnen die Markierung nicht über
+    eine eigene Hintergrundfarbe – deshalb die Markierungsfarbe halbdurchsichtig darüber und oben/unten eine Linie."""
+
+    def paint(self, painter, option, index):
+        super().paint(painter, option, index)
+        if option.state & QStyle.StateFlag.State_Selected and index.data(Qt.ItemDataRole.BackgroundRole) is not None:
+            hl = QColor(option.palette.color(QPalette.ColorRole.Highlight))
+            painter.save()
+            fill = QColor(hl)
+            fill.setAlpha(90)
+            painter.fillRect(option.rect, fill)
+            painter.setPen(QPen(hl, 2))
+            r = option.rect
+            painter.drawLine(r.left(), r.top() + 1, r.right(), r.top() + 1)
+            painter.drawLine(r.left(), r.bottom(), r.right(), r.bottom())
+            painter.restore()
 
 
 def value_text(sig) -> str:
@@ -118,7 +145,7 @@ class SignalModel(QAbstractTableModel):
             if s.status in STATUS_BG or (key == "value" and time.time() - s.changed < FLASH_S):
                 return QBrush(QColor("#000000" if key != "status" else STATUS_FG[s.status]))
             if key == "status":
-                return QBrush(QColor(STATUS_FG[s.status]))
+                return QBrush(QColor(status_fg(s.status)))
             return None
         if role == Qt.ItemDataRole.DecorationRole and key == "value" and s.binary:
             if math.isnan(s.value):
@@ -804,6 +831,7 @@ class IoCheckWindow(QMainWindow):
         self.proxy.setSourceModel(self.model)
         self.view = QTableView()
         self.view.setModel(self.proxy)
+        self.view.setItemDelegate(SelectionDelegate(self.view))
         self.view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.view.setSortingEnabled(True)
         self.view.verticalHeader().setVisible(False)

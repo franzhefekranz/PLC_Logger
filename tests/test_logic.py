@@ -176,6 +176,15 @@ def test_iocheck_project_roundtrip_and_protocol(tmp_path):
     assert open(pdf, "rb").read(5) == b"%PDF-"
     io.write_result(str(tmp_path / "r.csv"), q.signals)
     assert "Kabel" in open(tmp_path / "r.csv", encoding="utf-8-sig").read()
+    # Excel mit den Statusfarben der Signalliste
+    openpyxl = pytest.importorskip("openpyxl")
+    io.write_result(str(tmp_path / "r.xlsx"), q.signals)
+    ws = openpyxl.load_workbook(tmp_path / "r.xlsx").active
+    assert ws.cell(1, 1).font.bold
+    assert ws.cell(2, 1).fill.start_color.rgb.endswith("C8E6C9") and ws.cell(3, 3).fill.start_color.rgb.endswith("FFCDD2")
+    assert ws.cell(2, 8).font.color.rgb.endswith("1B5E20") and ws.cell(4, 1).fill.fill_type is None
+    io.write_result(str(tmp_path / "r2.xlsx"), q.signals, colors=False)
+    assert openpyxl.load_workbook(tmp_path / "r2.xlsx").active.cell(2, 1).fill.fill_type is None
     rows = io.matrix_rows(q.signals)
     assert rows[0][1] == "E0" and rows[0][2][1] is q.signals[1]
 

@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Farbschema** *Wie das System / Hell / Dunkel* im Menü *Sprache › Farbschema* – wirkt sofort und gilt für alle
+  Programme (Logger, Konfiguration, IO-Check, Ereignis-Viewer, Netzwerk-Panel).
+* **IO-Check:** Ergebnis-Export nach Excel mit den Farben der Signalliste (Zeilen je Status, Status fett in Farbe).
+
 ### Geändert
 
 * **Teststand:** Treiber `ads` mit TwinCAT 3.1.4026.25 auf demselben Rechner erfolgreich (Symbolauswahl, Lesen,
@@ -21,6 +27,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   SPS-Forum).
 * **Teststand:** Treiber `tia` auch an einer S7-1511F-1 PN (Firmware 2.9, Windows 11) erfolgreich – Variablen aus optimierten
   DBs lesen und aufzeichnen; nur das F-Programm mit Passwort (Rückmeldung aus dem SPS-Forum).
+
+### Behoben
+
+* **IO-Check:** markierte Zeile auf grünen, roten und grauen (geprüften) Zeilen nicht zu erkennen – die Markierung wird
+  jetzt darübergelegt; Status „offen“ im dunklen Farbschema hell statt dunkelgrau.
 
 ### Build
 

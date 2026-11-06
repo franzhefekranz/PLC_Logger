@@ -847,3 +847,49 @@ def test_opcua_browser_dialog_take(qt_log, tmp_path):
         assert d.result_vars[0][0].startswith("PLC Datenlogger.Linie1.") and d.result_vars[0][2] == "LREAL"
     finally:
         rec.stop()
+
+
+def test_color_scheme_and_iocheck_selection(qt_log, demo_config, tmp_path):
+    """Farbschema hell/dunkel umschalten (Menü, gespeichert); IO-Check: markierte Zeile auf farbigem Status-Hintergrund
+    sichtbar (Markierungsfarbe darübergelegt), Status „offen“ im dunklen Schema hell."""
+    from PySide6.QtGui import QPalette
+    from PySide6.QtWidgets import QApplication, QMenu
+
+    import plc_i18n
+    import plc_iocheck as io
+    import plc_iocheck_dialog as d
+    from plc_common import load_settings
+    app = QApplication.instance()
+    style, pal = app.style().name(), app.palette()
+    try:
+        menu = QMenu()
+        sub = plc_i18n.fill_scheme_menu(menu)
+        acts = {a.text(): a for a in sub.actions()}
+        acts["Dunkel"].trigger()
+        assert load_settings()["farbschema"] == "dunkel" and plc_i18n.is_dark()
+        assert d.status_fg("offen") != d.STATUS_FG["offen"]
+        w = d.IoCheckWindow(config_path=demo_config, demo=True)
+        w.resize(900, 500)
+        w.show()
+        sigs = [io.IoSignal(f"E0.{k}", symbol=f"B{k}") for k in range(4)]
+        io.set_status(sigs[1], "ok")
+        w.all_signals = sigs
+        w.model.set_signals(sigs)
+        wait(100)
+        row = w.proxy.mapFromSource(w.model.index(1, 0)).row()
+        rect = w.view.visualRect(w.proxy.index(row, d.COL["symbol"]))
+        before = w.view.viewport().grab().toImage().pixelColor(rect.center())
+        w.view.selectRow(row)
+        wait(100)
+        after = w.view.viewport().grab().toImage().pixelColor(rect.center())
+        assert before.name() != after.name(), (before.name(), after.name())     # Markierung erkennbar
+        w.close()
+        acts["Hell"].trigger()
+        assert load_settings()["farbschema"] == "hell" and not plc_i18n.is_dark()
+        assert app.palette().color(QPalette.ColorRole.Window).lightness() > 128
+    finally:
+        from plc_common import save_settings
+        save_settings(farbschema="system")
+        plc_i18n.apply_color_scheme(scheme="system")
+        app.setStyle(style)
+        app.setPalette(pal)

@@ -736,10 +736,21 @@ def result_rows(signals):
     return rows
 
 
-def write_result(path, signals):
-    """Ergebnis als CSV- oder Excel-Datei speichern."""
+# Farben im Excel-Ergebnis (wie in der Signalliste): Zeilenhintergrund und Schrift der Statusspalte
+RESULT_FILL = {"ok": "C8E6C9", "fehler": "FFCDD2", "uebersprungen": "E0E0E0"}
+RESULT_FONT = {"ok": "1B5E20", "fehler": "B71C1C", "uebersprungen": "616161", "offen": "455A64"}
+
+
+def write_result(path, signals, colors=True):
+    """Ergebnis als CSV- oder Excel-Datei speichern; Excel mit den Statusfarben der Signalliste (``colors``)."""
     from plc_export import write_table
-    write_table(path, [tr(h) for h in RESULT_HEADER], result_rows(signals), sheet=tr("IO-Check"))
+    fills = fonts = None
+    if colors:
+        col = RESULT_HEADER.index(N_("Status")) if N_("Status") in RESULT_HEADER else 7
+        fills = [RESULT_FILL.get(s.status) for s in signals]
+        fonts = [{col: RESULT_FONT.get(s.status, "000000")} for s in signals]
+    write_table(path, [tr(h) for h in RESULT_HEADER], result_rows(signals), sheet=tr("IO-Check"), fills=fills,
+                fonts=fonts)
 
 
 # ---------------------------------------------------------------------------------------------------------------------

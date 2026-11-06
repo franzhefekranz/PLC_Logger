@@ -168,8 +168,86 @@ def tr(text):
 _qt_translators = []
 
 
+# Farbschema der Oberfläche (Einstellung ``farbschema``): wie das System, hell oder dunkel
+SCHEMES = (("system", N_("Wie das System")), ("hell", N_("Hell")), ("dunkel", N_("Dunkel")))
+
+
+def _dark_palette():
+    """Dunkle Farbpalette für den Stil Fusion (wenn Qt das Farbschema nicht selbst umschalten kann)."""
+    from PySide6.QtGui import QColor, QPalette
+    p = QPalette()
+    R, G = QPalette.ColorRole, QPalette.ColorGroup
+    for role, color in ((R.Window, "#2b2f33"), (R.WindowText, "#e8eaed"), (R.Base, "#1f2226"),
+                        (R.AlternateBase, "#2b2f33"), (R.ToolTipBase, "#3c4043"), (R.ToolTipText, "#e8eaed"),
+                        (R.Text, "#e8eaed"), (R.Button, "#33373b"), (R.ButtonText, "#e8eaed"), (R.BrightText, "#ff6b6b"),
+                        (R.Link, "#8ab4f8"), (R.Highlight, "#3d7bd9"), (R.HighlightedText, "#ffffff"),
+                        (R.PlaceholderText, "#9aa0a6")):
+        p.setColor(role, QColor(color))
+    for role in (R.WindowText, R.Text, R.ButtonText):
+        p.setColor(G.Disabled, role, QColor("#80868b"))
+    return p
+
+
+def apply_color_scheme(app=None, scheme=None):
+    """Farbschema anwenden (``system``/``hell``/``dunkel``; None = aus den Einstellungen). Ab Qt 6.8 über die
+    Stil-Hinweise (behält das Aussehen des Systems), sonst bzw. wenn das System es ablehnt: Stil Fusion mit heller
+    bzw. dunkler Palette. Wirkt sofort, auch in schon offenen Fenstern."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QApplication
+    app = app or QApplication.instance()
+    if app is None:
+        return
+    if scheme is None:
+        from plc_common import load_settings
+        scheme = str(load_settings().get("farbschema", "system") or "system")
+    hints = app.styleHints()
+    want = {"hell": Qt.ColorScheme.Light, "dunkel": Qt.ColorScheme.Dark}.get(scheme, Qt.ColorScheme.Unknown)
+    if hasattr(hints, "setColorScheme"):
+        hints.setColorScheme(want)
+        if scheme == "system" or hints.colorScheme() == want:
+            return
+    if scheme == "system":
+        return
+    app.setStyle("Fusion")
+    app.setPalette(_dark_palette() if scheme == "dunkel" else app.style().standardPalette())
+
+
+def fill_scheme_menu(menu):
+    """Untermenü „Farbschema“: wie das System, hell, dunkel (gespeichert, gilt für alle Programme)."""
+    from PySide6.QtGui import QAction, QActionGroup
+    from plc_common import load_settings, save_settings
+    sub = menu.addMenu(tr("Farbschema"))
+    grp = QActionGroup(sub)
+    grp.setExclusive(True)
+    cur = str(load_settings().get("farbschema", "system") or "system")
+    for code, name in SCHEMES:
+        a = QAction(tr(name), sub)
+        a.setCheckable(True)
+        a.setChecked(code == cur)
+
+        def choose(_=False, c=code):
+            save_settings(farbschema=c)
+            apply_color_scheme(scheme=c)
+        a.triggered.connect(choose)
+        grp.addAction(a)
+        sub.addAction(a)
+    return sub
+
+
+def is_dark():
+    """True, wenn die Oberfläche gerade dunkel ist (Fensterfarbe der Palette)."""
+    from PySide6.QtGui import QPalette
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance()
+    return bool(app) and app.palette().color(QPalette.ColorRole.Window).lightness() < 128
+
+
 def install_qt(app):
-    """Qt-eigene Übersetzungen (Knöpfe der Meldungsfenster, Dateidialoge) passend zur Sprache laden."""
+    """Qt-eigene Übersetzungen (Knöpfe der Meldungsfenster, Dateidialoge) passend zur Sprache laden; Farbschema."""
+    try:
+        apply_color_scheme(app)
+    except Exception:
+        pass
     try:
         from PySide6.QtCore import QLibraryInfo, QLocale, QTranslator
         code = current()
@@ -217,6 +295,8 @@ def fill_language_menu(menu, window, restart_cmd):
         QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
     a.triggered.connect(open_folder)
     menu.addAction(a)
+    menu.addSeparator()
+    fill_scheme_menu(menu)
 
 
 def _switch(window, code, restart_cmd):

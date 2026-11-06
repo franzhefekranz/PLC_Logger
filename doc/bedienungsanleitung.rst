@@ -4358,7 +4358,8 @@ Speichern und Ergebnis
 Bemerkungen, Messpunkte, Scan-Bereiche, Optionen). Nach dem ersten Speichern wird jede
 Änderung sofort gesichert – man kann jederzeit aufhören und am nächsten Tag mit
 **Öffnen …** weitermachen. **Ergebnis exportieren …** schreibt die Liste mit Status,
-Prüfzeit, Prüfer, Bemerkung und Messpunkten als Excel- oder CSV-Datei.
+Prüfzeit, Prüfer, Bemerkung und Messpunkten als Excel- oder CSV-Datei; in Excel mit den
+Farben der Signalliste (Zeilen grün/rot/grau je Status, Status fett in Farbe).
 
 .. _io-mobil:
 
@@ -4455,6 +4456,12 @@ und wird in der Datei ``plc_einstellungen.json`` im Datenordner gespeichert. Auc
 Standardtexte von Qt (Ja/Nein/Abbrechen, Dateidialoge) folgen der gewählten Sprache, und
 **Hilfe › Bedienungsanleitung** (F1) öffnet die Anleitung in der gewählten Sprache (für alle
 Sprachen außer Deutsch die englische Fassung *User Manual*).
+
+**Farbschema:** Im selben Menü unter **Farbschema** wählen Sie *Wie das System*, *Hell* oder
+*Dunkel*. Die Wahl wirkt sofort und gilt für alle Programme (Logger, Konfiguration,
+IO-Check, Ereignis-Viewer, Netzwerk-Panel). Ist am Rechner der dunkle Modus eingestellt,
+das Programm soll aber hell erscheinen (oder umgekehrt), ist das der Weg. Die Diagramme des
+Loggers haben unabhängig davon ihren eigenen dunklen Hintergrund (Screenshots wahlweise hell).
 
 Nicht übersetzt werden Daten: Namen von Variablen, Diagrammen und Triggern, die Spalten
 der CSV-Dateien und des Ereignisprotokolls (``KOMMT``, ``GEHT`` …), die Webseite des

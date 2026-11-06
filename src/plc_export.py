@@ -45,15 +45,29 @@ def _openpyxl():
 
 
 # ---- Tabellen allgemein (Variablenliste) -------------------------------------------------------------------------
-def write_table(path, header, rows, sheet="Tabelle"):
-    """Kopfzeile und Zeilen als CSV (Semikolon) oder Excel-Datei schreiben."""
+def write_table(path, header, rows, sheet="Tabelle", fills=None, fonts=None):
+    """Kopfzeile und Zeilen als CSV (Semikolon) oder Excel-Datei schreiben.
+
+    Nur Excel: ``fills`` = je Zeile Hintergrundfarbe (Hex „C8E6C9“ oder None), ``fonts`` = je Zeile {Spalte: Hex}
+    für die Schriftfarbe (fett) einzelner Zellen; die Kopfzeile wird fett."""
     if is_excel(path):
         wb = _openpyxl().Workbook()
         ws = wb.active
         ws.title = sheet[:31]
         ws.append(list(header))
-        for row in rows:
+        if fills is not None or fonts is not None:
+            from openpyxl.styles import Font, PatternFill
+            for c in ws[1]:
+                c.font = Font(bold=True)
+        for r, row in enumerate(rows):
             ws.append(list(row))
+            color = fills[r] if fills is not None and r < len(fills) else None
+            if color:
+                fill = PatternFill("solid", start_color=color, end_color=color)
+                for c in ws[ws.max_row]:
+                    c.fill = fill
+            for col, fc in ((fonts[r] if fonts is not None and r < len(fonts) else None) or {}).items():
+                ws.cell(ws.max_row, col + 1).font = Font(bold=True, color=fc)
         for i, h in enumerate(header):                # Spaltenbreite grob an Kopf und Inhalt anpassen
             width = max([len(str(h))] + [len(str(r[i])) for r in rows if i < len(r) and r[i] is not None])
             ws.column_dimensions[ws.cell(1, i + 1).column_letter].width = min(max(width + 2, 8), 60)
