@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.14.1] – 2026-11-06
+
 ### Geändert
 
 * **Anleitung, Treiber `tia`:** Abschnitt *Rolle* (HMI, Engineering, PG) – was die Einstellung bewirkt
@@ -602,7 +604,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.14.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.14.1...HEAD
+[3.14.1]: ../../releases/tag/v3.14.1
 [3.14.0]: ../../releases/tag/v3.14.0
 [3.13.0]: ../../releases/tag/v3.13.0
 [3.12.2]: ../../releases/tag/v3.12.2
