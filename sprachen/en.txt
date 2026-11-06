@@ -4598,6 +4598,9 @@
 @ Ereignisprotokoll nicht beschreibbar: {0}
 > Event log not writable: {0}
 
+@ Port {0} ist belegt oder nicht verfügbar (anderes Programm, z. B. ein zweiter Logger)
+> Port {0} is in use or not available (another program, e.g. a second logger)
+
 @ Zeitfenster
 > Time window
 
@@ -6321,6 +6324,9 @@
 
 @ Rolle
 > Role
+
+@ Als was sich der Logger bei der CPU anmeldet. HMI (Standard): belegt eine HMI-Verbindung. Engineering/PG: belegt eine der wenigen für PG/TIA Portal reservierten Verbindungen – nur versuchen, wenn die CPU die HMI-Verbindung ablehnt. Lesen und Zugriffsschutz sind gleich.
+> What the logger identifies itself as to the CPU. HMI (default): uses an HMI connection. Engineering/PG: uses one of the few connections reserved for PG/TIA Portal – only try if the CPU refuses the HMI connection. Reading and access protection are the same.
 
 @ Höchstzahl Variablen je Leseanfrage (größere Mengen werden aufgeteilt)
 > Maximum number of variables per read request (larger sets are split)

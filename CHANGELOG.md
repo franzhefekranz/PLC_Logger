@@ -14,6 +14,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* **Anleitung, Treiber `tia`:** Abschnitt *Rolle* (HMI, Engineering, PG) – was die Einstellung bewirkt
+  (Verbindungsressourcen der CPU) und wann man sie ändert; Tooltip im Konfigurationsprogramm.
+
+### Behoben
+
+* **Webserver:** belegter Port beendete das Programm ohne Meldung (Werkzeug ruft dann `sys.exit` auf) – betroffen
+  waren *Mobil …* im IO-Check (z. B. wenn ein Logger den Port schon nutzt; jetzt wird wie vorgesehen der nächste freie
+  Port genommen) sowie der Start des Webservers im Logger und im Headless-Betrieb (jetzt Meldung „Port … belegt“).
+
 ## [3.14.0] – 2026-11-06
 
 ### Neu

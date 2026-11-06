@@ -1020,7 +1020,11 @@ class WebServer:
     def start(self):
         """Server starten; wirft OSError, wenn der Port belegt ist (bzw. ssl.SSLError/ImportError bei HTTPS)."""
         ctx = self._ssl_context() if self.https else None
-        self.srv = make_server(self.host, self.port, self.app, threaded=True, ssl_context=ctx)
+        try:
+            self.srv = make_server(self.host, self.port, self.app, threaded=True, ssl_context=ctx)
+        except SystemExit:                                # Werkzeug beendet bei belegtem Port das Programm (sys.exit)
+            raise OSError(tr("Port {0} ist belegt oder nicht verfügbar (anderes Programm, z. B. ein zweiter Logger)")
+                          .format(self.port)) from None
         self.thread = threading.Thread(target=self.srv.serve_forever, name="webserver", daemon=True)
         self.thread.start()
         RUNNING.append(self)

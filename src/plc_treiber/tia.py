@@ -33,7 +33,10 @@ class TiaDriver(Driver):
         Param("passwort", tr("Passwort"), "password", "",
               tip=tr("Passwort der Zugriffsstufe, falls die CPU lesenden Zugriff schützt. "
                      "Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.")),
-        Param("rolle", tr("Rolle"), "choice", "hmi", choices=list(ROLES.items()), advanced=True),
+        Param("rolle", tr("Rolle"), "choice", "hmi", choices=list(ROLES.items()), advanced=True,
+              tip=tr("Als was sich der Logger bei der CPU anmeldet. HMI (Standard): belegt eine HMI-Verbindung. "
+                     "Engineering/PG: belegt eine der wenigen für PG/TIA Portal reservierten Verbindungen – nur "
+                     "versuchen, wenn die CPU die HMI-Verbindung ablehnt. Lesen und Zugriffsschutz sind gleich.")),
         Param("tags_je_anfrage", tr("Variablen je Anfrage"), "int", 50, minimum=1, maximum=1000, advanced=True,
               tip=tr("Höchstzahl Variablen je Leseanfrage (größere Mengen werden aufgeteilt)")),
     ]

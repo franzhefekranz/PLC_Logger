@@ -4598,6 +4598,9 @@
 @ Ereignisprotokoll nicht beschreibbar: {0}
 > 
 
+@ Port {0} ist belegt oder nicht verfügbar (anderes Programm, z. B. ein zweiter Logger)
+> 
+
 @ Zeitfenster
 > 
 
@@ -6320,6 +6323,9 @@
 > 
 
 @ Rolle
+> 
+
+@ Als was sich der Logger bei der CPU anmeldet. HMI (Standard): belegt eine HMI-Verbindung. Engineering/PG: belegt eine der wenigen für PG/TIA Portal reservierten Verbindungen – nur versuchen, wenn die CPU die HMI-Verbindung ablehnt. Lesen und Zugriffsschutz sind gleich.
 > 
 
 @ Höchstzahl Variablen je Leseanfrage (größere Mengen werden aufgeteilt)

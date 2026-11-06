@@ -1219,6 +1219,28 @@ def test_web_client_history_export_events_rights(tmp_path):
         rec.stop()
 
 
+def test_web_port_in_use_raises_oserror():
+    """Belegter Port: Werkzeug ruft sys.exit auf – der Webserver meldet stattdessen OSError (früher beendete sich der
+    IO-Check bei „Mobil …“ ohne Meldung, der Logger beim Start des Webservers)."""
+    import socket
+    import plc_common
+    import plc_web
+    blocker = socket.socket()
+    blocker.bind(("127.0.0.1", 0))
+    blocker.listen()
+    port = blocker.getsockname()[1]
+    conn = plc_common.default_connection()
+    conn.update(web_host="127.0.0.1", web_port=port, web_https=0)
+    srv = plc_web.WebServer.from_conn(lambda: None, conn)
+    srv.host, srv.port = "127.0.0.1", port
+    try:
+        with pytest.raises(OSError, match=str(port)):
+            srv.start()
+        assert srv not in plc_web.RUNNING
+    finally:
+        blocker.close()
+
+
 def test_web_break_gaps():
     import numpy as np
 

@@ -1765,7 +1765,7 @@ Datenbausteine, **ohne** PUT/GET. Bibliothek: ``s7commplus``.
      - Passwort der Zugriffsstufe, falls die CPU lesenden Zugriff schützt
        (steht im Klartext in der Konfigurationsdatei).
    * - Rolle (Erweitert)
-     - *HMI* (Standard), *Engineering*, *PG*.
+     - *HMI* (Standard), *Engineering*, *PG* – siehe `Rolle <tia-rolle_>`__ unten.
    * - Variablen je Anfrage (Erweitert)
      - Höchstzahl Variablen je Leseanfrage (Standard 50); größere Mengen werden
        aufgeteilt.
@@ -1773,6 +1773,26 @@ Datenbausteine, **ohne** PUT/GET. Bibliothek: ``s7commplus``.
 **Vorbereitung:** In der Regel keine. Variablen müssen „Erreichbar aus
 HMI/OPC UA/Web API“ sein (Standard). Jede CPU erlaubt nur eine begrenzte Zahl
 von HMI-Verbindungen; der Logger belegt eine je Steuerung. TCP-Port 102.
+
+.. _tia-rolle:
+
+**Rolle:** legt fest, als was sich der Logger beim Verbindungsaufbau bei der CPU
+ausgibt (Kennung ``SIMATIC-ROOT-HMI``, ``-ES`` bzw. ``-PG``). Gelesen wird in allen
+drei Fällen gleich, auch Zugriffsstufe und Passwort gelten unverändert; mehr Rechte
+bekommt der Logger dadurch nicht. Der Unterschied liegt bei den
+**Verbindungsressourcen** der CPU (TIA Portal: *Online & Diagnose ›
+Verbindungsressourcen*):
+
+* **HMI** (Standard) belegt eine der HMI-Verbindungen – wie ein Bediengerät. Davon
+  hat jede CPU mehrere; die richtige Wahl für den Dauerbetrieb.
+* **Engineering** (TIA Portal) und **PG** (Programmiergerät) belegen eine der für
+  die PG-Kommunikation reservierten Verbindungen. Davon gibt es nur wenige; läuft der
+  Logger als PG, kann es sein, dass sich TIA Portal nicht mehr online verbinden kann.
+
+Engineering oder PG nur versuchen, wenn die CPU die Verbindung als HMI ablehnt
+(z. B. alle HMI-Verbindungen belegt). Ob einzelne Firmwarestände die Rollen darüber
+hinaus unterschiedlich behandeln, ist nicht an einer Steuerung verglichen –
+Rückmeldungen willkommen.
 
 **Adressen:** symbolische Namen wie in TIA Portal:
 

@@ -1724,7 +1724,7 @@ Symbolic access like TIA Portal and Siemens HMIs – also to **optimized** data 
      - Password of the access level if the CPU protects read access (stored in plain
        text in the configuration file).
    * - Role (Advanced)
-     - *HMI* (default), *Engineering*, *PG*.
+     - *HMI* (default), *Engineering*, *PG* – see `Role <tia-rolle_>`__ below.
    * - Variables per request (Advanced)
      - Maximum number of variables per read request (default 50); larger quantities are
        split.
@@ -1732,6 +1732,24 @@ Symbolic access like TIA Portal and Siemens HMIs – also to **optimized** data 
 **Preparation:** usually none. Variables must be “Accessible from HMI/OPC UA/Web API”
 (default). Each CPU allows only a limited number of HMI connections; the logger uses one
 per controller. TCP port 102.
+
+.. _tia-rolle:
+
+**Role:** determines what the logger identifies itself as when connecting to the CPU
+(identifier ``SIMATIC-ROOT-HMI``, ``-ES`` or ``-PG``). Reading works the same in all
+three cases, and access level and password apply unchanged; the logger does not gain
+any additional rights. The difference lies in the CPU's **connection resources**
+(TIA Portal: *Online & diagnostics › Connection resources*):
+
+* **HMI** (default) uses one of the HMI connections – like an operator panel. Every
+  CPU has several of them; the right choice for continuous operation.
+* **Engineering** (TIA Portal) and **PG** (programming device) use one of the
+  connections reserved for PG communication. There are only a few of these; if the
+  logger runs as PG, TIA Portal may no longer be able to go online.
+
+Only try Engineering or PG if the CPU refuses the connection as HMI (e.g. all HMI
+connections in use). Whether individual firmware versions treat the roles differently
+beyond that has not been compared on a controller – feedback welcome.
 
 **Addresses:** symbolic names as in TIA Portal:
 
