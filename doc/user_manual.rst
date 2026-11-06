@@ -4160,8 +4160,19 @@ If type and data type are missing, they are derived from the address: ``E0.0``/`
 analog input, ``AW``/``%QW`` = analog output. For the driver ``s7`` ``%`` and ``P`` are
 removed, for ``ads`` the TwinCAT notation (``%IX0.1``) and for ``tia`` the symbol name
 (``IArea.<Name>``) is used. Rows without address (intermediate headings) and duplicate
-addresses are skipped. On a second import the list can be replaced or extended. The
-message after the import names the recognized columns.
+addresses are skipped. The message after the import names the recognized columns.
+
+**Taking over a changed IO list:** if a list already exists, a second import asks:
+
+* **Update list** (default) – the new list applies: changed symbols, comments, device tags,
+  groups and measuring ranges, new and removed signals. **Status, check time, checker,
+  remark and test points** are kept for all signals with the same address (also in a
+  different notation, e.g. ``%I0.0`` instead of ``E0.0``). The message names the number of
+  test entries taken over and the signals that are no longer in the list.
+* **Replace** – the new list without the previous test entries.
+* **Add** – only add signals with new addresses.
+
+Single changes can be made directly in the table without an import (see below).
 
 **Own column headings:** **Columns …** lists per field the headings it is looked for in
 the list (several separated by commas; case, spaces and special characters do not
@@ -4187,7 +4198,13 @@ search field, filters for group, type and status and the progress (“312 of 480
   Linux user logged in; an empty field restores it. The setting applies to all test
   progress files of this user; on smartphone and tablet the login name in the web
   server is used.
-* The **remark** can be edited directly in the table by double-click.
+* **Address, symbol, comment, device tag, group** and **remark** can be changed directly
+  in the table by double-click (or F2), e.g. when a device tag has changed; the test entry
+  is kept. A **new address** must not exist yet; if the area changes (e.g. ``E`` → ``A``),
+  type and data type are derived again. If the signal has already been checked, the IO
+  check asks whether the test entry is reset (*Yes*: check again; *No*: keep it, e.g. for a
+  typo in the list). Addresses from scan ranges result from the range. Edited signals from
+  scan ranges are also saved with the test progress file.
 * **Check off signals automatically** (optional, off): a signal with status *open*
   becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and
   released) or an analog input has passed the wire break test (see below). Only signals in the IO list or a scan range are checked off; the list

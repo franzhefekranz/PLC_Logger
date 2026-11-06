@@ -19,6 +19,16 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **Dateidialoge merken sich den Ordner:** Speichern-, Öffnen- und Ordnerdialoge aller Programme öffnen im zuletzt
   benutzten Ordner (je Dialog, sonst der zuletzt überhaupt benutzte) statt immer im Programm- bzw. Datenordner.
   Wunsch aus dem SPS-Forum.
+* **IO-Check:** geänderte IO-Liste **aktualisieren** – der zweite Import übernimmt neue Texte, BMK, Messbereiche, neue
+  und entfallene Signale und behält Status, Prüfer, Bemerkung und Messpunkte gleicher Adressen (bisher nur Ersetzen
+  ohne Prüfeinträge oder Ergänzen). Adresse, Symbol, Kommentar, BMK und Gruppe sind außerdem direkt in der Tabelle
+  änderbar (neue Adresse: Prüfung auf doppelte, Frage, ob der Prüfeintrag zurückgesetzt wird).
+  Wunsch aus dem SPS-Forum.
+
+### Behoben
+
+* **IO-Check:** bearbeitete Signale aus Scan-Bereichen (Status, Bemerkung) wurden nicht mit dem Prüfstand gespeichert
+  und fehlten nach dem erneuten Öffnen.
 
 ## [3.14.1] – 2026-11-06
 

@@ -441,6 +441,42 @@ class ScanRange:
         return [drv.block_element_address(blk, i) for i in range(blk.count)]
 
 
+def change_address(sig: IoSignal, address: str):
+    """Adresse eines Signals ändern (Siemens-Schreibweise ohne '%'); wechselt dabei Bereich oder Breite (z. B. E -> A,
+    Bit -> Wort), werden Signalart und Datentyp neu aus der Adresse abgeleitet."""
+    address = (address or "").strip()
+    new, old = s7_parts(canon_address(address)), s7_parts(canon_address(sig.address))   # E/I, %, P einheitlich
+    if new and (not old or new[:2] != old[:2]):
+        sig.kind, sig.dtype = guess_kind_dtype(address)
+    sig.address = address.lstrip("%") if new else address
+
+
+def worth_saving(sig: IoSignal) -> bool:
+    """Signal aus einem Scan-Bereich mit Inhalt (Status, Bemerkung, Messpunkte oder eingetragene Texte)."""
+    return bool(sig.status != "offen" or sig.remark or sig.points or sig.symbol or sig.comment or sig.bmk or sig.group)
+
+
+CHECK_FIELDS = ("status", "checked_at", "checker", "remark", "points", "seen")
+
+
+def update_list(old, new):
+    """IO-Liste aktualisieren: ``new`` (frisch importiert) übernimmt von Signalen gleicher Adresse (und Steuerung) aus
+    ``old`` den Prüfstand (Status, Zeit, Prüfer, Bemerkung, Messpunkte); Texte, Typ, Messbereich kommen aus der neuen
+    Liste. Rückgabe: (neue Liste, Anzahl übernommener Prüfeinträge, entfallene Signale aus ``old``)."""
+    by_key = {s.key: s for s in old}
+    kept = 0
+    for s in new:
+        o = by_key.pop(s.key, None)
+        if o is None:
+            continue
+        for name in CHECK_FIELDS:
+            setattr(s, name, getattr(o, name))
+        s.points = dict(o.points)
+        if o.status != "offen" or o.remark:
+            kept += 1
+    return new, kept, [o for o in by_key.values() if not o.scanned]
+
+
 def scan_signals(rng: ScanRange, driver_id: str, existing: dict) -> list:
     """Signale eines Scan-Bereichs; Adressen, die schon in der IO-Liste stehen, werden übernommen (gleiches Objekt)."""
     out = []
@@ -700,9 +736,13 @@ def progress(signals):
 # ---------------------------------------------------------------------------------------------------------------------
 @dataclass
 class IoProject:
-    """Ein Prüfstand: Signale, Scan-Bereiche, zugehörige Konfiguration und Optionen (Datei ``*.iocheck.json``)."""
+    """Ein Prüfstand: Signale, Scan-Bereiche, zugehörige Konfiguration und Optionen (Datei ``*.iocheck.json``).
+
+    ``signals`` ist die IO-Liste; ``scanned`` hält bearbeitete Signale aus Scan-Bereichen (Status, Bemerkung, Texte),
+    damit sie mit gespeichert werden."""
     signals: list = field(default_factory=list)
     scans: list = field(default_factory=list)
+    scanned: list = field(default_factory=list)
     config: str = ""                       # Konfigurationsdatei (Steuerungen)
     options: dict = field(default_factory=dict)
     path: str = ""
@@ -712,7 +752,8 @@ class IoProject:
         path = path or self.path
         doc = {"format": FORMAT, "version": 1, "gespeichert": now_text(), "config": self.config,
                "options": self.options, "scans": [asdict(s) for s in self.scans],
-               "signals": [s.to_dict() for s in self.signals]}
+               "signals": [s.to_dict() for s in self.signals]
+               + [s.to_dict() for s in self.scanned if s not in self.signals]}
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(doc, f, ensure_ascii=False, indent=1)
@@ -726,7 +767,8 @@ class IoProject:
             doc = json.load(f)
         if doc.get("format") != FORMAT:
             raise ValueError(tr("{0} ist keine IO-Check-Datei.").format(os.path.basename(path)))
-        return cls(signals=[IoSignal.from_dict(d) for d in doc.get("signals", [])],
+        sigs = [IoSignal.from_dict(d) for d in doc.get("signals", [])]
+        return cls(signals=[s for s in sigs if not s.scanned], scanned=[s for s in sigs if s.scanned],
                    scans=[ScanRange(**{k: v for k, v in d.items() if k in ScanRange.__dataclass_fields__})
                           for d in doc.get("scans", [])],
                    config=doc.get("config", ""), options=doc.get("options", {}), path=path)

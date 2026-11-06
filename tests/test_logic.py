@@ -232,6 +232,37 @@ def test_iocheck_checker_name_and_protocol_layout(tmp_path, monkeypatch):
     assert boxes[0][0] < boxes[0][1]
 
 
+def test_iocheck_update_list_keeps_checks_and_scanned_saved(tmp_path):
+    """IO-Liste aktualisieren: neue Texte/BMK, Prüfeinträge gleicher Adressen bleiben (auch andere Schreibweise),
+    entfallene Signale werden gemeldet; bearbeitete Scan-Signale werden mit gespeichert."""
+    import plc_iocheck as io
+    old = [io.IoSignal("E0.0", bmk="-B1"), io.IoSignal("E0.1", bmk="-B2"), io.IoSignal("E0.2", bmk="-B3")]
+    io.set_status(old[0], "ok", checker="MT")
+    io.set_status(old[2], "fehler", remark="Kabel", checker="MT")
+    scan = io.IoSignal("E5.0", scanned=True)
+    io.set_status(scan, "ok", checker="MT")
+    new = [io.IoSignal("%I0.0", bmk="-B1A"), io.IoSignal("E0.1", bmk="-B2"), io.IoSignal("E5.0", bmk="-S5"),
+           io.IoSignal("E0.3")]
+    sigs, kept, gone = io.update_list(old + [scan], new)
+    assert kept == 2 and [s.address for s in gone] == ["E0.2"]
+    assert sigs[0].bmk == "-B1A" and sigs[0].status == "ok" and sigs[0].checker == "MT"
+    assert sigs[2].status == "ok" and sigs[2].bmk == "-S5" and sigs[3].status == "offen"
+    # Scan-Signale: nur bearbeitete werden gespeichert und beim Laden getrennt gehalten
+    s2 = io.IoSignal("E6.0", scanned=True, bmk="-B60")
+    p = io.IoProject(signals=sigs[:2], scanned=[s2], scans=[io.ScanRange("E6.0", 8)])
+    p.save(str(tmp_path / "s.iocheck.json"))
+    q = io.IoProject.load(str(tmp_path / "s.iocheck.json"))
+    assert len(q.signals) == 2 and [s.bmk for s in q.scanned] == ["-B60"]
+    assert io.worth_saving(s2) and not io.worth_saving(io.IoSignal("E6.1", scanned=True))
+    # Adresse ändern: Bereichswechsel leitet Typ neu ab, andere Schreibweise desselben Bereichs nicht
+    c = io.IoSignal("E0.3")
+    io.change_address(c, "A4.0")
+    assert (c.address, c.kind, c.dtype) == ("A4.0", "DO", "BOOL")
+    c = io.IoSignal("EW256", kind="AI", dtype="REAL")
+    io.change_address(c, "%IW258")
+    assert (c.address, c.kind, c.dtype) == ("IW258", "AI", "REAL")
+
+
 def test_iocheck_scan_addresses():
     """Adressbereich: 10 Bits ab E0.0 enden bei E1.1."""
     import plc_iocheck as io

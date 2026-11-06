@@ -284,7 +284,7 @@ class DbLoadDialog(QDialog):
         """Andere SQLite-Datei wählen und verbinden."""
         start = os.path.dirname(db_settings(self.conn)["datei"]) or BASE_DIR
         path, _ = plc_filedlg.open_name(self, tr("SQLite-Datei wählen"), start,
-                                              tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
+                                        tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
         if path:
             self.sqlite_file = path
             self.connect_db()

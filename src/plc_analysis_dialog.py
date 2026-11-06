@@ -95,7 +95,7 @@ class _AnalysisBase(QDialog):
     def save_image(self):
         """Diagramm als PNG-Bild speichern."""
         path, _ = plc_filedlg.save_name(self, tr("Bild speichern"), os.path.join(self.base_dir, "analyse.png"),
-                                              tr("PNG-Bild (*.png)"))
+                                        tr("PNG-Bild (*.png)"))
         if not path:
             return
         if not path.lower().endswith(".png"):
@@ -111,7 +111,7 @@ class _AnalysisBase(QDialog):
             QMessageBox.information(self, tr("Werte speichern"), tr("Es sind keine Werte vorhanden."))
             return
         path, _ = plc_filedlg.save_name(self, tr("Werte speichern"), os.path.join(self.base_dir, "analyse.csv"),
-                                              tr("CSV-Datei (*.csv)"))
+                                        tr("CSV-Datei (*.csv)"))
         if not path:
             return
         if not path.lower().endswith(".csv"):

@@ -30,6 +30,7 @@ STATUS_FG = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "
 STATUS_MARK = {"ok": "✓", "fehler": "✗", "uebersprungen": "–", "offen": ""}
 LED_ON_IN, LED_ON_OUT, LED_OFF, LED_NONE = "#2ecc71", "#f5a623", "#9aa3ad", "#e5484d"
 FLASH_S = 1.5                     # so lange wird ein Wechsel hervorgehoben
+EDITABLE = ("address", "symbol", "comment", "bmk", "group", "remark")   # in der Tabelle änderbar (Doppelklick)
 
 COLS = [("status", "Status"), ("value", "Wert"), ("address", "Adresse"), ("symbol", "Symbol"),
         ("comment", "Kommentar"), ("bmk", "BMK"), ("group", "Gruppe"), ("kind", "Typ"), ("plc", "Steuerung"),
@@ -109,6 +110,7 @@ class SignalModel(QAbstractTableModel):
     aufzubauen.
     """
     edited = Signal(object)
+    address_request = Signal(object, str)     # Adresse geändert: das Fenster prüft und übernimmt sie
 
     def __init__(self, parent=None):
         """Leeres Modell."""
@@ -136,9 +138,10 @@ class SignalModel(QAbstractTableModel):
         return None
 
     def flags(self, index):
-        """Zellen wählbar; die Spalte Bemerkung zusätzlich editierbar."""
+        """Zellen wählbar; Adresse, Symbol, Kommentar, BMK, Gruppe und Bemerkung zusätzlich editierbar (Doppelklick,
+        F2)."""
         f = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
-        if COLS[index.column()][0] == "remark":
+        if COLS[index.column()][0] in EDITABLE:
             f |= Qt.ItemFlag.ItemIsEditable
         return f
 
@@ -190,10 +193,17 @@ class SignalModel(QAbstractTableModel):
         return None
 
     def setData(self, index, value, role=Qt.ItemDataRole.EditRole):
-        """Bemerkung übernehmen und ``edited`` senden (das Fenster speichert dann)."""
-        if role == Qt.ItemDataRole.EditRole and COLS[index.column()][0] == "remark":
+        """Text eines editierbaren Felds übernehmen und ``edited`` senden (das Fenster speichert dann)."""
+        key = COLS[index.column()][0]
+        if role == Qt.ItemDataRole.EditRole and key in EDITABLE:
             sig = self.signals[index.row()]
-            sig.remark = str(value)
+            text = str(value) if key == "remark" else str(value).strip()
+            if getattr(sig, key) == text:
+                return False
+            if key == "address":                  # ändert Schlüssel und Lesen: das Fenster entscheidet
+                self.address_request.emit(sig, text)
+                return False
+            setattr(sig, key, text)
             self.dataChanged.emit(index, index)
             self.edited.emit(sig)
             return True
@@ -861,7 +871,8 @@ class IoCheckWindow(QMainWindow):
         self.progress.setTextVisible(True)
         v.addWidget(self.progress)
         self.model = SignalModel(self)
-        self.model.edited.connect(lambda _s: self._mark_dirty())
+        self.model.edited.connect(self._text_edited)
+        self.model.address_request.connect(self._change_address, Qt.ConnectionType.QueuedConnection)
         self.proxy = SignalFilter(self)
         self.proxy.setSourceModel(self.model)
         self.view = QTableView()
@@ -983,14 +994,17 @@ class IoCheckWindow(QMainWindow):
         if was_running:
             self.stop_reading()
         sigs = list(self.project.signals)
-        existing = {s.key: s for s in sigs}
+        existing = {s.key: s for s in self.project.scanned}
+        existing.update({s.key: s for s in sigs})
+        known = {s.key for s in sigs}
         for rng in self.project.scans:
             drv = self._plc_for(rng.plc)
             if drv is None:
                 continue
             try:
                 for s in io.scan_signals(rng, drv.driver, existing):
-                    if s.key not in existing:
+                    if s.key not in known:
+                        known.add(s.key)
                         existing[s.key] = s
                         sigs.append(s)
             except Exception as e:
@@ -998,15 +1012,7 @@ class IoCheckWindow(QMainWindow):
         self.all_signals = sigs
         self.model.set_signals(sigs)
         self._apply_columns()
-        groups = sorted({s.group for s in sigs if s.group})
-        cur = self.cb_group.currentData()
-        self.cb_group.blockSignals(True)
-        self.cb_group.clear()
-        self.cb_group.addItem(tr("Alle Gruppen"), "")
-        for g in groups:
-            self.cb_group.addItem(g, g)
-        self.cb_group.setCurrentIndex(max(0, self.cb_group.findData(cur)))
-        self.cb_group.blockSignals(False)
+        self._fill_groups()
         self._apply_filter()
         rows = io.matrix_rows(sigs)
         self.matrix.set_rows(rows)
@@ -1087,6 +1093,61 @@ class IoCheckWindow(QMainWindow):
         self.progress.setFormat(tr("{0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen").format(
             done, pr["gesamt"], pr["ok"], pr["fehler"], pr["uebersprungen"]))
 
+    def _fill_groups(self):
+        """Auswahl „Gruppe“ mit den Gruppen der Signale füllen (die gewählte bleibt, wenn es sie noch gibt)."""
+        groups = sorted({s.group for s in self.all_signals if s.group})
+        cur = self.cb_group.currentData()
+        self.cb_group.blockSignals(True)
+        self.cb_group.clear()
+        self.cb_group.addItem(tr("Alle Gruppen"), "")
+        for g in groups:
+            self.cb_group.addItem(g, g)
+        self.cb_group.setCurrentIndex(max(0, self.cb_group.findData(cur)))
+        self.cb_group.blockSignals(False)
+
+    def _text_edited(self, sig):
+        """Feld in der Tabelle geändert: Gruppenauswahl, Matrix und Analogfeld nachziehen, speichern."""
+        self._fill_groups()
+        self.matrix.update()
+        if self.analog.sig is sig:
+            self.analog.refresh()
+        self._mark_dirty()
+
+    def _change_address(self, sig, text):
+        """Adresse in der Tabelle geändert: prüfen (nicht leer, nicht doppelt, nicht aus einem Scan-Bereich), bei einem
+        schon geprüften Signal fragen, ob der Prüfeintrag zurückgesetzt wird; dann Liste neu aufbauen und speichern."""
+        title = tr("Adresse ändern")
+        if not text:
+            return
+        if sig.scanned or sig not in self.project.signals:
+            QMessageBox.information(self, title, tr("Das Signal stammt aus einem Scan-Bereich; die Adressen ergeben "
+                                                    "sich aus dem Bereich (Matrix › Bereiche scannen …)."))
+            return
+        key = (sig.plc, io.canon_address(text))
+        other = next((s for s in self.all_signals if s is not sig and s.key == key), None)
+        if other is not None:
+            QMessageBox.warning(self, title, tr("Die Adresse {0} gibt es schon ({1}).").format(
+                text, other.label))
+            return
+        if sig.status != "offen":
+            ans = QMessageBox.question(
+                self, title, tr("{0} ist bereits geprüft ({1}). Prüfeintrag zurücksetzen?\n\nJa: Status wieder "
+                                "„offen“ (die neue Adresse muss neu geprüft werden). Nein: Prüfeintrag behalten (z. B. "
+                                "nur Schreibfehler in der Liste).").format(sig.address, tr(io.STATUS[sig.status])),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Yes)
+            if ans == QMessageBox.StandardButton.Yes:
+                io.set_status(sig, "offen")
+            elif ans != QMessageBox.StandardButton.No:
+                return
+        io.change_address(sig, text)
+        self._rebuild()
+        self._mark_dirty()
+
+    def _sync_scanned(self):
+        """Bearbeitete Signale aus Scan-Bereichen in den Prüfstand übernehmen (werden mit gespeichert)."""
+        self.project.scanned = [s for s in self.all_signals if s.scanned and io.worth_saving(s)]
+
     def _mark_dirty(self):
         """Änderung vermerken; ist der Prüfstand schon gespeichert, sofort automatisch speichern (nichts geht verloren).
         """
@@ -1096,6 +1157,7 @@ class IoCheckWindow(QMainWindow):
         if self.project.path:                 # mit Dateiname: automatisch speichern (nichts geht verloren)
             try:
                 self.project.options = self._options()
+                self._sync_scanned()
                 self.project.save()
                 self.dirty = False
                 self._update_title()
@@ -1114,11 +1176,11 @@ class IoCheckWindow(QMainWindow):
 
     # ------------------------------------------------------------------ Datei
     def import_list(self):
-        """IO-Liste importieren; bei vorhandener Liste fragen, ob ersetzt oder ergänzt wird (Ergänzen übernimmt nur neue
-        Adressen).
+        """IO-Liste importieren; bei vorhandener Liste fragen: aktualisieren (neue Liste, Prüfeinträge gleicher Adressen
+        bleiben), ersetzen (alles neu) oder ergänzen (nur neue Adressen).
         """
         path, _f = plc_filedlg.open_name(self, tr("IO-Liste importieren"), "",
-                                               tr("Tabellen (*.xlsx *.xlsm *.ods *.csv *.txt);;Alle Dateien (*)"))
+                                         tr("Tabellen (*.xlsx *.xlsm *.ods *.csv *.txt);;Alle Dateien (*)"))
         if not path:
             return
         try:
@@ -1132,19 +1194,40 @@ class IoCheckWindow(QMainWindow):
         if not sigs:
             QMessageBox.information(self, tr("IO-Liste importieren"), tr("Keine Signale gefunden."))
             return
-        replace = True
+        mode = "ersetzen"
         if self.project.signals:
             box = QMessageBox(QMessageBox.Icon.Question, tr("IO-Liste importieren"),
-                              tr("{0} Signale gelesen. Vorhandene Liste ersetzen oder ergänzen?").format(len(sigs)),
+                              tr("{0} Signale gelesen. Wie soll die vorhandene Liste geändert werden?").format(len(sigs)),
                               parent=self)
+            box.setInformativeText(tr(
+                "Liste aktualisieren: neue Liste übernehmen (geänderte Texte, BMK, Messbereiche, neue und entfallene "
+                "Signale); Status, Prüfer und Bemerkungen gleicher Adressen bleiben erhalten.\n"
+                "Ersetzen: neue Liste ohne die bisherigen Prüfeinträge.\n"
+                "Ergänzen: nur Signale mit neuen Adressen hinzufügen."))
+            b_upd = box.addButton(tr("Liste aktualisieren"), QMessageBox.ButtonRole.AcceptRole)
             b_rep = box.addButton(tr("Ersetzen"), QMessageBox.ButtonRole.AcceptRole)
             b_add = box.addButton(tr("Ergänzen"), QMessageBox.ButtonRole.AcceptRole)
             box.addButton(QMessageBox.StandardButton.Cancel)
+            box.setDefaultButton(b_upd)
             box.exec()
-            if box.clickedButton() not in (b_rep, b_add):
+            clicked = box.clickedButton()
+            if clicked not in (b_upd, b_rep, b_add):
                 return
-            replace = box.clickedButton() is b_rep
-        if replace:
+            mode = "aktualisieren" if clicked is b_upd else "ersetzen" if clicked is b_rep else "ergaenzen"
+        extra = ""
+        if mode == "aktualisieren":
+            old = self.project.signals + [s for s in self.all_signals if s.scanned]
+            sigs, kept, gone = io.update_list(old, sigs)
+            self.project.signals = sigs
+            keys = {s.key for s in sigs}
+            self.project.scanned = [s for s in self.project.scanned if s.key not in keys]
+            extra = tr("Prüfeinträge übernommen: {0}.").format(kept)
+            if gone:
+                done = sum(1 for s in gone if s.status != "offen")
+                extra += "\n" + tr("Nicht mehr in der Liste und entfernt: {0} Signale (davon {1} bereits geprüft): "
+                                    "{2}").format(len(gone), done, ", ".join(s.address for s in gone[:12])
+                                                  + (" …" if len(gone) > 12 else ""))
+        elif mode == "ersetzen":
             self.project.signals = sigs
         else:
             have = {s.key for s in self.project.signals}
@@ -1152,6 +1235,8 @@ class IoCheckWindow(QMainWindow):
         counts = {k: sum(1 for s in sigs if s.kind == k) for k in io.KINDS}
         msg = tr("{0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.").format(
             len(sigs), counts["DI"], counts["DO"], counts["AI"], counts["AO"])
+        if extra:
+            msg += "\n" + extra
         msg += "\n\n" + tr("Erkannte Spalten: {0}").format(cols_text)
         if warnings:
             msg += "\n\n" + "\n".join(warnings[:15]) + ("\n…" if len(warnings) > 15 else "")
@@ -1175,7 +1260,7 @@ class IoCheckWindow(QMainWindow):
             return
         if not path:
             path, _f = plc_filedlg.open_name(self, tr("IO-Check öffnen"), "",
-                                                   tr("IO-Check (*.iocheck.json);;Alle Dateien (*)"))
+                                             tr("IO-Check (*.iocheck.json);;Alle Dateien (*)"))
             if not path:
                 return
         try:
@@ -1208,13 +1293,14 @@ class IoCheckWindow(QMainWindow):
         path = self.project.path
         if as_new or not path:
             path, _f = plc_filedlg.save_name(self, tr("IO-Check speichern"), path or "io-check" + io.EXTENSION,
-                                                   tr("IO-Check (*.iocheck.json)"))
+                                             tr("IO-Check (*.iocheck.json)"))
             if not path:
                 return False
             if not path.endswith(".json"):
                 path += io.EXTENSION
         try:
             self.project.options = self._options()
+            self._sync_scanned()
             self.project.save(path)
         except OSError as e:
             QMessageBox.warning(self, tr("IO-Check speichern"), str(e))
@@ -1230,7 +1316,7 @@ class IoCheckWindow(QMainWindow):
     def export_result(self):
         """Ergebnis als Excel- oder CSV-Datei speichern."""
         path, _f = plc_filedlg.save_name(self, tr("Ergebnis exportieren"), "io-check-ergebnis.xlsx",
-                                               tr("Excel (*.xlsx);;CSV (*.csv)"))
+                                         tr("Excel (*.xlsx);;CSV (*.csv)"))
         if not path:
             return
         try:

@@ -3298,9 +3298,6 @@
 @ Bereich {0}: {1}
 > 
 
-@ Alle Gruppen
-> 
-
 @ Prüfer: {0}
 > 
 
@@ -3311,6 +3308,21 @@
 > 
 
 @ {0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen
+> 
+
+@ Alle Gruppen
+> 
+
+@ Adresse ändern
+> 
+
+@ Das Signal stammt aus einem Scan-Bereich; die Adressen ergeben sich aus dem Bereich (Matrix › Bereiche scannen …).
+> 
+
+@ Die Adresse {0} gibt es schon ({1}).
+> 
+
+@ {0} ist bereits geprüft ({1}). Prüfeintrag zurücksetzen?\n\nJa: Status wieder „offen“ (die neue Adresse muss neu geprüft werden). Nein: Prüfeintrag behalten (z. B. nur Schreibfehler in der Liste).
 > 
 
 @ Speichern fehlgeschlagen: {0}
@@ -3325,10 +3337,22 @@
 @ Keine Signale gefunden.
 > 
 
-@ {0} Signale gelesen. Vorhandene Liste ersetzen oder ergänzen?
+@ {0} Signale gelesen. Wie soll die vorhandene Liste geändert werden?
+> 
+
+@ Liste aktualisieren: neue Liste übernehmen (geänderte Texte, BMK, Messbereiche, neue und entfallene Signale); Status, Prüfer und Bemerkungen gleicher Adressen bleiben erhalten.\nErsetzen: neue Liste ohne die bisherigen Prüfeinträge.\nErgänzen: nur Signale mit neuen Adressen hinzufügen.
+> 
+
+@ Liste aktualisieren
 > 
 
 @ Ergänzen
+> 
+
+@ Prüfeinträge übernommen: {0}.
+> 
+
+@ Nicht mehr in der Liste und entfernt: {0} Signale (davon {1} bereits geprüft): {2}
 > 
 
 @ {0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.

@@ -957,3 +957,50 @@ def test_file_dialogs_remember_folder(qt_log, tmp_path, monkeypatch):
     qt_log.file = str(own)
     assert fd.directory(None, "Ordner", plc_common.BASE_DIR) == str(own)
     assert fd.start_path("Ordner", "") == str(own)
+
+
+def test_iocheck_edit_texts_and_update_list(qt_log, demo_config, tmp_path, monkeypatch):
+    """IO-Check: BMK/Kommentar in der Tabelle ändern (gespeichert); geänderte IO-Liste „aktualisieren“ – Prüfeinträge
+    gleicher Adressen bleiben, neue Texte werden übernommen."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QMessageBox
+
+    import plc_iocheck as io
+    import plc_iocheck_dialog as d
+    csv = tmp_path / "io.csv"
+    csv.write_text("Adresse;Symbol;BMK\nE0.0;B1;-B1\nE0.1;B2;-B2\nE0.2;B3;-B3\n", encoding="utf-8")
+    w = d.IoCheckWindow(config_path=demo_config, demo=True)
+    qt_log.file = str(csv)
+    w.import_list()
+    assert [s.bmk for s in w.project.signals] == ["-B1", "-B2", "-B3"]
+    qt_log.file = str(tmp_path / "pruef")
+    assert w.save_project(as_new=True)
+    w.set_status(w.project.signals[:2], "ok")
+    sig = w.project.signals[1]
+    idx = w.model.index(w.model.signals.index(sig), d.COL["bmk"])
+    assert w.model.flags(idx) & Qt.ItemFlag.ItemIsEditable
+    assert not w.model.flags(w.model.index(0, d.COL["address"])) & Qt.ItemFlag.ItemIsEditable
+    assert w.model.setData(idx, " -B2.1 ")
+    assert io.IoProject.load(w.project.path).signals[1].bmk == "-B2.1"    # sofort gespeichert
+    # geänderte Liste: E0.0 neues BMK, E0.2 entfällt, E0.3 neu
+    csv.write_text("Adresse;Symbol;BMK\nE0.0;B1;-B10\nE0.1;B2;-B2\nE0.3;B4;-B4\n", encoding="utf-8")
+    monkeypatch.setattr(QMessageBox, "clickedButton",
+                        lambda self: next(b for b in self.buttons() if b.text() == d.tr("Liste aktualisieren")))
+    qt_log.file = str(csv)
+    w.import_list()
+    by = {s.address: s for s in w.project.signals}
+    assert sorted(by) == ["E0.0", "E0.1", "E0.3"]
+    assert by["E0.0"].bmk == "-B10" and by["E0.0"].status == "ok" and by["E0.1"].status == "ok"
+    assert by["E0.3"].status == "offen"
+    assert any("E0.2" in m[2] for m in qt_log.messages if m[0] == "information")
+    # Adresse ändern: offenes Signal E0.3 -> A4.0 (wird Digitalausgang); doppelte Adresse abgelehnt
+    s3 = by["E0.3"]
+    w.model.setData(w.model.index(w.model.signals.index(s3), d.COL["address"]), "A4.0")
+    wait(50)
+    assert s3.address == "A4.0" and s3.kind == "DO" and s3 in w.all_signals
+    assert io.IoProject.load(w.project.path).signals[-1].address == "A4.0"
+    w.model.setData(w.model.index(w.model.signals.index(s3), d.COL["address"]), "%I0.0")
+    wait(50)
+    assert s3.address == "A4.0" and any(m[0] == "warning" for m in qt_log.messages)
+    w.dirty = False
+    _close(w)

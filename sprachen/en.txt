@@ -3298,9 +3298,6 @@
 @ Bereich {0}: {1}
 > Range {0}: {1}
 
-@ Alle Gruppen
-> All groups
-
 @ Prüfer: {0}
 > Checked by: {0}
 
@@ -3312,6 +3309,21 @@
 
 @ {0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen
 > {0} of {1} checked – {2} OK, {3} faults, {4} skipped
+
+@ Alle Gruppen
+> All groups
+
+@ Adresse ändern
+> Change address
+
+@ Das Signal stammt aus einem Scan-Bereich; die Adressen ergeben sich aus dem Bereich (Matrix › Bereiche scannen …).
+> The signal comes from a scan range; the addresses result from the range (Matrix › Scan ranges …).
+
+@ Die Adresse {0} gibt es schon ({1}).
+> The address {0} already exists ({1}).
+
+@ {0} ist bereits geprüft ({1}). Prüfeintrag zurücksetzen?\n\nJa: Status wieder „offen“ (die neue Adresse muss neu geprüft werden). Nein: Prüfeintrag behalten (z. B. nur Schreibfehler in der Liste).
+> {0} has already been checked ({1}). Reset the test entry?\n\nYes: status back to “open” (the new address must be checked again). No: keep the test entry (e.g. only a typo in the list).
 
 @ Speichern fehlgeschlagen: {0}
 > Saving failed: {0}
@@ -3325,11 +3337,23 @@
 @ Keine Signale gefunden.
 > No signals found.
 
-@ {0} Signale gelesen. Vorhandene Liste ersetzen oder ergänzen?
-> {0} signals read. Replace the existing list or add to it?
+@ {0} Signale gelesen. Wie soll die vorhandene Liste geändert werden?
+> {0} signals read. How should the existing list be changed?
+
+@ Liste aktualisieren: neue Liste übernehmen (geänderte Texte, BMK, Messbereiche, neue und entfallene Signale); Status, Prüfer und Bemerkungen gleicher Adressen bleiben erhalten.\nErsetzen: neue Liste ohne die bisherigen Prüfeinträge.\nErgänzen: nur Signale mit neuen Adressen hinzufügen.
+> Update list: take over the new list (changed texts, device tags, measuring ranges, new and removed signals); status, checker and remarks of the same addresses are kept.\nReplace: new list without the previous test entries.\nAdd: only add signals with new addresses.
+
+@ Liste aktualisieren
+> Update list
 
 @ Ergänzen
 > Add
+
+@ Prüfeinträge übernommen: {0}.
+> Test entries taken over: {0}.
+
+@ Nicht mehr in der Liste und entfernt: {0} Signale (davon {1} bereits geprüft): {2}
+> No longer in the list and removed: {0} signals ({1} of them already checked): {2}
 
 @ {0} Signale übernommen: {1} DI, {2} DO, {3} AI, {4} AO.
 > {0} signals imported: {1} DI, {2} DO, {3} AI, {4} AO.

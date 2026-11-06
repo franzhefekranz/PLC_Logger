@@ -2082,7 +2082,7 @@ class MainWindow(QMainWindow):
     def load_config_file(self):
         start = os.path.dirname(self.config_path) or BASE_DIR
         path, _ = plc_filedlg.open_name(self, tr("Konfiguration laden"), start,
-                                              tr("Konfiguration (*.json);;Alle Dateien (*)"))
+                                        tr("Konfiguration (*.json);;Alle Dateien (*)"))
         if path:
             self.set_config(path)
 
@@ -2784,14 +2784,14 @@ class MainWindow(QMainWindow):
     def load_csv(self):
         """Eine oder mehrere Aufzeichnungen (CSV/ZIP) laden; mehrere Dateien werden nach der Zeit aneinandergehängt."""
         paths, _ = plc_filedlg.open_names(self, tr("CSV laden (mehrere Dateien = aneinanderhängen)"), self.csv_dir(),
-                                                tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
+                                          tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
         if paths:
             self._load_logs(paths, save=False)
 
     def join_csv(self):
         """Mehrere Aufzeichnungen aneinanderhängen, als neue CSV-Datei speichern und offline anzeigen."""
         paths, _ = plc_filedlg.open_names(self, tr("CSV-Dateien zum Aneinanderhängen wählen"), self.csv_dir(),
-                                                tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
+                                          tr("CSV/ZIP (*.csv *.zip);;Alle Dateien (*)"))
         if paths:
             self._load_logs(paths, save=True)
 
@@ -2830,7 +2830,7 @@ class MainWindow(QMainWindow):
             default = os.path.join(self.csv_dir(), "{0}_{1:%Y%m%d_%H%M%S}-{2:%Y%m%d_%H%M%S}.csv".format(
                 stem, datetime.fromtimestamp(t[0]), datetime.fromtimestamp(t[-1])))
             out, _ = plc_filedlg.save_name(self, tr("Zusammengefügte Aufzeichnung speichern"), default,
-                                                 tr("CSV-Datei (*.csv)"))
+                                           tr("CSV-Datei (*.csv)"))
             if out:
                 if not out.lower().endswith(".csv"):
                     out += ".csv"
@@ -2972,7 +2972,7 @@ class MainWindow(QMainWindow):
         stem = re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "export").strip("_") or "export"
         default = os.path.join(self.csv_dir(), f"{stem}_{res['key']}_{datetime.now():%Y%m%d_%H%M%S}.xlsx")
         path, flt = plc_filedlg.save_name(self, tr("Werte exportieren"), default,
-                                                tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
+                                          tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
         if not path:
             return
         if os.path.splitext(path)[1].lower() not in (".xlsx", ".csv"):

@@ -4265,8 +4265,19 @@ Digitaleingang, ``A4.0``/``%Q4.0`` = Digitalausgang, ``EW256``/``%IW256``/``PEW2
 Analogeingang, ``AW``/``%QW`` = Analogausgang. Für den Treiber ``s7`` werden ``%``
 und ``P`` entfernt, für ``ads`` die TwinCAT-Schreibweise (``%IX0.1``) und für ``tia``
 der Symbolname (``IArea.<Name>``) verwendet. Zeilen ohne Adresse (Zwischenüberschriften)
-und doppelte Adressen entfallen. Beim zweiten Import lässt sich die Liste ersetzen oder
-ergänzen. Die Meldung nach dem Import nennt die erkannten Spalten.
+und doppelte Adressen entfallen. Die Meldung nach dem Import nennt die erkannten Spalten.
+
+**Geänderte IO-Liste übernehmen:** Gibt es schon eine Liste, fragt ein zweiter Import:
+
+* **Liste aktualisieren** (Vorgabe) – die neue Liste gilt: geänderte Symbole, Kommentare, BMK,
+  Gruppen und Messbereiche, neue und entfallene Signale. **Status, Prüfzeit, Prüfer,
+  Bemerkung und Messpunkte** bleiben bei allen Signalen mit gleicher Adresse (auch in anderer
+  Schreibweise, z. B. ``%I0.0`` statt ``E0.0``) erhalten. Die Meldung nennt die Zahl der
+  übernommenen Prüfeinträge und die Signale, die nicht mehr in der Liste stehen.
+* **Ersetzen** – die neue Liste ohne die bisherigen Prüfeinträge.
+* **Ergänzen** – nur Signale mit neuen Adressen hinzufügen.
+
+Einzelne Änderungen gehen ohne Import direkt in der Tabelle (siehe unten).
 
 **Eigene Spaltenüberschriften:** Unter **Spalten …** steht je Feld, unter welchen
 Überschriften es in der Liste gesucht wird (mehrere durch Komma getrennt; Groß- und
@@ -4294,7 +4305,14 @@ geprüft – 305 OK, 4 Fehler, 3 übersprungen“).
   angemeldete Windows- bzw. Linux-Benutzer; ein leeres Feld stellt ihn wieder her. Die
   Einstellung gilt für alle Prüfstände dieses Benutzers; auf Smartphone und Tablet gilt
   der Anmeldename im Webserver.
-* Die **Bemerkung** lässt sich per Doppelklick direkt in der Tabelle bearbeiten.
+* **Adresse, Symbol, Kommentar, BMK, Gruppe** und **Bemerkung** lassen sich per
+  Doppelklick (oder F2) direkt in der Tabelle ändern, z. B. wenn sich ein BMK geändert
+  hat; der Prüfeintrag bleibt. Eine **neue Adresse** darf es noch nicht geben; wechselt
+  dabei der Bereich (z. B. ``E`` → ``A``), werden Typ und Datentyp neu abgeleitet. Ist das
+  Signal schon geprüft, fragt der IO-Check, ob der Prüfeintrag zurückgesetzt wird (*Ja*:
+  neu prüfen; *Nein*: behalten, z. B. bei einem Schreibfehler in der Liste). Adressen aus
+  Scan-Bereichen ergeben sich aus dem Bereich. Auch bearbeitete Signale aus Scan-Bereichen
+  werden mit dem Prüfstand gespeichert.
 * **Signale automatisch abhaken** (optional, aus): Ein Signal mit Status *offen* wird
   OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen)
   bzw. ein Analogeingang die Drahtbruchprüfung bestanden hat (siehe unten). Abgehakt werden nur Signale, die in der IO-Liste bzw. einem Scan-Bereich

@@ -880,7 +880,7 @@ class ConfigWindow(QMainWindow):
             """
             start = self.ed_event_file.text() or event_log_path(self.collect_conn())
             p, _ = plc_filedlg.save_name(self, tr("Ereignisdatei"), start, tr("Ereignisprotokoll (*.csv)"),
-                                               options=QFileDialog.Option.DontConfirmOverwrite)
+                                         options=QFileDialog.Option.DontConfirmOverwrite)
             if p:
                 self.ed_event_file.setText(p if p.lower().endswith(".csv") else p + tr(".csv"))
         btn_file.clicked.connect(pick)
@@ -1022,7 +1022,7 @@ class ConfigWindow(QMainWindow):
         def pick_db_file():
             """SQLite-Datei wählen oder neu benennen."""
             path, _ = plc_filedlg.save_name(self, tr("SQLite-Datenbank"), self.ed_db_file.text() or BASE_DIR,
-                                                  tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
+                                            tr("SQLite (*.db *.sqlite *.sqlite3);;Alle Dateien (*)"))
             if path:
                 self.ed_db_file.setText(path)
         btn_file.clicked.connect(pick_db_file)
@@ -2056,8 +2056,8 @@ class ConfigWindow(QMainWindow):
         from plc_export import write_table
         stem = os.path.splitext(os.path.basename(self.path))[0] if self.path else "variablen"
         path, flt = plc_filedlg.save_name(self, tr("Variablen exportieren"),
-                                                os.path.join(BASE_DIR, f"{stem}_variablen.xlsx"),
-                                                tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
+                                          os.path.join(BASE_DIR, f"{stem}_variablen.xlsx"),
+                                          tr("Excel-Datei (*.xlsx);;CSV-Datei (*.csv)"))
         if not path:
             return
         if os.path.splitext(path)[1].lower() not in (".xlsx", ".csv"):
@@ -2084,7 +2084,7 @@ class ConfigWindow(QMainWindow):
         Fehlende Diagramme und Y-Achsen werden angelegt; unbekannte Steuerungen fallen auf die erste zurück."""
         from plc_export import read_table
         path, _ = plc_filedlg.open_name(self, tr("Variablen importieren"), BASE_DIR,
-                                              tr("Excel, ODS oder CSV (*.xlsx *.ods *.csv);;Alle Dateien (*)"))
+                                        tr("Excel, ODS oder CSV (*.xlsx *.ods *.csv);;Alle Dateien (*)"))
         if not path:
             return
         try:
@@ -2471,7 +2471,7 @@ class ConfigWindow(QMainWindow):
         else:
             start = os.path.dirname(self.path) if self.path else BASE_DIR
             paths, _ = plc_filedlg.open_names(self, tr("INI-Datei(en) umwandeln"), start,
-                                                    tr("INI-Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)"))
+                                              tr("INI-Konfiguration (*.ini *.txt *.cfg);;Alle Dateien (*)"))
             if not paths:
                 return False
         done, errors = [], []
@@ -2543,8 +2543,8 @@ class ConfigWindow(QMainWindow):
             return
         stem = os.path.splitext(os.path.basename(self.path))[0]
         path, _f = plc_filedlg.save_name(self, tr("Grafana-Dashboard exportieren"),
-                                               os.path.join(os.path.dirname(self.path), f"{stem}_grafana.json"),
-                                               tr("Grafana-Dashboard (*.json)"))
+                                         os.path.join(os.path.dirname(self.path), f"{stem}_grafana.json"),
+                                         tr("Grafana-Dashboard (*.json)"))
         if not path:
             return
         try:
