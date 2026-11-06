@@ -29,7 +29,7 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 | `modbus` | Modbus TCP | 🧪 CI: pymodbus-Server |
 | `modbus_rtu` | Modbus RTU seriell, mehrere Geräte je Schnittstelle (pymodbus) | ⬜ ungetestet |
 | `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), zyklisch oder Subscription | 🧪 im Netz gegen den OPC-UA-Server des Loggers (Raspberry Pi → Kubuntu-VM; Lesen, Subscription, Wiederverbinden, Basic256Sha256 mit Anmeldung) · CI: asyncua-Server |
-| `ads` | Beckhoff TwinCAT 2/3 über ADS, mit Symbolauswahl | ✅ TwinCAT 3.1.4026 auf demselben PC (Rückmeldung) · ⬜ entfernt über Route |
+| `ads` | Beckhoff TwinCAT 2/3 über ADS, mit Symbolauswahl | ✅ TwinCAT 3.1.4026 auf demselben PC und entfernt über Route (Rückmeldungen) |
 | `slmp` | Mitsubishi MELSEC iQ-R, iQ-F, Q, L (SLMP/MC-Protokoll) | ⬜ ungetestet |
 | `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) | ⬜ ungetestet |
 | `kvhostlink` | KEYENCE KV (Host Link) | ⬜ ungetestet |

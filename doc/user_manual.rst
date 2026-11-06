@@ -1620,8 +1620,8 @@ CPU of S7-PLCSIM Advanced:
    * - ``ads``
      - **With TwinCAT 3.1.4026.25** on the same computer (Windows, registration with the
        local AMS router, without route): symbol selection, reading and recording, also with a
-       large project (feedback from the SPS-Forum). Not yet tried: remote controller via a
-       route, TwinCAT 2.
+       large project; likewise a remote controller via a route (feedback from the SPS-Forum).
+       Not yet tried: TwinCAT 2.
    * - ``logo``, ``pccc``, ``modbus_rtu``, ``slmp``, ``fins``, ``kvhostlink``,
        ``toyopuc``, ``s5as511``
      - Not yet tried with a controller or a simulator. Experience reports and error

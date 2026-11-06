@@ -57,7 +57,7 @@ can be mixed in **one** recording.
 | `s5as511` | Siemens S5 via the PG interface (AS511) | ⬜ untested |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ real PLC (Windows, Linux, Raspberry Pi, macOS) |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ untested |
-| `ads` | Beckhoff TwinCAT 2/3 via ADS, with symbol browser | ✅ TwinCAT 3.1.4026 on the same PC (user report) · ⬜ remote via route |
+| `ads` | Beckhoff TwinCAT 2/3 via ADS, with symbol browser | ✅ TwinCAT 3.1.4026 on the same PC and remote via route (user reports) |
 | `opcua` | OPC UA – Beckhoff, B&R, Codesys, Siemens, Omron, Kepware … (asyncua), cyclic or subscription | 🧪 over the network against the logger's own OPC UA server (Raspberry Pi → Kubuntu VM; read, subscription, reconnect, Basic256Sha256 with login) · CI: asyncua server |
 | `modbus` | Modbus TCP | 🧪 CI: pymodbus server |
 | `modbus_rtu` | Modbus RTU serial, several devices per port (pymodbus) | ⬜ untested |

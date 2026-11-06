@@ -17,7 +17,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 ### Geändert
 
 * **Teststand:** Treiber `ads` mit TwinCAT 3.1.4026.25 auf demselben Rechner erfolgreich (Symbolauswahl, Lesen,
-  Aufzeichnen, auch großes Projekt; Rückmeldung aus dem SPS-Forum).
+  Aufzeichnen, auch großes Projekt) und mit einer entfernten Steuerung über eine Route (Rückmeldungen aus dem
+  SPS-Forum).
 * **Teststand:** Treiber `tia` auch an einer S7-1511F-1 PN (Firmware 2.9, Windows 11) erfolgreich – Variablen aus optimierten
   DBs lesen und aufzeichnen; nur das F-Programm mit Passwort (Rückmeldung aus dem SPS-Forum).
 
