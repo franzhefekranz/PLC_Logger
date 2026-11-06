@@ -26,6 +26,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **IO-Check-Protokoll:** Kommentar und Bemerkung werden mehrzeilig gedruckt statt abgeschnitten; „Geprüft am“ zeigt
   nur das Datum.
 
+### Behoben
+
+* **IO-Check:** markierte offene Zeile kaum zu erkennen (blasse Markierung mancher Stile, z. B. Windows 11, vor allem
+  ohne Fokus) – die Markierung wird jetzt selbst gezeichnet: offene Zeilen voll in der Markierungsfarbe, geprüfte
+  Zeilen mit kräftigerer Überlagerung und Rahmenlinien.
+
 ## [3.13.0] – 2026-11-06
 
 ### Neu

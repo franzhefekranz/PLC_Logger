@@ -16,8 +16,8 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
                                QDoubleSpinBox, QFileDialog, QFormLayout, QGridLayout, QGroupBox, QHBoxLayout,
                                QHeaderView, QInputDialog, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
                                QProgressBar, QPushButton, QScrollArea, QSpinBox, QSplitter, QTableView, QTableWidget,
-                               QStyle, QStyledItemDelegate, QTableWidgetItem, QTabWidget, QToolBar, QToolButton,
-                               QVBoxLayout, QWidget)
+                               QStyle, QStyledItemDelegate, QStyleOptionViewItem, QTableWidgetItem, QTabWidget,
+                               QToolBar, QToolButton, QVBoxLayout, QWidget)
 
 import plc_iocheck as io
 from plc_common import Plc, load_plcs
@@ -44,22 +44,41 @@ def status_fg(status):
 
 
 class SelectionDelegate(QStyledItemDelegate):
-    """Markierte Zeile auch auf farbigen Status-Zeilen erkennbar: viele Stile zeichnen die Markierung nicht über
-    eine eigene Hintergrundfarbe – deshalb die Markierungsfarbe halbdurchsichtig darüber und oben/unten eine Linie."""
+    """Markierte Zeile deutlich erkennbar, auch ohne Fokus: Viele Stile (z. B. Windows 11) zeichnen die Markierung nur
+    blass und nicht über eine eigene Hintergrundfarbe. Deshalb zeichnet der Delegate sie selbst – offene Zeilen voll in
+    der Markierungsfarbe mit Markierungs-Schriftfarbe, farbige Status-Zeilen mit kräftiger Überlagerung; dazu oben und
+    unten eine Linie."""
 
     def paint(self, painter, option, index):
-        super().paint(painter, option, index)
-        if option.state & QStyle.StateFlag.State_Selected and index.data(Qt.ItemDataRole.BackgroundRole) is not None:
-            hl = QColor(option.palette.color(QPalette.ColorRole.Highlight))
-            painter.save()
+        if not option.state & QStyle.StateFlag.State_Selected:
+            super().paint(painter, option, index)
+            return
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        pal = option.palette
+        hl = QColor(pal.color(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight))
+        r = option.rect
+        has_bg = index.data(Qt.ItemDataRole.BackgroundRole) is not None
+        painter.save()
+        if has_bg:                                        # Statusfarbe sichtbar lassen, Markierung darüber
+            painter.fillRect(r, opt.backgroundBrush)
             fill = QColor(hl)
-            fill.setAlpha(90)
-            painter.fillRect(option.rect, fill)
-            painter.setPen(QPen(hl, 2))
-            r = option.rect
-            painter.drawLine(r.left(), r.top() + 1, r.right(), r.top() + 1)
-            painter.drawLine(r.left(), r.bottom(), r.right(), r.bottom())
-            painter.restore()
+            fill.setAlpha(130)
+            painter.fillRect(r, fill)
+        else:
+            painter.fillRect(r, hl)
+            text = pal.color(QPalette.ColorGroup.Active, QPalette.ColorRole.HighlightedText)
+            for group in (QPalette.ColorGroup.Active, QPalette.ColorGroup.Inactive):
+                opt.palette.setColor(group, QPalette.ColorRole.Text, text)
+        painter.setPen(QPen(hl.darker(140), 2))
+        painter.drawLine(r.left(), r.top() + 1, r.right(), r.top() + 1)
+        painter.drawLine(r.left(), r.bottom(), r.right(), r.bottom())
+        painter.restore()
+        opt.state &= ~QStyle.StateFlag.State_Selected     # Stil zeichnet keine eigene (blasse) Markierung
+        opt.state &= ~QStyle.StateFlag.State_HasFocus
+        opt.backgroundBrush = QBrush()
+        style = opt.widget.style() if opt.widget is not None else QApplication.style()
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
 
 
 def value_text(sig) -> str:

@@ -883,6 +883,16 @@ def test_color_scheme_and_iocheck_selection(qt_log, demo_config, tmp_path):
         wait(100)
         after = w.view.viewport().grab().toImage().pixelColor(rect.center())
         assert before.name() != after.name(), (before.name(), after.name())     # Markierung erkennbar
+        # offene Zeile (ohne Statusfarbe): voll in der Markierungsfarbe, auch wenn die Tabelle keinen Fokus hat
+        row0 = w.proxy.mapFromSource(w.model.index(0, 0)).row()
+        rect0 = w.view.visualRect(w.proxy.index(row0, d.COL["symbol"]))
+        w.view.selectRow(row0)
+        w.view.clearFocus()
+        wait(100)
+        got = w.view.viewport().grab().toImage().pixelColor(rect0.center())
+        hl = w.view.palette().color(QPalette.ColorGroup.Active, QPalette.ColorRole.Highlight)
+        assert abs(got.red() - hl.red()) + abs(got.green() - hl.green()) + abs(got.blue() - hl.blue()) < 40, \
+            (got.name(), hl.name())
         w.close()
         acts["Hell"].trigger()
         assert load_settings()["farbschema"] == "hell" and not plc_i18n.is_dark()
