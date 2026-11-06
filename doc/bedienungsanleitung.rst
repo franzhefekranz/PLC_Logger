@@ -1638,8 +1638,9 @@ CPU von S7-PLCSIM Advanced:
        Mac Neo); der Ringpuffer nur gegen eine
        nachgebildete libplctag.
    * - ``tia``
-     - **Mit Steuerung:** S7-1516-3 PN/DP, Firmware 2.9: Merker erfolgreich gelesen (Rückmeldung aus
-       dem SPS-Forum); optimierte DBs an einer echten CPU noch nicht erprobt.
+     - **Mit Steuerung** (Rückmeldungen aus dem SPS-Forum): S7-1516-3 PN/DP, Firmware 2.9:
+       Merker erfolgreich gelesen; S7-1511F-1 PN, Firmware 2.9 (Windows 11): Variablen lesen und
+       aufzeichnen erfolgreich. Optimierte DBs an einer echten CPU noch nicht ausdrücklich erprobt.
        **Mit S7-PLCSIM Advanced** (simulierte S7-1500, unter Windows) erfolgreich erprobt: ohne PUT/GET,
        mit TLS, Variablenliste aus der CPU, Lesen aus zwei optimierten DBs, Ringpuffer
        über seinen Namen, verschiedene Zugriffsstufen der CPU ohne Passwort (lesen bzw.

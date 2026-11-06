@@ -1598,8 +1598,9 @@ CPU of S7-PLCSIM Advanced:
        Neo); the ring buffer only against a
        simulated libplctag.
    * - ``tia``
-     - **With a PLC:** S7-1516-3 PN/DP, firmware 2.9: memory bits/words (M) read successfully
-       (feedback from the SPS-Forum); optimized DBs on a real CPU not yet tried.
+     - **With a PLC** (feedback from the SPS-Forum): S7-1516-3 PN/DP, firmware 2.9: memory
+       bits/words (M) read successfully; S7-1511F-1 PN, firmware 2.9 (Windows 11): reading and
+       recording variables successful. Optimized DBs on a real CPU not yet explicitly tried.
        **With S7-PLCSIM Advanced** (simulated S7-1500, on Windows) tried successfully: without
        PUT/GET, with TLS, variable list from the CPU, reading from two optimized DBs, ring
        buffer by its name, different access levels of the CPU without password (reading
