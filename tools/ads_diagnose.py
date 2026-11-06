@@ -88,7 +88,7 @@ def main():
         raise SystemExit(f"   ADS-Fehler im Kopf: 0x{err:x}")
     res, ads_state, dev_state = struct.unpack_from("<IHH", body, 32)
     print(f"   Ergebnis 0x{res:x}, ADS-Zustand {ads_state} (5 = RUN), Gerätezustand {dev_state}")
-    print(f"4. Symboltabelle: Größe abfragen …")
+    print("4. Symboltabelle: Größe abfragen …")
     req = struct.pack("<III", 0xF00F, 0, 24)
     hdr = target + struct.pack("<H", ams_port) + source + struct.pack("<H", source_port) + \
         struct.pack("<HHIII", 2, 0x0004, len(req), 0, 2)
