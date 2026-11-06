@@ -989,6 +989,7 @@ def main():
             pass
     import plc_common
     plc_common.SETTINGS_FILE = os.path.join(folder, "einstellungen.json")     # Einstellungen nicht im Projekt
+    plc_common.save_settings(iocheck_pruefer="M. Mustermann" if args.lang == "de" else "J. Smith")   # IO-Check
     import plc_i18n
     plc_i18n.load(args.lang)
     from PySide6.QtWidgets import QApplication
