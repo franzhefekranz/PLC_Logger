@@ -283,17 +283,29 @@ cp "$AD/$APP.desktop" "$AD/usr/share/applications/"
 # ------------------------------------------------------------------ 5. appimagetool
 echo "[5/7] appimagetool ..."
 TOOL="$B/appimagetool-$ARCH.AppImage"
+RUNTIME="$B/runtime-$ARCH"
+# Downloads von GitHub mit Wiederholung (Antworten wie 504 kommen dort zeitweise vor und ließen den Build scheitern)
+fetch() {
+    curl -fsSL --retry 8 --retry-delay 15 --retry-all-errors --connect-timeout 30 -o "$1" "$2" \
+        || wget -q --tries=8 --waitretry=15 --retry-on-http-error=429,500,502,503,504 -O "$1" "$2"
+}
 if [[ ! -x "$TOOL" ]]; then
-    URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
-    curl -fsSL -o "$TOOL" "$URL" || wget -q -O "$TOOL" "$URL"
+    fetch "$TOOL" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
     chmod +x "$TOOL"
+fi
+# Laufzeit (type2-runtime) selbst laden: appimagetool lädt sie sonst ohne Wiederholung
+if [[ ! -s "$RUNTIME" ]]; then
+    fetch "$RUNTIME" "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-$ARCH" \
+        || rm -f "$RUNTIME"
 fi
 
 # ------------------------------------------------------------------ 6. AppImage erzeugen
 OUT="dist/$APP-$VERSION-$ARCH.AppImage"
 echo "[6/7] $OUT ..."
 # --appimage-extract-and-run: funktioniert auch ohne FUSE (z. B. im Docker-Container)
-ARCH="$ARCH" "$TOOL" --appimage-extract-and-run --no-appstream "$AD" "$OUT"
+RTARG=()
+[[ -s "$RUNTIME" ]] && RTARG=(--runtime-file "$RUNTIME")
+ARCH="$ARCH" "$TOOL" --appimage-extract-and-run --no-appstream "${RTARG[@]}" "$AD" "$OUT"
 chmod +x "$OUT"
 
 # ------------------------------------------------------------------ 7. Debian-Paket (.deb) aus demselben AppDir

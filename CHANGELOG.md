@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Build
+
+* **AppImage:** appimagetool und die AppImage-Laufzeit werden mit Wiederholung geladen (zeitweise Antwort 504 von
+  GitHub ließ den Release-Build scheitern); die Laufzeit wird appimagetool als Datei übergeben.
+
 ## [3.16.0] – 2026-11-08
 
 ### Neu
