@@ -779,6 +779,15 @@
 @ OPC-UA-Server:
 > OPC UA server:
 
+@ MQTT …
+> MQTT …
+
+@ Werte an einen MQTT-Broker senden (Home Assistant, Node-RED, IoT-Plattformen)
+> Send values to an MQTT broker (Home Assistant, Node-RED, IoT platforms)
+
+@ MQTT:
+> MQTT:
+
 @ HTTPS (verschlüsselt)
 > HTTPS (encrypted)
 
@@ -3605,6 +3614,142 @@
 @ Lade Oberfläche (Diagramme) …
 > Loading user interface (charts) …
 
+# ---------------- plc_mqtt.py
+
+@ Bei Änderung
+> On change
+
+@ Zyklisch (alle Werte)
+> Cyclic (all values)
+
+@ Ein Topic je Variable
+> One topic per variable
+
+@ Ein JSON mit allen Werten
+> One JSON with all values
+
+@ Beides
+> Both
+
+@ Bibliothek paho-mqtt fehlt (pip install paho-mqtt)
+> Library paho-mqtt missing (pip install paho-mqtt)
+
+@ ⚠ MQTT nicht gestartet: {0}
+> ⚠ MQTT not started: {0}
+
+@ MQTT: sende an {0} → {1}/…
+> MQTT: sending to {0} → {1}/…
+
+@ MQTT verbunden: {0}
+> MQTT connected: {0}
+
+@ ⚠ MQTT: Broker lehnt die Anmeldung ab: {0}
+> ⚠ MQTT: broker refuses the login: {0}
+
+@ ⚠ MQTT: Verbindung zum Broker getrennt – verbinde neu …
+> ⚠ MQTT: connection to the broker lost – reconnecting …
+
+@ ⚠ MQTT: {0}
+> ⚠ MQTT: {0}
+
+@ Ereignis {0}
+> Event {0}
+
+# ---------------- plc_mqtt_dialog.py
+
+@ MQTT
+> MQTT
+
+@ Werte an einen MQTT-Broker senden (während der Aufzeichnung)
+> Send values to an MQTT broker (while recording)
+
+@ Broker
+> Broker
+
+@ z. B. 192.168.0.5 oder homeassistant.local
+> e.g. 192.168.0.5 or homeassistant.local
+
+@ TLS (verschlüsselt, meist Port 8883)
+> TLS (encrypted, usually port 8883)
+
+@ Aus: auch selbstsignierte Zertifikate annehmen (nur im eigenen Netz)
+> Off: also accept self-signed certificates (only in your own network)
+
+@ leer = Zertifikate des Systems
+> empty = certificates of the system
+
+@ CA-Zertifikat (Datei):
+> CA certificate (file):
+
+@ leer = ohne Anmeldung
+> empty = without login
+
+@ leer = automatisch
+> empty = automatic
+
+@ Client-ID:
+> Client ID:
+
+@ Senden
+> Send
+
+@ Topics: <Basis>/<Steuerung>/<Variable>, <Basis>/werte, <Basis>/ereignisse, <Basis>/status
+> Topics: <base>/<controller>/<variable>, <base>/werte, <base>/ereignisse, <base>/status
+
+@ Basis-Topic:
+> Base topic:
+
+@ Senden:
+> Send:
+
+@ Bei Änderung: höchstens so oft je Variable; zyklisch: alle Werte in diesem Takt
+> On change: at most this often per variable; cyclic: all values at this rate
+
+@ Intervall:
+> Interval:
+
+@ Format:
+> Format:
+
+@ 0 – höchstens einmal
+> 0 – at most once
+
+@ 1 – mindestens einmal
+> 1 – at least once
+
+@ QoS:
+> QoS:
+
+@ Werte beim Broker speichern (retain)
+> Store values at the broker (retain)
+
+@ Neue Abonnenten erhalten sofort den letzten Wert
+> New subscribers immediately receive the last value
+
+@ Home-Assistant-Discovery (Variablen erscheinen dort als Sensoren)
+> Home Assistant discovery (variables appear there as sensors)
+
+@ Discovery-Präfix:
+> Discovery prefix:
+
+@ {0} → {1}/<Steuerung>/<Variable>, {1}/werte, {1}/ereignisse, {1}/status
+> {0} → {1}/<controller>/<variable>, {1}/werte, {1}/ereignisse, {1}/status
+
+@ Bitte die Adresse des Brokers eintragen.
+> Please enter the address of the broker.
+
+@ Keine Verbindung zu {0}:\n{1}
+> No connection to {0}:\n{1}
+
+@ Verbindung zu {0} in Ordnung.
+> Connection to {0} is OK.
+
+@ Broker lehnt die Anmeldung ab: {0}
+> Broker refuses the login: {0}
+
+@ keine Antwort
+> no response
+
 # ---------------- plc_netpanel.py
 
 @ Leeren
@@ -5287,9 +5432,6 @@
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
 > Array tag “{0}” is empty or invalid (specify without index).
 
-@ keine Antwort
-> no response
-
 # ---------------- plc_treiber/clx_browser.py
 
 @ Array als Block übernehmen
@@ -5839,6 +5981,127 @@
 
 @ Schnittstelle fehlt
 > Serial port missing
+
+# ---------------- plc_treiber/mqtt.py
+
+@ Topic fehlt
+> Topic missing
+
+@ Platzhalter „+“ und „#“ sind im Topic einer Variable nicht erlaubt
+> Wildcards “+” and “#” are not allowed in the topic of a variable
+
+@ Topic zu lang
+> Topic too long
+
+@ Pfad nach „|“ fehlt (z. B. sensor.temperatur)
+> Path after “|” missing (e.g. sensor.temperature)
+
+@ kein Zahlenwert: „{0}“
+> not a number: “{0}”
+
+@ „{0}“ nicht in der Nachricht
+> “{0}” not in the message
+
+@ kein Zahlenwert an dieser Stelle der Nachricht
+> no number at this position of the message
+
+@ Broker {0} nicht erreichbar: {1}
+> Broker {0} not reachable: {1}
+
+@ Keine Antwort vom Broker {0}
+> No answer from broker {0}
+
+@ Verbindung zum Broker getrennt
+> Connection to the broker lost
+
+@ Werte von einem MQTT-Broker (Sensoren, IoT, Node-RED, Steuerungen mit MQTT)
+> Values from an MQTT broker (sensors, IoT, Node-RED, controllers with MQTT)
+
+@ Broker (Host)
+> Broker (host)
+
+@ Rechnername oder IP-Adresse des Brokers
+> Host name or IP address of the broker
+
+@ 1883, mit TLS meist 8883
+> 1883, with TLS usually 8883
+
+@ TLS (verschlüsselt)
+> TLS (encrypted)
+
+@ Leer = ohne Anmeldung
+> Empty = without login
+
+@ CA-Zertifikat (Datei)
+> CA certificate (file)
+
+@ Leer = Zertifikate des Systems
+> Empty = certificates of the system
+
+@ Client-ID
+> Client ID
+
+@ Leer = automatisch
+> Empty = automatic
+
+@ QoS
+> QoS
+
+@ Höchstalter eines Werts
+> Maximum age of a value
+
+@ Ältere Werte gelten als „kein Wert“ (Sender ausgefallen); 0 = unbegrenzt
+> Older values count as “no value” (sender failed); 0 = unlimited
+
+@ Topic, optional mit Pfad in einer JSON-Nachricht: halle1/temperatur, tele/sonoff/SENSOR|AM2301.Temperature
+> Topic, optionally with a path in a JSON message: hall1/temperature, tele/sonoff/SENSOR|AM2301.Temperature
+
+@ Blöcke sind bei MQTT nicht möglich – je Wert eine Variable
+> Blocks are not possible with MQTT – one variable per value
+
+@ Topics vom Broker …
+> Topics from broker …
+
+@ Broker (Host) fehlt
+> Broker (host) missing
+
+# ---------------- plc_treiber/mqtt_browser.py
+
+@ Keine Antwort vom Broker
+> No answer from the broker
+
+@ MQTT – Topics wählen ({0})
+> MQTT – choose topics ({0})
+
+@ Topic-Filter: # = alles, halle1/# = alles unter halle1, +/status = …
+> Topic filter: # = everything, hall1/# = everything below hall1, +/status = …
+
+@ Mithören
+> Listen
+
+@ Filter:
+> Filter:
+
+@ Dauer:
+> Duration:
+
+@ Werte, die während des Mithörens gesendet werden, erscheinen hier. Geräte, die selten senden, erscheinen nur mit „retained“-Nachrichten oder bei längerer Dauer.
+> Values sent while listening appear here. Devices that send rarely appear only with “retained” messages or with a longer duration.
+
+@ Topic | Pfad
+> Topic | path
+
+@ Wert
+> Value
+
+@ {0} Werte gefunden. Gewünschte abhaken und übernehmen.
+> {0} values found. Tick the desired ones and take them over.
+
+@ Höre mit … noch {0:.0f} s, {1} Werte
+> Listening … {0:.0f} s left, {1} values
+
+@ bereits vorhanden
+> already present
 
 # ---------------- plc_treiber/opcua.py
 

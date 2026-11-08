@@ -353,6 +353,15 @@ class ConfigWindow(QMainWindow):
         self.lbl_opcua.setWordWrap(True)
         ua_row = QHBoxLayout(); ua_row.addWidget(btn_ua); ua_row.addWidget(self.lbl_opcua, 1)
         form_web2.addRow(tr("OPC-UA-Server:"), ua_row)
+        # MQTT-Ausgang: Werte an einen Broker senden (Einstellungen im eigenen Dialog).
+        self.mqtt_settings = {}
+        btn_mq = QPushButton(tr("MQTT …"))
+        btn_mq.setToolTip(tr("Werte an einen MQTT-Broker senden (Home Assistant, Node-RED, IoT-Plattformen)"))
+        btn_mq.clicked.connect(self.edit_mqtt)
+        self.lbl_mqtt = QLabel("")
+        self.lbl_mqtt.setWordWrap(True)
+        mq_row = QHBoxLayout(); mq_row.addWidget(btn_mq); mq_row.addWidget(self.lbl_mqtt, 1)
+        form_web2.addRow(tr("MQTT:"), mq_row)
         # HTTPS und Anmeldung (Benutzer mit Passwort; gespeichert wird nur ein Hash).
         self.chk_https = QCheckBox(tr("HTTPS (verschlüsselt)"))
         self.chk_https.setToolTip(tr("Ohne eigenes Zertifikat wird einmalig ein selbstsigniertes erzeugt (Ordner "
@@ -1825,6 +1834,21 @@ class ConfigWindow(QMainWindow):
             self.opcua_settings = dlg.settings
             self._update_opcua()
 
+    def _update_mqtt(self):
+        """Kurztext des MQTT-Ausgangs neben dem Knopf (Broker, Basis-Topic, Art)."""
+        import plc_mqtt as mq
+        self.lbl_mqtt.setText(mq.describe(self.mqtt_settings, self.ed_project.text().strip()
+                                          if hasattr(self, "ed_project") else ""))
+
+    def edit_mqtt(self):
+        """Dialog MQTT öffnen und die Einstellungen übernehmen (gespeichert mit der Konfiguration)."""
+        from plc_mqtt_dialog import MqttDialog
+        dlg = MqttDialog(self, self.mqtt_settings, self.ed_project.text().strip() if hasattr(self, "ed_project")
+                         else "")
+        if dlg.exec():
+            self.mqtt_settings = dlg.settings
+            self._update_mqtt()
+
     def edit_notify(self):
         """Dialog Benachrichtigungen öffnen und die Einstellungen übernehmen."""
         from plc_notify_dialog import NotifyDialog
@@ -1951,6 +1975,9 @@ class ConfigWindow(QMainWindow):
         import plc_opcua_server as us
         self.opcua_settings = us.settings(conn.get("opcua_server", ""))
         self._update_opcua()
+        import plc_mqtt as mq
+        self.mqtt_settings = mq.settings(conn.get("mqtt", ""))
+        self._update_mqtt()
         self.charts = charts
         self.prop_key = None
         self.table.setRowCount(0)
@@ -2015,6 +2042,8 @@ class ConfigWindow(QMainWindow):
                                                                                      "telegram")) else "",
                 "opcua_server": json.dumps(self.opcua_settings, ensure_ascii=False)
                 if self.opcua_settings and self.opcua_settings != __import__("plc_opcua_server").settings({}) else "",
+                "mqtt": json.dumps(self.mqtt_settings, ensure_ascii=False)
+                if self.mqtt_settings and self.mqtt_settings != __import__("plc_mqtt").settings({}) else "",
                 "ereignis_datei": self.ed_event_file.text().strip(),
                 "bericht_aktiv": 1 if self.chk_report.isChecked() else 0,
                 "bericht_zeitraum": self.cb_report_period.currentData() or "tag",

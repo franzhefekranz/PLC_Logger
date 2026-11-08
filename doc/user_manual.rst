@@ -74,6 +74,10 @@ each controller in the configuration gets its own driver. Built in are:
    * - ``fins``
      - Omron CJ, CS, CP, NJ/NX via FINS/TCP or FINS/UDP
      - no additional library; ``D100``, ``W10``, ``CIO0.05``, ``E0_100``
+   * - ``mqtt``
+     - MQTT broker: sensors, IoT devices, Node-RED, controllers with MQTT
+     - paho-mqtt; topic like ``hall1/temperature``, number in JSON
+       ``tele/sonoff/SENSOR|AM2301.Temperature``; selection by listening
 
 Further drivers can be added **without changing the program**: a Python file in the
 ``treiber`` folder of the data folder is enough (see
@@ -244,6 +248,7 @@ Requirements
      pip install pycomm3                                     # driver clx (tag list), driver pccc
      pip install pymodbus pyserial                           # driver modbus_rtu
      pip install asyncua                                     # driver opcua
+     pip install paho-mqtt                                   # driver mqtt, MQTT output
      pip install pyserial                                    # driver s5as511
      pip install cryptography                                # web server with HTTPS
 
@@ -1630,6 +1635,10 @@ CPU of S7-PLCSIM Advanced:
        local AMS router, without route): symbol selection, reading and recording, also with a
        large project; likewise a remote controller via a route (feedback from the SPS-Forum).
        Not yet tried: TwinCAT 2.
+   * - ``mqtt``
+     - Automatically against Mosquitto and a test broker: topics, JSON paths, maximum age,
+       login, reconnecting, selection by listening; likewise the MQTT output with Home
+       Assistant discovery. Not yet tried: Home Assistant itself.
    * - ``logo``, ``pccc``, ``modbus_rtu``, ``slmp``, ``fins``, ``kvhostlink``,
        ``toyopuc``, ``s5as511``
      - Not yet tried with a controller or a simulator. Experience reports and error
@@ -2388,6 +2397,65 @@ possible. If a data block changes (reloaded, length changed), reconnect with **�
   with STEP 5.
 * If a data block is missing, the variable reports “DB… does not exist”; addresses beyond
   the end of the DB “address outside DB…”.
+
+Driver ``mqtt`` – MQTT broker
+----------------------------------------------------------------------
+
+Records values that devices send to an **MQTT broker** (e.g. Mosquitto, the Home
+Assistant broker, Node-RED, HiveMQ): sensors and IoT devices (Tasmota, Shelly, ESPHome),
+controllers with an MQTT library (e.g. S7-1500 with LMQTT, Codesys, Node-RED as a
+bridge). Library: ``paho-mqtt``. The values can be mixed with all other controllers in
+**one** recording.
+
+.. list-table:: Connection parameters
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Meaning
+   * - Broker (host), Port
+     - Host name or IP address of the broker; port 1883 (with TLS usually 8883).
+   * - TLS
+     - Encrypted connection.
+   * - User, Password
+     - Login at the broker; empty = without login.
+   * - Check certificate, CA certificate (Advanced)
+     - With TLS: verify the broker's certificate (off = also accept self-signed ones);
+       own certificate authority as a file, empty = certificates of the system.
+   * - Client ID, QoS (Advanced)
+     - Empty = automatic; QoS of the subscriptions (0, 1, 2).
+   * - Maximum age of a value (Advanced)
+     - Values that have not arrived for longer count as “no value” (sender failed);
+       0 = unlimited.
+   * - Timeout (Advanced)
+     - Time to wait for the broker's answer when connecting (5 s).
+
+**Addresses:** the **topic**, for JSON messages with ``|`` and the path to the number:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Address
+     - Message
+   * - ``hall1/temperature``
+     - ``21.5`` (also ``21,5``; ``true``/``false``, ``on``/``off`` → 1/0)
+   * - ``tele/sonoff/SENSOR|AM2301.Temperature``
+     - ``{"AM2301": {"Temperature": 21.5, "Humidity": 40}}``
+   * - ``values|data[2].value``
+     - list element 2 (from 0) of ``data``, in it ``value``
+
+Wildcards (``+``, ``#``) are not allowed in a variable. Types: ``REAL``, ``LREAL``,
+``BOOL``, ``INT``, ``DINT`` (always read as a number).
+
+**Operation:** the driver subscribes to all topics and returns the last received value
+in every read cycle. Until the first message a variable has no value; messages stored by
+the broker (*retained*) arrive immediately. If the connection breaks, the status LED
+shows the error and the logger reconnects.
+
+**Topics from broker …** listens for an adjustable time (default 5 s) to a filter
+(``#`` = everything, ``hall1/#`` = everything below ``hall1``) and lists the received
+numbers – for JSON messages each number separately with its path. Tick them and click **Apply selection**.
 
 
 .. _uebernahme:
@@ -3207,6 +3275,50 @@ via the namespace ``urn:plc-datenlogger``, usually 2). The folders *Calculated*,
 not change. The **source timestamp** is the time of the measurement. If a variable has no
 value (controller not reachable), it has the status **BadNoCommunication**. Clients can
 read or subscribe to the values; only changes are reported.
+
+.. _mqtt:
+
+MQTT
+======================================================================
+
+The logger can send its values to an **MQTT broker** – for Home Assistant, Node-RED, IoT
+platforms, dashboards or an MES. Like the web server and the OPC UA server this is
+optional and runs as long as the recording runs (also headless). To record values
+**from** a broker: driver ``mqtt`` (see `Controllers and drivers`_).
+
+**Switching on:** configuration program, tab *Web server & headless*, **MQTT …**:
+
+* **Broker:** address and port (1883, with TLS usually 8883), **TLS** with *Check
+  certificate* (off = also accept self-signed ones) and optionally an own CA certificate,
+  **User**/**Password**, **Client ID** (empty = automatic). **Test connection** logs in
+  with these data.
+* **Base topic** – start of all topics, default ``plc-logger/<project>``.
+* **Send** – *On change* (only changed values, per variable at most once per interval)
+  or *Cyclic* (all values in every interval). **Interval** default 1 s.
+* **Format** – *One topic per variable*, *One JSON with all values* or both.
+* **QoS** 0 or 1; **retain** (default on): the broker stores the last value, new
+  subscribers receive it immediately.
+* **Home Assistant discovery:** the variables appear in Home Assistant automatically as
+  sensors (BOOL as binary sensor) of a device “PLC Datenlogger <project>”, the triggers as
+  problem sensors; without the logger they become “unavailable”.
+
+**Topics:**
+
+.. code-block:: text
+
+   <base>/<controller>/<variable>   value as text: 21.5, BOOL 1/0; empty = no value
+   <base>/Berechnet/<variable>      computed variables
+   <base>/werte                     {"zeit": "…", "ts": …, "werte": {"Temperature": 21.5, …}}
+   <base>/ereignis/<trigger>        1/0: event is active
+   <base>/ereignisse                {"art": "KOMMT", "trigger": …, "prio": …, "text": …, "zeit": …}
+   <base>/status                    online/offline (last will: offline on disconnect)
+   <base>/status/<controller>       1/0: connection to the controller; …/text: state text
+
+The characters ``/``, ``+`` and ``#`` in names are replaced by ``_``. If the connection
+to the broker breaks, the logger reconnects by itself and then sends all values again.
+Messages (connected, disconnected, login refused) appear in the status bar or in the log.
+The topic names (``werte``, ``ereignis``, ``Berechnet`` …) are German and the same in
+both languages, so that subscribers keep working when the language is switched.
 
 .. _headless:
 

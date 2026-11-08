@@ -75,6 +75,10 @@ Treiber. Eingebaut sind:
    * - ``fins``
      - Omron CJ, CS, CP, NJ/NX über FINS/TCP oder FINS/UDP
      - keine Zusatzbibliothek; ``D100``, ``W10``, ``CIO0.05``, ``E0_100``
+   * - ``mqtt``
+     - MQTT-Broker: Sensoren, IoT-Geräte, Node-RED, Steuerungen mit MQTT
+     - paho-mqtt; Topic wie ``halle1/temperatur``, Zahl in JSON
+       ``tele/sonoff/SENSOR|AM2301.Temperature``; Auswahl durch Mithören
 
 Weitere Treiber lassen sich **ohne Änderung des Programms** ergänzen: Eine
 Python-Datei im Ordner ``treiber`` des Datenordners genügt (siehe
@@ -245,6 +249,7 @@ Voraussetzungen
      pip install pycomm3                                     # Treiber clx (Tag-Liste), Treiber pccc
      pip install pymodbus pyserial                           # Treiber modbus_rtu
      pip install asyncua                                     # Treiber opcua
+     pip install paho-mqtt                                   # Treiber mqtt, MQTT-Ausgang
      pip install pyserial                                    # Treiber s5as511
      pip install cryptography                                # Webserver mit HTTPS
 
@@ -1671,6 +1676,10 @@ CPU von S7-PLCSIM Advanced:
        AMS-Router, ohne Route): Symbolauswahl, Lesen und Aufzeichnen, auch mit einem großen
        Projekt; ebenso eine entfernte Steuerung über eine Route (Rückmeldungen aus dem
        SPS-Forum). Noch nicht erprobt: TwinCAT 2.
+   * - ``mqtt``
+     - Automatisch gegen Mosquitto und einen Test-Broker: Topics, JSON-Pfade, Höchstalter,
+       Anmeldung, Wiederverbinden, Auswahl durch Mithören; ebenso der MQTT-Ausgang mit
+       Home-Assistant-Discovery. Noch nicht erprobt: Home Assistant selbst.
    * - ``logo``, ``pccc``, ``modbus_rtu``, ``slmp``, ``fins``, ``kvhostlink``,
        ``toyopuc``, ``s5as511``
      - Noch weder mit Steuerung noch mit Simulator erprobt. Erfahrungen und Fehlermeldungen
@@ -2448,6 +2457,65 @@ geändert), mit **■ Stop** / **▶ Start** neu verbinden.
   mit STEP 5 den Logger stoppen.
 * Fehlt ein Datenbaustein, meldet die Variable „DB… nicht vorhanden“; Adressen
   hinter dem Ende des DB „Adresse außerhalb von DB…“.
+
+Treiber ``mqtt`` – MQTT-Broker
+----------------------------------------------------------------------
+
+Zeichnet Werte auf, die Geräte an einen **MQTT-Broker** senden (z. B. Mosquitto, den
+Broker von Home Assistant, Node-RED, HiveMQ): Sensoren und IoT-Geräte (Tasmota, Shelly,
+ESPHome), Steuerungen mit MQTT-Bibliothek (z. B. S7-1500 mit LMQTT, Codesys, Node-RED als
+Brücke). Bibliothek: ``paho-mqtt``. Die Werte lassen sich mit allen anderen Steuerungen
+in **einer** Aufzeichnung mischen.
+
+.. list-table:: Verbindungsparameter
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Parameter
+     - Bedeutung
+   * - Broker (Host), Port
+     - Rechnername oder IP-Adresse des Brokers; Port 1883 (mit TLS meist 8883).
+   * - TLS
+     - Verschlüsselte Verbindung.
+   * - Benutzer, Passwort
+     - Anmeldung am Broker; leer = ohne Anmeldung.
+   * - Zertifikat prüfen, CA-Zertifikat (Erweitert)
+     - Bei TLS: Zertifikat des Brokers prüfen (aus = auch selbstsignierte annehmen);
+       eigene Zertifizierungsstelle als Datei, leer = Zertifikate des Systems.
+   * - Client-ID, QoS (Erweitert)
+     - Leer = automatisch; QoS der Abonnements (0, 1, 2).
+   * - Höchstalter eines Werts (Erweitert)
+     - Werte, die länger nicht gekommen sind, gelten als „kein Wert“ (Sender
+       ausgefallen); 0 = unbegrenzt.
+   * - Zeitlimit (Erweitert)
+     - Wartezeit auf die Antwort des Brokers beim Verbinden (5 s).
+
+**Adressen:** das **Topic**, bei JSON-Nachrichten mit ``|`` und dem Pfad zur Zahl:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Adresse
+     - Nachricht
+   * - ``halle1/temperatur``
+     - ``21.5`` (auch ``21,5``; ``true``/``false``, ``on``/``off``, ``ein``/``aus`` → 1/0)
+   * - ``tele/sonoff/SENSOR|AM2301.Temperature``
+     - ``{"AM2301": {"Temperature": 21.5, "Humidity": 40}}``
+   * - ``werte|daten[2].wert``
+     - Listenelement 2 (ab 0) von ``daten``, darin ``wert``
+
+Platzhalter (``+``, ``#``) sind in einer Variable nicht erlaubt. Typen: ``REAL``,
+``LREAL``, ``BOOL``, ``INT``, ``DINT`` (gelesen wird immer als Zahl).
+
+**Ablauf:** Der Treiber abonniert alle Topics und liefert in jedem Lesezyklus den zuletzt
+empfangenen Wert. Bis zur ersten Nachricht hat eine Variable keinen Wert; vom Broker
+gespeicherte Nachrichten (*retained*) kommen sofort. Bricht die Verbindung ab, zeigt die
+Status-LED den Fehler und der Logger verbindet neu.
+
+**Topics vom Broker …** hört eine einstellbare Zeit (Vorgabe 5 s) auf einen Filter
+(``#`` = alles, ``halle1/#`` = alles unter ``halle1``) und listet die empfangenen Zahlen –
+bei JSON-Nachrichten jede Zahl einzeln mit Pfad. Abhaken, **Auswahl übernehmen**.
 
 
 .. _uebernahme:
@@ -3306,6 +3374,50 @@ Client über den Namensraum ``urn:plc-datenlogger``, meist 2). Der **Quellzeitst
 ist die Zeit der Messung. Hat eine Variable keinen Wert (Steuerung nicht erreichbar),
 trägt sie den Status **BadNoCommunication**. Clients können die Werte lesen oder
 abonnieren (Subscription); gemeldet wird nur, was sich geändert hat.
+
+.. _mqtt:
+
+MQTT
+======================================================================
+
+Der Logger kann seine Werte an einen **MQTT-Broker** senden – für Home Assistant,
+Node-RED, IoT-Plattformen, Dashboards oder ein MES. Wie Webserver und OPC-UA-Server ist
+das optional und läuft, solange die Aufzeichnung läuft (auch headless). Werte **von**
+einem Broker aufzeichnen: Treiber ``mqtt`` (siehe `Steuerungen und Treiber`_).
+
+**Einschalten:** Konfigurationsprogramm, Reiter *Webserver & Headless*, **MQTT …**:
+
+* **Broker:** Adresse und Port (1883, mit TLS meist 8883), **TLS** mit
+  *Zertifikat prüfen* (aus = auch selbstsignierte annehmen) und optional eigenem
+  CA-Zertifikat, **Benutzer**/**Passwort**, **Client-ID** (leer = automatisch).
+  **Verbindung testen** meldet sich mit diesen Daten an.
+* **Basis-Topic** – Anfang aller Topics, Vorgabe ``plc-logger/<Projekt>``.
+* **Senden** – *Bei Änderung* (nur geänderte Werte, je Variable höchstens einmal je
+  Intervall) oder *Zyklisch* (alle Werte in jedem Intervall). **Intervall** Vorgabe 1 s.
+* **Format** – *Ein Topic je Variable*, *Ein JSON mit allen Werten* oder beides.
+* **QoS** 0 oder 1; **retain** (Vorgabe an): der Broker speichert den letzten Wert, neue
+  Abonnenten bekommen ihn sofort.
+* **Home-Assistant-Discovery:** Die Variablen erscheinen in Home Assistant automatisch
+  als Sensoren (BOOL als binärer Sensor) eines Geräts „PLC Datenlogger <Projekt>“, die
+  Trigger als Problem-Sensoren; ohne Logger werden sie „nicht verfügbar“.
+
+**Topics:**
+
+.. code-block:: text
+
+   <Basis>/<Steuerung>/<Variable>   Wert als Text: 21.5, BOOL 1/0; leer = kein Wert
+   <Basis>/Berechnet/<Variable>     berechnete Variablen
+   <Basis>/werte                    {"zeit": "…", "ts": …, "werte": {"Temperatur": 21.5, …}}
+   <Basis>/ereignis/<Trigger>       1/0: Ereignis steht an
+   <Basis>/ereignisse               {"art": "KOMMT", "trigger": …, "prio": …, "text": …, "zeit": …}
+   <Basis>/status                   online/offline (letzter Wille: offline bei Abbruch)
+   <Basis>/status/<Steuerung>       1/0: Verbindung zur Steuerung; …/text: Zustandstext
+
+Die Zeichen ``/``, ``+`` und ``#`` in Namen werden durch ``_`` ersetzt. Bricht die
+Verbindung zum Broker ab, verbindet der Logger selbst neu und sendet danach alle Werte
+erneut. Meldungen (verbunden, getrennt, Anmeldung abgelehnt) stehen in der Statuszeile
+bzw. im Log. Die Topic-Namen (``werte``, ``ereignis``, ``Berechnet`` …) sind in beiden
+Sprachen gleich, damit Abonnenten beim Umschalten der Sprache weiter funktionieren.
 
 .. _headless:
 

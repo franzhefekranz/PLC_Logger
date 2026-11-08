@@ -102,7 +102,7 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
       <div class="card"><h3>In the browser</h3><p>Built-in web server with HTTPS and users: charts, rulers, export, events and process view on PC, tablet and phone.</p></div>
       <div class="card"><h3>Headless &amp; Raspberry Pi</h3><p>Runs as a service; touchscreen panel for network, Wi-Fi, time from the PLC and display dimming. Desktop clients connect over the network.</p></div>
       <div class="card"><h3>IO check</h3><p>Commissioning aid: signal list, matrix, swapped wires, analog test points and protocol – also on the phone.</p></div>
-      <div class="card"><h3>OPC UA server</h3><p>Provides the recorded values to SCADA and HMI systems.</p></div>
+      <div class="card"><h3>OPC UA server &amp; MQTT</h3><p>Provides the recorded values to SCADA and HMI systems, sends them to an MQTT broker (Home Assistant discovery, Node-RED) and records values from MQTT devices.</p></div>
     </div>
   </section>
 
@@ -135,6 +135,7 @@ footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);f
       <tr><td><code>fins</code></td><td>Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP)</td><td>⬜</td></tr>
       <tr><td><code>kvhostlink</code></td><td>KEYENCE KV (Host Link)</td><td>⬜</td></tr>
       <tr><td><code>toyopuc</code></td><td>JTEKT TOYOPUC (Computer Link)</td><td>⬜</td></tr>
+      <tr><td><code>mqtt</code></td><td>MQTT broker: topics, also numbers in JSON messages, with topic browser</td><td>🧪 Mosquitto and test broker</td></tr>
     </table>
     <p class="small">✅ tested with a real controller · 🧪 tested against a simulator/emulator on every push · ⬜ implemented from the protocol documentation, not yet tested with hardware – feedback very welcome. All seven databases and Grafana are tested against real servers.</p>
     <p class="small">Missing a controller? A driver is a single Python file – see <a href="en/user_manual.html#developing-drivers">Developing drivers</a>.</p>

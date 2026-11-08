@@ -414,6 +414,12 @@ def test_config_window(qt_log, demo_config):
     w.edit_plc_params(0)
     w.edit_notify()
     w.edit_opcua_server()
+    w.edit_mqtt()
+    from plc_mqtt_dialog import MqttDialog
+    md = MqttDialog(w, {"aktiv": True, "host": "broker", "ha": True}, "Testanlage")
+    assert md.collect()["host"] == "broker" and md.collect()["ha"] and "plc-logger/Testanlage" in md.lbl_topics.text()
+    md.ed_host.setText("")
+    md.test_connection()                                     # Hinweis statt Absturz
     from plc_opcua_dialog import OpcUaServerDialog
     od = OpcUaServerDialog(w, {"aktiv": True, "port": 4841}, 2)
     assert od.collect()["port"] == 4841 and od.collect()["sicherheit"] == ["none"]
@@ -1051,3 +1057,34 @@ def test_iocheck_photos(qt_log, demo_config, tmp_path, monkeypatch):
     assert plc_common.load_settings()["iocheck_protokoll_fotos"] is False and not io.protocol_photos()
     w.dirty = False
     _close(w)
+
+
+def test_mqtt_browser_dialog(qt_log):
+    """Treiber mqtt: Topics vom Broker mithören, JSON-Zahlen einzeln, abhaken und übernehmen."""
+    pytest.importorskip("paho.mqtt.client")
+    from PySide6.QtCore import Qt
+
+    from mqtt_broker import Broker
+    from plc_common import Plc
+    from plc_treiber import get_driver
+    from plc_treiber.mqtt_browser import MqttBrowserDialog
+    b = Broker()
+    try:
+        b.publish("halle/temp", "21.5", retain=True)
+        b.publish("tele/s1/SENSOR", json.dumps({"AM2301": {"Temperature": 19.5}}), retain=True)
+        params = get_driver("mqtt").default_params()
+        params.update(host="127.0.0.1", port=b.port)
+        dlg = MqttBrowserDialog(None, Plc(name="B", driver="mqtt", params=params), {"halle/temp"}, ["Diagramm 1"])
+        dlg.sp_secs.setValue(1)
+        dlg.listen()
+        for _i in range(60):
+            wait(50)
+            if len(dlg.items) == 2 and dlg.btn_listen.isEnabled():
+                break
+        assert set(dlg.items) == {"halle/temp", "tele/s1/SENSOR|AM2301.Temperature"}
+        assert dlg.items["halle/temp"].isDisabled()                  # schon vorhanden
+        dlg.items["tele/s1/SENSOR|AM2301.Temperature"].setCheckState(0, Qt.CheckState.Checked)
+        dlg.take()
+        assert dlg.result_vars == [("SENSOR_AM2301_Temperature", "tele/s1/SENSOR|AM2301.Temperature", "REAL")]
+    finally:
+        b.close()

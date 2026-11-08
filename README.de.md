@@ -7,7 +7,8 @@ Datenbank (SQLite, MariaDB, TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics) a
 ohne Oberfläche (Headless). Mit Trigger und Ereignisprotokoll (Marken an der Zeitachse), Aufzeichnung per Trigger
 mit Vor- und Nachlauf, PID-Regler-Optimierung, XY-Diagramm und FFT, PDF-Berichten je Schicht/Tag/Woche/Monat,
 Lesemodus für die Datenbank, Webserver mit HTTPS und Anmeldung, IO-Check für die Inbetriebnahme (Signalliste,
-Matrix, Vertauschungen, Analog-Prüfpunkte), Sprachumschaltung (Deutsch/Englisch).
+Matrix, Vertauschungen, Analog-Prüfpunkte), OPC-UA-Server, MQTT (Werte an einen Broker senden, mit
+Home-Assistant-Discovery, und Werte von einem Broker aufzeichnen), Sprachumschaltung (Deutsch/Englisch).
 
 ![Demo-Modus: Live-Trends mit Trigger-Marken, dann offline mit Linealen](doc/images/en/demo.gif)
 
@@ -34,6 +35,7 @@ Steuerungen verschiedener Hersteller lassen sich in **einer** Aufzeichnung misch
 | `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) | ⬜ ungetestet |
 | `kvhostlink` | KEYENCE KV (Host Link) | ⬜ ungetestet |
 | `toyopuc` | JTEKT TOYOPUC (Computer Link) | ⬜ ungetestet |
+| `mqtt` | MQTT-Broker: Topics, auch Zahlen in JSON-Nachrichten (paho-mqtt), mit Topic-Auswahl | 🧪 CI: Mosquitto und Test-Broker |
 | `s5as511` | Siemens S5 über die PG-Schnittstelle (AS511) | ⬜ ungetestet |
 
 ✅ mit echter Steuerung getestet · 🧪 gegen Simulator bzw. Emulator getestet (automatisch bei jedem Push) ·

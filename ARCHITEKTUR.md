@@ -28,7 +28,7 @@ Oberfläche (PySide6)     plc_gui, plc_config, plc_*_dialog, plc_event_viewer, p
 Kern (ohne Qt)           plc_recorder ── plc_events (Trigger) ── plc_formula (berechnete Variablen)
                                 │
 Ausgänge / Dienste       CSV (plc_recorder) · plc_db · plc_web (+ plc_web_prozess, plc_iocheck_web)
-                         plc_opcua_server · plc_notify · plc_report
+                         plc_opcua_server · plc_mqtt · plc_notify · plc_report
                                 │
 Treiber                  plc_treiber/ (base + je Protokoll ein Modul, optional Auswahldialog)
                                 │
@@ -68,6 +68,8 @@ Headless-Betrieb und die Logik-Tests ohne PySide6.
   JSON-Schnittstelle (`/api/...`), Anmeldung, HTTPS mit selbst erzeugtem Zertifikat.
 * `plc_web_prozess`, `plc_iocheck_web` – HTML/CSS/JavaScript der Browserseiten (je eine Zeichenkette).
 * `plc_opcua_server` – OPC-UA-Server (asyncua) mit allen Variablen, Status und Ereignissen.
+* `plc_mqtt` – MQTT-Ausgang (paho-mqtt): Werte, Ereignisse und Zustände an einen Broker, Home-Assistant-Discovery;
+  dazu Hilfen für den Treiber `mqtt` (Eingang). Dialog: `plc_mqtt_dialog`.
 * `plc_notify` – Benachrichtigungen (E-Mail, Teams/Slack/Webhook, ntfy) mit Sperrzeit, Versand im eigenen Thread.
 * `plc_report` – PDF-Berichte (Schicht/Tag/Woche/Monat) ohne Zusatzbibliothek.
 * `plc_qr`, `plc_svg` – QR-Code und SVG-Export, beide ohne Zusatzbibliothek.
@@ -120,6 +122,7 @@ verarbeitet sie nach Zeit sortiert.
 | `db-writer` | `plc_db` | Datenbank schreiben (Lesen im Lesemodus: Thread `db-lesen` in `plc_db_dialog`) |
 | `webserver` | `plc_web` | Flask/werkzeug, jede Anfrage in eigenem Thread |
 | `opcua-server` | `plc_opcua_server` | asyncio-Schleife des OPC-UA-Servers |
+| `mqtt-publisher` | `plc_mqtt` | Werte im Takt senden (Netzwerk-Thread von paho daneben); Treiber `mqtt`: paho-Thread empfängt |
 | `benachrichtigung` | `plc_notify` | Nachrichten versenden (SMTP/HTTP mit Zeitlimit) |
 | `bericht` | `plc_report` | PDF-Bericht erzeugen |
 | Auswahldialoge | `plc_treiber/*_browser` | Variablenliste aus der Steuerung laden, Fortschritt per Timer |

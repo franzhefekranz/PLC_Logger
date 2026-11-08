@@ -17,6 +17,7 @@ Eingebaut sind
   * fins    – Omron CJ/CS/CP/NJ über FINS/TCP oder FINS/UDP (ohne Zusatzbibliothek)
   * ads     – Beckhoff TwinCAT 2/3 über ADS (AMS/TCP, ohne Zusatzbibliothek)
   * pccc    – Allen-Bradley MicroLogix 1100/1400 und SLC 500 über EtherNet/IP/PCCC (pycomm3)
+  * mqtt    – Werte von einem MQTT-Broker (paho-mqtt): Topics, optional mit Pfad in JSON-Nachrichten
 
 Weitere Treiber werden beim Start automatisch geladen aus
   * dem Ordner ``treiber`` im Datenordner des Programms (eigene Treiber, bleiben bei Updates erhalten),
@@ -35,7 +36,7 @@ from plc_treiber.base import Driver, Reader
 from plc_i18n import tr
 
 BUILTIN = ("s7", "tia", "logo", "clx", "pccc", "modbus", "modbus_rtu", "opcua", "ads", "slmp", "fins", "kvhostlink",
-           "toyopuc", "s5as511")
+           "toyopuc", "s5as511", "mqtt")
 _drivers = None          # {id: Driver}
 _errors = []             # Ladefehler (Modul, Text) – werden im Konfigurationsprogramm angezeigt
 

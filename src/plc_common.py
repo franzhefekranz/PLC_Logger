@@ -465,7 +465,7 @@ _INT_KEYS = {"intervall_ms", "timeout_ms", "diagramm", "achse", "steuerung", "st
              "max_register", "luecke", "tags_je_anfrage", "db", "byte", "bit", "anzahl", "puffer"}
 _FLOAT_KEYS = {"y_min", "y_max", "verzoegerung_s", "amplitude", "aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s"}
 _INDEX_LIST_KEYS = {"nicht_aufzeichnen", "nicht_anzeigen"}                    # Block: Elementindizes als Zahlenliste
-_JSON_KEYS = {"treiberdaten", "web_benutzer", "web_rechte", "benachrichtigung", "opcua_server"}                  # Text mit JSON-Inhalt -> verschachteltes Objekt
+_JSON_KEYS = {"treiberdaten", "web_benutzer", "web_rechte", "benachrichtigung", "opcua_server", "mqtt"}                  # Text mit JSON-Inhalt -> verschachteltes Objekt
 
 
 class ConfigFormatError(ValueError):
@@ -736,6 +736,8 @@ def default_connection() -> dict:
             "benachrichtigung": "",
             # OPC-UA-Server im Logger (JSON, siehe *_opcua_server.py): stellt die Variablen anderen Systemen bereit.
             "opcua_server": "",
+            # MQTT-Ausgang (JSON, siehe *_mqtt.py): sendet die Werte an einen Broker.
+            "mqtt": "",
             # Treibereigene Werte (JSON {Treiber: {Schlüssel: Wert}}), z. B. die importierten DB-Quellen des S7-Treibers.
             "treiberdaten": ""}
 
@@ -751,7 +753,7 @@ CONN_STR_KEYS = ("csv_ordner", "anordnung", "logo", "kundenlogo", "icon", "csv_n
                  "ereignis_datei", "treiberdaten", "aufz_modus", "aufz_bedingung",
                  "web_zertifikat", "web_schluessel", "web_benutzer", "web_rechte",
                  "bericht_zeitraum", "bericht_schichten", "bericht_beginn", "bericht_ordner", "benachrichtigung",
-                 "opcua_server")
+                 "opcua_server", "mqtt")
 CONN_FLOAT_KEYS = ("aufz_vorlauf_s", "aufz_nachlauf_s", "aufz_max_s")
 RECORD_MODES = {"dauernd": N_("Dauernd"), "trigger": N_("Per Trigger mit Vor- und Nachlauf")}
 

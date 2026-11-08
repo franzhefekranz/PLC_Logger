@@ -14,6 +14,16 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **MQTT-Ausgang:** Werte an einen MQTT-Broker senden (wie Webserver und OPC-UA-Server optional, auch headless) –
+  ein Topic je Variable und/oder ein JSON mit allen Werten, bei Änderung oder zyklisch, Ereignisse und
+  Verbindungszustand, letzter Wille „offline“, TLS und Anmeldung, **Home-Assistant-Discovery**. Einstellungen im
+  Konfigurationsprogramm, Reiter *Webserver & Headless*, **MQTT …** (mit „Verbindung testen“).
+* **Treiber `mqtt`:** Werte von einem MQTT-Broker aufzeichnen – Topic als Adresse, Zahlen auch aus JSON-Nachrichten
+  (`tele/sonoff/SENSOR|AM2301.Temperature`), „true/on/ein“ als 1, Höchstalter für ausgefallene Sender; **Topics vom
+  Broker …** hört mit und bietet die empfangenen Werte zur Auswahl an. Bibliothek: paho-mqtt.
+
 ### Build
 
 * **AppImage:** appimagetool und die AppImage-Laufzeit werden mit Wiederholung geladen (zeitweise Antwort 504 von

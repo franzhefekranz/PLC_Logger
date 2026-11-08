@@ -141,7 +141,7 @@ echo "[4/6] PyInstaller ..."
     --add-data "$ROOT/sprachen:sprachen" \
     --add-data "$ROOT/vorlagen:vorlagen" \
     --add-data "$ROOT/logo.png:." --add-data "$ROOT/app.ico:." --add-data "$ROOT/icons:icons" \
-    --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 \
+    --collect-all snap7 --collect-all pycomm3 --collect-all s7commplus --collect-all asyncua --collect-submodules paho --collect-all pymodbus --collect-all serial --collect-data pyqtgraph --hidden-import PySide6.QtSvg --exclude-module PyQt6 --exclude-module PyQt5 \
     --hidden-import pymysql --hidden-import psycopg --collect-all psycopg_binary \
     --collect-all flask --collect-all werkzeug \
     --hidden-import plc_about --hidden-import plc_export --collect-all openpyxl --hidden-import plc_block_dialog --hidden-import plc_branding --hidden-import plc_common \
@@ -151,7 +151,7 @@ echo "[4/6] PyInstaller ..."
     --hidden-import plc_pid_dialog --hidden-import plc_recorder --hidden-import plc_splash \
     --hidden-import plc_svg --hidden-import plc_trigger_dialog --hidden-import plc_util \
     --hidden-import plc_web --hidden-import plc_webauth --hidden-import plc_web_dialog --hidden-import plc_report --hidden-import plc_client --hidden-import plc_client_dialog \
-    --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog --hidden-import plc_iocheck_web --hidden-import plc_qr --hidden-import plc_filedlg --hidden-import plc_notify --hidden-import plc_notify_dialog --hidden-import plc_opcua_server --hidden-import plc_opcua_dialog --hidden-import plc_web_prozess --hidden-import plc_netscan --hidden-import plc_netscan_dialog --hidden-import plc_headless --hidden-import plc_headless_dialog --hidden-import plc_grafana --hidden-import plc_netz --hidden-import plc_netpanel \
+    --hidden-import plc_csvjoin --hidden-import plc_analysis --hidden-import plc_analysis_dialog --hidden-import plc_iocheck --hidden-import plc_iocheck_dialog --hidden-import plc_iocheck_web --hidden-import plc_qr --hidden-import plc_filedlg --hidden-import plc_mqtt --hidden-import plc_mqtt_dialog --hidden-import plc_notify --hidden-import plc_notify_dialog --hidden-import plc_opcua_server --hidden-import plc_opcua_dialog --hidden-import plc_web_prozess --hidden-import plc_netscan --hidden-import plc_netscan_dialog --hidden-import plc_headless --hidden-import plc_headless_dialog --hidden-import plc_grafana --hidden-import plc_netz --hidden-import plc_netpanel \
     --hidden-import cryptography.x509 --hidden-import cryptography.hazmat.primitives.asymmetric.rsa \
     --collect-submodules plc_treiber --add-data "$ROOT/src/plc_treiber/_vorlage.py:plc_treiber" \
     ${EXTRA[@]+"${EXTRA[@]}"} \

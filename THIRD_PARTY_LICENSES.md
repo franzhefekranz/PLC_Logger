@@ -32,6 +32,7 @@ eigenen Lizenzen; deren Lizenztexte liegen den Paketen bei (im Programmordner un
 | pymodbus | BSD-3-Clause | Treiber `modbus_rtu` |
 | pyserial | BSD-3-Clause | serielle Schnittstelle |
 | asyncua | LGPL-3.0-or-later | Treiber `opcua` |
+| paho-mqtt | EPL-2.0 oder EDL-1.0 (BSD-3-Clause), nach Wahl | MQTT (Ausgang, Treiber `mqtt`) |
 | cryptography | Apache-2.0 oder BSD-3-Clause | OPC UA Security |
 | cffi / pycparser | MIT-0 / BSD-3-Clause | für cryptography |
 | anyio, aiosqlite, pytz, six | MIT | für asyncua |

@@ -244,7 +244,7 @@ def model_from_konfig(k):
     """Antwort von /api/konfig -> (conn, charts, variables, plcs) wie aus plc_common.load_config/load_plcs."""
     conn = default_connection()
     conn.update({key: val for key, val in (k.get("conn") or {}).items() if key in conn and val is not None})
-    conn.update(web_aktiv=0, opcua_server="", bericht_aktiv=0, csv_aktiv=0, headless=0)   # nichts selbst starten
+    conn.update(web_aktiv=0, opcua_server="", mqtt="", bericht_aktiv=0, csv_aktiv=0, headless=0)   # nichts selbst starten
     charts = []
     for c in k.get("charts") or []:
         axes = [Axis(name=a.get("name", ""), auto=bool(a.get("auto", True)), y_min=float(a.get("y_min", 0)),

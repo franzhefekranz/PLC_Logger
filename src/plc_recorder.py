@@ -484,6 +484,7 @@ class Recorder:
         self.trigger_engine = None               # TriggerEngine, solange die Aufzeichnung läuft
         self.notifier = None                     # Benachrichtigungen (plc_notify), solange die Aufzeichnung läuft
         self.opcua = None                        # OPC-UA-Server (plc_opcua_server), solange die Aufzeichnung läuft
+        self.mqtt = None                         # MQTT-Ausgang (plc_mqtt), solange die Aufzeichnung läuft
         self.cleanup = None                      # Aufräumen alter CSV-/Archivdateien (plc_cleanup)
         # Aufzeichnung per Trigger (Vor-/Nachlauf): CaptureGate, solange die Aufzeichnung läuft (sonst dauernd).
         self.capture_mode = (conn.get("aufz_modus") == "trigger")
@@ -599,7 +600,14 @@ class Recorder:
                               lambda: list(self.status))
             if srv and srv.start():
                 self.opcua = srv
-        hooks = [h.event for h in (self.notifier, self.opcua) if h]
+        self.mqtt = None
+        if self.conn.get("mqtt"):
+            from plc_mqtt import MqttPublisher
+            pub = MqttPublisher(self.conn, self.vars, self.plcs, self.triggers, self.emit,
+                                lambda: list(self.status))
+            if pub and pub.start():
+                self.mqtt = pub
+        hooks = [h.event for h in (self.notifier, self.opcua, self.mqtt) if h]
 
         def notify(*a):
             for h in hooks:
@@ -670,6 +678,9 @@ class Recorder:
         if self.opcua is not None:
             self.opcua.stop()
             self.opcua = None
+        if self.mqtt is not None:
+            self.mqtt.stop()
+            self.mqtt = None
         if self.cleanup is not None:
             self.cleanup.stop()
             self.cleanup = None
@@ -780,6 +791,8 @@ class Recorder:
         self._append(self._last_ts, row)
         if self.opcua is not None:
             self.opcua.update(ts, row)
+        if self.mqtt is not None:
+            self.mqtt.update(ts, row)
         acc = self.report_acc
         if acc is not None:
             if ts >= acc.t1:                 # Zeitraum vorbei: Bericht schreiben, nächsten beginnen

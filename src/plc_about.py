@@ -51,7 +51,7 @@ LIBRARIES = [("pyqtgraph", "pyqtgraph", "pyqtgraph"),
              ("s7commplus", "s7commplus", "s7commplus"), ("pycomm3", "pycomm3", "pycomm3"),
              ("pymodbus", "pymodbus", "pymodbus"), ("pyserial", "pyserial", "serial"),
              ("asyncua", "asyncua", "asyncua"), ("PyMySQL", "PyMySQL", "pymysql"), ("psycopg", "psycopg", "psycopg"),
-             ("openpyxl", "openpyxl", "openpyxl")]
+             ("openpyxl", "openpyxl", "openpyxl"), ("paho-mqtt", "paho-mqtt", "paho.mqtt")]
 
 
 def _search_dirs():
@@ -131,6 +131,8 @@ HELP_TOPICS = {
     "PasswordDialog": "HTTPS und Anmeldung",
     "NotifyDialog": "Benachrichtigungen",
     "OpcUaServerDialog": "OPC-UA-Server",
+    "MqttDialog": "MQTT",
+    "MqttBrowserDialog": "Treiber mqtt – MQTT-Broker",
 }
 
 

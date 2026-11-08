@@ -16,7 +16,7 @@ can be mixed in **one** recording.
 
 ## Highlights
 
-* **14 built-in drivers**, more as a single Python file (see below).
+* **15 built-in drivers** (including MQTT), more as a single Python file (see below).
 * **Recording** to CSV (millisecond timestamps, size limit with ZIP archive) and/or **SQLite, MariaDB/MySQL, PostgreSQL/TimescaleDB, QuestDB,
   InfluxDB 3, VictoriaMetrics, Prometheus** – with a ready-made **Grafana** dashboard export.
 * **Live trends** with zoom, rulers, value table, bar graphs, Bool signals, several pages and charts.
@@ -29,6 +29,8 @@ can be mixed in **one** recording.
   process view, CSV/Excel export.
 * **Client mode**: a second logger (or the browser) shows the recording of a headless logger – no own configuration.
 * **OPC UA server**: provides the recorded values to SCADA/HMI systems.
+* **MQTT**: sends the values to a broker (Home Assistant discovery, Node-RED, IoT platforms) and records values from
+  a broker (driver `mqtt`, also JSON messages).
 * **IO check for commissioning**: signal list, matrix, swapped wires, analog test points, protocol – also on the phone.
 * **Raspberry Pi**: headless service, touchscreen panel for network, Wi-Fi, time (from the PLC), display dimming.
 * **Demo mode** without a PLC, English and German user interface.
@@ -65,6 +67,7 @@ can be mixed in **one** recording.
 | `fins` | Omron CJ, CS, CP, NJ/NX (FINS/TCP, FINS/UDP) | ⬜ untested |
 | `kvhostlink` | KEYENCE KV (Host Link) | ⬜ untested |
 | `toyopuc` | JTEKT TOYOPUC (Computer Link) | ⬜ untested |
+| `mqtt` | MQTT broker: topics, also numbers in JSON messages (paho-mqtt), with topic browser | 🧪 CI: Mosquitto and test broker |
 
 ✅ tested with a real controller · 🧪 tested against a simulator or emulator (automatically on every push) ·
 ⬜ implemented from the protocol documentation, not yet tested with hardware – **feedback very welcome**

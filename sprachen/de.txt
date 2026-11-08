@@ -779,6 +779,15 @@
 @ OPC-UA-Server:
 > 
 
+@ MQTT …
+> 
+
+@ Werte an einen MQTT-Broker senden (Home Assistant, Node-RED, IoT-Plattformen)
+> 
+
+@ MQTT:
+> 
+
 @ HTTPS (verschlüsselt)
 > 
 
@@ -3605,6 +3614,142 @@
 @ Lade Oberfläche (Diagramme) …
 > 
 
+# ---------------- plc_mqtt.py
+
+@ Bei Änderung
+> 
+
+@ Zyklisch (alle Werte)
+> 
+
+@ Ein Topic je Variable
+> 
+
+@ Ein JSON mit allen Werten
+> 
+
+@ Beides
+> 
+
+@ Bibliothek paho-mqtt fehlt (pip install paho-mqtt)
+> 
+
+@ ⚠ MQTT nicht gestartet: {0}
+> 
+
+@ MQTT: sende an {0} → {1}/…
+> 
+
+@ MQTT verbunden: {0}
+> 
+
+@ ⚠ MQTT: Broker lehnt die Anmeldung ab: {0}
+> 
+
+@ ⚠ MQTT: Verbindung zum Broker getrennt – verbinde neu …
+> 
+
+@ ⚠ MQTT: {0}
+> 
+
+@ Ereignis {0}
+> 
+
+# ---------------- plc_mqtt_dialog.py
+
+@ MQTT
+> 
+
+@ Werte an einen MQTT-Broker senden (während der Aufzeichnung)
+> 
+
+@ Broker
+> 
+
+@ z. B. 192.168.0.5 oder homeassistant.local
+> 
+
+@ TLS (verschlüsselt, meist Port 8883)
+> 
+
+@ Aus: auch selbstsignierte Zertifikate annehmen (nur im eigenen Netz)
+> 
+
+@ leer = Zertifikate des Systems
+> 
+
+@ CA-Zertifikat (Datei):
+> 
+
+@ leer = ohne Anmeldung
+> 
+
+@ leer = automatisch
+> 
+
+@ Client-ID:
+> 
+
+@ Senden
+> 
+
+@ Topics: <Basis>/<Steuerung>/<Variable>, <Basis>/werte, <Basis>/ereignisse, <Basis>/status
+> 
+
+@ Basis-Topic:
+> 
+
+@ Senden:
+> 
+
+@ Bei Änderung: höchstens so oft je Variable; zyklisch: alle Werte in diesem Takt
+> 
+
+@ Intervall:
+> 
+
+@ Format:
+> 
+
+@ 0 – höchstens einmal
+> 
+
+@ 1 – mindestens einmal
+> 
+
+@ QoS:
+> 
+
+@ Werte beim Broker speichern (retain)
+> 
+
+@ Neue Abonnenten erhalten sofort den letzten Wert
+> 
+
+@ Home-Assistant-Discovery (Variablen erscheinen dort als Sensoren)
+> 
+
+@ Discovery-Präfix:
+> 
+
+@ {0} → {1}/<Steuerung>/<Variable>, {1}/werte, {1}/ereignisse, {1}/status
+> 
+
+@ Bitte die Adresse des Brokers eintragen.
+> 
+
+@ Keine Verbindung zu {0}:\n{1}
+> 
+
+@ Verbindung zu {0} in Ordnung.
+> 
+
+@ Broker lehnt die Anmeldung ab: {0}
+> 
+
+@ keine Antwort
+> 
+
 # ---------------- plc_netpanel.py
 
 @ Leeren
@@ -5287,9 +5432,6 @@
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
 > 
 
-@ keine Antwort
-> 
-
 # ---------------- plc_treiber/clx_browser.py
 
 @ Array als Block übernehmen
@@ -5838,6 +5980,127 @@
 > 
 
 @ Schnittstelle fehlt
+> 
+
+# ---------------- plc_treiber/mqtt.py
+
+@ Topic fehlt
+> 
+
+@ Platzhalter „+“ und „#“ sind im Topic einer Variable nicht erlaubt
+> 
+
+@ Topic zu lang
+> 
+
+@ Pfad nach „|“ fehlt (z. B. sensor.temperatur)
+> 
+
+@ kein Zahlenwert: „{0}“
+> 
+
+@ „{0}“ nicht in der Nachricht
+> 
+
+@ kein Zahlenwert an dieser Stelle der Nachricht
+> 
+
+@ Broker {0} nicht erreichbar: {1}
+> 
+
+@ Keine Antwort vom Broker {0}
+> 
+
+@ Verbindung zum Broker getrennt
+> 
+
+@ Werte von einem MQTT-Broker (Sensoren, IoT, Node-RED, Steuerungen mit MQTT)
+> 
+
+@ Broker (Host)
+> 
+
+@ Rechnername oder IP-Adresse des Brokers
+> 
+
+@ 1883, mit TLS meist 8883
+> 
+
+@ TLS (verschlüsselt)
+> 
+
+@ Leer = ohne Anmeldung
+> 
+
+@ CA-Zertifikat (Datei)
+> 
+
+@ Leer = Zertifikate des Systems
+> 
+
+@ Client-ID
+> 
+
+@ Leer = automatisch
+> 
+
+@ QoS
+> 
+
+@ Höchstalter eines Werts
+> 
+
+@ Ältere Werte gelten als „kein Wert“ (Sender ausgefallen); 0 = unbegrenzt
+> 
+
+@ Topic, optional mit Pfad in einer JSON-Nachricht: halle1/temperatur, tele/sonoff/SENSOR|AM2301.Temperature
+> 
+
+@ Blöcke sind bei MQTT nicht möglich – je Wert eine Variable
+> 
+
+@ Topics vom Broker …
+> 
+
+@ Broker (Host) fehlt
+> 
+
+# ---------------- plc_treiber/mqtt_browser.py
+
+@ Keine Antwort vom Broker
+> 
+
+@ MQTT – Topics wählen ({0})
+> 
+
+@ Topic-Filter: # = alles, halle1/# = alles unter halle1, +/status = …
+> 
+
+@ Mithören
+> 
+
+@ Filter:
+> 
+
+@ Dauer:
+> 
+
+@ Werte, die während des Mithörens gesendet werden, erscheinen hier. Geräte, die selten senden, erscheinen nur mit „retained“-Nachrichten oder bei längerer Dauer.
+> 
+
+@ Topic | Pfad
+> 
+
+@ Wert
+> 
+
+@ {0} Werte gefunden. Gewünschte abhaken und übernehmen.
+> 
+
+@ Höre mit … noch {0:.0f} s, {1} Werte
+> 
+
+@ bereits vorhanden
 > 
 
 # ---------------- plc_treiber/opcua.py
