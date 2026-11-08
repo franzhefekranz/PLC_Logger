@@ -34,6 +34,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag || github.ref }}
+      # Nachbau eines vorhandenen Tags von Hand: Build-Skript vom gestarteten Stand (z. B. main) nehmen, damit
+      # Korrekturen am Build (etwa Downloads mit Wiederholung) auch für ältere Tags greifen
+      - uses: actions/checkout@v4
+        if: inputs.tag != ''
+        with:
+          path: _ci
+          sparse-checkout: build_appimage.sh
+          sparse-checkout-cone-mode: false
+      - name: Build-Skript des gestarteten Stands
+        if: inputs.tag != ''
+        run: cp _ci/build_appimage.sh build_appimage.sh && rm -rf _ci
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

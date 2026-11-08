@@ -17,7 +17,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 ### Build
 
 * **AppImage:** appimagetool und die AppImage-Laufzeit werden mit Wiederholung geladen (zeitweise Antwort 504 von
-  GitHub ließ den Release-Build scheitern); die Laufzeit wird appimagetool als Datei übergeben.
+  GitHub ließ den Release-Build scheitern), ersatzweise eine feste appimagetool-Version; die Laufzeit wird
+  appimagetool als Datei übergeben. Ein Nachbau von Hand (*AppImages › Run workflow* mit Tag) nimmt das Build-Skript
+  des gestarteten Stands.
 
 ## [3.16.0] – 2026-11-08
 

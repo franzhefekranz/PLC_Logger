@@ -290,7 +290,9 @@ fetch() {
         || wget -q --tries=8 --waitretry=15 --retry-on-http-error=429,500,502,503,504 -O "$1" "$2"
 }
 if [[ ! -x "$TOOL" ]]; then
-    fetch "$TOOL" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
+    # „continuous“ (neuester Stand), sonst eine feste Version
+    fetch "$TOOL" "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage" \
+        || fetch "$TOOL" "https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-$ARCH.AppImage"
     chmod +x "$TOOL"
 fi
 # Laufzeit (type2-runtime) selbst laden: appimagetool lädt sie sonst ohne Wiederholung
