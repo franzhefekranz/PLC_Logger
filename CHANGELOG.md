@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.16.0] – 2026-11-08
+
 ### Neu
 
 * **IO-Check: Fotos zu Signalen** – am Smartphone/Tablet direkt mit der Kamera (📷 Foto) oder aus der Galerie, im
@@ -635,7 +637,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.15.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.16.0...HEAD
+[3.16.0]: ../../releases/tag/v3.16.0
 [3.15.0]: ../../releases/tag/v3.15.0
 [3.14.1]: ../../releases/tag/v3.14.1
 [3.14.0]: ../../releases/tag/v3.14.0
