@@ -3,7 +3,8 @@
 """IO-Check auf Smartphone/Tablet: Seite /io des Webservers (HTML, CSS und JavaScript in einer Datei).
 
 Die Seite liest /api/io (Signale, Werte, Status, letzte Wechsel) und sendet Prüfstatus, Bemerkungen und
-Analog-Prüfpunkte an /api/io/cmd. Prüfer ist der Anmeldename im Webserver. Mehrere Geräte können gleichzeitig prüfen;
+Analog-Prüfpunkte an /api/io/cmd, Fotos (mit der Kamera, im Browser auf höchstens 1600 Pixel verkleinert) an
+/api/io/foto. Prüfer ist der Anmeldename im Webserver. Mehrere Geräte können gleichzeitig prüfen;
 das IO-Check-Fenster am PC übernimmt die Änderungen und speichert sie.
 """
 
@@ -90,6 +91,13 @@ main{padding:8px}
 .wb{margin:8px 0 2px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;line-height:1.7}
 .okm{color:#2e9d4b;font-weight:700}
 .muted{color:var(--mute);font-size:12.5px}
+.ph{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.ph .th{position:relative;width:64px;height:64px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.ph .th img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .th button{position:absolute;right:0;top:0;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:14px;
+ width:22px;height:22px;padding:0;line-height:22px;border-radius:0 0 0 6px}
+.ph .add{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);
+ min-height:46px;padding:0 12px}
 </style>
 </head>
 <body>
@@ -114,11 +122,13 @@ main{padding:8px}
   <div class="muted" id="lastc"></div><div id="chs" style="margin-top:10px"></div></section>
 </main>
 <div id="sheet"><button class="x" onclick="pick(-1)" aria-label="{{T:Schließen}}">×</button><div id="sh"></div></div>
+<input type="file" id="cam" accept="image/*" capture="environment" hidden><input type="file" id="gal" accept="image/*" hidden>
 <script>
 var TOKEN=new URLSearchParams(location.search).get('token')||'';
 function api(u){return TOKEN?u+(u.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(TOKEN):u;}
 document.getElementById('pdf').href=api('api/io/protokoll.pdf');
-var SWAPS={},S=null,VER=-1,D=[],SEL=-1,TAB='list',lastSeq=-1,TOL=1,rowEl=[],cellEl=[],swapUntil=0,remarkDirty=false;
+var SWAPS={},S=null,VER=-1,D=[],SEL=-1,TAB='list',lastSeq=-1,TOL=1,rowEl=[],cellEl=[],swapUntil=0,remarkDirty=false,
+ lastSheet='',camFor=-1,UP=0;
 var ST={offen:'{{J:offen}}',ok:'{{J:OK}}',fehler:'{{J:Fehler}}',uebersprungen:'{{J:übersprungen}}'},MK={offen:'',ok:'✓',fehler:'✗',uebersprungen:'–'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function bin(i){var k=S.sig[i][5];return k=='DI'||k=='DO';}
@@ -200,10 +210,30 @@ function sheet(){var sh=document.getElementById('sheet');if(SEL<0||!S||!S.sig[SE
   '<div class="muted">{{J:Status}}: <b>'+ST[d[0]||'offen']+'</b>'+(d[5]?' · '+esc(d[5])+' · '+esc(d[6]):'')+'</div>'+
   '<div class="rm" style="margin-top:6px"><input id="rmk" placeholder="{{J:Bemerkung}}" value="'+esc(d[7])+'" oninput="remarkDirty=true">'+
   '<button onclick="cmd(\'remark\',{remark:document.getElementById(\'rmk\').value});remarkDirty=false">{{J:Speichern}}</button></div>';
+ h+='<div class="ph">'+(d[9]||[]).map(function(n){var u=api('api/io/foto/'+SEL+'/'+encodeURIComponent(n));
+  return '<div class="th"><img src="'+esc(u)+'" alt="" onclick="window.open(this.src)"><button onclick="delPhoto(\''+esc(n)+'\')" aria-label="{{J:Foto entfernen}}">×</button></div>';}).join('')+
+  '<button class="add" onclick="shoot(1)">📷 {{J:Foto}}</button><button class="add" onclick="shoot(0)">🖼 {{J:Bild wählen}}</button>'+
+  (UP?'<span class="muted">{{J:Foto wird gesendet …}}</span>':'')+'</div>';
  var active=document.activeElement&&document.activeElement.id=='rmk';
- if(!active){document.getElementById('sh').innerHTML=h;}
+ if(!active&&h!==lastSheet){lastSheet=h;document.getElementById('sh').innerHTML=h;}
  sh.style.display='block';document.body.style.setProperty('--sheet',sh.offsetHeight+'px');}
 
+function shoot(capture){camFor=SEL;var e=document.getElementById(capture?'cam':'gal');e.value='';e.click();}
+function delPhoto(n){if(SEL<0||!confirm('{{J:Foto entfernen? Die Datei wird gelöscht.}}'))return;cmd('photo_del',{name:n});}
+function shrink(file,cb){var MAX=1600;function draw(src,w,h){var k=Math.min(1,MAX/Math.max(w,h)),c=document.createElement('canvas');
+  c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(src,0,0,c.width,c.height);
+  c.toBlob(function(b){cb(b||file);},'image/jpeg',0.85);}
+ if(window.createImageBitmap){createImageBitmap(file,{imageOrientation:'from-image'}).then(function(bm){draw(bm,bm.width,bm.height);})
+  .catch(function(){viaImg();});}else viaImg();
+ function viaImg(){var im=new Image(),u=URL.createObjectURL(file);im.onload=function(){URL.revokeObjectURL(u);draw(im,im.naturalWidth,im.naturalHeight);};
+  im.onerror=function(){URL.revokeObjectURL(u);cb(null);};im.src=u;}}
+function upload(ev){var f=ev.target.files&&ev.target.files[0],i=camFor;if(!f||i<0)return;UP++;sheet();
+ shrink(f,function(b){if(!b){UP--;alert('{{J:Bild nicht lesbar.}}');return;}
+  fetch(api('api/io/foto?ver='+VER+'&i='+i),{method:'POST',headers:{'Content-Type':b.type=='image/png'?'image/png':'image/jpeg','X-Token':TOKEN},body:b})
+  .then(function(r){if(r.status==401){location.href='login';throw 0;}if(r.status==409)VER=-1;return r.json();})
+  .then(function(j){if(j&&j.error&&j.error!='version')alert(j.error);}).catch(function(){})
+  .then(function(){UP--;sheet();});});}
+document.getElementById('cam').addEventListener('change',upload);document.getElementById('gal').addEventListener('change',upload);
 function pick(i){SEL=i;remarkDirty=false;if(i>=0&&rowEl[i]&&TAB=='list')rowEl[i].e.scrollIntoView({block:'nearest'});
  update();sheet();}
 function setst(st){var extra={status:st};if(st=='fehler'){var r=prompt('{{J:Bemerkung (z. B. Verdrahtung, Sensor defekt):}}',(D[SEL]||[])[7]||'');

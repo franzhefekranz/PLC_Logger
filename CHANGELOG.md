@@ -14,6 +14,14 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check: Fotos zu Signalen** – am Smartphone/Tablet direkt mit der Kamera (📷 Foto) oder aus der Galerie, im
+  Browser auf 1600 Pixel verkleinert; am PC über **Fotos …** bzw. Doppelklick in die neue Spalte *Fotos* (hinzufügen,
+  öffnen, entfernen). Die Bilder liegen im Ordner `<Prüfstand>_fotos` neben der Prüfstand-Datei (*Speichern unter*
+  kopiert sie mit, *Liste aktualisieren* übernimmt sie). Das Abnahmeprotokoll verweist in der Bemerkung darauf und
+  hängt sie an (*Fotos anhängen* im Menü des Protokoll-Knopfs, abschaltbar). Wunsch aus dem SPS-Forum.
+
 ## [3.15.0] – 2026-11-06
 
 ### Neu

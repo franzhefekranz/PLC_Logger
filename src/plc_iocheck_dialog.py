@@ -34,7 +34,7 @@ EDITABLE = ("address", "symbol", "comment", "bmk", "group", "remark")   # in der
 
 COLS = [("status", "Status"), ("value", "Wert"), ("address", "Adresse"), ("symbol", "Symbol"),
         ("comment", "Kommentar"), ("bmk", "BMK"), ("group", "Gruppe"), ("kind", "Typ"), ("plc", "Steuerung"),
-        ("checked_at", "Geprüft am"), ("checker", "Prüfer"), ("remark", "Bemerkung")]
+        ("checked_at", "Geprüft am"), ("checker", "Prüfer"), ("photos", "Fotos"), ("remark", "Bemerkung")]
 COL = {k: i for i, (k, _t) in enumerate(COLS)}
 
 
@@ -158,6 +158,8 @@ class SignalModel(QAbstractTableModel):
                 return f"{STATUS_MARK[s.status]} {tr(io.STATUS[s.status])}".strip()
             if key == "value":
                 return value_text(s)
+            if key == "photos":
+                return str(len(s.photos)) if s.photos else ""
             return getattr(s, key)
         if role == Qt.ItemDataRole.BackgroundRole:
             if key == "value" and time.time() - s.changed < FLASH_S:
@@ -711,6 +713,124 @@ class AnalogPanel(QGroupBox):
 # ---------------------------------------------------------------------------------------------------------------------
 # Hauptfenster
 # ---------------------------------------------------------------------------------------------------------------------
+class PhotoDialog(QDialog):
+    """Fotos eines Signals: Vorschaubilder, hinzufügen (Datei; große Bilder werden verkleinert), öffnen, entfernen."""
+
+    THUMB = 160
+    MAX_SIDE = 1920                       # größere Bilder vom PC werden auf diese Kantenlänge verkleinert
+
+    def __init__(self, parent, sig, folder):
+        super().__init__(parent)
+        self.sig, self.folder, self.changed = sig, folder, False
+        self.setWindowTitle(tr("Fotos – {0}").format(f"{sig.address} {sig.symbol}".strip()))
+        self.resize(720, 460)
+        v = QVBoxLayout(self)
+        from PySide6.QtWidgets import QListWidget
+        self.list = QListWidget()
+        self.list.setViewMode(QListWidget.ViewMode.IconMode)
+        self.list.setIconSize(QSize(self.THUMB, self.THUMB))
+        self.list.setResizeMode(QListWidget.ResizeMode.Adjust)
+        self.list.setSpacing(6)
+        self.list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.list.itemDoubleClicked.connect(lambda _it: self.open_selected())
+        v.addWidget(self.list, 1)
+        self.lbl = QLabel()
+        self.lbl.setStyleSheet("color:#5b6878")
+        v.addWidget(self.lbl)
+        row = QHBoxLayout()
+        for text, slot in ((tr("Hinzufügen …"), self.add), (tr("Öffnen"), self.open_selected),
+                           (tr("Entfernen"), self.remove_selected)):
+            b = QPushButton(text)
+            b.clicked.connect(slot)
+            row.addWidget(b)
+        row.addStretch(1)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        bb.rejected.connect(self.reject)
+        row.addWidget(bb)
+        v.addLayout(row)
+        self.fill()
+
+    def fill(self):
+        """Vorschaubilder neu aufbauen."""
+        from PySide6.QtGui import QIcon, QPixmap
+        from PySide6.QtWidgets import QListWidgetItem
+        self.list.clear()
+        for name in self.sig.photos:
+            pm = QPixmap(os.path.join(self.folder, name))
+            it = QListWidgetItem(name)
+            if not pm.isNull():
+                it.setIcon(QIcon(pm.scaled(self.THUMB, self.THUMB, Qt.AspectRatioMode.KeepAspectRatio,
+                                           Qt.TransformationMode.SmoothTransformation)))
+            else:
+                it.setText(tr("{0} (fehlt)").format(name))
+            it.setData(Qt.ItemDataRole.UserRole, name)
+            self.list.addItem(it)
+        self.lbl.setText(tr("{0} Fotos · Ordner: {1}").format(len(self.sig.photos), self.folder))
+
+    def _names(self):
+        return [it.data(Qt.ItemDataRole.UserRole) for it in self.list.selectedItems()]
+
+    @classmethod
+    def image_bytes(cls, path):
+        """Bilddatei als JPEG/PNG-Daten; andere Formate und große Bilder über QImage als JPEG (verkleinert)."""
+        with open(path, "rb") as f:
+            data = f.read()
+        from PySide6.QtCore import QBuffer, QByteArray, QIODevice
+        from PySide6.QtGui import QImage, QImageReader
+        reader = QImageReader(path)
+        reader.setAutoTransform(True)                     # Ausrichtung aus den EXIF-Daten
+        size = reader.size()
+        if io.photo_type(data) and size.isValid() and max(size.width(), size.height()) <= cls.MAX_SIDE:
+            return data
+        img = reader.read()
+        if img.isNull():
+            img = QImage(path)
+        if img.isNull():
+            raise ValueError(tr("Bild nicht lesbar: {0}").format(os.path.basename(path)))
+        if max(img.width(), img.height()) > cls.MAX_SIDE:
+            img = img.scaled(cls.MAX_SIDE, cls.MAX_SIDE, Qt.AspectRatioMode.KeepAspectRatio,
+                             Qt.TransformationMode.SmoothTransformation)
+        buf = QByteArray()
+        dev = QBuffer(buf)
+        dev.open(QIODevice.OpenModeFlag.WriteOnly)
+        img.convertToFormat(QImage.Format.Format_RGB32).save(dev, "JPG", 85)
+        return bytes(buf.data())
+
+    def add(self):
+        """Bilddateien hinzufügen."""
+        paths, _f = plc_filedlg.open_names(self, tr("Fotos hinzufügen"), "",
+                                           tr("Bilder (*.jpg *.jpeg *.png *.bmp *.webp *.heic);;Alle Dateien (*)"))
+        errors = []
+        for path in paths:
+            try:
+                io.add_photo(self.sig, self.folder, self.image_bytes(path))
+                self.changed = True
+            except (OSError, ValueError) as e:
+                errors.append(f"{os.path.basename(path)}: {e}")
+        self.fill()
+        if errors:
+            QMessageBox.warning(self, tr("Fotos"), "\n".join(errors))
+
+    def open_selected(self):
+        """Markierte Fotos mit dem Standardprogramm öffnen."""
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        for name in self._names():
+            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.folder, name)))
+
+    def remove_selected(self):
+        """Markierte Fotos entfernen (die Dateien werden gelöscht)."""
+        names = self._names()
+        if not names:
+            return
+        if QMessageBox.question(self, tr("Fotos"), tr("{0} Foto(s) entfernen? Die Dateien werden gelöscht.")
+                                .format(len(names))) != QMessageBox.StandardButton.Yes:
+            return
+        for name in names:
+            self.changed |= io.remove_photo(self.sig, self.folder, name)
+        self.fill()
+
+
 class IoCheckWindow(QMainWindow):
     """Hauptfenster des IO-Checks: Werkzeugleiste, Reiter Signalliste und Matrix, rechts „Was hat sich bewegt?“.
 
@@ -782,17 +902,24 @@ class IoCheckWindow(QMainWindow):
         act(tr("Ergebnis exportieren …"), self.export_result, tr("Prüfergebnis als CSV oder Excel speichern"))
         self.act_protocol = act(tr("Protokoll (PDF) …"), self.make_protocol,
                                 tr("Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und "
-                                   "Unterschriftsfeldern; Pfeil: Hoch- oder Querformat"))
+                                   "Unterschriftsfeldern; Pfeil: Hoch- oder Querformat, Fotos anhängen"))
         # Seitenformat des Protokolls (persönliche Einstellung, Standard: hoch) – Menü am Pfeil des Knopfs
         menu = QMenu(self)
         self.act_landscape = menu.addAction(tr("Querformat"))
         self.act_landscape.setCheckable(True)
         self.act_landscape.setChecked(io.protocol_landscape())
         self.act_landscape.toggled.connect(lambda on: self._save_setting(iocheck_querformat=bool(on)))
+        self.act_photos_pdf = menu.addAction(tr("Fotos anhängen"))
+        self.act_photos_pdf.setCheckable(True)
+        self.act_photos_pdf.setChecked(io.protocol_photos())
+        self.act_photos_pdf.toggled.connect(lambda on: self._save_setting(iocheck_protokoll_fotos=bool(on)))
         self.act_protocol.setMenu(menu)
         btn = tb.widgetForAction(self.act_protocol)
         if isinstance(btn, QToolButton):
             btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        self.act_photos = act(tr("Fotos …"), self.edit_photos,
+                              tr("Fotos zum markierten Signal ansehen, hinzufügen oder entfernen (auch per Doppelklick "
+                                 "in die Spalte „Fotos“; am Smartphone mit der Kamera)"))
         act(tr("📱 Mobil …"), self.show_mobile,
             tr("IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)"))
         self.act_checker = act("", self.edit_checker,
@@ -886,9 +1013,12 @@ class IoCheckWindow(QMainWindow):
         self.view.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked
                                   | QAbstractItemView.EditTrigger.EditKeyPressed)
         for key, w in (("status", 110), ("value", 150), ("address", 90), ("symbol", 150), ("comment", 200),
-                       ("bmk", 90), ("group", 80), ("kind", 40), ("plc", 70), ("checked_at", 130), ("checker", 80)):
+                       ("bmk", 90), ("group", 80), ("kind", 40), ("plc", 70), ("checked_at", 130), ("checker", 80),
+                       ("photos", 45)):
             self.view.setColumnWidth(COL[key], w)
         self.view.selectionModel().currentRowChanged.connect(self._row_changed)
+        self.view.doubleClicked.connect(
+            lambda ix: self.edit_photos() if COLS[ix.column()][0] == "photos" else None)
         v.addWidget(self.view, 1)
         brow = QHBoxLayout()
         for st, text, key in (("ok", tr("✓ OK"), "Ctrl+1"), ("fehler", tr("✗ Fehler …"), "Ctrl+2"),
@@ -1018,6 +1148,7 @@ class IoCheckWindow(QMainWindow):
         self.matrix.set_rows(rows)
         self.bridge.publish(sigs, self.tracker, self._project_title(), rows)
         self.bridge.source, self.bridge.plcs = self.project.path, list(self.plcs)
+        self.bridge.photo_dir = io.photo_dir(self.project.path)
         from plc_common import logo_paths
         self.bridge.logos = logo_paths(self._conn())
         self._update_progress()
@@ -1308,6 +1439,7 @@ class IoCheckWindow(QMainWindow):
         self.dirty = False
         self._update_title()
         self.bridge.source = path
+        self.bridge.photo_dir = io.photo_dir(path)
         self.bridge.set_title(self._project_title())
         self.statusBar().showMessage(tr("Gespeichert: {0}").format(path), 5000)
         self._remember(path)
@@ -1394,7 +1526,7 @@ class IoCheckWindow(QMainWindow):
         try:
             from plc_common import logo_paths
             io.write_protocol(path, self.all_signals, self._project_title(), self.project.path, self.plcs,
-                              logo_paths(self._conn()))
+                              logo_paths(self._conn()), photos=self.act_photos_pdf.isChecked())
         except Exception as e:
             QMessageBox.warning(self, tr("Protokoll (PDF)"), str(e))
             return
@@ -1452,6 +1584,24 @@ class IoCheckWindow(QMainWindow):
         self.mobile_dialog.exec()
 
     # ------------------------------------------------------------------ Status
+    def edit_photos(self):
+        """Fotos des markierten Signals (bzw. des gerade geprüften) ansehen, hinzufügen, entfernen."""
+        sigs = self.selected_signals()
+        sig = sigs[0] if sigs else self.tracker.expected
+        if sig is None:
+            QMessageBox.information(self, tr("Fotos"), tr("Zuerst ein Signal in der Liste markieren."))
+            return
+        if not self.project.path:
+            if QMessageBox.question(self, tr("Fotos"), tr("Die Fotos liegen in einem Ordner neben der Prüfstand-Datei. "
+                                                          "Prüfstand jetzt speichern?")) \
+                    != QMessageBox.StandardButton.Yes or not self.save_project():
+                return
+        dlg = PhotoDialog(self, sig, io.photo_dir(self.project.path))
+        dlg.exec()
+        if dlg.changed:
+            self.model.refresh_rows([sig])
+            self._mark_dirty()
+
     def selected_signals(self):
         """In der Tabelle markierte Signale (über den Filter auf die Zeilen des Modells umgerechnet)."""
         rows = sorted({self.proxy.mapToSource(i).row() for i in self.view.selectionModel().selectedRows()})
@@ -1619,6 +1769,14 @@ class IoCheckWindow(QMainWindow):
                 self.tracker.take_point(sig, value, checker=user)
             elif cmd == "remark":
                 sig.remark = value
+            elif cmd == "photo":
+                try:
+                    io.add_photo(sig, io.photo_dir(self.project.path), value)
+                except (OSError, ValueError) as e:
+                    self.statusBar().showMessage(tr("Foto von {0} nicht gespeichert: {1}").format(user, e), 8000)
+                    continue
+            elif cmd == "photo_del":
+                io.remove_photo(sig, io.photo_dir(self.project.path), value)
             out.append(sig)
             self.statusBar().showMessage(tr("{0}: {1} – {2}").format(user, sig.label, tr(io.STATUS[sig.status])), 5000)
         if out:

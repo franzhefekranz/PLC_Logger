@@ -361,8 +361,65 @@ def test_web_login_and_iocheck_api():
         assert c.post("/api/io/cmd", data="x").status_code == 415
         assert c.get("/api/io/protokoll.pdf").data[:5] == b"%PDF-"
         assert "IO-Check" in c.get("/io").get_data(as_text=True)
+        # Fotos: ohne gespeicherten Prüfstand Fehlermeldung, sonst an das Fenster; nur Bild-Inhaltstyp
+        png = open(os.path.join(ROOT, "logo.png"), "rb").read()
+        url = f"/api/io/foto?ver={j['ver']}&i=0"
+        r = c.post(url, data=png, content_type="image/png")
+        assert r.status_code == 400 and "speichern" in r.get_json()["error"]
+        br.photo_dir = os.path.join(ROOT, "tests", "_fotos_test")
+        assert c.post(url, data=png, content_type="image/png").status_code == 200
+        cmd = br.commands.get_nowait()
+        assert cmd[0] == "photo" and cmd[1] is sigs[0] and cmd[2] == png and cmd[3] == "tablet1"
+        assert c.post(url, data=png, content_type="text/plain").status_code == 415
+        assert c.post(url, data=b"kein Bild", content_type="image/jpeg").status_code == 400
+        assert c.get("/api/io/foto/0/x.jpg").status_code == 404
+        import shutil
+        try:
+            name = io.add_photo(sigs[0], br.photo_dir, png)
+            assert c.get(f"/api/io/foto/0/{name}").data == png
+            assert c.get(f"/api/io/foto/1/{name}").status_code == 404           # anderes Signal
+            assert c.get("/api/io?ver=-1").get_json()["dyn"][0][9] == [name]
+            r = c.post("/api/io/cmd", json={"ver": j["ver"], "cmd": "photo_del", "i": 0, "name": name})
+            assert r.status_code == 200 and br.commands.get_nowait()[:3] == ("photo_del", sigs[0], name)
+        finally:
+            shutil.rmtree(br.photo_dir, ignore_errors=True)
     finally:
         plc_web.set_io_bridge(None)
+
+
+def test_iocheck_photos_project_and_protocol(tmp_path):
+    """Fotos: im Ordner neben dem Prüfstand, beim Speichern unter neuem Namen mitkopiert, beim Aktualisieren der Liste
+    übernommen, im Protokoll mit Verweis und als Anhang (abschaltbar)."""
+    import plc_iocheck as io
+    png = open(os.path.join(ROOT, "logo.png"), "rb").read()
+    assert io.photo_dir(str(tmp_path / "Anlage.iocheck.json")) == str(tmp_path / "Anlage_fotos")
+    assert io.photo_dir("") == ""
+    s = io.IoSignal("%I0.0", symbol="B1")
+    with pytest.raises(ValueError):
+        io.add_photo(s, "", png)                                  # nicht gespeichert
+    with pytest.raises(ValueError):
+        io.add_photo(s, str(tmp_path / "f"), b"GIF89a")
+    p = io.IoProject(signals=[s, io.IoSignal("E0.1")])
+    p.save(str(tmp_path / "Anlage.iocheck.json"))
+    n1 = io.add_photo(s, io.photo_dir(p.path), png)
+    n2 = io.add_photo(s, io.photo_dir(p.path), png)
+    assert n1 != n2 and n1.startswith("E0.0_") and n1.endswith(".png")
+    p.save()
+    q = io.IoProject.load(p.path)
+    assert q.signals[0].photos == [n1, n2] and "photos" not in q.signals[1].to_dict()
+    q.save(str(tmp_path / "Kopie.iocheck.json"))                  # Fotos mitkopieren
+    assert sorted(os.listdir(tmp_path / "Kopie_fotos")) == sorted([n1, n2])
+    assert io.remove_photo(q.signals[0], io.photo_dir(q.path), n2) and not (tmp_path / "Kopie_fotos" / n2).exists()
+    assert (tmp_path / "Anlage_fotos" / n2).exists()             # Original unberührt
+    new, kept, _gone = io.update_list(q.signals, [io.IoSignal("E0.0", bmk="-B1")])
+    assert new[0].photos == [n1] and kept == 1
+    io.set_status(new[0], "fehler", remark="Sensor verdreht")
+    with_ph = io.write_protocol(str(tmp_path / "m.pdf"), new, "Anlage", q.path, photos=True)
+    without = io.write_protocol(str(tmp_path / "o.pdf"), new, "Anlage", q.path, photos=False)
+    d1, d2 = open(with_ph, "rb").read(), open(without, "rb").read()
+    assert d1.count(b"/Subtype /Image") == 1 and b"/Subtype /Image" not in d2
+    assert len(d1) > len(d2)
+    assert io.protocol_signals([io.IoSignal("E9.0", scanned=True, photos=[n1])])     # Scan-Signal mit Foto
 
 
 # ---- Sprachdateien, Anleitung, Version --------------------------------------------------------------------------

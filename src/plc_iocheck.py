@@ -64,6 +64,7 @@ class IoSignal:
     points: dict = field(default_factory=dict)   # Analog: {"0": gemessener Wert, "50": …, "100": …}
     seen: int = 0                         # gesehene Flanken (SEEN_RISE | SEEN_FALL)
     scanned: bool = False                 # aus einem Scan-Bereich (nicht aus der IO-Liste)
+    photos: list = field(default_factory=list)   # Fotos (Dateinamen im Fotoordner des Prüfstands)
 
     def __post_init__(self):
         """Laufzeitfelder anlegen, die nicht gespeichert werden (letzter Wert, Zeit des Wechsels, Lesefehler, Zustand
@@ -101,7 +102,7 @@ class IoSignal:
     def to_dict(self) -> dict:
         """Für die Prüfstand-Datei: nur Felder mit Inhalt (spart Platz), Adresse, Art und Status immer."""
         d = asdict(self)
-        return {k: v for k, v in d.items() if v not in ("", {}, 0, False) or k in ("address", "kind", "status")}
+        return {k: v for k, v in d.items() if v not in ("", {}, [], 0, False) or k in ("address", "kind", "status")}
 
     @classmethod
     def from_dict(cls, d: dict):
@@ -109,7 +110,87 @@ class IoSignal:
         names = cls.__dataclass_fields__
         sig = cls(**{k: v for k, v in d.items() if k in names})
         sig.points = {str(k): float(v) for k, v in (sig.points or {}).items()}
+        sig.photos = [str(n) for n in (sig.photos or []) if valid_photo_name(n)]
         return sig
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Fotos zu Signalen: JPEG/PNG im Ordner „<Prüfstand>_fotos“ neben der Prüfstand-Datei
+# ---------------------------------------------------------------------------------------------------------------------
+PHOTO_MAX_BYTES = 20 * 1024 * 1024
+PHOTO_TYPES = {b"\xff\xd8": ".jpg", b"\x89PNG\r\n\x1a\n": ".png"}
+
+
+def valid_photo_name(name) -> bool:
+    """Nur einfache Dateinamen (kein Pfad) mit .jpg/.png."""
+    name = str(name)
+    return (bool(name) and os.path.basename(name) == name and name not in (".", "..")
+            and os.path.splitext(name)[1].lower() in (".jpg", ".png"))
+
+
+def photo_dir(project_path: str) -> str:
+    """Fotoordner eines Prüfstands: „Anlage.iocheck.json“ -> „Anlage_fotos“ daneben; ohne Datei ""."""
+    if not project_path:
+        return ""
+    base = project_path[:-len(EXTENSION)] if project_path.endswith(EXTENSION) else os.path.splitext(project_path)[0]
+    return base + "_fotos"
+
+
+def photo_type(data: bytes) -> str:
+    """Dateiendung zu Bilddaten (".jpg"/".png") oder "" bei anderen Daten."""
+    for magic, ext in PHOTO_TYPES.items():
+        if data[:len(magic)] == magic:
+            return ext
+    return ""
+
+
+def add_photo(sig, folder: str, data: bytes) -> str:
+    """Foto (JPEG/PNG-Daten) im Fotoordner speichern und beim Signal eintragen. Rückgabe: Dateiname.
+    Wirft ValueError bei anderem Format, zu großen Daten oder fehlendem Ordner (Prüfstand nicht gespeichert)."""
+    ext = photo_type(data)
+    if not ext:
+        raise ValueError(tr("Kein JPEG- oder PNG-Bild."))
+    if len(data) > PHOTO_MAX_BYTES:
+        raise ValueError(tr("Bild zu groß (höchstens {0} MB).").format(PHOTO_MAX_BYTES // (1024 * 1024)))
+    if not folder:
+        raise ValueError(tr("Prüfstand zuerst speichern – die Fotos liegen in einem Ordner daneben."))
+    os.makedirs(folder, exist_ok=True)
+    stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", canon_address(sig.address)).strip("_.") or "signal"
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    n = 1
+    while True:
+        name = f"{stem}_{stamp}" + (f"_{n}" if n > 1 else "") + ext
+        if not os.path.exists(os.path.join(folder, name)):
+            break
+        n += 1
+    tmp = os.path.join(folder, name + ".tmp")
+    with open(tmp, "wb") as f:
+        f.write(data)
+    os.replace(tmp, os.path.join(folder, name))
+    sig.photos.append(name)
+    return name
+
+
+def remove_photo(sig, folder: str, name: str) -> bool:
+    """Foto vom Signal entfernen und die Datei löschen. Rückgabe: True, wenn es eingetragen war."""
+    if name not in sig.photos:
+        return False
+    sig.photos.remove(name)
+    if folder and valid_photo_name(name):
+        try:
+            os.remove(os.path.join(folder, name))
+        except OSError:
+            pass
+    return True
+
+
+def protocol_photos() -> bool:
+    """Gespeicherte Wahl „Fotos im Protokoll“ (Einstellung ``iocheck_protokoll_fotos``, Standard: ja)."""
+    try:
+        from plc_common import load_settings
+        return bool(load_settings().get("iocheck_protokoll_fotos", True))
+    except Exception:
+        return True
 
 
 def norm_address(address: str) -> str:
@@ -453,10 +534,11 @@ def change_address(sig: IoSignal, address: str):
 
 def worth_saving(sig: IoSignal) -> bool:
     """Signal aus einem Scan-Bereich mit Inhalt (Status, Bemerkung, Messpunkte oder eingetragene Texte)."""
-    return bool(sig.status != "offen" or sig.remark or sig.points or sig.symbol or sig.comment or sig.bmk or sig.group)
+    return bool(sig.status != "offen" or sig.remark or sig.points or sig.photos or sig.symbol or sig.comment or sig.bmk
+                or sig.group)
 
 
-CHECK_FIELDS = ("status", "checked_at", "checker", "remark", "points", "seen")
+CHECK_FIELDS = ("status", "checked_at", "checker", "remark", "points", "seen", "photos")
 
 
 def update_list(old, new):
@@ -472,7 +554,8 @@ def update_list(old, new):
         for name in CHECK_FIELDS:
             setattr(s, name, getattr(o, name))
         s.points = dict(o.points)
-        if o.status != "offen" or o.remark:
+        s.photos = list(o.photos)
+        if o.status != "offen" or o.remark or o.photos:
             kept += 1
     return new, kept, [o for o in by_key.values() if not o.scanned]
 
@@ -748,8 +831,18 @@ class IoProject:
     path: str = ""
 
     def save(self, path=None):
-        """Prüfstand speichern (erst in eine temporäre Datei, dann ersetzen)."""
+        """Prüfstand speichern (erst in eine temporäre Datei, dann ersetzen). Unter neuem Namen gespeichert, werden
+        die Fotos in den neuen Fotoordner kopiert."""
         path = path or self.path
+        old, new = photo_dir(self.path), photo_dir(path)
+        if old and new and os.path.normcase(os.path.abspath(old)) != os.path.normcase(os.path.abspath(new)):
+            import shutil
+            for s in self.signals + self.scanned:
+                for name in s.photos:
+                    src = os.path.join(old, name)
+                    if os.path.isfile(src) and not os.path.exists(os.path.join(new, name)):
+                        os.makedirs(new, exist_ok=True)
+                        shutil.copy2(src, os.path.join(new, name))
         doc = {"format": FORMAT, "version": 1, "gespeichert": now_text(), "config": self.config,
                "options": self.options, "scans": [asdict(s) for s in self.scans],
                "signals": [s.to_dict() for s in self.signals]
@@ -976,6 +1069,7 @@ class IoWebBridge:
         self.plc_state = []
         self.commands = queue.Queue()
         self.watch = {}                       # Signal-Index -> Zeitpunkt der letzten Auswahl auf einer Webseite
+        self.photo_dir = ""                   # Fotoordner des Prüfstands ("" = noch nicht gespeichert)
 
     def publish(self, signals, tracker, title, matrix):
         """Neue Signalliste veröffentlichen (Fenster-Thread): Signale, Tracker, Titel und Matrix als Indizes."""
@@ -1026,7 +1120,7 @@ class IoWebBridge:
         for s in sigs:
             v = None if math.isnan(s.value) else round(s.value, 4)
             dyn.append([s.status, v, s.error, round(now - s.changed, 1) if s.changed else -1, s.seen,
-                        s.checked_at, s.checker, s.remark, s.points])
+                        s.checked_at, s.checker, s.remark, s.points, list(s.photos)])
         changes = []
         if tracker is not None:
             for ch in tracker.history[:40]:
@@ -1060,9 +1154,43 @@ class IoWebBridge:
             self.commands.put(("point", sig, pct, user))
         elif cmd == "remark":
             self.commands.put(("remark", sig, str(value.get("remark", ""))[:500], user))
+        elif cmd == "photo_del":
+            name = str(value.get("name", ""))
+            if name not in sig.photos:
+                return "photo"
+            self.commands.put(("photo_del", sig, name, user))
         else:
             return "cmd"
         return ""
+
+    def add_photo(self, version, idx, data, user):
+        """Foto von der Webseite: prüfen und dem Fenster übergeben (das speichert die Datei). Rückgabe: Fehlertext
+        oder ""."""
+        with self.lock:
+            if version != self.version:
+                return "version"
+            if not (0 <= idx < len(self.signals)):
+                return "index"
+            sig = self.signals[idx]
+        if not photo_type(data):
+            return tr("Kein JPEG- oder PNG-Bild.")
+        if len(data) > PHOTO_MAX_BYTES:
+            return tr("Bild zu groß (höchstens {0} MB).").format(PHOTO_MAX_BYTES // (1024 * 1024))
+        if not self.photo_dir:
+            return tr("Prüfstand zuerst am PC speichern – die Fotos liegen in einem Ordner daneben.")
+        self.commands.put(("photo", sig, data, user))
+        return ""
+
+    def photo_path(self, idx, name):
+        """Datei eines Fotos für die Webseite (nur eingetragene Fotos) oder None."""
+        with self.lock:
+            if not (0 <= idx < len(self.signals)) or not self.photo_dir:
+                return None
+            sig = self.signals[idx]
+        if name not in sig.photos or not valid_photo_name(name):
+            return None
+        path = os.path.join(self.photo_dir, name)
+        return path if os.path.isfile(path) else None
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1070,7 +1198,7 @@ class IoWebBridge:
 # ---------------------------------------------------------------------------------------------------------------------
 def protocol_signals(signals):
     """Signale für das Protokoll: die IO-Liste und aus Scan-Bereichen nur die bearbeiteten."""
-    return [s for s in signals if not s.scanned or s.status != "offen" or s.remark]
+    return [s for s in signals if not s.scanned or s.status != "offen" or s.remark or s.photos]
 
 
 def _short_date(text):
@@ -1090,14 +1218,17 @@ def protocol_landscape() -> bool:
         return False
 
 
-def write_protocol(path, signals, project="", source="", plcs=(), logos=(), landscape=None):
+def write_protocol(path, signals, project="", source="", plcs=(), logos=(), landscape=None, photos=None):
     """Abnahmeprotokoll als PDF: Zusammenfassung, Prüfer, Fehler/offene Signale, alle Signale je Gruppe,
-    Unterschriftsfelder. Prüfer = eingestellter Name am PC bzw. Anmeldename im Webserver; ``logos``: Bilddateien für
-    den Seitenkopf (Kundenlogo, Logo); ``landscape``: A4 quer (None: gespeicherte Wahl). Kommentar und Bemerkung
-    werden mehrzeilig gedruckt, „Geprüft am“ nur mit Datum."""
-    from plc_report import MARGIN, _Doc, _table
+    Unterschriftsfelder, als Anhang die Fotos. Prüfer = eingestellter Name am PC bzw. Anmeldename im Webserver;
+    ``logos``: Bilddateien für den Seitenkopf (Kundenlogo, Logo); ``landscape``: A4 quer (None: gespeicherte Wahl);
+    ``photos``: Fotos anhängen (None: gespeicherte Wahl; Fotoordner neben ``source``). Kommentar und Bemerkung werden
+    mehrzeilig gedruckt, „Geprüft am“ nur mit Datum."""
+    from plc_report import MARGIN, _Doc, _table, load_image, text_width
     if landscape is None:
         landscape = protocol_landscape()
+    if photos is None:
+        photos = protocol_photos()
     sigs = protocol_signals(signals)
     txt, mute, head = "#1b2430", "#5b6878", "#0d47a1"
     colors = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#b26a00"}
@@ -1159,11 +1290,24 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
             widths[j] += extra * part
     wrap = (2, 8)                                         # Kommentar und Bemerkung mehrzeilig
 
+    # Fotos: fortlaufend nummeriert (Verweis in der Bemerkung, Bilder im Anhang)
+    folder = photo_dir(source) if photos else ""
+    shots, numbers = [], {}
+    for s in sigs if folder else ():
+        for name in s.photos:
+            img = load_image(os.path.join(folder, name))
+            if img is not None:
+                shots.append((s, img))
+                numbers.setdefault(id(s), []).append(len(shots))
+
     def row(s):
         note = s.remark
         pts = " ".join(f"{q}%={s.points[str(q)]:.4g}" for q in POINTS if str(q) in s.points)
         if pts:
             note = f"{note}; {pts}" if note else pts
+        if id(s) in numbers:
+            ref = tr("Foto {0}").format(", ".join(str(n) for n in numbers[id(s)]))
+            note = f"{note} ({ref})" if note else ref
         return [s.address, s.symbol, s.comment, s.bmk, s.kind, (tr(STATUS[s.status]), colors[s.status]),
                 _short_date(s.checked_at), s.checker, note]
 
@@ -1194,6 +1338,41 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
         p.line(x, y, x + 220, y, color=txt, width=0.6)
         p.text(x, y - 11, tr("{0}: Name, Datum, Unterschrift").format(label), 8, color=mute)
     doc.y -= 80
+
+    # Anhang: Fotos, zwei nebeneinander (quer: drei), mit Nummer, Signal, Status und Bemerkung
+    if shots:
+        doc.new_page()
+        doc.heading(tr("Anhang: Fotos"))
+        per_row = 3 if p.W > p.H else 2
+        gap = 12
+        cw = (p.W - 2 * MARGIN - gap * (per_row - 1)) / per_row
+        max_h = 200.0
+
+        def fit(text, size, width, bold=False):
+            while text and text_width(text, size, bold) > width:
+                text = text[:-2] + "…" if len(text) > 2 else ""
+            return text
+        for k in range(0, len(shots), per_row):
+            part = shots[k:k + per_row]
+            sizes = []
+            for _s, img in part:
+                w = cw
+                h = w * img.h / max(img.w, 1)
+                if h > max_h:
+                    h, w = max_h, max_h * img.w / max(img.h, 1)
+                sizes.append((w, h))
+            row_h = max(h for _w, h in sizes) + 30
+            doc.need(row_h)
+            for j, ((s, img), (w, h)) in enumerate(zip(part, sizes)):
+                x = MARGIN + j * (cw + gap)
+                p.image(x, doc.y - h, w, h, img)
+                cap = f"{tr('Foto {0}').format(k + j + 1)}: {s.address} {s.symbol}".strip()
+                if s.bmk:
+                    cap += f" · {s.bmk}"
+                p.text(x, doc.y - h - 10, fit(cap, 7.5, cw, True), 7.5, bold=True, color=txt)
+                sub = tr(STATUS[s.status]) + (f" – {s.remark}" if s.remark else "")
+                p.text(x, doc.y - h - 19, fit(sub, 7, cw), 7, color=colors[s.status])
+            doc.y -= row_h
     os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
     p.save(path, tr("IO-Check – Abnahmeprotokoll"))
     return path

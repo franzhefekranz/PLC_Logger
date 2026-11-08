@@ -2903,6 +2903,15 @@
 @ übersprungen
 > 
 
+@ Kein JPEG- oder PNG-Bild.
+> 
+
+@ Bild zu groß (höchstens {0} MB).
+> 
+
+@ Prüfstand zuerst speichern – die Fotos liegen in einem Ordner daneben.
+> 
+
 @ Symbol
 > 
 
@@ -3020,6 +3029,9 @@
 @ Demo-Modus (simulierte Werte)
 > 
 
+@ Prüfstand zuerst am PC speichern – die Fotos liegen in einem Ordner daneben.
+> 
+
 @ IO-Check – Abnahmeprotokoll
 > 
 
@@ -3050,6 +3062,9 @@
 @ Signale
 > 
 
+@ Foto {0}
+> 
+
 @ Fehler und offene Signale
 > 
 
@@ -3066,6 +3081,9 @@
 > 
 
 @ {0}: Name, Datum, Unterschrift
+> 
+
+@ Anhang: Fotos
 > 
 
 # ---------------- plc_iocheck_dialog.py
@@ -3166,6 +3184,36 @@
 @ (jetzt in Toleranz)
 > 
 
+@ Fotos – {0}
+> 
+
+@ Hinzufügen …
+> 
+
+@ Öffnen
+> 
+
+@ {0} (fehlt)
+> 
+
+@ {0} Fotos · Ordner: {1}
+> 
+
+@ Bild nicht lesbar: {0}
+> 
+
+@ Fotos hinzufügen
+> 
+
+@ Bilder (*.jpg *.jpeg *.png *.bmp *.webp *.heic);;Alle Dateien (*)
+> 
+
+@ Fotos
+> 
+
+@ {0} Foto(s) entfernen? Die Dateien werden gelöscht.
+> 
+
 @ IO-Liste importieren …
 > 
 
@@ -3199,10 +3247,19 @@
 @ Protokoll (PDF) …
 > 
 
-@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat
+@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat, Fotos anhängen
 > 
 
 @ Querformat
+> 
+
+@ Fotos anhängen
+> 
+
+@ Fotos …
+> 
+
+@ Fotos zum markierten Signal ansehen, hinzufügen oder entfernen (auch per Doppelklick in die Spalte „Fotos“; am Smartphone mit der Kamera)
 > 
 
 @ 📱 Mobil …
@@ -3427,6 +3484,12 @@
 @ IO-Check auf Smartphone/Tablet
 > 
 
+@ Zuerst ein Signal in der Liste markieren.
+> 
+
+@ Die Fotos liegen in einem Ordner neben der Prüfstand-Datei. Prüfstand jetzt speichern?
+> 
+
 @ Bemerkung (z. B. Verdrahtung, Sensor defekt):
 > 
 
@@ -3440,6 +3503,9 @@
 > 
 
 @ ■ Lesen stoppen
+> 
+
+@ Foto von {0} nicht gespeichert: {1}
 > 
 
 @ {0}: {1} – {2}
@@ -3499,6 +3565,24 @@
 > 
 
 @ Zurück
+> 
+
+@ Foto entfernen
+> 
+
+@ Foto
+> 
+
+@ Bild wählen
+> 
+
+@ Foto wird gesendet …
+> 
+
+@ Foto entfernen? Die Datei wird gelöscht.
+> 
+
+@ Bild nicht lesbar.
 > 
 
 @ Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.
@@ -4504,9 +4588,6 @@
 @ Zuletzt benutzt:
 > 
 
-@ Öffnen
-> 
-
 @ Durchsuchen …
 > 
 
@@ -4802,9 +4883,6 @@
 > 
 
 @ Häkchen = Schreibrecht: Ereignisse quittieren, Notizen eintragen, Prozessbild bearbeiten. Ohne Häkchen nur ansehen und exportieren.
-> 
-
-@ Hinzufügen …
 > 
 
 @ Passwort ändern …

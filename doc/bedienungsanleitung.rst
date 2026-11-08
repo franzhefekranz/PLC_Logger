@@ -4313,6 +4313,13 @@ geprüft – 305 OK, 4 Fehler, 3 übersprungen“).
   neu prüfen; *Nein*: behalten, z. B. bei einem Schreibfehler in der Liste). Adressen aus
   Scan-Bereichen ergeben sich aus dem Bereich. Auch bearbeitete Signale aus Scan-Bereichen
   werden mit dem Prüfstand gespeichert.
+* **Fotos …** (oder Doppelklick in die Spalte *Fotos*) zeigt die Fotos des markierten
+  Signals: **Hinzufügen …** (JPEG, PNG und andere Bildformate; Bilder über 1920 Pixel
+  werden verkleinert), **Öffnen**, **Entfernen** (löscht die Datei). Die Spalte *Fotos*
+  zeigt die Anzahl. Die Bilder liegen im Ordner **<Prüfstand>_fotos** neben der
+  Prüfstand-Datei (``Anlage.iocheck.json`` → ``Anlage_fotos``), der Prüfstand muss daher
+  gespeichert sein; *Speichern unter* kopiert sie in den neuen Ordner. Am Smartphone
+  geht es direkt mit der Kamera (siehe unten).
 * **Signale automatisch abhaken** (optional, aus): Ein Signal mit Status *offen* wird
   OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen)
   bzw. ein Analogeingang die Drahtbruchprüfung bestanden hat (siehe unten). Abgehakt werden nur Signale, die in der IO-Liste bzw. einem Scan-Bereich
@@ -4453,6 +4460,11 @@ Port belegt, der nächste freie).
   anlegen, siehe `HTTPS und Anmeldung <https-anmeldung_>`__); er steht in Liste, Ergebnis
   und Protokoll. Ohne Anmeldung wird „Web (Zugriffscode)“ bzw. „Web (IP-Adresse)“
   eingetragen – dann kann jeder im Netz den Status ändern, daher Benutzer anlegen.
+* **📷 Foto** nimmt mit der Kamera ein Foto zum gewählten Signal auf, **🖼 Bild wählen**
+  nimmt eines aus der Galerie. Das Bild wird auf dem Gerät auf höchstens 1600 Pixel
+  verkleinert (spart Datenvolumen) und im Fotoordner des Prüfstands am PC gespeichert;
+  die Vorschaubilder erscheinen unter dem Bemerkungsfeld (Antippen: groß, **×**: entfernen).
+  Der Prüfstand muss am PC gespeichert sein.
 * **PDF** oben rechts öffnet das Abnahmeprotokoll auf dem Gerät.
 * Die Änderungen übernimmt das IO-Check-Fenster am PC und speichert sie; es muss dafür
   geöffnet bleiben.
@@ -4471,7 +4483,8 @@ Abnahmeprotokoll (PDF)
 
 **Protokoll (PDF) …** erzeugt das Abnahmeprotokoll und öffnet es. Über den Pfeil am
 Knopf lässt sich **Querformat** wählen (A4 quer, mehr Platz für Symbol, Kommentar und
-Bemerkung); die Wahl wird gemerkt und gilt auch für **PDF** auf der Mobilseite.
+Bemerkung) und **Fotos anhängen** ab- oder einschalten (Vorgabe: an); beide Einstellungen
+werden gemerkt und gelten auch für **PDF** auf der Mobilseite.
 
 * Kopf: Projekt, Prüfstand, Steuerungen, Prüfzeitraum und Ergebnis (geprüft in %, OK,
   Fehler, übersprungen, offen); darüber Kundenlogo und Logo der Konfiguration.
@@ -4482,6 +4495,9 @@ Bemerkung); die Wahl wird gemerkt und gilt auch für **PDF** auf der Mobilseite.
   (ohne Uhrzeit), Prüfer und Bemerkung bzw. Messpunkten der Analogwerte. Kommentar und
   Bemerkung werden mehrzeilig gedruckt, andere zu lange Einträge gekürzt („…“).
 * **Bestätigung:** Unterschriftsfelder für Prüfer und Abnahme (Auftraggeber).
+* **Anhang: Fotos** (wenn eingeschaltet): alle Fotos fortlaufend nummeriert, zwei
+  nebeneinander (quer: drei), darunter Signal, BMK, Status und Bemerkung; in der Spalte
+  Bemerkung steht der Verweis („Foto 3“).
 
 Aus Scan-Bereichen erscheinen nur bearbeitete Signale. Das Protokoll entsteht ohne
 Zusatzprogramm (wie die PDF-Berichte); Zeichen außerhalb des westeuropäischen

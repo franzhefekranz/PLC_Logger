@@ -1004,3 +1004,50 @@ def test_iocheck_edit_texts_and_update_list(qt_log, demo_config, tmp_path, monke
     assert s3.address == "A4.0" and any(m[0] == "warning" for m in qt_log.messages)
     w.dirty = False
     _close(w)
+
+
+def test_iocheck_photos(qt_log, demo_config, tmp_path, monkeypatch):
+    """IO-Check: Fotos am PC hinzufügen (großes Bild wird verkleinert), Spalte „Fotos“, Foto vom Smartphone über die
+    Brücke, Entfernen; Protokoll-Menü „Fotos anhängen“."""
+    from PySide6.QtGui import QColor, QImage
+    from PySide6.QtWidgets import QMessageBox
+
+    import plc_common
+    import plc_iocheck as io
+    import plc_iocheck_dialog as d
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    logo = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logo.png")
+    big = QImage(3000, 2000, QImage.Format.Format_RGB32)
+    big.fill(QColor("#336699"))
+    assert big.save(str(tmp_path / "gross.bmp"))
+    w = d.IoCheckWindow(config_path=demo_config, demo=True)
+    w.project.signals = [io.IoSignal("E0.0", symbol="B1"), io.IoSignal("E0.1")]
+    w._rebuild()
+    qt_log.file = str(tmp_path / "anlage")
+    assert w.save_project(as_new=True)
+    folder = io.photo_dir(w.project.path)
+    assert w.bridge.photo_dir == folder
+    sig = w.project.signals[0]
+    dlg = d.PhotoDialog(w, sig, folder)
+    qt_log.files = [str(tmp_path / "gross.bmp"), logo]
+    dlg.add()
+    assert len(sig.photos) == 2 and dlg.changed and dlg.list.count() == 2
+    jpg = QImage(os.path.join(folder, sig.photos[0]))
+    assert sig.photos[0].endswith(".jpg") and max(jpg.width(), jpg.height()) == d.PhotoDialog.MAX_SIDE
+    assert sig.photos[1].endswith(".png")
+    row = w.model.signals.index(sig)
+    assert w.model.data(w.model.index(row, d.COL["photos"])) == "2"
+    # vom Smartphone: Foto über die Brücke, das Fenster speichert es
+    assert w.bridge.add_photo(w.bridge.version, row, open(logo, "rb").read(), "tablet1") == ""
+    w._web_commands()
+    assert len(sig.photos) == 3
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    dlg.fill()
+    dlg.list.item(0).setSelected(True)
+    first = sig.photos[0]
+    dlg.remove_selected()
+    assert first not in sig.photos and not os.path.exists(os.path.join(folder, first))
+    w.act_photos_pdf.setChecked(False)
+    assert plc_common.load_settings()["iocheck_protokoll_fotos"] is False and not io.protocol_photos()
+    w.dirty = False
+    _close(w)

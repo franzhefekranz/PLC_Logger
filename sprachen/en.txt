@@ -2903,6 +2903,15 @@
 @ übersprungen
 > skipped
 
+@ Kein JPEG- oder PNG-Bild.
+> Not a JPEG or PNG image.
+
+@ Bild zu groß (höchstens {0} MB).
+> Image too large (at most {0} MB).
+
+@ Prüfstand zuerst speichern – die Fotos liegen in einem Ordner daneben.
+> Save the test progress file first – the photos are kept in a folder next to it.
+
 @ Symbol
 > Symbol
 
@@ -3020,6 +3029,9 @@
 @ Demo-Modus (simulierte Werte)
 > Demo mode (simulated values)
 
+@ Prüfstand zuerst am PC speichern – die Fotos liegen in einem Ordner daneben.
+> Save the test progress file on the PC first – the photos are kept in a folder next to it.
+
 @ IO-Check – Abnahmeprotokoll
 > IO check – acceptance protocol
 
@@ -3050,6 +3062,9 @@
 @ Signale
 > Signals
 
+@ Foto {0}
+> Photo {0}
+
 @ Fehler und offene Signale
 > Faults and open signals
 
@@ -3067,6 +3082,9 @@
 
 @ {0}: Name, Datum, Unterschrift
 > {0}: name, date, signature
+
+@ Anhang: Fotos
+> Appendix: photos
 
 # ---------------- plc_iocheck_dialog.py
 
@@ -3166,6 +3184,36 @@
 @ (jetzt in Toleranz)
 > (within tolerance now)
 
+@ Fotos – {0}
+> Photos – {0}
+
+@ Hinzufügen …
+> Add …
+
+@ Öffnen
+> Open
+
+@ {0} (fehlt)
+> {0} (missing)
+
+@ {0} Fotos · Ordner: {1}
+> {0} photos · folder: {1}
+
+@ Bild nicht lesbar: {0}
+> Image not readable: {0}
+
+@ Fotos hinzufügen
+> Add photos
+
+@ Bilder (*.jpg *.jpeg *.png *.bmp *.webp *.heic);;Alle Dateien (*)
+> Images (*.jpg *.jpeg *.png *.bmp *.webp *.heic);;All files (*)
+
+@ Fotos
+> Photos
+
+@ {0} Foto(s) entfernen? Die Dateien werden gelöscht.
+> Remove {0} photo(s)? The files will be deleted.
+
 @ IO-Liste importieren …
 > Import IO list …
 
@@ -3199,11 +3247,20 @@
 @ Protokoll (PDF) …
 > Protocol (PDF) …
 
-@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat
-> Acceptance protocol with summary, fault list, all signals and signature fields; arrow: portrait or landscape
+@ Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat, Fotos anhängen
+> Acceptance protocol with summary, fault list, all signals and signature fields; arrow: portrait or landscape, attach photos
 
 @ Querformat
 > Landscape
+
+@ Fotos anhängen
+> Attach photos
+
+@ Fotos …
+> Photos …
+
+@ Fotos zum markierten Signal ansehen, hinzufügen oder entfernen (auch per Doppelklick in die Spalte „Fotos“; am Smartphone mit der Kamera)
+> View, add or remove photos of the selected signal (also by double-click in the “Photos” column; on the phone with the camera)
 
 @ 📱 Mobil …
 > 📱 Mobile …
@@ -3427,6 +3484,12 @@
 @ IO-Check auf Smartphone/Tablet
 > IO check on smartphone/tablet
 
+@ Zuerst ein Signal in der Liste markieren.
+> Select a signal in the list first.
+
+@ Die Fotos liegen in einem Ordner neben der Prüfstand-Datei. Prüfstand jetzt speichern?
+> The photos are kept in a folder next to the test progress file. Save the test progress file now?
+
 @ Bemerkung (z. B. Verdrahtung, Sensor defekt):
 > Remark (e.g. wiring, sensor defective):
 
@@ -3441,6 +3504,9 @@
 
 @ ■ Lesen stoppen
 > ■ Stop reading
+
+@ Foto von {0} nicht gespeichert: {1}
+> Photo from {0} not saved: {1}
 
 @ {0}: {1} – {2}
 > {0}: {1} – {2}
@@ -3500,6 +3566,24 @@
 
 @ Zurück
 > Back
+
+@ Foto entfernen
+> Remove photo
+
+@ Foto
+> Photo
+
+@ Bild wählen
+> Choose image
+
+@ Foto wird gesendet …
+> Sending photo …
+
+@ Foto entfernen? Die Datei wird gelöscht.
+> Remove photo? The file will be deleted.
+
+@ Bild nicht lesbar.
+> Image not readable.
 
 @ Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.
 > No IO check open – open <b>Analysis › IO check</b> on the PC.
@@ -4504,9 +4588,6 @@
 @ Zuletzt benutzt:
 > Recently used:
 
-@ Öffnen
-> Open
-
 @ Durchsuchen …
 > Browse …
 
@@ -4803,9 +4884,6 @@
 
 @ Häkchen = Schreibrecht: Ereignisse quittieren, Notizen eintragen, Prozessbild bearbeiten. Ohne Häkchen nur ansehen und exportieren.
 > Tick = write access: acknowledge events, enter notes, edit the process view. Without tick only view and export.
-
-@ Hinzufügen …
-> Add …
 
 @ Passwort ändern …
 > Change password …

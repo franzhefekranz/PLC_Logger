@@ -903,10 +903,41 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
             abort(400)
         return reply({"error": err} if err else {"ok": True}, 409 if err == "version" else 400 if err else 200)
 
+    @app.route("/api/io/foto", methods=["POST"])
+    def api_io_photo_add():
+        """IO-Check: Foto von Smartphone/Tablet zu einem Signal (``?ver=…&i=…``, Rumpf = JPEG/PNG-Daten). Nur mit
+        Bild-Inhaltstyp: Formulare fremder Seiten (CSRF) können ihn nicht setzen."""
+        b = _io_bridge
+        if b is None:
+            return reply({"error": "inactive"}, 409)
+        if request.mimetype not in ("image/jpeg", "image/png"):
+            abort(415)
+        from plc_iocheck import PHOTO_MAX_BYTES
+        if (request.content_length or 0) > PHOTO_MAX_BYTES:
+            abort(413)
+        try:
+            ver, idx = int(request.args.get("ver", -1)), int(request.args.get("i", -1))
+        except ValueError:
+            abort(400)
+        err = b.add_photo(ver, idx, request.get_data(cache=False), current_user())
+        return reply({"error": err} if err else {"ok": True}, 409 if err == "version" else 400 if err else 200)
+
+    @app.route("/api/io/foto/<int:idx>/<name>")
+    def api_io_photo(idx, name):
+        """IO-Check: Foto eines Signals anzeigen (nur eingetragene Fotos aus dem Fotoordner)."""
+        b = _io_bridge
+        path = b.photo_path(idx, name) if b is not None else None
+        if path is None:
+            abort(404)
+        with open(path, "rb") as f:
+            data = f.read()
+        return Response(data, mimetype="image/png" if name.lower().endswith(".png") else "image/jpeg",
+                        headers={"Cache-Control": "private, max-age=86400"})
+
     @app.route("/api/io/protokoll.pdf")
     def api_io_protocol():
         """IO-Check: Abnahmeprotokoll als PDF erzeugen und im Browser anzeigen (``?quer=1``/``0``: Quer-/Hochformat,
-        sonst die am PC gespeicherte Wahl)."""
+        sonst die am PC gespeicherte Wahl; Fotos nach der Wahl am PC)."""
         b = _io_bridge
         if b is None or not b.signals:
             abort(404)

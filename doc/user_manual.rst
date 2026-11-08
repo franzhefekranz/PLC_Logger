@@ -4205,6 +4205,13 @@ search field, filters for group, type and status and the progress (“312 of 480
   check asks whether the test entry is reset (*Yes*: check again; *No*: keep it, e.g. for a
   typo in the list). Addresses from scan ranges result from the range. Edited signals from
   scan ranges are also saved with the test progress file.
+* **Photos …** (or double-click in the *Photos* column) shows the photos of the selected
+  signal: **Add …** (JPEG, PNG and other image formats; images larger than 1920 pixels are
+  scaled down), **Open**, **Remove** (deletes the file). The *Photos* column shows the
+  number. The images are kept in the folder **<test progress file>_fotos** next to the
+  test progress file (``Plant.iocheck.json`` → ``Plant_fotos``), so the file must have
+  been saved; *Save as* copies them to the new folder. On the phone the camera can be
+  used directly (see below).
 * **Check off signals automatically** (optional, off): a signal with status *open*
   becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and
   released) or an analog input has passed the wire break test (see below). Only signals in the IO list or a scan range are checked off; the list
@@ -4345,6 +4352,11 @@ free one).
   list, the result and the protocol. Without login “Web (Zugriffscode)” or “Web (IP
   address)” is entered – then anybody in the network can change the status, so create
   users.
+* **📷 Photo** takes a photo of the selected signal with the camera, **🖼 Choose image**
+  takes one from the gallery. The image is scaled down on the device to at most 1600
+  pixels (saves data volume) and saved in the photo folder of the test progress file on
+  the PC; the thumbnails appear below the remark field (tap: large, **×**: remove). The
+  test progress file must have been saved on the PC.
 * **PDF** at the top right opens the acceptance protocol on the device.
 * The IO check window on the PC takes over and saves the changes; it must stay open for
   this.
@@ -4362,8 +4374,9 @@ Acceptance protocol (PDF)
    First page of an acceptance protocol.
 
 **Protocol (PDF) …** creates the acceptance protocol and opens it. The arrow on the
-button offers **Landscape** (A4 landscape, more room for symbol, comment and remark); the
-choice is remembered and also applies to **PDF** on the mobile page.
+button offers **Landscape** (A4 landscape, more room for symbol, comment and remark) and
+**Attach photos** (switch off or on, default: on); both settings are remembered and also
+apply to **PDF** on the mobile page.
 
 * Header: project, test progress file, controllers, test period and result (checked in
   %, OK, faults, skipped, open); above it the customer logo and logo of the configuration.
@@ -4374,6 +4387,9 @@ choice is remembered and also applies to **PDF** on the mobile page.
   check date (without time), checker and remark or test points of the analog values.
   Comment and remark are printed on several lines, other long entries are shortened (“…”).
 * **Confirmation:** signature fields for the checker and the acceptance (customer).
+* **Appendix: photos** (if switched on): all photos numbered consecutively, two side by
+  side (landscape: three), below them signal, device tag, status and remark; the remark
+  column contains the reference (“Photo 3”).
 
 From scan ranges only edited signals appear. The protocol is created without additional
 programs (like the PDF reports); characters outside the Western European character set
