@@ -4351,7 +4351,8 @@ free one).
   configuration program, see `HTTPS and login <https-anmeldung_>`__); it appears in the
   list, the result and the protocol. Without login “Web (Zugriffscode)” or “Web (IP
   address)” is entered – then anybody in the network can change the status, so create
-  users.
+  users. Users with the right **read** see list, matrix, values, photos and the protocol
+  but cannot change anything (no status buttons, remarks, test points or photos).
 * **📷 Photo** takes a photo of the selected signal with the camera, **🖼 Choose image**
   takes one from the gallery. The image is scaled down on the device to at most 1600
   pixels (saves data volume) and saved in the photo folder of the test progress file on

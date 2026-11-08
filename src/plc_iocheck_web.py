@@ -128,7 +128,7 @@ var TOKEN=new URLSearchParams(location.search).get('token')||'';
 function api(u){return TOKEN?u+(u.indexOf('?')<0?'?':'&')+'token='+encodeURIComponent(TOKEN):u;}
 document.getElementById('pdf').href=api('api/io/protokoll.pdf');
 var SWAPS={},S=null,VER=-1,D=[],SEL=-1,TAB='list',lastSeq=-1,TOL=1,rowEl=[],cellEl=[],swapUntil=0,remarkDirty=false,
- lastSheet='',camFor=-1,UP=0;
+ lastSheet='',camFor=-1,UP=0,WR=true;
 var ST={offen:'{{J:offen}}',ok:'{{J:OK}}',fehler:'{{J:Fehler}}',uebersprungen:'{{J:übersprungen}}'},MK={offen:'',ok:'✓',fehler:'✗',uebersprungen:'–'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function bin(i){var k=S.sig[i][5];return k=='DI'||k=='DO';}
@@ -203,16 +203,17 @@ function sheet(){var sh=document.getElementById('sheet');if(SEL<0||!S||!S.sig[SE
   var eng=scale(SEL,d[1]),u=s[6]?' '+s[6]:'',pts=d[8]||{};
   [0,50,100].forEach(function(p){var got=pts[p];h+='<div class="pt"><b>'+p+' %</b><span>{{J:Soll}} '+fmt(target(SEL,p))+u+'</span><span>'+
    (got==null?(inTol(SEL,p,eng)?'<i class="muted">{{J:in Toleranz …}}</i>':''):fmt(got)+u)+'</span><span>'+(got==null?'':(inTol(SEL,p,got)?'✓':'✗'))+
-   '</span><button onclick="cmd(\'point\',{pct:'+p+'})">{{J:Übernehmen}}</button></div>';});
-  h+='<div class="muted" style="margin-top:6px">'+'{{J:Wert 1 s lang in Toleranz (±{0} %) → Messpunkt wird automatisch übernommen.}}'.replace('{0}',TOL)+'</div>';}
- h+='<div class="btns"><button class="ok" onclick="setst(\'ok\')">✓ {{J:OK}}</button><button class="fehler" onclick="setst(\'fehler\')">✗ {{J:Fehler}}</button>'+
-  '<button onclick="setst(\'uebersprungen\')">– {{J:Übersprungen}}</button><button onclick="setst(\'offen\')">↺ {{J:Zurück}}</button></div>'+
-  '<div class="muted">{{J:Status}}: <b>'+ST[d[0]||'offen']+'</b>'+(d[5]?' · '+esc(d[5])+' · '+esc(d[6]):'')+'</div>'+
-  '<div class="rm" style="margin-top:6px"><input id="rmk" placeholder="{{J:Bemerkung}}" value="'+esc(d[7])+'" oninput="remarkDirty=true">'+
+   '</span>'+(WR?'<button onclick="cmd(\'point\',{pct:'+p+'})">{{J:Übernehmen}}</button>':'<span></span>')+'</div>';});
+  if(WR)h+='<div class="muted" style="margin-top:6px">'+'{{J:Wert 1 s lang in Toleranz (±{0} %) → Messpunkt wird automatisch übernommen.}}'.replace('{0}',TOL)+'</div>';}
+ if(WR)h+='<div class="btns"><button class="ok" onclick="setst(\'ok\')">✓ {{J:OK}}</button><button class="fehler" onclick="setst(\'fehler\')">✗ {{J:Fehler}}</button>'+
+  '<button onclick="setst(\'uebersprungen\')">– {{J:Übersprungen}}</button><button onclick="setst(\'offen\')">↺ {{J:Zurück}}</button></div>';
+ h+='<div class="muted"'+(WR?'':' style="margin-top:8px"')+'>{{J:Status}}: <b>'+ST[d[0]||'offen']+'</b>'+(d[5]?' · '+esc(d[5])+' · '+esc(d[6]):'')+'</div>';
+ if(!WR)h+=(d[7]?'<div style="margin-top:6px">'+esc(d[7])+'</div>':'')+'<div class="muted" style="margin-top:6px">{{J:Nur Leserecht – Status, Bemerkung und Fotos können nicht geändert werden.}}</div>';
+ else h+='<div class="rm" style="margin-top:6px"><input id="rmk" placeholder="{{J:Bemerkung}}" value="'+esc(d[7])+'" oninput="remarkDirty=true">'+
   '<button onclick="cmd(\'remark\',{remark:document.getElementById(\'rmk\').value});remarkDirty=false">{{J:Speichern}}</button></div>';
  h+='<div class="ph">'+(d[9]||[]).map(function(n){var u=api('api/io/foto/'+SEL+'/'+encodeURIComponent(n));
-  return '<div class="th"><img src="'+esc(u)+'" alt="" onclick="window.open(this.src)"><button onclick="delPhoto(\''+esc(n)+'\')" aria-label="{{J:Foto entfernen}}">×</button></div>';}).join('')+
-  '<button class="add" onclick="shoot(1)">📷 {{J:Foto}}</button><button class="add" onclick="shoot(0)">🖼 {{J:Bild wählen}}</button>'+
+  return '<div class="th"><img src="'+esc(u)+'" alt="" onclick="window.open(this.src)">'+(WR?'<button onclick="delPhoto(\''+esc(n)+'\')" aria-label="{{J:Foto entfernen}}">×</button>':'')+'</div>';}).join('')+
+  (WR?'<button class="add" onclick="shoot(1)">📷 {{J:Foto}}</button><button class="add" onclick="shoot(0)">🖼 {{J:Bild wählen}}</button>':'')+
   (UP?'<span class="muted">{{J:Foto wird gesendet …}}</span>':'')+'</div>';
  var active=document.activeElement&&document.activeElement.id=='rmk';
  if(!active&&h!==lastSheet){lastSheet=h;document.getElementById('sh').innerHTML=h;}
@@ -240,11 +241,11 @@ function setst(st){var extra={status:st};if(st=='fehler'){var r=prompt('{{J:Beme
  if(r===null)return;extra.remark=r;}cmd('status',extra);}
 function cmd(c,extra){if(SEL<0)return;var body={ver:VER,cmd:c,i:SEL};for(var k in extra)body[k]=extra[k];
  fetch(api('api/io/cmd'),{method:'POST',headers:{'Content-Type':'application/json','X-Token':TOKEN},body:JSON.stringify(body)})
- .then(function(r){if(r.status==409)VER=-1;if(r.status==401)location.href='login';});}
+ .then(function(r){if(r.status==409)VER=-1;if(r.status==401)location.href='login';if(r.status==403){WR=false;sheet();}});}
 
 function poll(){fetch(api('api/io?ver='+VER+'&sel='+SEL),{cache:'no-store'}).then(function(r){if(r.status==401){location.href='login';throw 0;}return r.json();})
  .then(function(j){if(!j.active){document.getElementById('rows').innerHTML='<div class="msg">{{J:Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.}}</div>';VER=-1;S=null;return;}
-  if(j.static){S=j.static;VER=j.ver;D=j.dyn;build();}D=j.dyn;TOL=j.tol;
+  if(j.static){S=j.static;VER=j.ver;D=j.dyn;build();}D=j.dyn;TOL=j.tol;WR=j.write!==false;
   document.getElementById('title').textContent=j.title+(j.user?' · '+j.user:'');
   var p=j.progress,done=p.ok+p.fehler+p.uebersprungen;document.getElementById('barv').style.width=(100*done/Math.max(1,p.gesamt))+'%';
   document.getElementById('bart').textContent='{{J:{0} / {1} geprüft · {2} OK · {3} Fehler}}'.replace('{0}',done).replace('{1}',p.gesamt).replace('{2}',p.ok).replace('{3}',p.fehler);

@@ -383,6 +383,16 @@ def test_web_login_and_iocheck_api():
             assert r.status_code == 200 and br.commands.get_nowait()[:3] == ("photo_del", sigs[0], name)
         finally:
             shutil.rmtree(br.photo_dir, ignore_errors=True)
+        # Benutzer mit Leserecht: sieht alles, ändert nichts (Status, Fotos), wird nicht als Beobachter gezählt
+        ro = plc_web.create_app(lambda: None, users={"leser": hash_password("geheim123")},
+                                rights={"leser": "lesen"}).test_client()
+        assert ro.post("/login", data={"benutzer": "leser", "passwort": "geheim123"}).status_code == 302
+        j2 = ro.get("/api/io?ver=-1&sel=1").get_json()
+        assert j2["write"] is False and j["write"] is True and 1 not in br.watch
+        assert ro.post("/api/io/cmd", json={"ver": j2["ver"], "cmd": "status", "i": 1, "status": "ok"}).status_code == 403
+        assert ro.post(f"/api/io/foto?ver={j2['ver']}&i=0", data=png, content_type="image/png").status_code == 403
+        assert br.commands.empty()
+        assert ro.get("/api/io/protokoll.pdf").data[:5] == b"%PDF-"
     finally:
         plc_web.set_io_bridge(None)
 

@@ -22,6 +22,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   kopiert sie mit, *Liste aktualisieren* übernimmt sie). Das Abnahmeprotokoll verweist in der Bemerkung darauf und
   hängt sie an (*Fotos anhängen* im Menü des Protokoll-Knopfs, abschaltbar). Wunsch aus dem SPS-Forum.
 
+### Behoben
+
+* **IO-Check im Webserver:** Benutzer mit Recht *lesen* konnten auf der Mobilseite Status, Bemerkungen und Messpunkte
+  ändern – jetzt nur noch Anzeige (Befehle und Fotos werden mit 403 abgewiesen, die Knöpfe ausgeblendet).
+
 ## [3.15.0] – 2026-11-06
 
 ### Neu

@@ -885,15 +885,21 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
             sel = int(sel) if sel not in ("", "-1") else None
         except ValueError:
             abort(400)
-        return reply(b.snapshot(ver, sel, current_user()))
+        write = may_edit()
+        out = b.snapshot(ver, sel if write else None, current_user())     # nur mit Schreibrecht beobachten (Messpunkte)
+        out["write"] = write
+        return reply(out)
 
     @app.route("/api/io/cmd", methods=["POST"])
     def api_io_cmd():
-        """IO-Check: Befehl von der Mobilseite (Status setzen, Bemerkung …); nur JSON, Prüfer = angemeldeter Benutzer.
+        """IO-Check: Befehl von der Mobilseite (Status setzen, Bemerkung …); nur JSON, nur mit Schreibrecht, Prüfer =
+        angemeldeter Benutzer.
         """
         b = _io_bridge
         if b is None:
             return reply({"error": "inactive"}, 409)
+        if not may_edit():
+            return reply({"error": "readonly"}, 403)
         if not request.is_json:                  # nur JSON: Formulare fremder Seiten (CSRF) werden abgewiesen
             abort(415)
         d = request.get_json(silent=True) or {}
@@ -910,6 +916,8 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         b = _io_bridge
         if b is None:
             return reply({"error": "inactive"}, 409)
+        if not may_edit():
+            return reply({"error": "readonly"}, 403)
         if request.mimetype not in ("image/jpeg", "image/png"):
             abort(415)
         from plc_iocheck import PHOTO_MAX_BYTES

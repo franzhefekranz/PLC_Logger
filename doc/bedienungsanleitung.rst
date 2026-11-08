@@ -4460,6 +4460,8 @@ Port belegt, der nächste freie).
   anlegen, siehe `HTTPS und Anmeldung <https-anmeldung_>`__); er steht in Liste, Ergebnis
   und Protokoll. Ohne Anmeldung wird „Web (Zugriffscode)“ bzw. „Web (IP-Adresse)“
   eingetragen – dann kann jeder im Netz den Status ändern, daher Benutzer anlegen.
+  Benutzer mit dem Recht **lesen** sehen Liste, Matrix, Werte, Fotos und das Protokoll,
+  können aber nichts ändern (keine Statusknöpfe, Bemerkungen, Messpunkte oder Fotos).
 * **📷 Foto** nimmt mit der Kamera ein Foto zum gewählten Signal auf, **🖼 Bild wählen**
   nimmt eines aus der Galerie. Das Bild wird auf dem Gerät auf höchstens 1600 Pixel
   verkleinert (spart Datenvolumen) und im Fotoordner des Prüfstands am PC gespeichert;

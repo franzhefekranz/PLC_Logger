@@ -3567,6 +3567,9 @@
 @ Zurück
 > Back
 
+@ Nur Leserecht – Status, Bemerkung und Fotos können nicht geändert werden.
+> Read-only access – status, remark and photos cannot be changed.
+
 @ Foto entfernen
 > Remove photo
 

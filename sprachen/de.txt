@@ -3567,6 +3567,9 @@
 @ Zurück
 > 
 
+@ Nur Leserecht – Status, Bemerkung und Fotos können nicht geändert werden.
+> 
+
 @ Foto entfernen
 > 
 
