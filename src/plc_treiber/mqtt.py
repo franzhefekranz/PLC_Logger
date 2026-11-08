@@ -111,11 +111,17 @@ class MqttReader(Reader):
 
         def on_connect(c, userdata, flags, rc, *rest):
             if reason_ok(rc):
-                if topics:
+                if topics:                  # verbunden erst nach der Bestätigung des Abonnements (SUBACK)
                     c.subscribe([(t, qos) for t in topics])
-                self.connected.set()
+                else:
+                    self.connected.set()
+                    self.answer.set()
             else:
                 self.refused = reason_text(rc)
+                self.answer.set()
+
+        def on_subscribe(c, userdata, *args):
+            self.connected.set()
             self.answer.set()
 
         def on_disconnect(c, userdata, *args):
@@ -126,6 +132,7 @@ class MqttReader(Reader):
                 self.last[msg.topic] = (msg.payload, time.time())
 
         client.on_connect, client.on_disconnect, client.on_message = on_connect, on_disconnect, on_message
+        client.on_subscribe = on_subscribe
         timeout = float(p.get("timeout_s", 5.0) or 5.0)
         try:
             client.connect(p.get("host", ""), int(p.get("port", 1883) or 1883), keepalive=30)
