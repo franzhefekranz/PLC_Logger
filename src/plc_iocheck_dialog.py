@@ -901,7 +901,20 @@ class IoCheckWindow(QMainWindow):
         act(tr("Spalten …"), self.edit_columns,
             tr("Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt"))
         act(tr("Öffnen …"), lambda: self.open_project(), tr("Gespeicherten IO-Check öffnen"), "Ctrl+O")
-        act(tr("Speichern"), lambda: self.save_project(), tr("Prüfstand speichern (*.iocheck.json)"), "Ctrl+S")
+        self.act_save = act(tr("Speichern"), lambda: self.save_project(),
+                            tr("Prüfstand speichern (*.iocheck.json); Pfeil: automatisch speichern ein/aus"), "Ctrl+S")
+        # Automatisch speichern (persönliche Einstellung, Standard: an) – Menü am Pfeil des Knopfs
+        save_menu = QMenu(self)
+        self.act_autosave = save_menu.addAction(tr("Automatisch speichern"))
+        self.act_autosave.setCheckable(True)
+        self.act_autosave.setChecked(io.autosave_enabled())
+        self.act_autosave.setToolTip(tr("Jede Änderung sofort in die Prüfstand-Datei schreiben (sobald der Prüfstand "
+                                        "einmal gespeichert ist)"))
+        self.act_autosave.toggled.connect(self._autosave_toggled)
+        self.act_save.setMenu(save_menu)
+        btn = tb.widgetForAction(self.act_save)
+        if isinstance(btn, QToolButton):
+            btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         act(tr("Speichern unter …"), lambda: self.save_project(as_new=True))
         act(tr("Ergebnis exportieren …"), self.export_result, tr("Prüfergebnis als CSV oder Excel speichern"))
         self.act_protocol = act(tr("Protokoll (PDF) …"), self.make_protocol,
@@ -1283,13 +1296,29 @@ class IoCheckWindow(QMainWindow):
         """Bearbeitete Signale aus Scan-Bereichen in den Prüfstand übernehmen (werden mit gespeichert)."""
         self.project.scanned = [s for s in self.all_signals if s.scanned and io.worth_saving(s)]
 
+    def _autosave_toggled(self, on):
+        """Automatisch speichern ein/aus (Wahl merken). Beim Einschalten gleich speichern; ohne Dateinamen fragen, ob
+        der Prüfstand jetzt gespeichert werden soll (erst dann kann automatisch gespeichert werden)."""
+        self._save_setting(iocheck_autosave=bool(on))
+        if not on:
+            self.statusBar().showMessage(tr("Automatisch speichern aus – Änderungen mit „Speichern“ sichern."), 8000)
+            return
+        if self.project.path:
+            if self.dirty:
+                self._mark_dirty()
+            self.statusBar().showMessage(tr("Automatisch speichern an: jede Änderung wird sofort gesichert."), 8000)
+        elif self.all_signals and QMessageBox.question(
+                self, tr("Automatisch speichern"),
+                tr("Der Prüfstand hat noch keinen Dateinamen. Jetzt speichern? Danach wird jede Änderung sofort "
+                   "gesichert.")) == QMessageBox.StandardButton.Yes:
+            self.save_project()
+
     def _mark_dirty(self):
-        """Änderung vermerken; ist der Prüfstand schon gespeichert, sofort automatisch speichern (nichts geht verloren).
-        """
+        """Änderung vermerken; mit „Automatisch speichern“ und Dateinamen sofort speichern (nichts geht verloren)."""
         self.dirty = True
         self._update_progress()
         self._update_title()
-        if self.project.path:                 # mit Dateiname: automatisch speichern (nichts geht verloren)
+        if self.project.path and self.act_autosave.isChecked():   # automatisch speichern (nichts geht verloren)
             try:
                 self.project.options = self._options()
                 self._sync_scanned()

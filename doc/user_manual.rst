@@ -4417,8 +4417,11 @@ Saving and result
 ----------------------------------------------------------------------
 
 **Save** stores the test progress as ``*.iocheck.json`` (signals, status, remarks, test
-points, scan ranges, options). After the first save, every change is saved immediately –
-you can stop at any time and continue the next day with **Open …**. **Export result …**
+points, scan ranges, options). With **Save automatically** (arrow on the *Save* button,
+default: on) every change is saved immediately after the first save – you can stop at any
+time and continue the next day with **Open …**. When switched off, a ``*`` in the window
+title shows unsaved changes; on closing the IO check asks. The choice is remembered; when
+switching it on without a file name, it offers to save the test progress file right away. **Export result …**
 writes the list with status, check time, checker, remark and test points as Excel or CSV
 file; in Excel with the colours of the signal list (rows green/red/grey per status, status
 bold in colour).

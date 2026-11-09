@@ -3241,7 +3241,13 @@
 @ Gespeicherten IO-Check öffnen
 > 
 
-@ Prüfstand speichern (*.iocheck.json)
+@ Prüfstand speichern (*.iocheck.json); Pfeil: automatisch speichern ein/aus
+> 
+
+@ Automatisch speichern
+> 
+
+@ Jede Änderung sofort in die Prüfstand-Datei schreiben (sobald der Prüfstand einmal gespeichert ist)
 > 
 
 @ Speichern unter …
@@ -3389,6 +3395,15 @@
 > 
 
 @ {0} ist bereits geprüft ({1}). Prüfeintrag zurücksetzen?\n\nJa: Status wieder „offen“ (die neue Adresse muss neu geprüft werden). Nein: Prüfeintrag behalten (z. B. nur Schreibfehler in der Liste).
+> 
+
+@ Automatisch speichern aus – Änderungen mit „Speichern“ sichern.
+> 
+
+@ Automatisch speichern an: jede Änderung wird sofort gesichert.
+> 
+
+@ Der Prüfstand hat noch keinen Dateinamen. Jetzt speichern? Danach wird jede Änderung sofort gesichert.
 > 
 
 @ Speichern fehlgeschlagen: {0}

@@ -1088,3 +1088,39 @@ def test_mqtt_browser_dialog(qt_log):
         assert dlg.result_vars == [("SENSOR_AM2301_Temperature", "tele/s1/SENSOR|AM2301.Temperature", "REAL")]
     finally:
         b.close()
+
+
+def test_iocheck_autosave_switch(qt_log, demo_config, tmp_path, monkeypatch):
+    """IO-Check: automatisch speichern ein/aus (Einstellung gemerkt); aus -> Datei bleibt bis „Speichern“ unverändert."""
+    from PySide6.QtWidgets import QMessageBox
+
+    import plc_common
+    import plc_iocheck as io
+    import plc_iocheck_dialog as d
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    w = d.IoCheckWindow(config_path=demo_config, demo=True)
+    assert w.act_autosave.isChecked() and w.act_save.menu() is not None
+    w.project.signals = [io.IoSignal("E0.0"), io.IoSignal("E0.1")]
+    w._rebuild()
+    qt_log.file = str(tmp_path / "pruef")
+    assert w.save_project(as_new=True)
+    w.set_status(w.project.signals[:1], "ok")
+    assert io.IoProject.load(w.project.path).signals[0].status == "ok" and not w.dirty     # an: sofort gesichert
+    w.act_autosave.setChecked(False)
+    assert plc_common.load_settings()["iocheck_autosave"] is False and not io.autosave_enabled()
+    w.set_status(w.project.signals[1:], "fehler")
+    assert w.dirty and io.IoProject.load(w.project.path).signals[1].status == "offen"   # aus: noch nicht gesichert
+    assert w.windowTitle().endswith(" *")
+    w.act_autosave.setChecked(True)                                                    # einschalten: gleich sichern
+    assert not w.dirty and io.IoProject.load(w.project.path).signals[1].status == "fehler"
+    w2 = d.IoCheckWindow(config_path=demo_config, demo=True)                           # neues Fenster ohne Datei
+    w2.project.signals = [io.IoSignal("E1.0")]
+    w2._rebuild()
+    monkeypatch.setattr(QMessageBox, "question", staticmethod(lambda *a, **k: QMessageBox.StandardButton.Yes))
+    qt_log.file = str(tmp_path / "neu")
+    w2.act_autosave.setChecked(False)
+    w2.act_autosave.setChecked(True)                                                   # fragt und speichert
+    assert w2.project.path and os.path.exists(w2.project.path)
+    for win in (w, w2):
+        win.dirty = False
+        _close(win)

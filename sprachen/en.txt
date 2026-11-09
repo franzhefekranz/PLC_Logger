@@ -3241,8 +3241,14 @@
 @ Gespeicherten IO-Check öffnen
 > Open a saved IO check
 
-@ Prüfstand speichern (*.iocheck.json)
-> Save the test progress (*.iocheck.json)
+@ Prüfstand speichern (*.iocheck.json); Pfeil: automatisch speichern ein/aus
+> Save test progress file (*.iocheck.json); arrow: save automatically on/off
+
+@ Automatisch speichern
+> Save automatically
+
+@ Jede Änderung sofort in die Prüfstand-Datei schreiben (sobald der Prüfstand einmal gespeichert ist)
+> Write every change to the test progress file immediately (once it has been saved)
 
 @ Speichern unter …
 > Save as …
@@ -3390,6 +3396,15 @@
 
 @ {0} ist bereits geprüft ({1}). Prüfeintrag zurücksetzen?\n\nJa: Status wieder „offen“ (die neue Adresse muss neu geprüft werden). Nein: Prüfeintrag behalten (z. B. nur Schreibfehler in der Liste).
 > {0} has already been checked ({1}). Reset the test entry?\n\nYes: status back to “open” (the new address must be checked again). No: keep the test entry (e.g. only a typo in the list).
+
+@ Automatisch speichern aus – Änderungen mit „Speichern“ sichern.
+> Save automatically off – save changes with “Save”.
+
+@ Automatisch speichern an: jede Änderung wird sofort gesichert.
+> Save automatically on: every change is saved immediately.
+
+@ Der Prüfstand hat noch keinen Dateinamen. Jetzt speichern? Danach wird jede Änderung sofort gesichert.
+> The test progress file has no file name yet. Save now? After that every change is saved immediately.
 
 @ Speichern fehlgeschlagen: {0}
 > Saving failed: {0}

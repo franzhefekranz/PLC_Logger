@@ -4526,9 +4526,12 @@ Speichern und Ergebnis
 ----------------------------------------------------------------------
 
 **Speichern** legt den Prüfstand als ``*.iocheck.json`` ab (Signale, Status,
-Bemerkungen, Messpunkte, Scan-Bereiche, Optionen). Nach dem ersten Speichern wird jede
-Änderung sofort gesichert – man kann jederzeit aufhören und am nächsten Tag mit
-**Öffnen …** weitermachen. **Ergebnis exportieren …** schreibt die Liste mit Status,
+Bemerkungen, Messpunkte, Scan-Bereiche, Optionen). Mit **Automatisch speichern** (Pfeil
+am Knopf *Speichern*, Vorgabe: an) wird nach dem ersten Speichern jede Änderung sofort
+gesichert – man kann jederzeit aufhören und am nächsten Tag mit **Öffnen …**
+weitermachen. Ausgeschaltet zeigt ein ``*`` im Fenstertitel ungesicherte Änderungen; beim
+Schließen fragt der IO-Check nach. Die Wahl wird gemerkt; beim Einschalten ohne
+Dateinamen bietet er an, den Prüfstand gleich zu speichern. **Ergebnis exportieren …** schreibt die Liste mit Status,
 Prüfzeit, Prüfer, Bemerkung und Messpunkten als Excel- oder CSV-Datei; in Excel mit den
 Farben der Signalliste (Zeilen grün/rot/grau je Status, Status fett in Farbe).
 

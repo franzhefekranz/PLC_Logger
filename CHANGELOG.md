@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** automatisches Speichern ein-/ausschaltbar (Pfeil am Knopf *Speichern*, Vorgabe an, gemerkt);
+  ausgeschaltet wird erst mit „Speichern“ gesichert, beim Schließen kommt die Rückfrage.
+
 ## [3.17.0] – 2026-11-08
 
 ### Neu

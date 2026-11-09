@@ -1209,6 +1209,16 @@ def _short_date(text):
         return text[:10]
 
 
+def autosave_enabled() -> bool:
+    """Gespeicherte Wahl „Automatisch speichern“ (Einstellung ``iocheck_autosave``, Standard: an): jede Änderung
+    wird sofort in die Prüfstand-Datei geschrieben, sobald der Prüfstand einen Dateinamen hat."""
+    try:
+        from plc_common import load_settings
+        return bool(load_settings().get("iocheck_autosave", True))
+    except Exception:
+        return True
+
+
 def protocol_landscape() -> bool:
     """Gespeicherte Wahl „Protokoll im Querformat“ (Einstellung ``iocheck_querformat``, Standard: hoch)."""
     try:
