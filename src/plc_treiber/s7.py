@@ -33,9 +33,12 @@ S7_TYPES = {
     "LWORD": (8, ">Q"), "ULINT": (8, ">Q"), "LINT": (8, ">q"), "LREAL": (8, ">d"),
 }
 
+# Schreibweisen: DB10.DBD4 / DB10.DBX0.1 (Siemens), DB10.4 bzw. DB10.0.1 (kurz), M5.0 / MW10 / EW64 / IW64 / AB3 / QB3
+# (deutsch und englisch). Die Größe (B/W/D/L) ergibt sich beim Lesen aus dem Typ, nicht aus dem Buchstaben
 _RE_DB = re.compile(r"^DB(\d+)\.DB([XBWDL]?)(\d+)(?:\.(\d))?$", re.I)
 _RE_DB_SHORT = re.compile(r"^DB(\d+)\.(\d+)(?:\.(\d))?$", re.I)
 _RE_AREA = re.compile(r"^([MEAIQ])([XBWDL]?)(\d+)(?:\.(\d))?$", re.I)
+# Bereichsbuchstabe -> snap7-Bereich: Merker, Prozessabbild Eingänge (E/I), Ausgänge (A/Q), Datenbaustein
 _AREA_KEY = {"M": "MK", "E": "PE", "I": "PE", "A": "PA", "Q": "PA", "DB": "DB"}
 
 
@@ -99,6 +102,7 @@ def list_plc_dbs(client) -> dict:
     if db_type is None:
         raise RuntimeError(tr("Die installierte python-snap7-Version unterstützt keine Bausteinliste."))
     result = {}
+    # Höchstens 2000 DBs abfragen; die Größe (MC7Size) dient im Auswahldialog dem Abgleich mit der importierten Quelle
     for n in [int(x) for x in client.list_blocks_of_type(db_type, 2000)]:
         try:
             result[n] = int(client.get_block_info(db_type, n).MC7Size)
@@ -147,6 +151,7 @@ class S7Reader(Reader, RingSupport):
                 blocks.setdefault((v.block, it.area, it.db), []).append(it)
             else:
                 self.plan.append(("single", it))
+        # Ein Block = eine Anfrage über den ganzen Bytebereich vom ersten bis hinter das letzte Element
         for (_name, area, db), items in blocks.items():
             start = min(i.byte for i in items)
             end = max(i.byte + (1 if i.dtype == "BOOL" else S7_TYPES[i.dtype][0]) for i in items)
@@ -177,11 +182,14 @@ class S7Reader(Reader, RingSupport):
         off = it.byte - base
         if it.dtype == "BOOL":
             return float((raw[off] >> it.bit) & 1)
+        # S7 speichert Big Endian (höchstwertiges Byte zuerst) – daher die Formate mit „>“
         return float(struct.unpack_from(S7_TYPES[it.dtype][1], raw, off)[0])
 
     def _failed(self, exc, addr):
         """Fehler einer Anfrage: Verbindung weg -> Ausnahme, sonst Fehler dieser Adresse merken."""
         try:
+            # snap7 meldet „Adresse gibt es nicht“ und „Verbindung weg“ beide als Ausnahme – erst die Nachfrage
+            # unterscheidet
             alive = bool(self.client.get_connected())
         except Exception:
             alive = False

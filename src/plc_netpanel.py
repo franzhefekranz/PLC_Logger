@@ -57,11 +57,14 @@ class QrLabel(QWidget):
     """QR-Code (plc_qr) als Bild; leer ohne Text."""
 
     def __init__(self):
+        """Leeres Feld, mindestens 120 × 120 Pixel."""
         super().__init__()
         self.matrix = None
         self.setMinimumSize(QSize(120, 120))
 
     def set_text(self, text):
+        """Text (z. B. Webserver-Adresse) als QR-Code kodieren und neu zeichnen; leer oder nicht kodierbar -> nichts
+        anzeigen."""
         self.matrix = None
         if text:
             try:
@@ -72,6 +75,8 @@ class QrLabel(QWidget):
         self.update()
 
     def paintEvent(self, _ev):
+        """QR-Code quadratisch und mittig zeichnen: weißer Hintergrund mit 4 Modulen Ruhezone ringsum (vom Standard
+        verlangt, sonst lesen manche Scanner nicht), dunkle Module schwarz."""
         if not self.matrix:
             return
         p = QPainter(self)
@@ -93,10 +98,12 @@ class QrLabel(QWidget):
 class Keyboard(QWidget):
     """Bildschirmtastatur: schreibt in das zuletzt angetippte Eingabefeld. ``numeric``: nur Ziffern, Punkt, /."""
 
+    # Deutsche Belegung (QWERTZ), Umlaute fehlen bewusst: WLAN-Namen und -Passwörter enthalten sie selten
     ROWS = ["1234567890", "qwertzuiop", "asdfghjkl", "yxcvbnm"]
     SYMBOLS = ["1234567890", "!\"§$%&/()=", "?@#+-_.,:;", "*'<>|[]{}"]
 
     def __init__(self, numeric=False):
+        """Tastatur aufbauen; ``numeric``: nur Ziffernblock (IP-Adressen), sonst Buchstaben mit Umschalt- und Symbolebene."""
         super().__init__()
         self.target = None
         self.shift = False
@@ -108,6 +115,7 @@ class Keyboard(QWidget):
         self._build()
 
     def _key(self, text, slot, span=1):
+        """Taste erzeugen: nimmt nie den Fokus (sonst verlöre das Eingabefeld ihn) und füllt die verfügbare Fläche."""
         b = QPushButton(text)
         b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -115,6 +123,7 @@ class Keyboard(QWidget):
         return b, span
 
     def _build(self):
+        """Tasten (neu) anlegen – nach jedem Wechsel von Umschalt- bzw. Symbolebene, damit die Beschriftung stimmt."""
         while self.grid.count():
             w = self.grid.takeAt(0).widget()
             if w:
@@ -147,6 +156,7 @@ class Keyboard(QWidget):
         self.grid.addWidget(b, last, 8, 1, 2)
 
     def type(self, text):
+        """Zeichen in das Zielfeld schreiben; Umschalten gilt wie am Handy nur für ein Zeichen."""
         if self.target is not None:
             self.target.insert(text)
         if self.shift and not self.symbols:
@@ -154,18 +164,22 @@ class Keyboard(QWidget):
             self._build()
 
     def backspace(self):
+        """Zeichen links vom Cursor im Zielfeld löschen."""
         if self.target is not None:
             self.target.backspace()
 
     def clear(self):
+        """Zielfeld leeren."""
         if self.target is not None:
             self.target.clear()
 
     def toggle_shift(self):
+        """Großbuchstaben für das nächste Zeichen ein/aus."""
         self.shift = not self.shift
         self._build()
 
     def toggle_symbols(self):
+        """Zwischen Buchstaben und Sonderzeichen umschalten."""
         self.symbols = not self.symbols
         self._build()
 
@@ -174,12 +188,14 @@ class TouchEdit(QLineEdit):
     """Eingabefeld, das beim Antippen die Bildschirmtastatur auf sich richtet."""
 
     def __init__(self, keyboard, password=False):
+        """Eingabefeld mit Bezug zur Bildschirmtastatur; ``password``: Eingabe verdeckt."""
         super().__init__()
         self.keyboard = keyboard
         if password:
             self.setEchoMode(QLineEdit.EchoMode.Password)
 
     def focusInEvent(self, ev):
+        """Beim Antippen schreibt die Tastatur ab jetzt in dieses Feld."""
         self.keyboard.target = self
         super().focusInEvent(ev)
 
@@ -189,6 +205,8 @@ class Stepper(QWidget):
     es am Ende von vorn los, sonst bleibt der Wert an der Grenze stehen."""
 
     def __init__(self, label, lo, hi, width=2, changed=None, inc=1, wrap=True):
+        """Aufbau: Beschriftung, ▲, Wert, ▼. Die Tasten wiederholen beim Festhalten (erst nach 400 ms, dann alle 120 ms).
+        ``width``: Stellen mit führenden Nullen, ``changed``: Rückruf bei Änderung."""
         super().__init__()
         self.lo, self.hi, self.width, self.changed = lo, hi, width, changed
         self.inc, self.wrap = inc, wrap
@@ -217,16 +235,19 @@ class Stepper(QWidget):
         self.set_value(lo, notify=False)
 
     def set_range(self, lo, hi):
+        """Neuer Wertebereich (z. B. Tage je Monat); der Wert wird in den Bereich geholt."""
         self.lo, self.hi = lo, hi
         self.set_value(min(max(self.value, lo), hi), notify=False)
 
     def set_value(self, value, notify=True):
+        """Wert setzen und anzeigen; ``notify``: Rückruf ``changed`` auslösen."""
         self.value = int(value)
         self.lbl.setText(str(self.value).zfill(self.width))
         if notify and self.changed:
             self.changed()
 
     def step(self, d):
+        """Um ``d`` Schritte ändern: mit ``wrap`` rundum (59 -> 00), sonst an den Grenzen anhalten."""
         if not self.wrap:
             self.set_value(min(max(self.value + d * self.inc, self.lo), self.hi))
             return
@@ -239,6 +260,8 @@ class Backlight:
     DSI-Display); ``available`` False, wenn es keine gibt. Helligkeit in Prozent."""
 
     def __init__(self, base="/sys/class/backlight"):
+        """Erste Beleuchtung unter ``base`` suchen; verfügbar nur, wenn ``brightness`` beschreibbar ist (udev-Regel, siehe
+        Anleitung)."""
         import glob
         dirs = sorted(glob.glob(os.path.join(base, "*")))
         self.path = dirs[0] if dirs else ""
@@ -249,10 +272,12 @@ class Backlight:
         self.available = bool(self.path) and os.access(os.path.join(self.path, "brightness"), os.W_OK)
 
     def _read(self, name):
+        """Datei der Beleuchtung lesen (Text ohne Zeilenende)."""
         with open(os.path.join(self.path, name)) as f:
             return f.read().strip()
 
     def _write(self, name, value):
+        """In eine Datei der Beleuchtung schreiben; fehlende Rechte werden ignoriert."""
         try:
             with open(os.path.join(self.path, name), "w") as f:
                 f.write(str(value))
@@ -260,6 +285,7 @@ class Backlight:
             pass
 
     def get(self):
+        """Aktuelle Helligkeit in Prozent (nicht lesbar: 100)."""
         try:
             return round(int(self._read("brightness")) * 100 / self.max)
         except (OSError, ValueError):
@@ -271,6 +297,7 @@ class Backlight:
             return
         percent = min(max(int(percent), 0), 100)
         if os.path.exists(os.path.join(self.path, "bl_power")):
+            # bl_power: 0 = Beleuchtung an, 4 = aus (Linux-Konvention FB_BLANK_POWERDOWN)
             self._write("bl_power", 4 if percent == 0 else 0)
         self._write("brightness", round(self.max * percent / 100))
 
@@ -279,6 +306,7 @@ class _InputWatch(QObject):
     """Beobachtet alle Eingaben der Anwendung: hält das Display wach und verschluckt die erste Berührung im dunklen
     Zustand (sie schaltet nur ein, löst aber keinen Knopf aus)."""
 
+    # Ereignisse, die eine Berührung beginnen (wecken), sie fortsetzen und sie beenden (Ende des Verschluckens)
     PRESS = (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick, QEvent.Type.TouchBegin,
              QEvent.Type.KeyPress)
     OTHER = (QEvent.Type.MouseButtonRelease, QEvent.Type.MouseMove, QEvent.Type.TouchUpdate, QEvent.Type.TouchEnd,
@@ -286,11 +314,14 @@ class _InputWatch(QObject):
     END = (QEvent.Type.MouseButtonRelease, QEvent.Type.TouchEnd, QEvent.Type.KeyRelease)
 
     def __init__(self, panel):
+        """Filter für das Panel ``panel``; ``swallow``: die restlichen Ereignisse der Wecker-Berührung verwerfen."""
         super().__init__(panel)
         self.panel = panel
         self.swallow = False
 
     def eventFilter(self, obj, ev):
+        """Für jede Eingabe der Anwendung: im dunklen Zustand nur wecken (und Druck + Loslassen verschlucken), sonst die
+        Zeit bis zum Abdunkeln neu starten. True = Ereignis verworfen."""
         t = ev.type()
         if t not in self.PRESS and t not in self.OTHER:
             return False
@@ -321,6 +352,7 @@ def load_settings():
 
 
 def save_settings(data):
+    """Einstellungen des Panels speichern (Datenordner); Fehler beim Schreiben werden ignoriert."""
     from plc_common import BASE_DIR
     try:
         os.makedirs(BASE_DIR, exist_ok=True)
@@ -422,6 +454,8 @@ class LoggerControl:
     nächsten Neustart). Stoppen beendet den Dienst (und schaltet ihn aus) und alle laufenden Headless-Logger."""
 
     def __init__(self, run, service="plc-datenlogger", dropin_dir=None, popen=None, program=None, run_dirs=None):
+        """``run``: Befehle ausführen (plc_netz.Netz.run), ``service``: Name des systemd-Dienstes; ``popen``, ``program``,
+        ``run_dirs`` nur für Tests."""
         self.run, self.service = run, service
         self.dropin_dir = dropin_dir or f"/etc/systemd/system/{service}.service.d"
         self.popen = popen
@@ -429,6 +463,7 @@ class LoggerControl:
         self.run_dirs = run_dirs
 
     def has_service(self):
+        """Gibt es den systemd-Dienst des Loggers (installiert mit dem Debian-Paket)?"""
         if not self.service:
             return False
         try:
@@ -447,6 +482,7 @@ class LoggerControl:
         return list(prog) + ["--headless", os.path.abspath(path)]
 
     def _stop_headless(self):
+        """Alle laufenden Headless-Logger zum Beenden auffordern -> Anzahl."""
         import plc_headless
         n = 0
         for d in (headless_run_dirs() if self.run_dirs is None else self.run_dirs):
@@ -524,6 +560,8 @@ class NetPanel(QWidget):
 
     def __init__(self, netz=None, config_path="", service="plc-datenlogger", background=True, settings=None,
                  backlight=None, logger_ctl=None, config_dirs=None):
+        """Seiten aufbauen, Einstellungen laden, Zeitgeber starten: Anzeige alle 5 s, Uhr jede Sekunde, Hintergrundaufgaben
+        alle 200 ms, Uhrzeit der Steuerung stündlich. ``background`` False (Tests): Befehle direkt statt im Thread."""
         super().__init__()
         self.backlight = backlight or Backlight()
         self.dimmed = False
@@ -598,6 +636,7 @@ class NetPanel(QWidget):
     # ------------------------------------------------------------------ Seiten
     @staticmethod
     def _button(text, slot, checkable=False):
+        """Großer Touch-Knopf (mindestens 56 Pixel hoch, ohne Fokus)."""
         b = QPushButton(text)
         b.setCheckable(checkable)
         b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
@@ -606,6 +645,8 @@ class NetPanel(QWidget):
         return b
 
     def _build_home(self):
+        """Übersicht: Rechnername, Version, Uhr, Schnittstellen mit Adressen, Webadresse mit QR-Code und die Knöpfe zu den
+        übrigen Seiten."""
         w = QWidget()
         v = QVBoxLayout(w)
         top = QHBoxLayout()
@@ -654,6 +695,7 @@ class NetPanel(QWidget):
         return w
 
     def _build_ip(self):
+        """Seite IP-Einstellung: DHCP oder feste Adresse mit Gateway und DNS, Ziffernblock."""
         w = QWidget()
         v = QVBoxLayout(w)
         self.lbl_ip_title = QLabel()
@@ -695,6 +737,7 @@ class NetPanel(QWidget):
         return w
 
     def _build_wifi(self):
+        """Seite WLAN: ein/aus, Liste der gefundenen Netze, neu suchen."""
         w = QWidget()
         v = QVBoxLayout(w)
         h = QHBoxLayout()
@@ -718,6 +761,7 @@ class NetPanel(QWidget):
         return w
 
     def _build_password(self):
+        """Seite WLAN-Passwort mit Bildschirmtastatur und „anzeigen“."""
         w = QWidget()
         v = QVBoxLayout(w)
         self.lbl_pw_title = QLabel()
@@ -743,6 +787,7 @@ class NetPanel(QWidget):
         return w
 
     def _build_time(self):
+        """Seite Datum und Uhrzeit: Internetzeit, Zeitzone, Einsteller für Datum/Uhrzeit, Uhrzeit von der Steuerung."""
         w = QWidget()
         v = QVBoxLayout(w)
         h = QHBoxLayout()
@@ -793,6 +838,7 @@ class NetPanel(QWidget):
         return w
 
     def _build_timezone(self):
+        """Seite Zeitzone: Liste mit Wischen blätterbar (Touch)."""
         w = QWidget()
         v = QVBoxLayout(w)
         t = QLabel(tr("Zeitzone"))
@@ -811,6 +857,7 @@ class NetPanel(QWidget):
 
     # ------------------------------------------------------------------ Übersicht
     def _tick(self):
+        """Uhr in der Kopfzeile aktualisieren (jede Sekunde)."""
         self.lbl_clock.setText(datetime.datetime.now().strftime("%d.%m.%Y  %H:%M:%S"))
 
     def web_url(self):
@@ -866,11 +913,13 @@ class NetPanel(QWidget):
                                        "siehe Anleitung)."))
 
     def show_home(self):
+        """Zur Übersicht (mit frischen Daten)."""
         self.refresh()
         self.stack.setCurrentWidget(self.page_home)
 
     # ------------------------------------------------------------------ IP-Einstellung
     def show_ip(self, typ):
+        """IP-Seite für die Schnittstelle vom Typ ``typ`` (ethernet/wifi) mit ihren aktuellen Werten öffnen."""
         dev = next((d for d in self.devs if d.typ == typ), None)
         if dev is None:
             self.lbl_status.setText(tr("Keine Schnittstelle vom Typ {0}").format(typ))
@@ -886,6 +935,7 @@ class NetPanel(QWidget):
         self.ed_addr.setFocus()
 
     def _set_mode(self, dhcp):
+        """DHCP bzw. feste Adresse wählen; die Felder sind nur bei fester Adresse bedienbar."""
         self.btn_dhcp.setChecked(dhcp)
         self.btn_manual.setChecked(not dhcp)
         for ed in (self.ed_addr, self.ed_gw, self.ed_dns):
@@ -893,6 +943,7 @@ class NetPanel(QWidget):
         self.numpad.setEnabled(not dhcp)
 
     def apply_ip(self):
+        """Eingaben prüfen und im Hintergrund übernehmen (NetworkManager)."""
         dhcp = self.btn_dhcp.isChecked()
         addr, gw, dns = self.ed_addr.text(), self.ed_gw.text(), self.ed_dns.text()
         if not dhcp:
@@ -906,6 +957,7 @@ class NetPanel(QWidget):
         self._run(lambda: self.netz.set_ipv4(name, dhcp, addr, gw, dns), self._ip_done)
 
     def _ip_done(self, err):
+        """Ergebnis der IP-Übernahme anzeigen; bei Erfolg nach kurzer Zeit zur Übersicht."""
         self.btn_apply.setEnabled(True)
         if err:
             self._msg(self.lbl_ip_msg, tr("Fehler: {0}").format(err), False)
@@ -915,6 +967,7 @@ class NetPanel(QWidget):
 
     # ------------------------------------------------------------------ WLAN
     def show_wifi(self):
+        """WLAN-Seite öffnen und gleich nach Netzen suchen."""
         self.lbl_wifi_msg.setText("")
         try:
             self.btn_wifi_on.setChecked(self.netz.wifi_enabled())
@@ -924,16 +977,19 @@ class NetPanel(QWidget):
         self.scan_wifi()
 
     def scan_wifi(self):
+        """Netze im Hintergrund suchen (dauert einige Sekunden); bei ausgeschaltetem WLAN nur die Liste leeren."""
         if not self.btn_wifi_on.isChecked():
             self.list_wifi.clear()
             return
         self._msg(self.lbl_wifi_msg, tr("Suche Netze …"), True)
 
         def work():
+            """Hintergrund: Liste der Netze holen (Ergebnis in self._scan_result)."""
             self._scan_result = self.netz.wifi_list()
         self._run(work, self._scan_done)
 
     def _scan_done(self, err):
+        """Gefundene Netze anzeigen: Signalstärke als Balken, Schloss bei Verschlüsselung, Haken beim verbundenen."""
         if err:
             self._msg(self.lbl_wifi_msg, tr("Fehler: {0}").format(err), False)
             return
@@ -953,11 +1009,13 @@ class NetPanel(QWidget):
                       + RIGHTS_HINT(), False)
 
     def toggle_wifi(self):
+        """WLAN ein-/ausschalten, danach neu suchen."""
         on = self.btn_wifi_on.isChecked()
         self._run(lambda: self.netz.set_wifi_enabled(on), lambda err: (
             self._msg(self.lbl_wifi_msg, tr("Fehler: {0}").format(err), False) if err else self.scan_wifi()))
 
     def choose_wifi(self, item):
+        """Netz angetippt: zur Passwortseite."""
         row = self.list_wifi.row(item)
         if not 0 <= row < len(self.wifis):
             return
@@ -969,10 +1027,12 @@ class NetPanel(QWidget):
         self.ed_pw.setFocus()
 
     def _toggle_pw(self):
+        """Passwort sichtbar/verdeckt."""
         self.ed_pw.setEchoMode(QLineEdit.EchoMode.Normal if self.btn_show_pw.isChecked()
                                else QLineEdit.EchoMode.Password)
 
     def connect_wifi(self):
+        """Mit dem gewählten Netz verbinden (im Hintergrund)."""
         if self.chosen_wifi is None:
             return
         ssid, pw = self.chosen_wifi.ssid, self.ed_pw.text()
@@ -982,6 +1042,7 @@ class NetPanel(QWidget):
         self._run(lambda: self.netz.wifi_connect(ssid, pw, dev), self._wifi_done)
 
     def _wifi_done(self, err):
+        """Ergebnis der WLAN-Verbindung: Fehler anzeigen bzw. zur Übersicht."""
         self.btn_connect.setEnabled(True)
         if err:
             self._msg(self.lbl_pw_msg, tr("Fehler: {0}").format(err), False)
@@ -991,6 +1052,7 @@ class NetPanel(QWidget):
 
     # ------------------------------------------------------------------ Logger (Konfiguration wählen, starten)
     def _build_logger(self):
+        """Seite Logger: Zustand, Liste der Konfigurationen, Starten/Beenden."""
         w = QWidget()
         v = QVBoxLayout(w)
         t = QLabel(tr("Logger"))
@@ -1015,6 +1077,7 @@ class NetPanel(QWidget):
         return w
 
     def _logger_state_text(self):
+        """Zustand des Loggers als farbiger Text (grün: läuft, rot: gestoppt)."""
         state, text = logger_state(self.config_path, self.logger_ctl.service)
         color = "#a5d6a7" if state == "active" else "#ff8a80"
         return f"{tr('Logger')}: <span style='color:{color}'><b>{text or tr('gestoppt')}</b></span>"
@@ -1040,6 +1103,7 @@ class NetPanel(QWidget):
         self.stack.setCurrentWidget(self.page_logger)
 
     def start_logger(self):
+        """Gewählte Konfiguration headless starten (als Dienst, falls vorhanden) und als Konfiguration des Panels merken."""
         row = self.list_cfg.currentRow()
         if not 0 <= row < len(self.configs):
             self._msg(self.lbl_logger_msg, tr("Bitte eine Konfiguration wählen."), False)
@@ -1049,9 +1113,11 @@ class NetPanel(QWidget):
         result = {}
 
         def work():
+            """Hintergrund: Logger starten; Rückgabe merkt, ob als Dienst oder direkt."""
             result["how"] = self.logger_ctl.start(path)
 
         def done(err):
+            """Gestartet: Konfiguration merken, Webadresse und Uhrzeit-Steuerung auf sie umstellen, Meldung anzeigen."""
             if err:
                 self._msg(self.lbl_logger_msg, tr("Fehler: {0}").format(err), False)
                 return
@@ -1068,9 +1134,11 @@ class NetPanel(QWidget):
         self._run(work, done)
 
     def stop_logger(self):
+        """Logger beenden (Dienst stoppen und ausschalten, Headless-Logger beenden)."""
         self._msg(self.lbl_logger_msg, tr("Beende den Logger …"), True)
 
         def done(err):
+            """Ergebnis anzeigen; der Zustand wird kurz danach neu gelesen."""
             if err:
                 self._msg(self.lbl_logger_msg, tr("Fehler: {0}").format(err), False)
                 return
@@ -1080,6 +1148,7 @@ class NetPanel(QWidget):
 
     # ------------------------------------------------------------------ Ausschalten
     def _build_power(self):
+        """Seite Ausschalten: Hinweis, Neustart und Herunterfahren (rot)."""
         w = QWidget()
         v = QVBoxLayout(w)
         t = QLabel(tr("Ausschalten"))
@@ -1105,6 +1174,7 @@ class NetPanel(QWidget):
         return w
 
     def show_power(self):
+        """Seite Ausschalten öffnen (Knöpfe wieder bedienbar)."""
         self.lbl_power_msg.setText("")
         for b in (self.btn_reboot, self.btn_poweroff):
             b.setEnabled(True)
@@ -1117,6 +1187,7 @@ class NetPanel(QWidget):
             b.setEnabled(False)
 
         def done(err):
+            """Nur bei Fehler zu sehen (z. B. fehlende Rechte): Meldung, Knöpfe wieder freigeben."""
             if err:
                 self._msg(self.lbl_power_msg, tr("Fehler: {0}").format(err), False)
                 for b in (self.btn_reboot, self.btn_poweroff):
@@ -1125,6 +1196,7 @@ class NetPanel(QWidget):
 
     # ------------------------------------------------------------------ Display (Abdunkeln)
     def _build_display(self):
+        """Seite Display: Abdunkeln nach Minuten, Helligkeit hell und dunkel."""
         w = QWidget()
         v = QVBoxLayout(w)
         t = QLabel(tr("Display"))
@@ -1150,12 +1222,14 @@ class NetPanel(QWidget):
         return w
 
     def dim_minutes(self):
+        """Minuten ohne Berührung bis zum Abdunkeln (0 = nie)."""
         try:
             return max(0, int(self.settings.get("dunkel_min", 5)))
         except (TypeError, ValueError):
             return 5
 
     def show_display(self):
+        """Seite Display mit den gespeicherten Werten öffnen (ohne dabei Änderungen auszulösen)."""
         self._filling_display = True
         self.st_dim_min.set_value(self.dim_minutes(), notify=False)
         self.st_bright.set_value(int(self.settings.get("hell_prozent", 100) or 100), notify=False)
@@ -1170,6 +1244,7 @@ class NetPanel(QWidget):
         self.stack.setCurrentWidget(self.page_display)
 
     def _display_changed(self):
+        """Einsteller geändert: speichern und die Helligkeit sofort anwenden."""
         if getattr(self, "_filling_display", False):
             return
         self.settings.update(dunkel_min=self.st_dim_min.value, hell_prozent=self.st_bright.value,
@@ -1234,6 +1309,7 @@ class NetPanel(QWidget):
         self.stack.setCurrentWidget(self.page_time)
 
     def _time_info_text(self, info=None):
+        """Zeile mit Zeitzone und Zustand der Internetzeit aktualisieren."""
         info = info or self.netz.time_info()
         parts = [tr("Zeitzone: {0}").format(info.timezone or "?")]
         if info.ntp:
@@ -1248,6 +1324,7 @@ class NetPanel(QWidget):
         self.st_day.set_range(1, calendar.monthrange(self.st_year.value, self.st_month.value)[1])
 
     def chosen_time(self):
+        """In den Einstellern gewählte Zeit als datetime (Ortszeit)."""
         return datetime.datetime(self.st_year.value, self.st_month.value, self.st_day.value,
                                  self.st_hour.value, self.st_min.value)
 
@@ -1258,6 +1335,7 @@ class NetPanel(QWidget):
         self._run(lambda: self.netz.set_time(dt), lambda err: self._time_done(err, dt))
 
     def _time_done(self, err, dt):
+        """Uhr gestellt: Internetzeit ist dabei ausgeschaltet worden; Anzeige aktualisieren."""
         if err:
             self._msg(self.lbl_time_msg, tr("Fehler: {0}").format(err), False)
             return
@@ -1267,6 +1345,7 @@ class NetPanel(QWidget):
         self._msg(self.lbl_time_msg, tr("Uhr gestellt: {0}").format(dt.strftime("%d.%m.%Y %H:%M:%S")), True)
 
     def toggle_ntp(self):
+        """Internetzeit (systemd-timesyncd) ein-/ausschalten."""
         on = self.btn_ntp.isChecked()
         self._run(lambda: self.netz.set_ntp(on), lambda err: (
             self._msg(self.lbl_time_msg, tr("Fehler: {0}").format(err), False) if err else
@@ -1274,6 +1353,7 @@ class NetPanel(QWidget):
                                                else tr("Internetzeit ausgeschaltet"), True))))
 
     def show_timezone(self):
+        """Zeitzonenliste (einmal vom System holen) mit der aktuellen markiert anzeigen."""
         if not self.timezones:
             try:
                 self.timezones = self.netz.timezones()
@@ -1294,12 +1374,14 @@ class NetPanel(QWidget):
         self.stack.setCurrentWidget(self.page_tz)
 
     def apply_timezone(self):
+        """Gewählte Zeitzone für das System einstellen (im Hintergrund)."""
         it = self.list_tz.currentItem()
         if it is None:
             return
         tz = it.text()
 
         def done(err):
+            """Übernommen: auch dieses Programm auf die neue Zeitzone umstellen und zurück."""
             if err:
                 self._msg(self.lbl_tz_msg, tr("Fehler: {0}").format(err), False)
                 return
@@ -1322,11 +1404,13 @@ class NetPanel(QWidget):
         return next((x for x in self.clock_plcs if x[0].name == name), self.clock_plcs[0])
 
     def _update_plc_button(self):
+        """Knopf mit der Steuerung, deren Uhrzeit gelesen wird (wechselbar, wenn es mehrere gibt)."""
         cur = self.current_plc()
         self.btn_plc.setText(cur[0].name if cur else "")
         self.btn_plc.setEnabled(len(self.clock_plcs) > 1)
 
     def next_plc(self):
+        """Nächste Steuerung mit Uhr wählen und merken."""
         cur = self.current_plc()
         if not cur:
             return
@@ -1338,12 +1422,14 @@ class NetPanel(QWidget):
         self._update_plc_button()
 
     def toggle_utc(self):
+        """Läuft die Uhr der Steuerung in UTC (TIA-Standard) oder in Ortszeit? Wahl merken."""
         self.settings["uhr_utc"] = self.btn_utc.isChecked()
         save_settings(self.settings)
         self.plc_time = None
         self.btn_take_plc.setEnabled(False)
 
     def toggle_auto(self):
+        """Automatische Übernahme der Uhrzeit von der Steuerung ein/aus (beim Start und stündlich)."""
         self.settings["uhr_auto"] = self.btn_auto.isChecked()
         save_settings(self.settings)
         self._msg(self.lbl_time_msg, tr("Automatisch: Uhrzeit beim Start und stündlich von der Steuerung übernehmen, "
@@ -1364,6 +1450,8 @@ class NetPanel(QWidget):
         result["plc"] = self.plc_local_time(dt)
 
     def read_plc_clock(self):
+        """Uhrzeit der gewählten Steuerung lesen (Hintergrund) und die Abweichung anzeigen; danach kann sie übernommen
+        werden."""
         cur = self.current_plc()
         if not cur:
             return
@@ -1372,6 +1460,7 @@ class NetPanel(QWidget):
         self.btn_read_plc.setEnabled(False)
 
         def done(err):
+            """Gelesene Zeit und Lesezeitpunkt merken (zum Übernehmen wird die seitdem vergangene Zeit addiert)."""
             self.btn_read_plc.setEnabled(True)
             if err:
                 self.plc_time = None
@@ -1405,6 +1494,8 @@ class NetPanel(QWidget):
         result = {}
 
         def work():
+            """Hintergrund: Zeit lesen, Laufzeit seit dem Lesen berücksichtigen und nur bei Abweichung über SYNC_LIMIT_S
+            stellen."""
             self._read_clock(result)
             dt = result["plc"] + (datetime.datetime.now() - result["at"])
             result["diff"] = (dt - datetime.datetime.now()).total_seconds()
@@ -1412,6 +1503,7 @@ class NetPanel(QWidget):
                 self.netz.set_time(dt)
 
         def done(err):
+            """Ergebnis in der Statuszeile der Übersicht melden."""
             name = self.current_plc()[0].name
             if err:
                 self.lbl_status.setText(tr("Uhrzeit von {0}: {1}").format(name, err))
@@ -1423,6 +1515,8 @@ class NetPanel(QWidget):
     # ------------------------------------------------------------------ Hilfen
     @staticmethod
     def _msg(label, text, ok):
+        """Meldung in ``label`` anzeigen (grün/rot über den Objektnamen im Stylesheet); bei Rechtefehlern mit Hinweis zur
+        polkit-Regel."""
         if not ok and plc_netz.is_policy_error(text) and RIGHTS_HINT() not in text:
             text += "\n" + RIGHTS_HINT()                 # z. B. „System policy prevents …“
         label.setObjectName("ok" if ok else "fehler")
@@ -1441,6 +1535,7 @@ class NetPanel(QWidget):
         state = {}
 
         def work():
+            """Hintergrund: Aufgabe ausführen und einen Fehler als Text merken."""
             try:
                 fn()
             except Exception as e:
@@ -1451,6 +1546,8 @@ class NetPanel(QWidget):
         self.poll.start()
 
     def _poll_job(self):
+        """Alle 200 ms (GUI-Thread): ist die Hintergrundaufgabe fertig, deren Abschluss mit dem Fehlertext ("" = ok)
+        aufrufen."""
         if self._job is None:
             self.poll.stop()
             return
