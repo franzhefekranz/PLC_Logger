@@ -1108,11 +1108,11 @@ def test_iocheck_autosave_switch(qt_log, demo_config, tmp_path, monkeypatch):
     assert io.IoProject.load(w.project.path).signals[0].status == "ok" and not w.dirty     # an: sofort gesichert
     w.act_autosave.setChecked(False)
     assert plc_common.load_settings()["iocheck_autosave"] is False and not io.autosave_enabled()
-    w.set_status(w.project.signals[1:], "fehler")
+    w.set_status(w.project.signals[1:], "ok")
     assert w.dirty and io.IoProject.load(w.project.path).signals[1].status == "offen"   # aus: noch nicht gesichert
     assert w.windowTitle().endswith(" *")
     w.act_autosave.setChecked(True)                                                    # einschalten: gleich sichern
-    assert not w.dirty and io.IoProject.load(w.project.path).signals[1].status == "fehler"
+    assert not w.dirty and io.IoProject.load(w.project.path).signals[1].status == "ok"
     w2 = d.IoCheckWindow(config_path=demo_config, demo=True)                           # neues Fenster ohne Datei
     w2.project.signals = [io.IoSignal("E1.0")]
     w2._rebuild()

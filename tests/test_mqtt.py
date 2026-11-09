@@ -119,6 +119,7 @@ def test_driver_real_broker():
     c = make_client()
     c.connect(host, int(port or 1883))
     c.loop_start()
+    assert wait_for(c.is_connected)                     # erst nach der Antwort des Brokers senden
     try:
         _driver_roundtrip(lambda t, p: c.publish(t, p, qos=1).wait_for_publish(3), (host, int(port or 1883)))
     finally:
