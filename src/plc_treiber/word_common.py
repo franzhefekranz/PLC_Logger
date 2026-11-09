@@ -33,12 +33,15 @@ def decode(words, offset, dtype, bit=None):
     n, fmt = WORD_TYPES[dtype]
     if dtype == "BOOL":
         return float((words[offset] >> (bit or 0)) & 1)
+    # Wörter in Bytes zurückverwandeln (je Wort Little Endian, niederwertiges Wort zuerst) und als Zieltyp lesen – so
+    # werden DINT/REAL/LREAL über Wortgrenzen richtig zusammengesetzt
     raw = b"".join(int(w & 0xFFFF).to_bytes(2, "little") for w in words[offset:offset + n])
     return float(struct.unpack(fmt, raw)[0])
 
 
 class _Item:
     """Eine zu lesende Variable: Position im Ergebnis, Bereich, Wortnummer, Bit, Typ, Anzahl Wörter, Adresse."""
+    # __slots__: viele kleine Objekte ohne eigenes __dict__ (spart Speicher bei langen Variablenlisten)
     __slots__ = ("pos", "area", "word", "bit", "dtype", "words", "address")
 
 
@@ -111,6 +114,8 @@ class WordReader(Reader):
             cur = None
             for it in sorted((i for i in items if i.area == area), key=lambda i: i.word):
                 end = it.word + it.words
+                # An die laufende Anfrage anhängen, wenn die Lücke klein genug ist und die Anfrage nicht zu lang wird;
+                # cur = [Bereich, Start, Anzahl Wörter, Variablen]
                 if cur and it.word - (cur[1] + cur[2]) <= gap and end - cur[1] <= limit:
                     cur[2] = max(cur[2], end - cur[1])
                     cur[3].append(it)
@@ -140,10 +145,13 @@ class WordReader(Reader):
         for area, start, count, items in self.requests:
             try:
                 words = self.read_words(area, start, count)
+            # Fehlerantwort der Steuerung (z. B. Adresse gibt es nicht): nur diese Variablen ohne Wert, die Verbindung
+            # bleibt
             except DeviceError as e:
                 for it in items:
                     self.errors[it.address] = str(e)
                 continue
+            # Übertragungsfehler oder kaputte Antwort: als Verbindungsabbruch melden, der Logger verbindet neu
             except (OSError, ConnectionError, struct.error, IndexError, ValueError) as e:
                 raise ConnectionError(str(e) or type(e).__name__) from None
             for it in items:

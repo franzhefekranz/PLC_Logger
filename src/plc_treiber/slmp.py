@@ -35,8 +35,11 @@ DEVICES = {
     "SB": (0xA1, 16, True), "SW": (0xB5, 16, False), "DX": (0xA2, 16, True), "DY": (0xA3, 16, True),
     "Z": (0xCC, 10, False), "R": (0xAF, 10, False), "ZR": (0xB0, 10, False),
 }
+# Längere Gerätenamen zuerst prüfen, sonst würde z. B. „SM400“ als Gerät „S“ + „M400“ erkannt bzw. „ZR“ als „Z“
 _NAMES = sorted(DEVICES, key=len, reverse=True)
+# Gerät, Nummer (dezimal oder hex, je nach Gerät) und optional „.Bit“ (hex 0…F)
 _RE = re.compile(r"^(" + "|".join(_NAMES) + r")([0-9A-F]+)(?:\.([0-9A-F]))?$")
+# Häufige Endcodes der Antwort (Fehler der Steuerung) mit Klartext; alle übrigen: siehe SLMP-Handbuch
 END_CODES = {
     0xC050: N_("ASCII-Daten nicht wandelbar"), 0xC051: N_("Anzahl Punkte zu groß"), 0xC052: N_("Anzahl Punkte zu groß"),
     0xC053: N_("Anzahl Punkte zu groß"), 0xC054: N_("Anzahl Punkte zu groß"), 0xC056: N_("Adresse außerhalb des Bereichs"),
@@ -59,6 +62,7 @@ def parse(address):
     except ValueError:
         raise ValueError(tr("„{0}“: {1} wird {2} gezählt").format(address, dev,
                                                                 tr("dezimal") if radix == 10 else tr("hexadezimal"))) from None
+    # „M10.3“ ist unsinnig: ein Bitgerät ist schon ein einzelnes Bit
     if bit is not None and is_bit:
         raise ValueError(tr("Bitgeräte haben keine Bitnummer: {0}").format(address))
     return dev, n, (int(bit, 16) if bit is not None else None)
@@ -85,10 +89,12 @@ class SlmpClient:
         """Socket öffnen (TCP mit TCP_NODELAY bzw. „verbundenes“ UDP)."""
         self.close()
         if self.udp:
+            # UDP: connect() legt nur die Gegenstelle fest (kein Verbindungsaufbau); send/recv gehen dann ohne Adresse
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect((self.host, self.port))
         else:
             s = socket.create_connection((self.host, self.port), timeout=self.timeout)
+            # Kleine Anfragen sofort senden (kein Nagle-Puffer) – sonst bis zu 200 ms Verzögerung je Zyklus
             s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         s.settimeout(self.timeout)
         self.sock = s
@@ -108,6 +114,8 @@ class SlmpClient:
         """
         timer = max(1, min(0xFFFF, int(self.timeout * 4)))          # Überwachungszeit in 250-ms-Schritten
         body = struct.pack("<HHH", timer, command, subcommand) + data
+        # Kopf: Kennung 50 00, Netzwerk-Nr., PC-Nr. (Station), E/A-Nr. des Zielmoduls, Stations-Nr. des Zielmoduls (0),
+        # dann die Länge ab der Überwachungszeit
         return (b"\x50\x00" + struct.pack("<BBHB", self.network, self.station, self.module_io, 0)
                 + struct.pack("<H", len(body)) + body)
 
@@ -123,10 +131,13 @@ class SlmpClient:
                 resp = self.sock.recv(8192)
             else:
                 self.sock.sendall(req)
+                # Antwortkopf: D0 00, Netzwerk, Station, Modul (2), Modulstation, Datenlänge (2) – die Länge steht in
+                # Byte 7/8
                 head = recv_exact(self.sock, 9)
                 resp = head + recv_exact(self.sock, struct.unpack_from("<H", head, 7)[0])
         if len(resp) < 11 or resp[:2] != b"\xD0\x00":
             raise ConnectionError(tr("Ungültige SLMP-Antwort"))
+        # Endcode (Byte 9/10): 0 = in Ordnung, sonst Fehlernummer der Steuerung; danach folgen die Daten
         end = struct.unpack_from("<H", resp, 9)[0]
         if end:
             raise DeviceError(tr("SLMP-Fehler 0x{0:04X}: {1}").format(end, tr(END_CODES.get(end, "siehe Handbuch"))))
@@ -138,9 +149,11 @@ class SlmpClient:
         """
         code = DEVICES[dev][0]
         if self.iqr:
+            # iQ-R (Unterbefehl 0002): Gerätenummer 4 Byte, Gerätecode 2 Byte
             spec = struct.pack("<IH", start, code)
             sub = 0x0002
         else:
+            # Q/L/iQ-F (Unterbefehl 0000): Gerätenummer 3 Byte, Gerätecode 1 Byte
             spec = start.to_bytes(3, "little") + bytes([code])
             sub = 0x0000
         data = self.exchange(self.frame(0x0401, sub, spec + struct.pack("<H", count)))
@@ -151,6 +164,7 @@ class SlmpClient:
 
 class SlmpReader(WordReader):
     """Wortgeräte: Wortnummer = Gerätenummer. Bitgeräte: Wortnummer = Gerätenummer // 16 (16 Bits je Wort)."""
+    # 960 Wörter = Höchstmenge von Befehl 0401 je Anfrage; Lücken bis 16 Wörter werden mitgelesen statt neu angefragt
     default_max_words = 960
     default_gap = 16
 
@@ -259,6 +273,7 @@ class SlmpDriver(Driver):
             dev, n, bit = parse(address)
         except ValueError:
             return address.strip()
+        # Hexadezimale Geräte (X, Y, B, W …) wieder hex schreiben, die übrigen dezimal
         num = format(n, "X") if DEVICES[dev][1] == 16 else str(n)
         return f"{dev}{num}" + (f".{bit:X}" if bit is not None else "")
 
@@ -272,8 +287,11 @@ class SlmpDriver(Driver):
             return f"{block.address}+{i}"
         radix16 = DEVICES[dev][1] == 16
         if DEVICES[dev][2]:
+            # Bitgerät: BOOL-Elemente sind aufeinanderfolgende Geräte; Wortzugriff (z. B. M0 als INT) belegt 16 Geräte
+            # je Wort
             step = 1 if block.dtype == "BOOL" else 16 * _words(block.dtype)
         elif block.dtype == "BOOL":
+            # BOOL in einem Wortgerät (D100.0, D100.1 …): nach Bit 15 geht es im nächsten Wort weiter
             pos = (bit or 0) + i
             num = n + pos // 16
             return f"{dev}{format(num, 'X') if radix16 else num}.{pos % 16:X}"

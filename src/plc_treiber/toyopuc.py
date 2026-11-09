@@ -25,6 +25,8 @@ from plc_treiber.base import Driver, Param
 from plc_treiber.word_common import TYPES, WORD_TYPES, DeviceError, WordReader, recv_exact
 
 # Grundbereich (Befehl 1C): Wortadresse = Basis + Nummer (Register) bzw. Basis + Nummer // 16 (Relais)
+# Register: Bereich -> (Wortadresse von Nummer 0, höchste Nummer). Relais (BASIC_BIT): (Wortadresse des ersten
+# Relaiswortes, höchste Relaisnummer); X und Y teilen sich die Adressen, ebenso T und C
 BASIC_WORD = {"S": (0x0200, 0x03FF), "N": (0x0600, 0x01FF), "R": (0x0800, 0x07FF), "D": (0x1000, 0x2FFF),
               "B": (0x6000, 0x1FFF)}
 BASIC_BIT = {"P": (0x0000, 0x01FF), "K": (0x0020, 0x02FF), "V": (0x0050, 0x00FF), "T": (0x0060, 0x01FF),
@@ -50,7 +52,9 @@ PROGRAM_BIT = {"P": [(0x000, 0x1FF, 0x0000), (0x1000, 0x17FF, 0x6000)], "K": [(0
                "L": [(0x000, 0x7FF, 0x0080), (0x1000, 0x2FFF, 0x6200)], "X": [(0x000, 0x7FF, 0x0100)],
                "Y": [(0x000, 0x7FF, 0x0100)], "M": [(0x000, 0x7FF, 0x0180), (0x1000, 0x17FF, 0x6180)]}
 _AREAS = sorted(set(BASIC_WORD) | set(BASIC_BIT) | set(EXT_BIT) | set(EXT_WORD) | {"EB"}, key=len, reverse=True)
+# Optional Programmbereich „P1-“, Bereich, Nummer (hex), optional „W“ (16 Relais als Wort) bzw. „.Bit“
 _RE = re.compile(r"^(?:(P[123])-)?(" + "|".join(_AREAS) + r")([0-9A-F]+)(W)?(?:\.([0-9A-F]))?$")
+# Fehlercodes der Antwort (Byte 1 ≠ 0) mit Klartext
 ERRORS = {0x11: N_("CPU-Modul-Fehler"), 0x20: N_("Relaisbefehl: falsche Länge"), 0x21: N_("Befehl nicht unterstützt"),
           0x23: N_("Zugriff verweigert (Schlüssel/Modus)"), 0x24: N_("Programmnummer/Bereich fehlt"),
           0x25: N_("Antwortdaten zu lang"), 0x31: N_("Schreibschutz"), 0x40: N_("Adresse außerhalb des Bereichs"),
@@ -89,12 +93,16 @@ def parse(address):
         relay_bit, n = n % 16, n // 16
     wn = n                                               # Wortnummer innerhalb des Bereichs
     if prog:
+        # Programmbereich: die Nummern liegen in bis zu zwei Segmenten mit eigener Wortbasis (z. B. D0000–0FFF und
+        # D1000–2FFF)
         if area in PROGRAM_WORD and not packed:
             seg = _segment(PROGRAM_WORD[area], wn)
             if seg is None:
                 raise ValueError(tr("Adresse außerhalb des Bereichs: {0}").format(address))
             return ("94", PROGRAM_NO[prog]), seg[0] + wn - seg[1], bitno, False
         if area in PROGRAM_BIT:
+            # Relais im Programmbereich: Segmente sind in Relaisnummern angegeben, daher zurück auf die volle Nummer
+            # rechnen
             full = wn * 16
             seg = _segment(PROGRAM_BIT[area], full)
             if seg is None:
@@ -125,6 +133,7 @@ def parse(address):
     if area == "EB":
         if wn > 0x1FFFF:
             raise ValueError(tr("Adresse außerhalb des Bereichs: {0}").format(address))
+        # EB (erweiterter Pufferbereich) ist größer als ein Bereich: je 0x8000 Wörter eine eigene Bereichsnummer ab 09
         return ("94", 0x09 + wn // 0x8000), wn % 0x8000, bitno, False
     raise ValueError(tr("Unbekannter Bereich: {0}").format(address))
 
@@ -166,6 +175,7 @@ class ComputerLinkClient:
         """
         if self.sock is None:
             raise ConnectionError(tr("nicht verbunden"))
+        # Anfrage: FT=00 (Anfrage), RC=00, Länge (Befehl + Daten, Little Endian), Befehlsbyte, Daten
         frame = bytes([0x00, 0x00]) + struct.pack("<H", 1 + len(data)) + bytes([cmd]) + data
         with self.lock:
             if self.udp:
@@ -175,6 +185,8 @@ class ComputerLinkClient:
                 self.sock.sendall(frame)
                 head = recv_exact(self.sock, 4)
                 resp = head + recv_exact(self.sock, struct.unpack_from("<H", head, 2)[0])
+        # Antwort: FT=80 (Antwort), RC (0 = in Ordnung), Länge (2), Befehl, Daten – bei Fehlern steht der Fehlercode am
+        # Ende
         if len(resp) < 5 or resp[0] != 0x80:
             raise ConnectionError(tr("Ungültige Antwort (TOYOPUC)"))
         if resp[1] != 0x00:
@@ -186,8 +198,10 @@ class ComputerLinkClient:
         """Wörter lesen: Befehl 1C (Grundbereich) bzw. 94 (erweiterter und Programmbereich, mit Bereichsnummer)."""
         kind, no = area
         if kind == "1C":
+            # 1C: Wörter lesen im Grundbereich – Wortadresse und Anzahl, je 2 Byte
             data = self.exchange(0x1C, struct.pack("<HH", addr, count))
         else:
+            # 94: Wörter lesen im erweiterten bzw. Programmbereich – zusätzlich die Bereichsnummer vorweg
             data = self.exchange(0x94, bytes([no]) + struct.pack("<HH", addr, count))
         if len(data) < 2 * count:
             raise ConnectionError(tr("TOYOPUC-Antwort zu kurz"))
@@ -196,6 +210,7 @@ class ComputerLinkClient:
 
 class ToyopucReader(WordReader):
     """Leser für TOYOPUC über WordReader (Relais werden wortweise gelesen, Bit = Relaisnummer % 16)."""
+    # 512 Wörter = Höchstmenge einer Leseanfrage (Computer Link)
     default_max_words = 512
     default_gap = 16
 

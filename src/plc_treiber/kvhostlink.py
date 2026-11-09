@@ -23,12 +23,15 @@ from plc_i18n import N_, tr
 from plc_treiber.base import Driver, Param
 from plc_treiber.word_common import TYPES, WORD_TYPES, DeviceError, WordReader
 
+# Gerät -> Zahlenbasis der Gerätenummer (16 = hexadezimal). Wortgeräte: 16 Bit je Gerät
 WORD_DEVICES = {"DM": 10, "EM": 10, "FM": 10, "ZF": 10, "W": 16, "TM": 10, "CM": 10, "VM": 10, "Z": 10}
 BIT_DEVICES = {"R": 10, "MR": 10, "LR": 10, "CR": 10, "B": 16, "VB": 16}
 BANK_DEVICES = {"R", "MR", "LR", "CR"}               # Nummer = Kanal * 100 + Bit (00–15)
 COUNTER_DEVICES = {"T": 10, "C": 10}                 # Istwerte, 32 Bit (Format .D)
+# Längere Namen zuerst, damit z. B. „MR“ nicht als „M“ und „DM“ nicht als „D“ erkannt wird
 _ALL = sorted(list(WORD_DEVICES) + list(BIT_DEVICES) + list(COUNTER_DEVICES), key=len, reverse=True)
 _RE = re.compile(r"^(" + "|".join(_ALL) + r")([0-9A-F]+)(?:\.([0-9A-F]{1,2}))?$")
+# Fehlerantworten des Host-Link-Protokolls (statt Daten kommt „E0“ … „E6“)
 ERRORS = {"E0": N_("Gerätenummer ungültig"), "E1": N_("Befehl ungültig"), "E2": N_("Programm nicht registriert"),
           "E4": N_("Schreibschutz"), "E5": N_("Gerätefehler"), "E6": N_("kein Kommentar")}
 
@@ -46,11 +49,13 @@ def parse(address):
         n = int(num, radix)
     except ValueError:
         raise ValueError(tr("„{0}“: {1} wird dezimal gezählt").format(address, dev)) from None
+    # Kanal-Bitgeräte: R1015 = Kanal 10, Bit 15; R1016 gibt es nicht (Bits 00…15 je Kanal)
     if dev in BANK_DEVICES and n % 100 > 15:
         raise ValueError(tr("„{0}“: die letzten beiden Ziffern sind die Bitnummer 00–15").format(address))
     if bit is not None:
         if dev not in WORD_DEVICES:
             raise ValueError(tr("Bitnummer nur bei Wortgeräten: {0}").format(address))
+        # Bitnummer dezimal (DM5.12) oder als einzelne Hexziffer (DM5.C) erlaubt
         b = int(bit, 10) if bit.isdigit() else int(bit, 16)
         if b > 15:
             raise ValueError(tr("Bitnummer 0–15 erwartet: {0}").format(address))
@@ -102,6 +107,8 @@ class HostLinkClient:
         if self.sock is None:
             raise ConnectionError(tr("nicht verbunden"))
         with self.lock:
+            # Befehl endet mit CR; die Antwort ist eine Zeile mit CR LF. Was über das Zeilenende hinaus kam, bleibt in
+            # self.buf für die nächste Antwort
             self.sock.sendall(text.encode("ascii") + b"\r")
             while b"\r\n" not in self.buf:
                 chunk = self.sock.recv(4096)
@@ -119,6 +126,7 @@ class HostLinkClient:
         vorzeichenlos) -> Liste von Zahlen.
         """
         resp = self.command(f"RDS {device}{fmt} {count}")
+        # Antwort: Werte durch Leerzeichen getrennt (ältere Modelle auch durch Komma)
         tokens = [t for t in re.split(r"[ ,]+", resp) if t]
         if len(tokens) < count:
             raise ConnectionError(tr("KV-Antwort zu kurz: {0}").format(resp[:60]))
@@ -144,6 +152,8 @@ class KvReader(WordReader):
             cur = None
             for pos, d, n, addr in sorted((b for b in self.bits if b[1] == dev), key=lambda b: logical(b[1], b[2])):
                 lg = logical(d, n)
+                # Nur lückenlose Bits zusammenfassen (RDS liest fortlaufende Geräte); cur = [Gerät, erstes Bit, letztes
+                # Bit, Variablen, Startgerät]
                 if cur and lg - cur[2] <= 1 and lg - cur[1] < limit:
                     cur[2] = max(cur[2], lg)
                     cur[3].append((pos, lg, addr))
@@ -189,6 +199,8 @@ class KvReader(WordReader):
         out = super().read()
         for dev, lo, hi, items, first in self.bit_requests:
             try:
+                # RDS ohne Format liefert bei Bitgeräten je Gerät 0 oder 1; die Steuerung zählt dabei selbst über
+                # Kanalgrenzen weiter
                 vals = self.client.read_consecutive(device_text(dev, first), hi - lo + 1)
             except DeviceError as e:
                 for _p, _l, addr in items:
@@ -201,6 +213,7 @@ class KvReader(WordReader):
                 self.errors.pop(addr, None)
         for pos, dev, n, addr in self.counters:
             try:
+                # Format .D = 32 Bit vorzeichenlos: Istwert von Timer/Zähler (der letzte Wert der Antwort)
                 resp = self.client.command(f"RD {dev}{n}.D")
                 out[pos] = float(int([t for t in re.split(r"[ ,]+", resp) if t][-1], 10))
                 self.errors.pop(addr, None)
@@ -274,6 +287,7 @@ class KvDriver(Driver):
             return f"{block.address}+{i}"
         if dev in BANK_DEVICES:
             lg = logical(dev, n) + i
+            # Fortlaufende Bitnummer zurück in Kanal*100 + Bit (R1015 + 1 -> R1100)
             return f"{dev}{(lg // 16) * 100 + lg % 16}"
         if dev in BIT_DEVICES or dev in COUNTER_DEVICES:
             return device_text(dev, n + i)

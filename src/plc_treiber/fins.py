@@ -28,9 +28,13 @@ from plc_treiber.word_common import TYPES, DeviceError, WordReader, recv_exact
 
 # Bereich -> FINS-Bereichscode für Wortzugriff (CS/CJ/CP/NJ)
 AREAS = {"CIO": 0xB0, "W": 0xB1, "H": 0xB2, "A": 0xB3, "D": 0x82, "T": 0x89, "C": 0x89}
+# Andere übliche Schreibweisen (CX-Programmer, ältere Handbücher) auf den Bereichsnamen abbilden; ohne Bereich = CIO
 ALIASES = {"DM": "D", "WR": "W", "HR": "H", "AR": "A", "TIM": "T", "CNT": "C", "": "CIO", "EM": "E"}
+# Höchste Wortadresse je Bereich (CJ2/CS1; kleinere CPUs haben teils weniger – die Steuerung meldet dann 1103)
 LIMITS = {"CIO": 6143, "W": 511, "H": 1535, "A": 1471, "D": 32767, "T": 4095, "C": 4095, "E": 32767}
+# Bereich (optional), Bank beim erweiterten Datenspeicher („E2_“), Wortadresse, optional „.Bit“
 _RE = re.compile(r"^(CIO|DM|WR|HR|AR|TIM|CNT|EM|D|W|H|A|T|C|E)?(?:(\d{1,2})_)?(\d+)(?:\.(\d{1,2}))?$")
+# Endcodes (Haupt-/Untercode) der FINS-Antwort mit Klartext; vollständige Liste: Omron-Handbuch W342
 END_CODES = {
     0x0101: N_("lokaler Knoten nicht im Netz"), 0x0102: N_("Token-Zeitüberschreitung"), 0x0201: N_("Zielknoten nicht im Netz"),
     0x0202: N_("Zieleinheit fehlt"), 0x0205: N_("Antwort-Zeitüberschreitung"), 0x0401: N_("Befehl nicht unterstützt"),
@@ -114,6 +118,7 @@ class FinsClient:
         s.settimeout(self.timeout)
         self.sock = s
         # Knotennummern austauschen: Anfrage mit Knoten 0 = automatisch vergeben
+        # FINS/TCP-Kopf: „FINS“, Länge 12, Befehl 0 (Knotenadresse anfordern), Fehler 0, gewünschter Knoten
         s.sendall(b"FINS" + struct.pack(">IIII", 12, 0, 0, self.sa1 if self.sa1 else 0))
         head = recv_exact(s, 8)
         if head[:4] != b"FINS":
@@ -124,6 +129,8 @@ class FinsClient:
             raise ConnectionError(tr("FINS/TCP abgelehnt (Fehler 0x{0:08X}) – Knotennummer belegt?").format(err))
         if cmd != 1 or len(body) < 16:
             raise ConnectionError(tr("Unerwartete FINS/TCP-Antwort"))
+        # Antwort (Befehl 1): zugeteilte Knotennummer des Clients und Knotennummer der Steuerung (je 4 Byte, wichtig ist
+        # das letzte Byte)
         self.sa1, server = struct.unpack_from(">II", body, 8)
         self.sa1 &= 0xFF
         if not self.da1:
@@ -147,15 +154,20 @@ class FinsClient:
         if self.sock is None:
             raise ConnectionError(tr("nicht verbunden"))
         with self.lock:
+            # Service-ID: jede Anfrage bekommt eine neue Nummer, damit verspätete Antworten älterer Anfragen erkannt und
+            # verworfen werden
             self.sid = (self.sid + 1) & 0xFF
             frame = bytes([0x80, 0x00, 0x02, self.dna, self.da1, 0x00, self.sna, self.sa1, 0x00, self.sid]) + command + data
             if self.udp:
                 self.sock.send(frame)
                 while True:
+                    # UDP: Antworten mit anderer Service-ID (verspätet) überspringen
                     resp = self.sock.recv(4096)
                     if len(resp) >= 10 and resp[9] == self.sid:
                         break
             else:
+                # FINS/TCP: Rahmen in einen Kopf „FINS“, Länge (ab Befehl), Befehl 2 (FINS-Rahmen senden), Fehler 0
+                # verpacken
                 self.sock.sendall(b"FINS" + struct.pack(">III", 8 + len(frame), 2, 0) + frame)
                 while True:
                     head = recv_exact(self.sock, 16)
@@ -167,6 +179,7 @@ class FinsClient:
                         raise ConnectionError(tr("FINS/TCP-Fehler 0x{0:08X}").format(err))
                     if len(resp) >= 10 and resp[9] == self.sid:
                         break
+        # Antwort: 10 Byte Kopf, Befehlscode (wie in der Anfrage), Endcode (2 Byte), dann die Daten
         if len(resp) < 14 or resp[10:12] != command:
             raise ConnectionError(tr("Ungültige FINS-Antwort"))
         end = struct.unpack_from(">H", resp, 12)[0] & 0x7F3F       # Relais-/Fehlerkennzeichen ausblenden
@@ -176,6 +189,8 @@ class FinsClient:
 
     def read_words(self, area, start, count):
         """Befehl 0101 (Speicherbereich lesen): ``count`` Wörter ab ``start``."""
+        # 0101 Speicherbereich lesen: Bereichscode, Wortadresse (2 Byte), Bitnummer 0, Anzahl Wörter (2 Byte) – FINS ist
+        # Big Endian
         data = self.exchange(b"\x01\x01", struct.pack(">BHBH", area_code(area), start, 0, count))
         if len(data) < 2 * count:
             raise ConnectionError(tr("FINS-Antwort zu kurz"))
