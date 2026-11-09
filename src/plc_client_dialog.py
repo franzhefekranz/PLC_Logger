@@ -32,6 +32,8 @@ class ClientDialog(QDialog):
     """Verbindung zu einem Logger aufbauen; nach OK steht die angemeldete Verbindung in ``connection``."""
 
     def __init__(self, parent=None, url="", user=""):
+        """Dialog aufbauen: Adresse (mit zuletzt benutzten), Benutzer, Passwort bzw. Zugangscode, „merken“; ``initial``:
+        vorgeschlagene Adresse."""
         super().__init__(parent)
         self.setWindowTitle(tr("Mit Logger verbinden (Client)"))
         self.resize(560, 300)
@@ -82,6 +84,7 @@ class ClientDialog(QDialog):
         (self.ed_pw if self.ed_user.text() else self.cb_url).setFocus()
 
     def _recent_chosen(self, i):
+        """Zuletzt benutzte Adresse gewählt: den dazu gemerkten Benutzer eintragen."""
         if 0 <= i < len(self.recent):
             self.ed_user.setText(self.recent[i].get("benutzer", ""))
 
@@ -95,6 +98,9 @@ class ClientDialog(QDialog):
                "vertrauen?").format(err.host, err.fingerprint)) == QMessageBox.StandardButton.Yes
 
     def try_connect(self):
+        """Mit den eingegebenen Daten verbinden. Unbekanntes Zertifikat: nachfragen und bei Zustimmung den Fingerabdruck
+        merken (ein zweiter Versuch). Bei Erfolg wird die Verbindung in self.connection abgelegt, sonst der Fehler im
+        Dialog angezeigt."""
         from plc_client import ClientError, Connection, LoginRequired, UntrustedCertificate
         pins = dict(load_settings().get("client_zertifikate") or {})
         self.lbl_err.setText("")

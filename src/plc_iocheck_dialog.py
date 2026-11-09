@@ -52,6 +52,8 @@ class SelectionDelegate(QStyledItemDelegate):
     unten eine Linie."""
 
     def paint(self, painter, option, index):
+        """Unmarkierte Zellen wie üblich; markierte selbst zeichnen (Füllung, Linien), dann den Inhalt ohne die
+        Stil-Markierung."""
         if not option.state & QStyle.StateFlag.State_Selected:
             super().paint(painter, option, index)
             return
@@ -720,6 +722,7 @@ class PhotoDialog(QDialog):
     MAX_SIDE = 1920                       # größere Bilder vom PC werden auf diese Kantenlänge verkleinert
 
     def __init__(self, parent, sig, folder):
+        """Dialog für die Fotos eines Signals; ``folder``: Fotoordner des Prüfstands."""
         super().__init__(parent)
         self.sig, self.folder, self.changed = sig, folder, False
         self.setWindowTitle(tr("Fotos – {0}").format(f"{sig.address} {sig.symbol}".strip()))
@@ -768,6 +771,7 @@ class PhotoDialog(QDialog):
         self.lbl.setText(tr("{0} Fotos · Ordner: {1}").format(len(self.sig.photos), self.folder))
 
     def _names(self):
+        """Dateinamen der markierten Fotos."""
         return [it.data(Qt.ItemDataRole.UserRole) for it in self.list.selectedItems()]
 
     @classmethod

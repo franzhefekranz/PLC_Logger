@@ -26,6 +26,7 @@ class HeadlessDialog(QDialog):
     """Laufende Headless-Logger dieses Datenordners anzeigen und beenden."""
 
     def __init__(self, parent=None, run_dir=None):
+        """Liste der laufenden Headless-Logger dieses Rechners (Statusdateien in ``run_dir``), sekündlich aktualisiert."""
         super().__init__(parent)
         self.setWindowTitle(tr("Laufende Headless-Logger"))
         self.resize(900, 320)
@@ -110,6 +111,7 @@ class HeadlessDialog(QDialog):
         return self.loggers[rows[0].row()]
 
     def _update_buttons(self):
+        """„Beenden“ nur für einen gewählten Logger, der noch nicht zum Beenden aufgefordert wurde."""
         sel = self.selected()
         self.btn_stop.setEnabled(bool(sel) and not sel.get("stop"))
 
@@ -135,6 +137,7 @@ class HeadlessDialog(QDialog):
         return True
 
     def done(self, r):
+        """Beim Schließen den Aktualisierungs-Timer anhalten."""
         self.timer.stop()
         super().done(r)
 

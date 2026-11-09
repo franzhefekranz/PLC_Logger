@@ -22,8 +22,10 @@ import time
 from plc_i18n import tr
 from plc_treiber.base import NAN, BrowseResult, Driver, Param, Reader
 
+# Texte, die als Wahrheitswert gelten (Tasmota, Shelly, Node-RED senden z. B. ON/OFF): groß/klein egal
 TRUE_WORDS = {"true", "on", "yes", "ja", "ein", "an", "high", "open", "auf"}
 FALSE_WORDS = {"false", "off", "no", "nein", "aus", "low", "closed", "zu"}
+# Ein Pfadteil: Schlüssel bis zum nächsten Punkt/Klammer oder Listenindex in eckigen Klammern
 _PATH_PART = re.compile(r"([^.\[\]]+)|\[(\d+)\]")
 
 
@@ -62,10 +64,12 @@ def payload_value(payload, parts=()):
         if low in FALSE_WORDS:
             return 0.0
         try:
+            # Dezimalkomma ("21,5") nur, wenn genau ein Komma und kein Punkt vorkommt – "1,234.5" bleibt ungültig
             return float(text.replace(",", ".")) if text.count(",") == 1 and "." not in text else float(text)
         except ValueError:
             pass
     try:
+        # Kein einfacher Wert: als JSON lesen und dem Pfad folgen
         data = json.loads(text)
     except ValueError:
         raise ValueError(tr("kein Zahlenwert: „{0}“").format(text[:40])) from None
@@ -79,6 +83,7 @@ def payload_value(payload, parts=()):
     if isinstance(data, (int, float)):
         return float(data)
     if isinstance(data, str):
+        # Zahl als Text im JSON ("17"): wie eine einfache Nachricht auswerten
         return payload_value(data)
     raise ValueError(tr("kein Zahlenwert an dieser Stelle der Nachricht"))
 
@@ -87,6 +92,9 @@ class MqttReader(Reader):
     """Abonniert die Topics der Variablen und hält je Topic die letzte Nachricht."""
 
     def connect(self):
+        """Topics der Variablen prüfen, beim Broker anmelden und abonnieren. Wartet, bis der Broker das Abonnement
+        bestätigt hat (sonst gingen Nachrichten direkt nach dem Verbinden verloren). Rückgabe: Zahl der gültigen
+        Variablen; Fehler -> ConnectionError."""
         from plc_mqtt import make_client, reason_ok, reason_text
         p = self.plc.params
         self.items = []
@@ -101,6 +109,7 @@ class MqttReader(Reader):
             topics[topic] = None
             self.items.append((topic, parts, v.address))
         self.lock = threading.Lock()
+        # Zugriff aus zwei Threads: paho schreibt (on_message), der Lese-Thread des Loggers liest – daher self.lock
         self.last = {}                      # Topic -> (Nachricht, Empfangszeit)
         self.connected = threading.Event()
         self.answer = threading.Event()
@@ -110,6 +119,7 @@ class MqttReader(Reader):
         qos = int(p.get("qos", 0) or 0)
 
         def on_connect(c, userdata, flags, rc, *rest):
+            """Antwort des Brokers auf die Anmeldung (paho-Netzwerk-Thread): bei Erfolg abonnieren, sonst Ablehnung merken."""
             if reason_ok(rc):
                 if topics:                  # verbunden erst nach der Bestätigung des Abonnements (SUBACK)
                     c.subscribe([(t, qos) for t in topics])
@@ -121,13 +131,16 @@ class MqttReader(Reader):
                 self.answer.set()
 
         def on_subscribe(c, userdata, *args):
+            """Abonnement bestätigt (SUBACK): erst jetzt gilt die Verbindung als bereit."""
             self.connected.set()
             self.answer.set()
 
         def on_disconnect(c, userdata, *args):
+            """Verbindung verloren: read() meldet ab jetzt einen Fehler, der Logger verbindet neu."""
             self.connected.clear()
 
         def on_message(c, userdata, msg):
+            """Neue Nachricht: nur roh mit Empfangszeit merken; ausgewertet wird erst in read()."""
             with self.lock:
                 self.last[msg.topic] = (msg.payload, time.time())
 
@@ -139,6 +152,7 @@ class MqttReader(Reader):
         except OSError as e:
             raise ConnectionError(tr("Broker {0} nicht erreichbar: {1}").format(self.driver.summary(self.plc), e)) \
                 from None
+        # paho bearbeitet Netzwerk und Rückrufe ab jetzt in einem eigenen Thread
         client.loop_start()
         self.client = client
         if not self.answer.wait(timeout) or not self.connected.is_set():
@@ -148,6 +162,8 @@ class MqttReader(Reader):
         return sum(1 for it in self.items if it)
 
     def read(self):
+        """Je Variable den zuletzt empfangenen Wert liefern (NaN: noch nichts empfangen, zu alt oder nicht lesbar). Nicht
+        lesbare Nachrichten stehen in self.errors. Ohne Verbindung -> ConnectionError."""
         if not self.connected.is_set():
             raise ConnectionError(tr("Verbindung zum Broker getrennt"))
         max_age = float(self.plc.params.get("max_alter_s", 0) or 0)
@@ -170,10 +186,13 @@ class MqttReader(Reader):
             except ValueError as e:
                 self.errors[address] = str(e)
                 x = NAN
+            # Unendlich (z. B. "inf" in der Nachricht) wie „kein Wert“ behandeln: Diagramme und Datenbanken vertragen es
+            # nicht
             out.append(x if not math.isinf(x) else NAN)
         return out
 
     def close(self):
+        """Vom Broker abmelden und den paho-Thread beenden (mehrfacher Aufruf ist unschädlich)."""
         client = getattr(self, "client", None)
         if client is None:
             return
@@ -217,23 +236,29 @@ class MqttDriver(Driver):
     browse_label = tr("Topics vom Broker …")
 
     def summary(self, plc):
+        """Kurzanzeige der Verbindung: mqtt://host:port bzw. mqtts://… bei TLS."""
         p = plc.params
         return f"{'mqtts' if p.get('tls') else 'mqtt'}://{p.get('host', '')}:{p.get('port', 1883)}"
 
     def check_params(self, params):
+        """Verbindungsparameter prüfen: ein Broker muss eingetragen sein."""
         return "" if str(params.get("host", "")).strip() else tr("Broker (Host) fehlt")
 
     def check_address(self, address, dtype):
+        """Adresse (Topic, optional |Pfad) formal prüfen -> Fehlertext oder ""."""
         return check_topic(address)
 
     def normalize_address(self, address, dtype):
+        """Leerzeichen um Topic und Pfad entfernen (Schreibweise sonst unverändert, Topics unterscheiden Groß/klein)."""
         topic, _sep, path = (address or "").partition("|")
         return f"{topic.strip()}|{path.strip()}" if _sep else topic.strip()
 
     def check_block(self, block):
+        """Blöcke gibt es bei MQTT nicht (jede Nachricht ist ein eigener Wert)."""
         return tr("Blöcke sind bei MQTT nicht möglich – je Wert eine Variable")
 
     def create_reader(self, plc, variables):
+        """Leser für eine Steuerung (hier: einen Broker) und ihre Variablen."""
         return MqttReader(self, plc, variables)
 
     def browse(self, parent, ctx):

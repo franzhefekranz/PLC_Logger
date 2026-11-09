@@ -15,6 +15,8 @@ class MqttDialog(QDialog):
     """Ergebnis bei OK in ``self.settings`` (dict, wie plc_mqtt.settings)."""
 
     def __init__(self, parent, settings, project=""):
+        """Felder aus den Einstellungen füllen (``settings``: dict oder JSON wie in der Konfiguration; ``project``: für das
+        vorgeschlagene Basis-Topic)."""
         super().__init__(parent)
         self.setWindowTitle(tr("MQTT"))
         self.project = project
@@ -148,6 +150,7 @@ class MqttDialog(QDialog):
             done, result = threading.Event(), []
 
             def on_connect(client, userdata, flags, rc, *rest):
+                """Antwort des Brokers merken; der Dialog wartet höchstens 5 s darauf."""
                 result.append(rc)
                 done.set()
             c.on_connect = on_connect
@@ -166,5 +169,6 @@ class MqttDialog(QDialog):
                 mq.reason_text(result[0]) if result else tr("keine Antwort")))
 
     def _ok(self):
+        """Felder übernehmen und den Dialog schließen."""
         self.collect()
         self.accept()

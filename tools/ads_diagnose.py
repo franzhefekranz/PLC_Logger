@@ -19,10 +19,12 @@ AMS_TCP_PORT = 48898
 
 
 def hexdump(b):
+    """Bytes als Hex-Text (höchstens 64 Bytes, danach „…“)."""
     return " ".join(f"{x:02x}" for x in b[:64]) + (" …" if len(b) > 64 else "")
 
 
 def netid(text):
+    """AMS-Net-ID als Text (6 Zahlen 0…255, durch Punkte getrennt) -> 6 Bytes."""
     parts = [int(p) for p in text.split(".")]
     if len(parts) != 6 or not all(0 <= p <= 255 for p in parts):
         raise SystemExit(f"Ungültige AMS-Net-ID: {text}")
@@ -30,6 +32,7 @@ def netid(text):
 
 
 def recv_exact(s, n):
+    """Genau ``n`` Bytes empfangen (TCP liefert ggf. in Teilen)."""
     buf = b""
     while len(buf) < n:
         chunk = s.recv(n - len(buf))
@@ -40,11 +43,13 @@ def recv_exact(s, n):
 
 
 def recv_frame(s):
+    """Ein AMS/TCP-Paket empfangen: 2 Byte Befehl, 4 Byte Länge, dann die Daten -> (Befehl, Daten)."""
     cmd, length = struct.unpack("<HI", recv_exact(s, 6))
     return cmd, recv_exact(s, length)
 
 
 def main():
+    """Schritte nacheinander ausführen und jedes Ergebnis ausgeben; bricht beim ersten Fehler mit Hinweis ab."""
     target_text = sys.argv[1] if len(sys.argv) > 1 else ""
     ams_port = int(sys.argv[2]) if len(sys.argv) > 2 else 851
     host = sys.argv[3] if len(sys.argv) > 3 else "127.0.0.1"
@@ -53,6 +58,7 @@ def main():
     s.settimeout(5)
     print(f"1. TCP verbunden: lokal {s.getsockname()}, Gegenstelle {s.getpeername()}")
     if host in ("127.0.0.1", "localhost", "::1"):
+        # Befehl 0x1000 (PORT_CONNECT) mit Wunschport 0: der lokale Router teilt Net-ID und einen freien Port zu
         s.sendall(struct.pack("<HIH", 0x1000, 2, 0))
         print("2. Anmeldung beim lokalen Router gesendet (0x1000) …")
         try:
@@ -72,6 +78,8 @@ def main():
         target = netid(target_text or f"{host}.1.1")
         print(f"2. Entfernte Steuerung, Absender {local}.1.1:32905 (Route in TwinCAT nötig)")
     print(f"3. ADS ReadState an {'.'.join(map(str, target))}:{ams_port} …")
+    # AMS-Kopf: Ziel-Net-ID und -Port, Absender-Net-ID und -Port, Befehl 4 = ReadState, Status 0x0004 = Anfrage,
+    # Datenlänge 0, Fehler 0, Rufnummer 1
     hdr = target + struct.pack("<H", ams_port) + source + struct.pack("<H", source_port) + \
         struct.pack("<HHIII", 4, 0x0004, 0, 0, 1)
     s.sendall(struct.pack("<HI", 0, len(hdr)) + hdr)
@@ -89,6 +97,7 @@ def main():
     res, ads_state, dev_state = struct.unpack_from("<IHH", body, 32)
     print(f"   Ergebnis 0x{res:x}, ADS-Zustand {ads_state} (5 = RUN), Gerätezustand {dev_state}")
     print("4. Symboltabelle: Größe abfragen …")
+    # ADS Read: Index-Gruppe 0xF00F (Symbol-Upload-Info), Offset 0, 24 Byte -> Zahl und Größe der Symbole
     req = struct.pack("<III", 0xF00F, 0, 24)
     hdr = target + struct.pack("<H", ams_port) + source + struct.pack("<H", source_port) + \
         struct.pack("<HHIII", 2, 0x0004, len(req), 0, 2)
@@ -103,6 +112,7 @@ def main():
     n_sym, size = struct.unpack_from("<II", body, 40)
     print(f"   {n_sym} Symbole, {size} Bytes – Verbindung in Ordnung.")
     if host in ("127.0.0.1", "localhost", "::1"):
+        # Befehl 0x0001 (PORT_CLOSE): zugeteilten Port beim lokalen Router wieder freigeben
         s.sendall(struct.pack("<HIH", 0x0001, 2, source_port))
     s.close()
 

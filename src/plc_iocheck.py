@@ -1253,6 +1253,7 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
     doc.heading(tr("Zusammenfassung"))
 
     def count_rows(keyfn, labels):
+        """Zusammenfassung je Gruppe bzw. Signalart: Zeilen mit Anzahl gesamt, OK, Fehler, offen und Fortschritt."""
         rows = []
         for key in labels:
             part = [s for s in sigs if keyfn(s) == key]
@@ -1301,6 +1302,7 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
                 numbers.setdefault(id(s), []).append(len(shots))
 
     def row(s):
+        """Tabellenzeile eines Signals; Bemerkung mit Messpunkten der Analogwerte und Verweis auf Fotos."""
         note = s.remark
         pts = " ".join(f"{q}%={s.points[str(q)]:.4g}" for q in POINTS if str(q) in s.points)
         if pts:
@@ -1349,6 +1351,7 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
         max_h = 200.0
 
         def fit(text, size, width, bold=False):
+            """Text so kürzen („…“), dass er in ``width`` Punkt passt."""
             while text and text_width(text, size, bold) > width:
                 text = text[:-2] + "…" if len(text) > 2 else ""
             return text

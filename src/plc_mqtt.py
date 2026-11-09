@@ -244,8 +244,10 @@ class MqttPublisher:
             return False
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
+        # Wiederverbinden nach 1 s, bei weiteren Fehlschlägen bis 30 s Abstand
         self.client.reconnect_delay_set(1, 30)
         try:
+            # connect_async blockiert nicht: ist der Broker beim Start nicht erreichbar, versucht paho es weiter
             self.client.connect_async(s["host"], int(s["port"]), keepalive=30)
             self.client.loop_start()
         except Exception as e:
@@ -277,6 +279,7 @@ class MqttPublisher:
 
     # ---- paho-Rückrufe (Netzwerk-Thread von paho) ----------------------------------------------------------------
     def _on_connect(self, client, userdata, flags, rc, *rest):
+        """Anmeldung beantwortet (paho-Thread): bei Erfolg alles neu senden lassen, sonst den Grund melden."""
         if reason_ok(rc):
             self.connected.set()
             self.resend.set()
@@ -287,6 +290,7 @@ class MqttPublisher:
             self.emit(tr("⚠ MQTT: Broker lehnt die Anmeldung ab: {0}").format(self.error))
 
     def _on_disconnect(self, client, userdata, *args):
+        """Verbindung verloren (paho verbindet selbst neu); nur einmal melden, nicht beim gewollten Beenden."""
         if self.connected.is_set() and not self.stop_evt.is_set():
             self.emit(tr("⚠ MQTT: Verbindung zum Broker getrennt – verbinde neu …"))
         self.connected.clear()
@@ -303,6 +307,8 @@ class MqttPublisher:
     def _run(self):
         """Im Takt: nach (Wieder-)Verbindung Status und ggf. Discovery senden, dann Werte, Ereignisse, Zustände."""
         period = self.s["intervall_ms"] / 1000.0
+        # Zuletzt gesendete Texte je Topic (für „bei Änderung“); nach einer neuen Verbindung geleert, damit alles neu
+        # kommt
         last_vals, last_ev, last_st = {}, {}, {}
         last_ts = None
         while not self.stop_evt.is_set():
@@ -370,6 +376,7 @@ class MqttPublisher:
         """Home-Assistant-Discovery: je Variable ein Sensor (BOOL: binary_sensor), je Trigger ein binary_sensor."""
         from plc_common import APP_VERSION
         s = self.s
+        # Home Assistant: Discovery-Topic <Präfix>/<Komponente>/<Knoten>/<Objekt>/config, Inhalt als JSON (retained)
         node = object_id(self.base)
         device = {"identifiers": [node], "name": "PLC Datenlogger" + (f" {self.project}" if self.project else ""),
                   "manufacturer": "PLC Datenlogger", "model": "PLC Logger", "sw_version": APP_VERSION}

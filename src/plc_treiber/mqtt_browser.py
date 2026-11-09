@@ -14,6 +14,7 @@ import time
 from plc_i18n import tr
 from plc_treiber.mqtt import payload_value
 
+# Obergrenze, damit ein Filter „#“ an einem großen Broker den Dialog nicht überlastet
 MAX_TOPICS = 5000
 
 
@@ -21,6 +22,7 @@ class Listener:
     """Hört im Hintergrund auf einen Topic-Filter; ``messages`` {Topic: letzte Nachricht}."""
 
     def __init__(self, params, topic_filter="#"):
+        """Vorbereiten: Verbindungsparameter der Steuerung (Broker) und Topic-Filter (leer = #)."""
         self.params, self.filter = params, topic_filter.strip() or "#"
         self.messages = {}
         self.lock = threading.Lock()
@@ -35,6 +37,7 @@ class Listener:
         ready = threading.Event()
 
         def on_connect(c, userdata, flags, rc, *rest):
+            """Anmeldung beantwortet: Filter abonnieren bzw. Ablehnung merken; start() wartet darauf."""
             if reason_ok(rc):
                 c.subscribe(self.filter, 0)
             else:
@@ -42,6 +45,7 @@ class Listener:
             ready.set()
 
         def on_message(c, userdata, msg):
+            """Letzte Nachricht je Topic merken (höchstens MAX_TOPICS verschiedene Topics)."""
             with self.lock:
                 if msg.topic in self.messages or len(self.messages) < MAX_TOPICS:
                     self.messages[msg.topic] = msg.payload
@@ -64,10 +68,12 @@ class Listener:
         return True
 
     def snapshot(self):
+        """Kopie der bisher empfangenen Nachrichten {Topic: Nachricht}."""
         with self.lock:
             return dict(self.messages)
 
     def stop(self):
+        """Mithören beenden und vom Broker abmelden."""
         if self.client is not None:
             try:
                 self.client.disconnect()
@@ -135,6 +141,8 @@ class MqttBrowserDialog(QDialog):
     Ergebnis: ``result_vars`` [(Name, Adresse, Typ)], ``target_index``."""
 
     def __init__(self, parent, plc, existing, target_labels, default_target=0):
+        """Dialog aufbauen: Filter, Dauer, Liste der gefundenen Werte, Ziel-Diagramm. ``existing``: Adressen, die schon
+        Variablen sind (werden ausgegraut)."""
         super().__init__(parent)
         self.plc, self.existing = plc, set(existing)
         self.result_vars = []
@@ -181,6 +189,7 @@ class MqttBrowserDialog(QDialog):
         lay.addWidget(bb)
         self.items = {}                # Adresse -> QTreeWidgetItem
         self.timer = QTimer(self)
+        # Die Liste wird im Takt aus dem Hintergrund-Thread von paho nachgeführt (Qt-Elemente nur im GUI-Thread ändern)
         self.timer.setInterval(300)
         self.timer.timeout.connect(self.poll)
 
@@ -226,6 +235,7 @@ class MqttBrowserDialog(QDialog):
             it.setText(1, f"{x:g}")
 
     def stop(self):
+        """Mithören beenden; zuletzt empfangene Werte noch übernehmen."""
         self.timer.stop()
         if self.listener is not None:
             self.listener.stop()
@@ -245,5 +255,6 @@ class MqttBrowserDialog(QDialog):
         self.accept()
 
     def reject(self):
+        """Abbrechen: Verbindung zum Broker trennen, dann schließen."""
         self.stop()
         super().reject()
