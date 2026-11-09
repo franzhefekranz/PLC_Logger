@@ -14,11 +14,6 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
-### Geändert
-
-* **Anleitung, Raspberry Pi:** Remotedesktop (XFCE und xrdp) ist jetzt Schritt 3, direkt nach der Grundeinrichtung –
-  die weiteren Schritte lassen sich so schon in der Remotesitzung erledigen.
-
 ## [3.18.1] – 2026-11-09
 
 ### Behoben
@@ -30,6 +25,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   nimmt das Panel ebenfalls `linuxfb`.
 * **MQTT:** automatische Client-IDs mit Zufallsteil – zwei Clients desselben Rechners konnten sich beim Broker
   gegenseitig abmelden.
+
+### Geändert
+
+* **Anleitung, Raspberry Pi:** Remotedesktop (XFCE und xrdp) ist jetzt Schritt 3, direkt nach der Grundeinrichtung –
+  die weiteren Schritte lassen sich so schon in der Remotesitzung erledigen.
 
 ## [3.18.0] – 2026-11-09
 
