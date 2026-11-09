@@ -22,10 +22,10 @@ intervall_ms, format, qos, retain, ha, ha_prefix.
 import json
 import math
 import re
+import secrets
 import socket
 import ssl
 import threading
-import time
 from datetime import datetime
 
 from plc_i18n import N_, tr
@@ -135,7 +135,9 @@ def paho():
 def make_client(client_id="", user="", password="", tls=False, verify=True, ca="", will=None):
     """paho-Client mit Anmeldung, TLS und letztem Willen (``will`` = (Topic, Text)) – noch nicht verbunden."""
     mqtt = paho()
-    cid = client_id or f"plc-logger-{socket.gethostname()}-{int(time.time() * 1000) % 100000}"
+    # Automatische ID mit Zufallsteil: zwei Clients mit derselben ID (z. B. Ausgang und Treiber im selben Programm)
+    # würden sich beim Broker gegenseitig abmelden
+    cid = client_id or f"plc-logger-{socket.gethostname()}-{secrets.token_hex(4)}"
     try:
         client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=cid, protocol=mqtt.MQTTv311)
     except AttributeError:                               # paho-mqtt 1.x
