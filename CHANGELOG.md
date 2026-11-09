@@ -18,7 +18,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 * **Netzwerk-Panel:** startete auf einer frischen Ubuntu-Installation nicht („Failed to load EGL device integration
   eglfs_kms“, „Could not open display“, Abbruch in Schleife), weil libgbm/libdrm fehlten. Das Debian-Paket hängt jetzt
-  von `libgbm1` und `libdrm2` ab; fehlen sie trotzdem, nimmt das Panel `linuxfb`.
+  von `libgbm1` und `libdrm2` ab; fehlen sie trotzdem, nimmt das Panel `linuxfb`. Ursache war auch das fehlende
+  Qt-Plugin `egldeviceintegrations/libqeglfs-kms-integration.so`: es wird jetzt mit ins Paket gepackt, und fehlt es,
+  nimmt das Panel ebenfalls `linuxfb`.
 * **MQTT:** automatische Client-IDs mit Zufallsteil – zwei Clients desselben Rechners konnten sich beim Broker
   gegenseitig abmelden.
 

@@ -1586,7 +1586,21 @@ def kms_libs_ok():
             ctypes.CDLL(lib)
         except OSError:
             return False
-    return True
+    return kms_plugin_ok()
+
+
+def kms_plugin_ok():
+    """Ist das Qt-Plugin für eglfs mit KMS vorhanden (egldeviceintegrations/libqeglfs-kms-integration.so)? Ältere
+    Pakete enthielten es nicht; dann ``linuxfb`` statt Abbruch mit „Could not open display“."""
+    try:
+        from PySide6.QtCore import QLibraryInfo
+        plugins = QLibraryInfo.path(QLibraryInfo.LibraryPath.PluginsPath)
+    except Exception:
+        return True                                     # unbekannt: wie bisher eglfs versuchen
+    if not plugins or not os.path.isdir(plugins):
+        return True
+    import glob
+    return bool(glob.glob(os.path.join(plugins, "egldeviceintegrations", "libqeglfs-kms-integration*")))
 
 
 def display_platform(windowed, environ=None, platform=None, dri=None, kms=None):
@@ -1605,8 +1619,8 @@ def display_platform(windowed, environ=None, platform=None, dri=None, kms=None):
     if dri and kms is None:
         kms = kms_libs_ok()
     if dri and not kms:
-        print("plc-netzwerk: libgbm/libdrm/libEGL fehlen – Anzeige über linuxfb "
-              "(besser: sudo apt install libgbm1 libdrm2 libegl1)", file=sys.stderr)
+        print("plc-netzwerk: libgbm/libdrm/libEGL oder das Qt-Plugin eglfs-kms fehlen – Anzeige über linuxfb "
+              "(Bibliotheken: sudo apt install libgbm1 libdrm2 libegl1)", file=sys.stderr)
     return "eglfs" if dri and kms else "linuxfb"
 
 

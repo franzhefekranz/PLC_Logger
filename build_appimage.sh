@@ -195,6 +195,22 @@ echo "[3/7] PyInstaller ..."
     ${EXTRA[@]+"${EXTRA[@]}"} \
     "$PWD/src/${PFX}_logger.py"
 
+# Qt-Erweiterungen für eglfs (Netzwerk-Panel auf dem Pi-Display ohne Desktop) nimmt PyInstaller nicht mit: ohne
+# egldeviceintegrations/libqeglfs-kms-integration.so bricht Qt mit „Could not open display“ ab. Plugins und die
+# zugehörigen Qt-Bibliotheken (EglFsKms…) aus PySide6 nachkopieren.
+QTSRC=$("$VPY" -c "import os, PySide6; print(os.path.join(os.path.dirname(PySide6.__file__), 'Qt'))" 2>/dev/null || true)
+QTDST=$(dirname "$(find "$B/dist/$APP" -type d -path '*PySide6/Qt/plugins' | head -1)" 2>/dev/null || true)
+if [[ -n "$QTSRC" && -d "$QTSRC/plugins/egldeviceintegrations" && -n "$QTDST" && -d "$QTDST" ]]; then
+    mkdir -p "$QTDST/plugins" "$QTDST/lib"
+    cp -an "$QTSRC/plugins/egldeviceintegrations" "$QTDST/plugins/"
+    for f in "$QTSRC"/lib/libQt6EglFs*.so* "$QTSRC"/lib/libQt6Kms*.so*; do
+        [[ -e "$f" ]] && cp -an "$f" "$QTDST/lib/"
+    done
+    echo "      eglfs-Plugins übernommen: $(ls "$QTDST/plugins/egldeviceintegrations" | tr '\n' ' ')"
+else
+    echo "[HINWEIS] egldeviceintegrations nicht gefunden – Netzwerk-Panel nutzt auf dem Display linuxfb."
+fi
+
 # ------------------------------------------------------------------ 4. AppDir
 echo "[4/7] AppDir zusammenstellen ..."
 AD="$B/AppDir"
