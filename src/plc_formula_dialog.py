@@ -140,11 +140,13 @@ class FormulaEditor(QDialog):
     # ---------------- Hilfen ----------------
     # Text an der Cursorposition einfügen und den Fokus zurück ins Formelfeld geben.
     def insert(self, text):
+        """Text (Variable, Funktion, Operator) an der Cursorposition einfügen."""
         self.ed_formula.insertPlainText(text)
         self.ed_formula.setFocus()
 
     # Variablenliste nach dem Suchtext filtern (Groß-/Kleinschreibung egal).
     def filter_vars(self, text):
+        """Variablenliste nach Text filtern."""
         text = text.strip().lower()
         for i in range(self.lst_vars.count()):
             it = self.lst_vars.item(i)
@@ -152,6 +154,7 @@ class FormulaEditor(QDialog):
 
     # Testwerte aus der Tabelle in self._test übernehmen; ungültige Eingaben werden zu NaN (Komma als Dezimaltrenner erlaubt).
     def _read_test_values(self):
+        """Eingetragene Testwerte aus der Tabelle übernehmen (Dezimalkomma erlaubt)."""
         for r in range(self.tbl.rowCount()):
             n = self.tbl.item(r, 0).text()
             try:
@@ -161,6 +164,7 @@ class FormulaEditor(QDialog):
 
     # Tabelle für die Variablen der Formel neu aufbauen; bereits eingegebene Testwerte bleiben erhalten (Standard: 1).
     def _fill_table(self, refs):
+        """Testtabelle mit den in der Formel verwendeten Variablen füllen (bisherige Testwerte bleiben)."""
         self._read_test_values()
         # Signale blockieren, damit das Befüllen keine Änderungsereignisse auslöst.
         self.tbl.blockSignals(True)
@@ -209,6 +213,7 @@ class FormulaEditor(QDialog):
 
     # Wird bei OK aufgerufen: Name, Formel und Variablenbezüge müssen gültig sein, erst dann schließt der Dialog.
     def accept_checked(self):
+        """Name und Formel prüfen (nicht leer, eindeutig, Formel gültig, kein Bezug auf sich selbst) und übernehmen."""
         name = self.ed_name.text().strip()
         # Name: nicht leer; kein ';' (Trennzeichen der CSV-Datei).
         if not name or ";" in name:

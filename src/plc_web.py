@@ -247,6 +247,7 @@ def store_vars(rec):
 
 
 def has_db(rec):
+    """Zeichnet der Recorder in eine Datenbank auf (dann ist der Lesemodus im Browser möglich)?"""
     return bool((getattr(rec, "db_conf", None) or {}).get("typ"))
 
 
@@ -723,9 +724,11 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
         return t0, t1, sel
 
     def _selected(rec, sel):
+        """Indizes der gespeicherten Variablen, eingeschränkt auf die Auswahl ``sel`` (None = alle)."""
         return [vi for vi, _v in store_vars(rec) if sel is None or vi in sel]
 
     def _file_reply(path, mimetype, name, inline=False):
+        """Temporäre Datei senden und danach löschen (Download bzw. Anzeige im Browser)."""
         with open(path, "rb") as f:
             data = f.read()
         try:
@@ -737,6 +740,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
                                                           "Cache-Control": "no-store"})
 
     def _stem(rec):
+        """Dateiname für Exporte aus dem CSV-Namen (nur sichere Zeichen)."""
         return re.sub(r"[^\w\-]+", "_", rec.conn.get("csv_name") or "export").strip("_") or "export"
 
     @app.route("/api/export")
@@ -863,6 +867,7 @@ def create_app(get_rec, token="", refresh_ms=1000, users=None, https=False, logo
     # ---- IO-Check (Smartphone/Tablet) ---------------------------------------------------------------------------
     @app.route("/io")
     def io_page():
+        """Mobilseite des IO-Checks (Kopf mit Links zu den Diagrammen und zum Abmelden)."""
         from plc_iocheck_web import IO_HTML
         user = session.get("user") if users else ""
         out = ('<a class="lnk" href="logout" title="{{T:Abmelden}}">⎋ ' + html.escape(user) + "</a>") if user else ""

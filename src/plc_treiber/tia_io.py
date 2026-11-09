@@ -97,6 +97,7 @@ def _install_keylog_switch():
 
     @contextlib.contextmanager
     def key_log(ctx):
+        """Schlüsselprotokoll nur schreiben, wenn es nicht für diesen Thread abgeschaltet ist."""
         if getattr(_KEYLOG, "skip", False):
             yield ""
         else:
@@ -104,6 +105,7 @@ def _install_keylog_switch():
                 yield path
 
     def derive(ssl_object, path):
+        """Wie das Original, aber abschaltbar je Thread."""
         if getattr(_KEYLOG, "skip", False) or orig_derive is None:
             return None
         return orig_derive(ssl_object, path)
@@ -262,12 +264,14 @@ class TagReader(RingSupport):
         b = ring.base
 
         def get(name):
+            """Variable des Ringpuffers im Katalog suchen oder None."""
             try:
                 return catalog.resolve(name)
             except KeyError:
                 return None
 
         def need(name):
+            """Variable des Ringpuffers, die es geben muss (sonst KeyError mit Hinweis auf den erwarteten Aufbau)."""
             tag = get(name)
             if tag is None:
                 raise KeyError(tr("Ringpuffer {0}: Variable „{1}“ nicht gefunden (Aufbau: Zaehler, "

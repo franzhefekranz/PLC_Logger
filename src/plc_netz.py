@@ -41,6 +41,7 @@ class Device:
 
     @property
     def dhcp(self):
+        """Adresse automatisch (DHCP)? Sonst feste Adresse („manual“)."""
         return self.method != "manual"
 
 
@@ -223,10 +224,12 @@ class Netz:
         return sorted(best.values(), key=lambda w: (not w.active, -w.signal))
 
     def wifi_enabled(self):
+        """WLAN-Funk eingeschaltet?"""
         return self.run(["nmcli", "-t", "radio", "wifi"]).strip() == "enabled"
 
     # ------------------------------------------------------------------ einstellen
     def set_wifi_enabled(self, on):
+        """WLAN-Funk ein-/ausschalten."""
         self.run(["nmcli", "radio", "wifi", "on" if on else "off"])
 
     def wifi_connect(self, ssid, password="", device=""):
@@ -295,6 +298,7 @@ class Netz:
         return [z.strip() for z in self.run(["timedatectl", "list-timezones"]).splitlines() if z.strip()]
 
     def set_timezone(self, tz):
+        """Zeitzone des Systems setzen (z. B. Europe/Berlin)."""
         self.run(["timedatectl", "set-timezone", tz])
 
     def power(self, action):
@@ -313,6 +317,7 @@ def local_naive(dt):
 
 
 def hostname():
+    """Rechnername."""
     return socket.gethostname()
 
 

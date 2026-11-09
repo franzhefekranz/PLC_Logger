@@ -152,6 +152,7 @@ class SymbolBrowser(QDialog):
     # ---------------- Ergebnis ----------------
     # Quellen als Konfigurationseinträge (Pfad oder Pfad#DB-Nummern) zurückgeben.
     def entries(self):
+        """Importierte Quelldateien als Einträge für die Konfiguration (Pfad, ggf. mit vergebenen DB-Nummern)."""
         return self.symset.entries()
 
     # ---------------- Baum aufbauen ----------------
@@ -251,6 +252,7 @@ class SymbolBrowser(QDialog):
     # ---------------- Häkchen ----------------
     # Häkchen wurde geändert: auf Nachfahren übertragen und die Elternknoten nachziehen.
     def on_item_changed(self, item, col):
+        """Häkchen geändert: Nachfahren übernehmen den Zustand, Eltern zeigen „alle/teilweise/keine“."""
         if col != 0 or self._busy:
             return
         self._busy = True
@@ -264,6 +266,7 @@ class SymbolBrowser(QDialog):
 
     # Zustand rekursiv auf alle anwählbaren Nachfahren übertragen (gesperrte bleiben unverändert).
     def _set_descendants(self, item, state):
+        """Alle anwählbaren Nachfahren von ``item`` auf ``state`` setzen."""
         for i in range(item.childCount()):
             ch = item.child(i)
             if ch.flags() & CHECKABLE:
@@ -272,6 +275,7 @@ class SymbolBrowser(QDialog):
 
     # Von unten nach oben: Zustand der Elternknoten aus den Kindern berechnen (alle / keine / teilweise).
     def _update_parents(self, p):
+        """Zustand der Elternknoten aus ihren Kindern ableiten (alle, keine oder teilweise angehakt)."""
         while p is not None:
             # Nur Kinder berücksichtigen, die überhaupt anwählbar sind.
             states = [p.child(i).checkState(0) for i in range(p.childCount())
@@ -288,10 +292,13 @@ class SymbolBrowser(QDialog):
     # ---------------- Filter ----------------
     # Filter: blendet Einträge aus, deren Name (und dessen Kinder) den Text nicht enthalten.
     def apply_filter(self, text):
+        """Baum nach Text filtern: passende Knoten, ihre Vorfahren und (bei passendem Elternknoten) alle Nachfahren bleiben
+        sichtbar."""
         text = text.strip().lower()
 
         # force=True: ein Elternknoten passt -> alle seine Nachfahren bleiben sichtbar.
         def visit(it, force):
+            """Knoten rekursiv prüfen -> True, wenn er oder ein Nachfahre sichtbar bleibt."""
             match = not text or text in it.text(0).lower()
             any_child = False
             for i in range(it.childCount()):
@@ -382,6 +389,7 @@ class SymbolBrowser(QDialog):
 
     # Angehakte, aufzeichenbare, neue Blätter rekursiv einsammeln.
     def _collect(self, item, out):
+        """Angehakte, aufzeichenbare Variablen unter ``item`` sammeln."""
         n = item.data(0, ROLE_NODE)
         if (n is not None and n.kind == "leaf" and n.supported and (item.flags() & CHECKABLE)
                 and item.checkState(0) == Qt.CheckState.Checked):
@@ -424,6 +432,7 @@ class SymbolBrowser(QDialog):
 
     # Auswahl übernehmen: Ergebnis merken und den Dialog schließen (accept).
     def take_selection(self):
+        """Angehakte Variablen (und gewählte Blöcke) übernehmen und den Dialog schließen; ohne Auswahl ein Hinweis."""
         out = []
         for i in range(self.tree.topLevelItemCount()):
             self._collect(self.tree.topLevelItem(i), out)

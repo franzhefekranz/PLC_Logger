@@ -148,6 +148,7 @@ class DemoLoop:
     SETPOINTS = (40.0, 60.0, 50.0, 70.0)
 
     def __init__(self):
+        """Simulierte Regelstrecke (PT1 mit Totzeit) mit PI-Regler für den Demo-Modus."""
         self.y, self.integ, self.u, self.last = 20.0, 0.0, 0.0, None
         self.hist = collections.deque()               # (Zeit, Stellwert) für die Totzeit
 
@@ -185,6 +186,8 @@ class CaptureGate:
     ``feed`` liefert (zu schreibende Zeilen [(Zeit, Zeile)], Ereignis) mit Ereignis None, "start" oder "stop"."""
 
     def __init__(self, condition, pre_s=10.0, post_s=10.0, max_s=0.0):
+        """Aufzeichnung per Trigger: ``condition`` startet, Vorlauf ``pre_s`` kommt aus dem Ringpuffer, Nachlauf ``post_s``
+        nach Ende der Bedingung, ``max_s`` begrenzt eine Aufnahme (0 = unbegrenzt)."""
         self.formula = Formula(condition)             # FormulaError bei ungültiger Bedingung
         self.condition = condition
         self.pre, self.post, self.max = max(0.0, float(pre_s)), max(0.0, float(post_s)), max(0.0, float(max_s))
@@ -251,6 +254,8 @@ class PlcSampler(threading.Thread):
     """Liest zyklisch alle Variablen EINER Steuerung und stellt die Messzyklen in die Warteschlange des Recorders."""
 
     def __init__(self, rec, idx, plc, var_idx):
+        """Lese-Thread einer Steuerung: liest ihre Variablen (globale Indizes ``var_idx``) im Takt und übergibt die Werte
+        dem Sammler."""
         super().__init__(name=f"plc-{idx}", daemon=True)
         self.rec, self.idx, self.plc = rec, idx, plc
         self.var_idx = var_idx                                   # globale Indizes der Variablen dieser Steuerung
@@ -610,6 +615,7 @@ class Recorder:
         hooks = [h.event for h in (self.notifier, self.opcua, self.mqtt) if h]
 
         def notify(*a):
+            """Ereignis an alle Empfänger weiterreichen (Benachrichtigungen, OPC-UA-Server, MQTT)."""
             for h in hooks:
                 h(*a)
         self.trigger_engine = TriggerEngine(self.triggers, self.events, self.emit, self.names,
@@ -821,6 +827,7 @@ class Recorder:
 
     # ------------------------------------------------------------------ PDF-Berichte
     def _new_report(self, ts):
+        """Berichtszeitraum, in dem ``ts`` liegt (Schicht, Tag, Woche, Monat) -> neuer Sammler für den PDF-Bericht."""
         from plc_report import ReportAccumulator, period_bounds, period_label
         c = self.conn
         kind = c.get("bericht_zeitraum") or "tag"

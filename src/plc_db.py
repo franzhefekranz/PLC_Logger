@@ -174,6 +174,8 @@ class Storage:
     None = von diesem Datenbanktyp nicht abfragbar."""
 
     def __init__(self, tabelle=None, gesamt=None, zeilen=None, geschaetzt=False, hinweis="", details=None):
+        """Belegung der Datenbank für die Anzeige: Tabelle, Gesamtgröße, Zeilen (ggf. geschätzt), Hinweis und weitere
+        Zeilen."""
         self.tabelle, self.gesamt, self.zeilen, self.geschaetzt, self.hinweis = tabelle, gesamt, zeilen, geschaetzt, hinweis
         self.details = list(details or [])             # weitere Zeilen (z. B. je Projekt)
 
@@ -1500,9 +1502,11 @@ class _ReadSql:
     time_col = "zeit"
 
     def epoch(self):                # Ausdruck: Unix-Zeit der Spalte zeit (float, Sekunden)
+        """SQL-Ausdruck für die Unix-Zeit (Sekunden, mit Nachkommastellen) der Spalte zeit – je Datenbank."""
         raise NotImplementedError
 
     def bound(self, epoch):         # Python-Wert für einen Vergleich mit der Spalte zeit
+        """Python-Wert für einen Vergleich mit der Spalte zeit (je Datenbank: datetime oder Zahl)."""
         raise NotImplementedError
 
     def table(self, t):
@@ -1557,6 +1561,7 @@ class _MariaSql(_ReadSql):
         return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).replace(tzinfo=None)
 
     def table(self, t):
+        """Tabellenname in MariaDB-Schreibweise (Backticks)."""
         return f"`{t}`"
 
 
@@ -1573,6 +1578,7 @@ class _PgSql(_ReadSql):
         return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc)
 
     def table(self, t):
+        """Tabellenname in PostgreSQL-Schreibweise (doppelte Anführungszeichen, Groß/klein bleibt)."""
         return f'"{t}"'
 
 
@@ -1823,6 +1829,7 @@ class VmReader:
     eine Serie ohne Label projekt (im Selektor: projekt="")."""
 
     def __init__(self, conn):
+        """Lesen aus VictoriaMetrics/Prometheus über die HTTP-API; Metrikname aus dem Tabellennamen."""
         s = dict(db_settings(conn))
         if not check_table_name(s["tabelle"]):
             raise ValueError(tr("Ungültiger Tabellenname: {0!r} (nur Buchstaben, Ziffern, _)").format(s['tabelle']))

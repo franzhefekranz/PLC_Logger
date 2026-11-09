@@ -346,6 +346,8 @@ class DbLoadDialog(QDialog):
         proj = self.current_project()
 
         def done(info):
+            """Liste der Variablen in der Datenbank anzeigen (Anzahl Werte, erster/letzter Zeitpunkt); die der
+            Konfiguration vorab angehakt."""
             self.info = info
             self.tree.blockSignals(True)
             self.tree.clear()
@@ -466,6 +468,7 @@ class DbLoadDialog(QDialog):
         names, (t0, t1), proj = [s[0] for s in sel], self.time_range(), self.current_project()
 
         def done(n):
+            """Anzahl der Werte im Zeitraum anzeigen."""
             self.lbl_status.setText(tr("{0} Werte im gewählten Zeitraum ({1} je Variable im Mittel).")
                                     .format(_num(n), _num(n / max(len(names), 1))))
         self._run(tr("Zähle Werte …"), lambda: self.reader.count(names, t0, t1, proj), done)
@@ -489,9 +492,11 @@ class DbLoadDialog(QDialog):
         save_settings(db_lesen={"aufloesung": self.cb_res.currentData()})
 
         def progress(n):
+            """Fortschritt (Zahl gelesener Werte) für die Anzeige merken (aus dem Lese-Thread)."""
             self._progress = n
 
         def fn():
+            """Lese-Thread: Raster wählen (automatisch: Rohdaten, solange es nicht zu viele sind) und die Werte laden."""
             r = raster
             if r < 0:                                    # automatisch: Rohdaten, solange es nicht zu viele sind
                 n = self.reader.count(names, t0, t1, proj)
@@ -501,6 +506,7 @@ class DbLoadDialog(QDialog):
             return data + (r,)
 
         def done(res):
+            """Geladene Daten übergeben und den Dialog schließen; leerer Zeitraum -> Hinweis."""
             t, nm, cols, r = res
             if not len(t):
                 QMessageBox.information(self, tr("Aus Datenbank laden"),
