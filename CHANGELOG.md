@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.18.1] – 2026-11-09
+
 ### Behoben
 
 * **Netzwerk-Panel:** startete auf einer frischen Ubuntu-Installation nicht („Failed to load EGL device integration
@@ -673,7 +675,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.18.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.18.1...HEAD
+[3.18.1]: ../../releases/tag/v3.18.1
 [3.18.0]: ../../releases/tag/v3.18.0
 [3.17.0]: ../../releases/tag/v3.17.0
 [3.16.0]: ../../releases/tag/v3.16.0
