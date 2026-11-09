@@ -5641,7 +5641,9 @@ recording come from the Pi):
   *Logger*) still needs root.
 * Rotate the picture by 180°: add ``Environment=QT_QPA_EGLFS_ROTATION=180``. If the panel does
   not start (``journalctl -u plc-netzwerk``), add ``Environment=QT_QPA_PLATFORM=linuxfb``. Without a graphics driver (no ``/dev/dri/card…``) the panel uses ``linuxfb`` by
-  itself. By hand (without service): ``sudo plc-netzwerk`` – on the text console, via SSH or from
+  itself, likewise if the libraries for ``eglfs`` are missing (message “Failed to load EGL
+  device integration eglfs_kms” or “Could not open display” with older versions; better:
+  ``sudo apt install libgbm1 libdrm2 libegl1``). By hand (without service): ``sudo plc-netzwerk`` – on the text console, via SSH or from
   a terminal in the remote desktop, the panel always appears full screen on the Pi's display
   (``sudo timeout 600 plc-netzwerk`` ends it after 10 minutes by itself). As a window in the
   remote desktop: ``sudo plc-netzwerk --fenster``.

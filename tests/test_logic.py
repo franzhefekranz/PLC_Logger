@@ -1216,7 +1216,8 @@ def test_netpanel_display_platform():
     """Netzwerk-Panel: ohne --fenster immer auf das Display (eglfs bzw. ohne Grafiktreiber linuxfb)."""
     pytest.importorskip("PySide6")
     from plc_netpanel import display_platform
-    assert display_platform(False, {"DISPLAY": ":10.0"}, "linux", dri=True) == "eglfs"      # aus dem Remotedesktop
+    assert display_platform(False, {"DISPLAY": ":10.0"}, "linux", dri=True, kms=True) == "eglfs"   # aus dem Remotedesktop
+    assert display_platform(False, {}, "linux", dri=True, kms=False) == "linuxfb"   # libgbm/libdrm fehlen
     assert display_platform(False, {}, "linux", dri=False) == "linuxfb"
     assert display_platform(True, {"DISPLAY": ":10.0"}, "linux", dri=True) == ""            # --fenster
     assert display_platform(False, {"QT_QPA_PLATFORM": "linuxfb"}, "linux", dri=True) == ""

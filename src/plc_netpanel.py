@@ -1577,18 +1577,37 @@ def _sudo_xauthority(environ=None):
     return ""
 
 
-def display_platform(windowed, environ=None, platform=None, dri=None):
-    """Qt-Plattform für das angeschlossene Display: ``eglfs`` (mit Grafiktreiber /dev/dri/card*), sonst ``linuxfb``.
+def kms_libs_ok():
+    """Lassen sich die Systembibliotheken laden, die Qt für ``eglfs`` mit KMS braucht (libgbm, libdrm, libEGL)?
+    Fehlen sie (z. B. frisch installiertes Ubuntu Server), bricht Qt sonst mit „Could not open display“ ab."""
+    import ctypes
+    for lib in ("libgbm.so.1", "libdrm.so.2", "libEGL.so.1"):
+        try:
+            ctypes.CDLL(lib)
+        except OSError:
+            return False
+    return True
+
+
+def display_platform(windowed, environ=None, platform=None, dri=None, kms=None):
+    """Qt-Plattform für das angeschlossene Display: ``eglfs`` (mit Grafiktreiber /dev/dri/card* und den Bibliotheken
+    dafür), sonst ``linuxfb``.
 
     "" = nichts ändern: Fenster im Desktop (``--fenster``), nicht Linux oder QT_QPA_PLATFORM schon gesetzt. Auch aus
-    einem Terminal im Remotedesktop gestartet geht das Panel ohne ``--fenster`` auf das Display des Rechners."""
+    einem Terminal im Remotedesktop gestartet geht das Panel ohne ``--fenster`` auf das Display des Rechners.
+    ``dri``/``kms`` nur für Tests (sonst geprüft)."""
     env = os.environ if environ is None else environ
     if windowed or not (platform or sys.platform).startswith("linux") or env.get("QT_QPA_PLATFORM"):
         return ""
     if dri is None:
         import glob
         dri = bool(glob.glob("/dev/dri/card*"))
-    return "eglfs" if dri else "linuxfb"
+    if dri and kms is None:
+        kms = kms_libs_ok()
+    if dri and not kms:
+        print("plc-netzwerk: libgbm/libdrm/libEGL fehlen – Anzeige über linuxfb "
+              "(besser: sudo apt install libgbm1 libdrm2 libegl1)", file=sys.stderr)
+    return "eglfs" if dri and kms else "linuxfb"
 
 
 def run_panel(config_path="", service="plc-datenlogger", windowed=False):

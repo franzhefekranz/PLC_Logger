@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* **Netzwerk-Panel:** startete auf einer frischen Ubuntu-Installation nicht („Failed to load EGL device integration
+  eglfs_kms“, „Could not open display“, Abbruch in Schleife), weil libgbm/libdrm fehlten. Das Debian-Paket hängt jetzt
+  von `libgbm1` und `libdrm2` ab; fehlen sie trotzdem, nimmt das Panel `linuxfb`.
+
 ## [3.18.0] – 2026-11-09
 
 ### Neu

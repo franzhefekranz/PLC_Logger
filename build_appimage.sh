@@ -362,7 +362,8 @@ Version: $VERSION
 Architecture: $DARCH
 Maintainer: Michael Taxis <mxtaxis@gmail.com>
 Installed-Size: $SIZE
-Depends: libc6 (>= ${GLIBC:-2.31}), libgl1, libegl1, libfontconfig1, libxkbcommon-x11-0, libxcb-cursor0, libdbus-1-3
+Depends: libc6 (>= ${GLIBC:-2.31}), libgl1, libegl1, libgbm1, libdrm2, libfontconfig1, libxkbcommon-x11-0, libxcb-cursor0,
+ libdbus-1-3
 Section: misc
 Priority: optional
 Homepage: https://github.com/franzhefekranz/PLC_Logger

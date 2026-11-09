@@ -5773,7 +5773,9 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
   (Seite *Logger*) geht weiterhin nur als root.
 * Bild um 180° drehen: ``Environment=QT_QPA_EGLFS_ROTATION=180`` ergänzen. Startet das Panel
   nicht (``journalctl -u plc-netzwerk``), ``Environment=QT_QPA_PLATFORM=linuxfb`` ergänzen. Ohne Grafiktreiber (kein ``/dev/dri/card…``) nimmt das Panel ``linuxfb`` von
-  selbst. Von Hand (ohne Dienst): ``sudo plc-netzwerk`` – an der Textkonsole, per SSH oder aus
+  selbst, ebenso wenn die Bibliotheken für ``eglfs`` fehlen (Meldung „Failed to load EGL
+  device integration eglfs_kms“ bzw. „Could not open display“ bei älteren Versionen; besser:
+  ``sudo apt install libgbm1 libdrm2 libegl1``). Von Hand (ohne Dienst): ``sudo plc-netzwerk`` – an der Textkonsole, per SSH oder aus
   einem Terminal im Remotedesktop, das Panel erscheint immer bildschirmfüllend auf dem Display
   des Pi (mit ``sudo timeout 600 plc-netzwerk`` endet es nach 10 Minuten von selbst). Als
   Fenster im Remotedesktop: ``sudo plc-netzwerk --fenster``.
