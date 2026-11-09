@@ -89,6 +89,7 @@ def _driver_roundtrip(publish, host_port, drop=None):
         publish("schalter/1", "ON")
         publish("kaputt/x", "Text")
         assert wait_for(lambda: not math.isnan(r.read()[2]))
+        assert wait_for(lambda: (r.read(), "kaputt/x" in r.errors)[1])    # letzte Nachricht auch angekommen
         vals = r.read()
         assert vals[:3] == [21.5, 19.25, 1.0] and math.isnan(vals[3]) and math.isnan(vals[4])
         assert "kaputt/x" in r.errors
