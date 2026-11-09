@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.18.0] – 2026-11-09
+
 ### Neu
 
 * **IO-Check:** automatisches Speichern ein-/ausschaltbar (Pfeil am Knopf *Speichern*, Vorgabe an, gemerkt);
@@ -661,7 +663,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.17.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.18.0...HEAD
+[3.18.0]: ../../releases/tag/v3.18.0
 [3.17.0]: ../../releases/tag/v3.17.0
 [3.16.0]: ../../releases/tag/v3.16.0
 [3.15.0]: ../../releases/tag/v3.15.0
