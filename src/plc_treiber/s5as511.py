@@ -28,10 +28,13 @@ import time
 from plc_i18n import tr
 from plc_treiber.base import NAN, Driver, Param, Reader
 
+# Steuerzeichen des AS511-Protokolls (wie 3964R): Text-Anfang/-Ende, Übertragungsende, Quittung, Umschaltung (DLE) und
+# Ablehnung
 STX, ETX, EOT, ACK, DLE, NAK = 0x02, 0x03, 0x04, 0x06, 0x10, 0x15
 TYPES = ["BOOL", "BYTE", "WORD", "INT", "DWORD", "DINT", "REAL", "S5TIME"]
 SIZE = {"BOOL": 1, "BYTE": 1, "WORD": 2, "INT": 2, "S5TIME": 2, "DWORD": 4, "DINT": 4, "REAL": 4}
 _AREA_LETTER = {"E": "E", "I": "E", "A": "A", "Q": "A", "M": "M", "F": "M"}
+# S5-Datenwörter: DW (Wort), DL/DR (linkes/rechtes Byte), DD (Doppelwort), D4.3 (Bit 3 im Datenwort 4)
 _RE_DB = re.compile(r"^DB(\d{1,3})\.D([WLRD]?)(\d{1,4})(?:\.(\d{1,2}))?$")
 _RE_AREA = re.compile(r"^([EIAQMF])([BWD]?)(\d{1,4})(?:\.([0-7]))?$")
 _RE_TZ = re.compile(r"^([TZC])(\d{1,3})$")
@@ -53,6 +56,7 @@ def parse(address):
             return "DB", db, 2 * word + (1 if b < 8 else 0), b % 8, "X"
         if kind == "":
             raise ValueError(tr("S5-Datenwort: DB10.DW4, DB10.DL4, DB10.DR4, DB10.DD4 oder DB10.D4.3"))
+        # Datenwort w liegt ab Byte 2·w; DR = rechtes (niederwertiges) Byte = Byte 2·w+1
         off = 2 * word + (1 if kind == "R" else 0)
         return "DB", db, off, None, {"W": "W", "L": "B", "R": "B", "D": "D"}[kind]
     m = _RE_AREA.match(a)
@@ -68,6 +72,7 @@ def parse(address):
     m = _RE_TZ.match(a)
     if m:
         letter = "T" if m.group(1) == "T" else "Z"
+        # Timer/Zähler: je 2 Byte (ein Wort) ab der Anfangsadresse des Bereichs
         return letter, 0, 2 * int(m.group(2)), None, "W"
     raise ValueError(tr("Ungültige S5-Adresse „{0}“ (z. B. DB10.DW4, DB10.D4.3, EW0, A1.0, MW10, T5, Z3)")
                      .format(address))
@@ -85,6 +90,7 @@ def kg_to_float(raw):
 def s5time_ms(word):
     """S5-Timerwort: Bits 12/13 Zeitbasis (10 ms, 100 ms, 1 s, 10 s), Bits 0–11 Zeitwert BCD (3 Stellen)."""
     base = (10, 100, 1000, 10000)[(word >> 12) & 3]
+    # Drei BCD-Ziffern (Hunderter, Zehner, Einer) je 4 Bit
     v = ((word >> 8) & 0xF) * 100 + ((word >> 4) & 0xF) * 10 + (word & 0xF)
     return float(v * base)
 
@@ -214,9 +220,11 @@ class AS511:
         except AS511Error:
             time.sleep(0.5)                      # nach Abweisung 500 ms Pause (AS511)
             raise AS511Error(tr("DB{0} nicht vorhanden").format(db)) from None
+        # Bausteinkopf: Kennung 70 70, Bausteinart 41h (DB) und die erfragte Nummer – sonst gibt es den DB nicht
         if len(d) < 13 or d[0] != 0 or d[3] != 0x70 or d[4] != 0x70 or d[5] != 0x41 or d[6] != db:
             raise AS511Error(tr("DB{0} nicht vorhanden").format(db))
         addr = struct.unpack_from(">H", d, 1)[0]
+        # Länge im Kopf in Wörtern einschließlich 5 Wörter Bausteinkopf -> Datenlänge in Bytes
         length = (struct.unpack_from(">H", d, 11)[0] - 5) * 2
         return addr, max(0, length)
 
@@ -224,6 +232,7 @@ class AS511:
         """Funktion 04h: Bytes start … start+count-1 aus dem S5-Speicher lesen."""
         end = start + count - 1
         d = self.exchange(0x04, struct.pack(">HH", start & 0xFFFF, end & 0xFFFF))
+        # Antwort: 5 Byte Kopf (alle 0), dann die angeforderten Speicherbytes
         if len(d) < 5 + count or d[:5] != b"\x00" * 5:
             raise AS511Error(tr("Fehlerhafte Speicherdaten der S5"))
         return d[5:5 + count]

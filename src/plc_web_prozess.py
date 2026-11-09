@@ -17,10 +17,14 @@ import re
 
 from plc_i18n import tr
 
+# Kacheltypen: Zahlenwert, Zeigerinstrument, Balken, Zustandslampe (BOOL), Kurzverlauf, fester Text
 TYPES = ("wert", "zeiger", "balken", "status", "trend", "text")
+# Raster: 12 Spalten (Breite passt sich dem Bildschirm an); Grenzen gegen übergroße Layouts aus dem Browser
 COLS = 12
 MAX_PAGES, MAX_TILES = 20, 300
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+# Zahlenfelder einer Kachel: Skala und Grenzwerte (untere/obere Alarm- und Warngrenze) für die Farben; Textfelder mit
+# Höchstlänge
 _NUM_KEYS = ("min", "max", "ug_alarm", "ug_warn", "og_warn", "og_alarm")
 _STR_KEYS = {"var": 120, "titel": 80, "einheit": 20, "text_ein": 40, "text_aus": 40}
 
@@ -60,6 +64,7 @@ def clean_tile(t) -> dict:
     typ = t.get("typ") if t.get("typ") in TYPES else "wert"
     out = {"typ": typ, "x": _int(t.get("x"), 0, COLS - 1, 0), "y": _int(t.get("y"), 0, 199, 0),
            "w": _int(t.get("w"), 1, COLS, 2), "h": _int(t.get("h"), 1, 12, 2)}
+    # Kachel darf nicht über den rechten Rand hinausragen
     out["w"] = min(out["w"], COLS - out["x"])
     for k, n in _STR_KEYS.items():
         v = t.get(k)
@@ -125,6 +130,7 @@ def default_layout(variables) -> dict:
     """Vorschlag ohne gespeichertes Layout: BOOL als Lampe, sonst Zahlenwert; berechnete Variablen ebenso."""
     tiles, x, y = [], 0, 0
     for v in variables:
+        # Von großen Blöcken nur die ersten 8 Elemente vorschlagen, sonst wird die Seite unübersichtlich
         if getattr(v, "block", "") and getattr(v, "block_idx", 0) > 7:
             continue
         typ = "status" if v.dtype == "BOOL" else "wert"
