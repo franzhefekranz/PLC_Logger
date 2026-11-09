@@ -125,6 +125,8 @@ class AssignTree(QTreeWidget):
 
     # Ablegen: Zielposition bestimmen und als Signal melden. Die Tabelle wird vom Fenster angepasst.
     def dropEvent(self, event):
+        """Variablen per Ziehen auf ein Diagramm bzw. eine Y-Achse legen: das Ziel wird an ``moved`` gemeldet (das Fenster
+        ordnet die Zeilen um); der Baum selbst verschiebt nichts."""
         target = self.itemAt(event.position().toPoint())
         # Gezogen werden nur Variablen (kind == 'var').
         uids = [it.data(0, ROLE_UID) for it in self.selectedItems()
@@ -1165,6 +1167,7 @@ class ConfigWindow(QMainWindow):
 
         # Dateiauswahl für ein Eingabefeld (Logo/Icon): Dialog öffnen und den gewählten Pfad eintragen.
         def pick():
+            """Datei wählen (ausgehend vom eingetragenen Pfad) und eintragen."""
             p, _ = plc_filedlg.open_name(
                 self, title, edit.text() or BASE_DIR,
                 filt or tr("Bilder (*.png *.svg *.ico *.jpg *.jpeg *.bmp);;Alle Dateien (*)"))
@@ -1192,10 +1195,12 @@ class ConfigWindow(QMainWindow):
     # ---------- Struktur-Hilfen ----------
     # Alle wählbaren Ziele als Liste von (Diagramm-Index, Achsen-Index); die Reihenfolge entspricht den Auswahllisten.
     def flat(self):
+        """Alle Ziele (Diagramm-Index, Achsen-Index) in der Reihenfolge der Auswahllisten."""
         return [(ci, ai) for ci, c in enumerate(self.charts) for ai, _ in enumerate(c.axes)]
 
     # Beschriftungen zu flat(): 'Diagramm › Achse'.
     def flat_labels(self):
+        """Beschriftungen der Ziele: „Diagramm › Achse“."""
         return [f"{c.name} › {a.name}" for c in self.charts for a in c.axes]
 
     @staticmethod
@@ -1206,6 +1211,7 @@ class ConfigWindow(QMainWindow):
 
     # Ziel (Diagramm, Achse) der Tabellenzeile r aus der Auswahlliste.
     def assign_of_row(self, r):
+        """Ziel (Diagramm, Achse) der Variablenzeile ``r`` laut Auswahlliste; ungültig -> erstes Ziel."""
         idx = self.table.cellWidget(r, C_AXIS).currentIndex()
         flat = self.flat()
         return flat[idx] if 0 <= idx < len(flat) else (0, 0)
@@ -1251,6 +1257,7 @@ class ConfigWindow(QMainWindow):
 
     # Tabellenzeile zur Variablen-ID suchen (-1: Zeile existiert nicht mehr).
     def row_of_uid(self, uid):
+        """Tabellenzeile zur internen Kennung einer Variable (bleibt beim Sortieren gleich) oder -1."""
         for r in range(self.table.rowCount()):
             if self.table.item(r, C_NAME).data(ROLE_UID) == uid:
                 return r
@@ -1261,6 +1268,7 @@ class ConfigWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # ---------- Baum ----------
     def refresh_tree(self):
+        """Baum Diagramme › Achsen › Variablen/Blöcke neu aufbauen und die vorherige Auswahl wiederherstellen."""
         # Baum komplett neu aufbauen: Diagramme > Achsen > Variablen/Blöcke. Die Auswahl (Diagramm/Achse) wird gemerkt
         # und danach wiederhergestellt; Signale ruhen während des Aufbaus.
         key = self.prop_key
@@ -1347,6 +1355,7 @@ class ConfigWindow(QMainWindow):
 
     # Auswahl im Baum geändert: merken, ob ein Diagramm oder eine Achse gewählt ist, und die Eigenschaftenfelder laden.
     def on_tree_select(self):
+        """Auswahl im Baum: Eigenschaften (Name, Seite, Skalierung, PID) des gewählten Diagramms bzw. der Achse anzeigen."""
         items = self.tree.selectedItems()
         it = items[0] if items else None
         kind = it.data(0, ROLE_KIND) if it else None
@@ -1360,6 +1369,7 @@ class ConfigWindow(QMainWindow):
 
     # Variablen wurden auf ein Ziel gezogen: Zuordnung in die Tabelle schreiben (Auswahllisten sind die Datenquelle).
     def on_moved(self, uids, ci, ai):
+        """Nach Ziehen im Baum: die Variablen dem Ziel (Diagramm, Achse) zuordnen."""
         flat = self.flat()
         for uid in uids:
             r = self.row_of_uid(uid)
@@ -1377,6 +1387,7 @@ class ConfigWindow(QMainWindow):
     # ---------- Eigenschaften ----------
     # Eigenschaftenfelder mit den Werten des ausgewählten Diagramms/der Y-Achse füllen (und ein-/ausschalten).
     def load_props(self):
+        """Eigenschaftsfelder aus dem gewählten Diagramm bzw. der Achse füllen (ohne dabei Änderungen auszulösen)."""
         self._loading = True
         k = self.prop_key
         # Y-Achsen-Felder (Auto/min/max) sind nur bei einer Y-Achse bedienbar, min/max nur ohne Auto-Skalierung.
@@ -1408,6 +1419,7 @@ class ConfigWindow(QMainWindow):
 
     # ---- PID-Regler-Optimierung des ausgewählten Diagramms
     def _pid_chart(self):
+        """Gewähltes Diagramm (für die PID-Einstellungen) oder None, wenn eine Achse gewählt ist."""
         k = self.prop_key
         return self.charts[k[1]] if k and k[0] == "chart" else None
 
@@ -1451,6 +1463,7 @@ class ConfigWindow(QMainWindow):
 
     # Eingabe aus den Feldern in das Datenmodell (self.charts) übernehmen.
     def apply_props(self, *_):
+        """Geänderte Eigenschaftsfelder in Diagramm bzw. Achse übernehmen (bei jeder Eingabe)."""
         if self._loading or self.prop_key is None:
             return
         kind, ci, ai = self.prop_key
@@ -1471,6 +1484,7 @@ class ConfigWindow(QMainWindow):
 
     # Diagramm, in das eine neue Y-Achse eingefügt werden soll (Auswahl; sonst das letzte Diagramm).
     def selected_chart_index(self):
+        """Index des Diagramms, zu dem die Auswahl im Baum gehört (sonst das letzte)."""
         items = self.tree.selectedItems()
         if not items:
             return len(self.charts) - 1
@@ -1481,6 +1495,7 @@ class ConfigWindow(QMainWindow):
 
     # Neues Diagramm mit einer Y-Achse anhängen. Zuordnungen vorher sichern und danach neu setzen.
     def add_chart(self):
+        """Neues Diagramm mit einer Achse anhängen; Zuordnungen der Variablen bleiben."""
         assigns = self.assignments()
         self.charts.append(Chart(name=f"Diagramm {len(self.charts) + 1}", axes=[Axis()]))
         self.set_assignments(assigns)
@@ -1488,6 +1503,7 @@ class ConfigWindow(QMainWindow):
 
     # Neue Y-Achse im ausgewählten Diagramm anlegen.
     def add_axis(self):
+        """Neue Y-Achse im gewählten Diagramm."""
         assigns = self.assignments()
         c = self.charts[self.selected_chart_index()]
         c.axes.append(Axis(name=f"Achse {len(c.axes) + 1}"))
@@ -1496,6 +1512,8 @@ class ConfigWindow(QMainWindow):
 
     # Auswahl entfernen: Block, Variable, Y-Achse oder Diagramm.
     def remove_selected(self):
+        """Gewähltes Diagramm bzw. Achse (mit Rückfrage) oder Variable entfernen; Variablen entfernter Achsen wandern auf
+        die erste."""
         items = self.tree.selectedItems()
         if not items:
             return
@@ -1664,6 +1682,8 @@ class ConfigWindow(QMainWindow):
 
     # Blockeditor öffnen; bei OK die Blöcke übernehmen und den Baum aktualisieren.
     def open_block_editor(self):
+        """Blockeditor öffnen (Blocklesemodus): neuen Block aus der Auswahl bzw. vorhandene bearbeiten; das Ergebnis
+        ersetzt die Blöcke."""
         # Namen, die für Block-Elemente nicht mehr in Frage kommen (vorhandene Variablen).
         taken = {self.table.item(r, C_NAME).text() for r in range(self.table.rowCount())}
         flat = self.flat()
@@ -1700,6 +1720,7 @@ class ConfigWindow(QMainWindow):
 
     # Neue berechnete Variable: Editor öffnen; bei OK als neue Zeile (im ausgewählten Diagramm/der Achse) anlegen.
     def add_computed(self):
+        """Berechnete Variable mit dem Formeleditor anlegen (im gewählten Diagramm)."""
         taken = ({self.table.item(r, C_NAME).text() for r in range(self.table.rowCount())}
                  | set(self.block_names()))
         dlg = FormulaEditor(self, self.available_names(), taken=taken)
@@ -1711,6 +1732,8 @@ class ConfigWindow(QMainWindow):
 
     # Vorhandene berechnete Variable bearbeiten (Name und Formel).
     def edit_computed(self, row):
+        """Formel der berechneten Variable in Zeile ``row`` bearbeiten; ein neuer Name wird in Formeln anderer Variablen
+        übernommen."""
         old = self.table.item(row, C_NAME).text()
         taken = ({self.table.item(r, C_NAME).text() for r in range(self.table.rowCount())}
                  | set(self.block_names())) - {old}
@@ -1723,11 +1746,13 @@ class ConfigWindow(QMainWindow):
 
     # Doppelklick auf die Formel einer berechneten Variable öffnet den Editor.
     def on_var_double_click(self, item):
+        """Doppelklick auf eine Formel öffnet den Formeleditor."""
         if item.column() == C_FORMULA and item.text():
             self.edit_computed(item.row())
 
     # Namensänderung -> Baum neu aufbauen (zeigt den Namen).
     def on_var_item_changed(self, item):
+        """Zelle geändert: Baum (Name, Aufzeichnen, Anzeigen) und Filter nachführen."""
         if item.column() in (C_NAME, C_REC, C_DISP):
             self.refresh_tree()
         if item.column() in (C_NAME, C_TAG, C_FORMULA, C_REC, C_DISP):
@@ -1789,6 +1814,7 @@ class ConfigWindow(QMainWindow):
 
     # Markierte Zeilen von unten nach oben löschen (bei aktivem Filter nur die sichtbaren).
     def remove_rows(self):
+        """Markierte (sichtbare) Variablenzeilen löschen."""
         rows = sorted({i.row() for i in self.table.selectedIndexes() if not self.table.isRowHidden(i.row())},
                       reverse=True)
         for r in rows:
@@ -1798,6 +1824,7 @@ class ConfigWindow(QMainWindow):
 
     # Farbe per Farbdialog ändern; Knopf und Baumsymbol werden aktualisiert.
     def pick_color(self, btn):
+        """Farbe einer Variable wählen (Knopf zeigt sie)."""
         c = QColorDialog.getColor(QColor(btn.property("color")), self)
         if c.isValid():
             btn.setProperty("color", c.name())
@@ -1903,6 +1930,8 @@ class ConfigWindow(QMainWindow):
     # ---------- Daten <-> UI ----------
     # Oberfläche mit einer geladenen Konfiguration füllen.
     def fill(self, conn, charts, variables, blocks=None, plcs=None):
+        """Alle Felder aus einer geladenen Konfiguration füllen: Verbindung/Einstellungen ``conn``, Diagramme, Variablen,
+        Blöcke, Steuerungen."""
         self._loading = True
         self.ed_project.setText(conn.get("projekt", ""))
         # Steuerungen zuerst: die Variablenzeilen brauchen deren Namen für ihre Auswahlliste.
@@ -1996,6 +2025,7 @@ class ConfigWindow(QMainWindow):
     # Verbindungs- und Anzeigeeinstellungen aus den Feldern als Wörterbuch (für die Konfigurationsdatei und für Tests).
     # Die Steuerungen stehen getrennt in collect_plcs(); ip/pfad/cpu/intervall_ms spiegeln die erste Steuerung.
     def collect_conn(self):
+        """Alle Einstellungen der Reiter als dict für den Abschnitt „verbindung“ der Konfiguration."""
         import json
         return {"projekt": self.ed_project.text().strip(),
                 "treiberdaten": json.dumps(self.store, ensure_ascii=False) if self.store else "",
@@ -2058,6 +2088,7 @@ class ConfigWindow(QMainWindow):
 
     # Alle Tabellenzeilen als Variable-Objekte einsammeln (einschließlich Zuordnung und Formel).
     def collect(self):
+        """Variablentabelle -> Liste von Variable (mit Zuordnung zu Diagramm und Achse)."""
         t = self.table
         out = []
         for r in range(t.rowCount()):
@@ -2310,6 +2341,8 @@ class ConfigWindow(QMainWindow):
     # ---------- Aktionen ----------
     # Konfiguration prüfen und in 'path' schreiben. Rückgabe: True bei Erfolg.
     def _write(self, path):
+        """Eingaben prüfen (Namen, Steuerungen, Variablen, Treiberparameter) und die Konfiguration nach ``path`` schreiben
+        -> True bei Erfolg."""
         # CSV-Name wird Teil von Dateinamen und Ordnern: keine unzulässigen Zeichen.
         if re.search(r'[\\/:*?"<>|]', self.ed_csvname.text()):
             QMessageBox.warning(self, tr("CSV-Name"),
@@ -2444,10 +2477,12 @@ class ConfigWindow(QMainWindow):
 
     # Speichern in die aktuelle Datei; ohne Dateinamen (neue Konfiguration) wie „Speichern unter“.
     def save(self):
+        """Speichern (ohne Dateiname: „Speichern unter“)."""
         return self._write(self.path) if self.path else self.save_as()
 
     # „Speichern unter“: beliebiger Dateiname; die Endung ist immer .json.
     def save_as(self):
+        """Dateiname wählen (Endung .json ergänzen) und speichern."""
         start = self.path or os.path.join(BASE_DIR, "plc_config.json")
         p, _ = plc_filedlg.save_name(self, tr("Konfiguration speichern unter"), start, FILE_FILTER)
         if not p:
@@ -2459,6 +2494,7 @@ class ConfigWindow(QMainWindow):
 
     # Konfiguration aus Datei p laden (JSON, beliebiger Name). Rückgabe: True bei Erfolg.
     def load_path(self, p):
+        """Konfiguration laden und anzeigen; alte INI-Dateien zur Umwandlung anbieten."""
         try:
             read_config_store(p)
         except ConfigFormatError as e:
@@ -2491,6 +2527,7 @@ class ConfigWindow(QMainWindow):
 
     # Ältere INI-Konfiguration(en) einmalig in JSON umwandeln (die INI-Dateien bleiben unverändert).
     def convert_ini(self, path=None):
+        """INI-Konfiguration(en) in JSON umwandeln und die erste öffnen; ohne ``path`` Dateien wählen."""
         if path:
             paths = [path]
             ask = tr("„{0}“ ist eine Konfiguration im alten INI-Format.\n\nJetzt in eine JSON-Datei umwandeln und öffnen?\n"
@@ -2527,6 +2564,7 @@ class ConfigWindow(QMainWindow):
 
     # „Öffnen“: Dateidialog für eine Konfigurationsdatei mit beliebigem Namen.
     def open_file(self):
+        """Konfiguration wählen und laden."""
         start = os.path.dirname(self.path) if self.path else BASE_DIR
         p, _ = plc_filedlg.open_name(self, tr("Konfiguration öffnen"), start, FILE_FILTER)
         if p:
@@ -2534,6 +2572,7 @@ class ConfigWindow(QMainWindow):
 
     # „Neu“: leere Konfiguration mit einer Steuerung; der Dateiname wird beim ersten Speichern gefragt.
     def new_config(self):
+        """Neue, leere Konfiguration (Vorgabewerte, eine Steuerung, ein Diagramm)."""
         self.path = ""
         conn, plc = default_connection(), Plc()
         self.fill(conn, [Chart()], [], blocks=[], plcs=[plc])
@@ -2543,6 +2582,7 @@ class ConfigWindow(QMainWindow):
 
     # Logger mit dieser Konfiguration starten (nach dem Speichern).
     def start_logger(self):
+        """Speichern und den Logger mit dieser Konfiguration starten."""
         if not self.save():
             return
         from plc_branding import launch
@@ -2606,6 +2646,8 @@ class ConfigWindow(QMainWindow):
     # Verbindung zu jeder Steuerung aufbauen und deren Variablen einmal lesen; das Ergebnis (oder die Fehlermeldung)
     # steht in der Spalte 'Testwert'.
     def test_connection(self):
+        """Jede Steuerung verbinden und ihre Variablen einmal lesen; Ergebnis (Werte bzw. Fehler je Adresse) in einem
+        Dialog."""
         plcs = self.collect_plcs()
         variables = self.collect()
         errors = []

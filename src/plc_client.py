@@ -53,6 +53,7 @@ class UntrustedCertificate(ClientError):
     """HTTPS mit einem Zertifikat, dem (noch) nicht vertraut wird – ``fingerprint`` zum Vergleich anzeigen."""
 
     def __init__(self, host, fingerprint):
+        """Fehler mit Rechnername und SHA-256-Fingerabdruck des unbekannten Zertifikats (zum Vergleichen und Merken)."""
         super().__init__(tr("Unbekanntes Zertifikat von {0}").format(host))
         self.host, self.fingerprint = host, fingerprint
 
@@ -81,10 +82,13 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
     """HTTPS-Verbindung, die nur ein Zertifikat mit dem gemerkten Fingerabdruck annimmt (selbstsignierte Zertifikate)."""
 
     def __init__(self, host, pin="", **kw):
+        """HTTPS-Verbindung, die nur ein Zertifikat mit dem Fingerabdruck ``pin`` annimmt."""
         super().__init__(host, **kw)
         self.pin = pin
 
     def connect(self):
+        """Verbinden und den Fingerabdruck des Server-Zertifikats mit dem gemerkten vergleichen; anders -> Verbindung
+        schließen und SSLError."""
         super().connect()
         fp = fingerprint_of(self.sock.getpeercert(binary_form=True) or b"")
         if fp != self.pin:
@@ -93,7 +97,11 @@ class _PinnedHTTPSConnection(http.client.HTTPSConnection):
 
 
 class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
+    """urllib-Handler für HTTPS mit „Certificate Pinning“: statt Zertifizierungsstelle zählt der gemerkte Fingerabdruck
+    (selbstsignierte Zertifikate der Logger)."""
     def __init__(self, pin):
+        """Standardprüfung abschalten (selbstsigniert, Name passt oft nicht) – geprüft wird der Fingerabdruck in
+        _PinnedHTTPSConnection."""
         ctx = ssl.create_default_context()
         ctx.check_hostname = False
         ctx.verify_mode = ssl.CERT_NONE           # geprüft wird stattdessen der Fingerabdruck (siehe oben)
@@ -101,6 +109,7 @@ class _PinnedHTTPSHandler(urllib.request.HTTPSHandler):
         self.pin = pin
 
     def https_open(self, req):
+        """Für jede Anfrage eine _PinnedHTTPSConnection mit dem gemerkten Fingerabdruck verwenden."""
         return self.do_open(lambda host, **kw: _PinnedHTTPSConnection(host, pin=self.pin, **kw), req,
                             context=self._context)
 
@@ -111,6 +120,8 @@ class Connection:
     ``pins``: {"host:port": Fingerabdruck} vertrauter selbstsignierter Zertifikate (wird beim Bestätigen ergänzt)."""
 
     def __init__(self, url, user="", password="", token="", pins=None):
+        """Verbindungsdaten: Adresse (ein ``?token=…`` darin gilt als Zugriffscode), Benutzer/Passwort, Zugriffscode,
+        gemerkte Fingerabdrücke {Rechner: Fingerabdruck}. Verbunden wird erst mit connect()."""
         self.url = normalize_url(url)
         # Adresse mit Zugriffscode (wie „Webserver-Adresse …“ sie kopiert): …/?token=…
         q = urllib.parse.parse_qs(urllib.parse.urlsplit((url or "").strip()).query)
@@ -128,6 +139,8 @@ class Connection:
 
     # ---------------------------------------------------------------- Netz
     def _build_opener(self):
+        """urllib-Opener anlegen: ohne Proxy, mit Cookies (Anmeldung) und – bei bekanntem Zertifikat – mit
+        Fingerabdruck-Prüfung."""
         handlers = [urllib.request.ProxyHandler({}),                 # im Anlagennetz nie über einen Proxy
                     urllib.request.HTTPCookieProcessor(self.cookies)]
         if self.https and self.hostkey in self.pins:
@@ -149,6 +162,8 @@ class Connection:
         self._opener = None
 
     def _open(self, path, data=None, headers=None, timeout=TIMEOUT_S):
+        """Anfrage an ``path`` (relativ zur Adresse des Loggers) senden; komprimierte Antworten und JSON erbeten,
+        Zugriffscode im Kopf. HTTP-Fehler werden in verständliche ClientError übersetzt."""
         if self._opener is None:
             self._build_opener()
         h = {"Accept-Encoding": "gzip", "Accept": "application/json"}
@@ -178,12 +193,14 @@ class Connection:
             raise ClientError(tr("{0} nicht erreichbar: {1}").format(self.hostkey, e)) from None
 
     def get_json(self, path, params=None, timeout=TIMEOUT_S):
+        """GET mit Parametern -> JSON-Antwort (Python-Objekt)."""
         if params:
             path += ("&" if "?" in path else "?") + urllib.parse.urlencode(params)
         with self._open(path, timeout=timeout) as r:
             return json.loads(_read(r).decode("utf-8") or "null")
 
     def post_json(self, path, body):
+        """POST mit JSON-Inhalt -> JSON-Antwort (Python-Objekt)."""
         data = json.dumps(body).encode("utf-8")
         with self._open(path, data, {"Content-Type": "application/json"}) as r:
             return json.loads(_read(r).decode("utf-8") or "null")
@@ -220,6 +237,7 @@ class Connection:
 
 
 def _read(resp):
+    """Antwortdaten lesen und bei Bedarf entpacken (gzip)."""
     raw = resp.read()
     if resp.headers.get("Content-Encoding") == "gzip":
         import gzip
@@ -232,11 +250,13 @@ class RemotePlc:
     """Steuerung des Servers (nur Name und Kurzbeschreibung für die Status-LEDs)."""
 
     def __init__(self, name, summary="", driver=""):
+        """Steuerung des entfernten Loggers – nur Name und Kurztext (die Verbindungsdaten bleiben beim Server)."""
         self.name, self._summary, self.driver = name, summary, driver
         self.enabled = True
         self.params = {}
 
     def summary(self):
+        """Kurztext der Verbindung, wie ihn der Server meldet."""
         return self._summary
 
 
@@ -273,6 +293,8 @@ class RemoteEventLog:
     """Ereignisprotokoll des Servers mit der Schnittstelle von plc_events.EventLog (für Viewer, Marken, Zähler)."""
 
     def __init__(self, con):
+        """Ereignisprotokoll des Servers über /api/ereignisse; wird bei Bedarf nachgeladen, ``version`` steigt bei jeder
+        Änderung (für die Anzeige)."""
         self.con = con
         self.path = con.url + "  (" + tr("Server") + ")"
         self.version = 0
@@ -294,14 +316,18 @@ class RemoteEventLog:
         self._open = int(ev.get("open") or 0)
 
     def changed_on_disk(self):
+        """Keine lokale Datei: Änderungen meldet der Server über seine Versionsnummer."""
         return False
 
     def reload(self):
+        """Zwischengespeicherte Ereignisse verwerfen; beim nächsten Zugriff neu vom Server holen."""
         with self.lock:
             self._events = None
             self.version += 1
 
     def events(self):
+        """Ereignisse (der letzten 400 Tage) vom Server, zwischengespeichert; bei Verbindungsfehlern die letzte bekannte
+        Liste."""
         from plc_events import Event
         with self.lock:
             if self._events is not None:
@@ -324,15 +350,19 @@ class RemoteEventLog:
         return list(out)
 
     def open_count(self):
+        """Zahl der offenen (nicht quittierten) Ereignisse laut letzter Abfrage."""
         return self._open
 
     def acknowledge(self, ids=None, user=None):
+        """Ereignisse beim Server quittieren (``ids`` None = alle offenen) -> Anzahl. Quittierer ist der angemeldete
+        Benutzer des Servers."""
         r = self.con.post_json("api/ereignisse", {"aktion": "quittieren",
                                                   "ids": "alle" if ids is None else [int(i) for i in ids]})
         self.reload()
         return int((r or {}).get("count", 0))
 
     def note(self, text, ts=None, user=None):
+        """Notiz beim Server eintragen -> ID der Notiz."""
         r = self.con.post_json("api/ereignisse", {"aktion": "notiz", "text": str(text), "ts": ts})
         self.reload()
         return (r or {}).get("id")
@@ -347,6 +377,8 @@ class RemoteRecorder:
     die Oberfläche verbindet sich dann neu."""
 
     def __init__(self, con, konfig=None):
+        """Modell (Steuerungen, Diagramme, Variablen) aus der Konfiguration des Servers aufbauen und Puffer wie beim
+        lokalen Recorder anlegen; ``write``: der Benutzer darf beim Server schreiben (Notizen, Quittieren)."""
         self.con = con
         self.konfig = konfig or con.konfig or con.connect()
         self.conn, self.charts, self.vars, self.plcs = model_from_konfig(self.konfig)
@@ -377,6 +409,7 @@ class RemoteRecorder:
 
     # ---------------------------------------------------------------- Ablauf
     def start(self):
+        """Abfrage-Thread starten (holt neue Zeilen im Takt des Servers)."""
         if self.running:
             return
         self._stop.clear()
@@ -385,6 +418,7 @@ class RemoteRecorder:
         self._thread.start()
 
     def stop(self):
+        """Abfrage-Thread beenden und auf ihn warten (nicht, wenn stop aus ihm selbst kommt)."""
         self._stop.set()
         th = self._thread
         if th is not None and th.is_alive() and th is not threading.current_thread():
@@ -395,9 +429,12 @@ class RemoteRecorder:
     shutdown = stop
 
     def emit(self, text):
+        """Meldung für die Statuszeile vormerken (wie Recorder.emit)."""
         self.messages.append(text)
 
     def _loop(self):
+        """Abfrage-Thread: je Takt die Zeilen seit der letzten holen (beim ersten Mal die jüngsten INITIAL_ROWS), anhängen,
+        Zustand und Ereignis-Version übernehmen; Verbindungsfehler melden und weiter versuchen."""
         last = 0.0
         failed = False
         while not self._stop.is_set():
@@ -475,10 +512,12 @@ class RemoteRecorder:
             self.dirty = True
 
     def count(self):
+        """Zahl der Zeilen im Puffer."""
         with self.lock:
             return self.n
 
     def window(self, seconds):
+        """Die letzten ``seconds`` Sekunden (Zeiten, Werte) als Kopie – Online-Anzeige."""
         with self.lock:
             n = self.n
             if n == 0:
@@ -488,6 +527,7 @@ class RemoteRecorder:
             return t[i0:n].copy(), self.ybuf[:, i0:n].copy()
 
     def slice_time(self, t0, t1):
+        """Zeilen zwischen t0 und t1 (mit je einem Punkt davor/danach, damit Linien bis zum Rand reichen) als Kopie."""
         with self.lock:
             n = self.n
             if n == 0:
@@ -498,16 +538,19 @@ class RemoteRecorder:
             return t[i0:i1].copy(), self.ybuf[:, i0:i1].copy()
 
     def snapshot(self):
+        """Alle Zeilen im Puffer als Kopie (Zeiten, Werte)."""
         with self.lock:
             return self.tbuf[:self.n].copy(), self.ybuf[:, :self.n].copy()
 
     def last_row(self):
+        """Letzte Zeile (Zeit, Werte) oder (None, None)."""
         with self.lock:
             if self.n == 0:
                 return None, None
             return float(self.tbuf[self.n - 1]), self.ybuf[:, self.n - 1].copy()
 
     def first_time(self):
+        """Zeit der ersten Zeile im Puffer oder None."""
         with self.lock:
             return float(self.tbuf[0]) if self.n else None
 
@@ -524,6 +567,7 @@ class RemoteRecorder:
         return self._link
 
     def drain_messages(self):
+        """Vorgemerkte Meldungen abholen und leeren."""
         out = []
         while True:
             try:
@@ -532,6 +576,7 @@ class RemoteRecorder:
                 return out
 
     def capture_state(self):
+        """Zustand der Aufzeichnung per Trigger (wie ihn der Server meldet)."""
         return self._capture
 
     def load_range(self, t0, t1, max_rows=200_000):

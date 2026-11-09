@@ -90,6 +90,7 @@ class BarStrip(QWidget):
     # colors/names: Farbe und Name je Balken; width: Balkenbreite in Pixeln (None = Vorgabe). Es wird nichts in einer
     # Liste vorgehalten außer den letzten Werten.
     def __init__(self, colors, names, width=None):
+        """Balken je Variable in deren Farbe; ``width``: Balkenbreite in Pixel (Abstand passt sich an)."""
         super().__init__()
         if width:
             self.BAR_W = max(2, int(width))
@@ -108,22 +109,27 @@ class BarStrip(QWidget):
 
     # Skalierungsbereiche der Balken setzen (bei Änderung der Y-Achsen).
     def set_ranges(self, ranges):
+        """Skalierung je Balken (min, max) – die der Y-Achse seiner Kurve."""
         self.ranges = ranges
         self.update()
 
     # Ränder setzen, damit die Balken mit der Plotfläche des Diagramms bündig sind.
     def set_margins(self, top, bottom):
+        """Oberen und unteren Rand so setzen, dass die Balken genau neben der Zeichenfläche des Diagramms liegen."""
         self.top, self.bottom = int(round(top)), int(round(bottom))   # Qt erwartet ganze Pixel
         self.update()
 
     # Neue Werte übernehmen; der Tooltip zeigt Name und Wert aller Balken.
     def set_values(self, values):
+        """Aktuelle Werte setzen (Tooltip mit Namen und Werten) und neu zeichnen."""
         self.values = values
         self.setToolTip("\n".join(f"{n}: {v:.4g}" for n, v in zip(self.names, values)))
         self.update()
 
     # Zeichnet Rahmen und Füllung jedes Balkens. Füllhöhe = (Wert - min) / (max - min), auf 0..1 begrenzt.
     def paintEvent(self, _event):
+        """Balken von unten bis zum Wert zeichnen, auf die Höhe der Zeichenfläche bezogen; Werte außerhalb werden an den
+        Rand geklemmt."""
         h = self.height() - self.top - self.bottom
         if h <= 2:
             return
@@ -160,6 +166,8 @@ class _NoClickSample(ItemSample):
 
     # ev.ignore(): der Klick wird an das nächste Element darunter (die Legende) weitergegeben.
     def mouseClickEvent(self, ev):
+        """Klick auf das Farbmuster der Legende weiterreichen (pyqtgraph würde sonst die Kurve ausblenden; das macht hier
+        das Kontextmenü)."""
         ev.ignore()
 
 
@@ -192,11 +200,13 @@ class BoolSample(_NoClickSample):
 
     # Ausgeblendete Kurve: Streifen entfällt.
     def set_dim(self, flag):
+        """Ausgeblendete Kurve: Muster abgeschwächt zeichnen."""
         self.dim = flag
         self._changed()
 
     # bold: Kurve ist hervorgehoben (dicker); faded: eine andere Kurve ist hervorgehoben (abblenden).
     def set_emphasis(self, bold, faded):
+        """Hervorhebung: ``bold`` = diese Kurve hervorgehoben, ``faded`` = eine andere ist hervorgehoben."""
         self.bold, self.faded = bold, faded
         self._changed()
 
@@ -285,6 +295,7 @@ class CurveLegend(pg.LegendItem):
 
     # on_menu(kurve, bildschirmposition): Rechtsklick; on_click(kurve): Linksklick.
     def __init__(self, on_menu, on_click, **kwargs):
+        """Legende mit Rückrufen für Rechtsklick (Menü) und Linksklick (hervorheben)."""
         super().__init__(**kwargs)
         self.on_menu = on_menu
         self.on_click = on_click
@@ -301,6 +312,8 @@ class CurveLegend(pg.LegendItem):
     # Linksklick -> hervorheben; Rechtsklick -> Menü. ev.accept() verhindert, dass pyqtgraph den Klick weiterverarbeitet
     # (z. B. das Standard-Kontextmenü der Diagrammfläche).
     def mouseClickEvent(self, ev):
+        """Klick auf einen Eintrag: rechts -> Menü (ein-/ausblenden …), links -> Kurve hervorheben; neben den Einträgen
+        weiterreichen."""
         item = self._entry_at(ev.scenePos())
         if item is None:
             ev.ignore()
@@ -334,11 +347,13 @@ class ChartTitle(QLabel):
 
     # Mausklick merken (Startpunkt des Ziehens).
     def mousePressEvent(self, ev):
+        """Startpunkt merken (Ziehen beginnt erst nach einer Mindeststrecke)."""
         if ev.button() == Qt.MouseButton.LeftButton:
             self._press = ev.position().toPoint()
 
     # Maus bewegt bei gedrückter Taste: erst nach Überschreiten der Mindeststrecke (startDragDistance) beginnt das Ziehen.
     def mouseMoveEvent(self, ev):
+        """Titel ziehen: Diagramm per Drag & Drop auf einen anderen Titel verschieben."""
         if (ev.buttons() & Qt.MouseButton.LeftButton
                 and (ev.position().toPoint() - self._press).manhattanLength()
                 >= QApplication.startDragDistance()):
@@ -351,11 +366,13 @@ class ChartTitle(QLabel):
 
     # Nur Ziehvorgänge mit unserem MIME-Typ annehmen.
     def dragEnterEvent(self, ev):
+        """Nur gezogene Diagrammtitel annehmen."""
         if ev.mimeData().hasFormat(MIME_CHART):
             ev.acceptProposedAction()
 
     # Losgelassen auf dieser Titelzeile: Nummer des gezogenen Diagramms melden (die Seite ordnet um).
     def dropEvent(self, ev):
+        """Diagramm ``src`` an die Stelle dieses Diagramms verschieben (Rückruf an das Hauptfenster)."""
         try:
             src = int(bytes(ev.mimeData().data(MIME_CHART)).decode())
         except ValueError:
@@ -376,6 +393,7 @@ class ZoomViewBox(pg.ViewBox):
     sigZoomRect = Signal(object)
 
     def __init__(self, *a, **k):
+        """ViewBox mit umschaltbarem Rechteck-Zoom (sonst Ziehen = Verschieben)."""
         super().__init__(*a, **k)
         self.rect_zoom = False
 
@@ -412,6 +430,8 @@ class ChartPanel(QWidget):
     # Gesamtliste); variables: Gesamtliste; show_bars: Balken anzeigen; bool_in_plot: BOOLs auch im Diagramm zeichnen;
     # bar_width: Breite der Balken in Pixeln (None = Vorgabe).
     def __init__(self, ci, cfg, var_idx, variables, show_bars, bool_in_plot=False, bar_width=None):
+        """Ein Diagramm: Titel, Plot mit einer ViewBox je Y-Achse, Legende, optional Balken; ``var_idx``: Indizes seiner
+        Variablen, ``bool_in_plot``: BOOL zusätzlich als Kurve."""
         super().__init__()
         self.user_visible = {}            # Variablen-Index -> vom Benutzer sichtbar geschaltet
         self.highlighted = None           # Variablen-Index der hervorgehobenen Kurve
@@ -605,6 +625,7 @@ class ChartPanel(QWidget):
 
     # Geometrie der zusätzlichen ViewBoxen an die der Hauptfläche anpassen (gleiche Position und Größe).
     def _update_views(self, *_):
+        """Zusätzliche ViewBoxes (weitere Y-Achsen) über die Haupt-ViewBox legen und deren Zeitachse mitführen."""
         main = self.plot.plotItem.vb
         for vb2 in self.axis_vbs[1:]:
             vb2.setGeometry(main.sceneBoundingRect())
@@ -612,6 +633,7 @@ class ChartPanel(QWidget):
 
     # Balkenskalierung = aktuell sichtbarer y-Bereich der Achse jeder Variable.
     def _update_bar_ranges(self):
+        """Balken nach Skalierungsänderung der Y-Achsen neu skalieren."""
         self.bars.set_ranges([tuple(self.axis_vbs[self.var_axis[vi]].viewRange()[1])
                               for vi in self.bar_idx])
 
@@ -745,10 +767,12 @@ class ChartPanel(QWidget):
 
     # Balken ein-/ausblenden; ohne Balken-Variablen bleibt der Streifen immer ausgeblendet.
     def set_bars_visible(self, flag):
+        """Balken ein/aus (nur wenn das Diagramm Variablen mit Balken hat)."""
         self.bars.setVisible(flag and bool(self.bar_idx))
 
     # Titelzeile nur zeigen, wenn die Seite mehrere Diagramme enthält (sonst steht der Name schon im Tab).
     def title_visible(self, flag):
+        """Titelzeile ein/aus (z. B. bei nur einem Diagramm im Tab)."""
         self.title.setVisible(flag)
 
     # --- Kurven ein-/ausblenden (Rechtsklick auf den Namen in der Legende)
@@ -758,6 +782,7 @@ class ChartPanel(QWidget):
 
     # Rechtsklick-Menü der Legende: Kurve ein-/ausblenden bzw. alle Kurven dieses Diagramms einblenden.
     def _legend_menu(self, item, pos):
+        """Kontextmenü eines Legendeneintrags: ein-/ausblenden, hervorheben, Farbe …"""
         vi = self._curve_vi(item)
         if vi is None:
             return
@@ -814,6 +839,7 @@ class ChartPanel(QWidget):
     # --- Hervorheben (Linksklick auf den Namen in der Legende)
     # Linksklick auf einen Legendeneintrag: Kurve hervorheben bzw. die Hervorhebung wieder aufheben.
     def _legend_click(self, item):
+        """Linksklick auf einen Legendeneintrag: Kurve hervorheben bzw. wieder normal."""
         vi = self._curve_vi(item)
         if vi is not None:
             self.toggle_highlight(vi)
@@ -840,6 +866,7 @@ class ChartPanel(QWidget):
     # Legendentexte aktualisieren: 'Name: Wert' in der Farbe der Variable, fett bei Hervorhebung, grau mit '(aus)' wenn ausgeblendet.
     # values = {Variablen-Index: aktueller Wert}; None = vorherige Werte beibehalten (nur Stil neu setzen).
     def set_legend_values(self, values=None):
+        """Werte hinter den Namen in der Legende (in Kurvenfarbe); ohne ``values`` die zuletzt gesetzten neu anzeigen."""
         if values is not None:
             self._vals = values
         for vi, label in self.legend_labels.items():
@@ -867,6 +894,7 @@ class ChartPanel(QWidget):
 
     # Textfarbe aller Legendeneinträge einheitlich ändern (derzeit nicht verwendet, da die Einträge variablenfarbig sind).
     def _legend_text(self, color):
+        """Schriftfarbe der Legende setzen (pyqtgraph-Versionen unterschiedlich)."""
         leg = self.legend
         if hasattr(leg, "setLabelTextColor"):
             leg.setLabelTextColor(color)
@@ -961,6 +989,8 @@ class ChartPage(QScrollArea):
 
     # panels: ChartPanel-Objekte dieser Seite; mode: Anordnung; columns: Spaltenzahl im Raster (0 = automatisch).
     def __init__(self, panels, mode="untereinander", columns=0):
+        """Seite mit Diagrammen: untereinander (mit Mindesthöhe und Scrollleiste), nebeneinander oder im Raster mit
+        ``columns`` Spalten."""
         super().__init__()
         self.panels = list(panels)
         self.mode, self.columns = mode, columns
@@ -1091,9 +1121,13 @@ def dock_features(dock):
         dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetClosable)
 
 class MainWindow(QMainWindow):
+    """Hauptfenster des Loggers: Diagramme (Docks), Werteanzeige, Online/Offline, Lineale, Menüs, Status-LEDs. Datenquelle:
+    lokaler Recorder, CSV-Datei, Datenbank oder (Client) Webserver eines anderen Loggers."""
     # config_path: Konfigurationsdatei (JSON); demo: Demo-Modus vorwählen; client: angemeldete plc_client.Connection
     # (Betriebsart Client: Konfiguration und Messwerte kommen vom Webserver eines anderen Loggers).
     def __init__(self, config_path, demo=False, client=None):
+        """Konfiguration laden, Oberfläche aufbauen, Zeitgeber starten; ``demo``: Demo-Modus vorwählen, ``client``:
+        angemeldete Verbindung zu einem anderen Logger."""
         super().__init__()
         # Menüleiste im Fenster: Unter Linux (KDE Plasma, Ubuntu mit globalem Menü …) wandert sie sonst in die
         # Leiste der Arbeitsoberfläche und fehlt im Fenster – samt Logo rechts oben. macOS: wie üblich oben am Bildschirm.
@@ -1184,6 +1218,7 @@ class MainWindow(QMainWindow):
 
     # Konfiguration einer Datei lesen -> (conn, charts, variables, plcs); bei Fehlern Meldung und Standardkonfiguration.
     def _read_config(self, path):
+        """Konfiguration lesen -> (conn, charts, variables, plcs) oder None mit Meldung."""
         try:
             conn, charts, variables = load_config(path)
             return conn, charts, variables, load_plcs(path)
@@ -1196,11 +1231,13 @@ class MainWindow(QMainWindow):
     # (ältere Konfigurationen: 'nebeneinander' stellte auch die Diagramme einer Seite nebeneinander).
     @staticmethod
     def _page_mode_from(conn):
+        """Anordnung der Diagramme aus der Konfiguration (neue Einstellung oder aus der alten abgeleitet)."""
         return conn.get("seite_anordnung") or ("nebeneinander" if conn["anordnung"] == "nebeneinander"
                                                else "untereinander")
 
     # Fenstertitel: Programmname, Projektname und Name der Konfigurationsdatei.
     def _title(self):
+        """Fenstertitel: Projekt und Konfigurationsdatei bzw. Adresse des Servers im Client-Betrieb."""
         proj = self.conn.get("projekt", "")
         if self.client is not None:
             return "PLC Datenlogger" + (f" – {proj}" if proj else "") + "  [" + tr("Client: {0}").format(
@@ -1209,6 +1246,7 @@ class MainWindow(QMainWindow):
 
     # ---------------- UI ----------------
     def _build_ui(self):
+        """Menüs, Werkzeugleiste, Statuszeile mit LEDs und die Diagramme (Docks) aufbauen."""
         # Fenster-Icon: konfiguriertes Icon, sonst das Logo, sonst das Standard-Symbol.
         self.setWindowIcon(app_icon(self.conn.get("icon", ""), self.conn.get("logo", "")))
         # Verschachtelte Docks erlauben (frei kombinierbar: nebeneinander, übereinander, als Tabs).
@@ -1662,12 +1700,14 @@ class MainWindow(QMainWindow):
 
     # Haken in den Ansichtsmenüs passend zum Zustand setzen (Seitenanordnung, Diagrammanordnung, Rasterspalten).
     def _sync_menus(self):
+        """Häkchen der Menüs (Anordnung, Seiten, Spalten) an die aktuellen Einstellungen anpassen."""
         self.arr_actions[self.layout_mode].setChecked(True)
         self.page_actions[self.page_mode].setChecked(True)
         self.col_actions.get(int(self.conn.get("raster_spalten", 0)), self.col_actions[0]).setChecked(True)
 
     # Eine Status-LED je Steuerung (Name aus der Konfiguration) in der Statusleiste anlegen.
     def _rebuild_leds(self):
+        """Status-LEDs neu anlegen (je Steuerung eine), z. B. nach Laden einer anderen Konfiguration."""
         for led in self.leds:
             self.led_lay.removeWidget(led)
             led.deleteLater()
@@ -1688,6 +1728,7 @@ class MainWindow(QMainWindow):
 
     # Meldungen und Verbindungszustände vom Recorder abholen (wird vom 100-ms-Takt aufgerufen; billig).
     def poll_recorder(self):
+        """Im Takt der Anzeige: Meldungen und Zustände des Recorders übernehmen (Statuszeile, LEDs, Ereignisse)."""
         rec = self.rec
         if rec is None:
             return
@@ -1722,6 +1763,7 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # Alle Messdaten (Zeiten, Werte je Variable): während der Aufzeichnung aus dem Recorder, sonst die angezeigten.
     def _pid_source(self):
+        """Messdaten für die PID-Optimierung: online der Pufferinhalt, sonst die geladenen Daten."""
         if self.online and self.rec is not None and self.source == "rec":
             return self.rec.snapshot()
         return self.t, self.y
@@ -1736,6 +1778,7 @@ class MainWindow(QMainWindow):
 
     # Dialog der PID-Optimierung für Diagramm ci öffnen; Zeitbereiche: sichtbar, zwischen den Linealen, alle Daten.
     def open_pid(self, ci):
+        """PID-Optimierung für Diagramm ``ci`` öffnen (braucht mindestens 20 Messpunkte)."""
         from plc_pid_dialog import PidTuneDialog
         t, _y = self._pid_source()
         if len(t) < 20:
@@ -1856,6 +1899,7 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # Aktuelles Ereignisprotokoll: das der Aufzeichnung, sonst das der geladenen Konfiguration.
     def event_log(self):
+        """Ereignisprotokoll der aktuellen Quelle: des Recorders bzw. des Servers, offline die Datei der Konfiguration."""
         if self.rec is not None and self.source in ("rec", "client"):
             return self.rec.events
         path = event_log_path(self.conn)
@@ -1865,6 +1909,7 @@ class MainWindow(QMainWindow):
 
     # Knopf in der Statusleiste: Anzahl offener Ereignisse, rot hinterlegt, solange etwas zu quittieren ist.
     def update_event_button(self):
+        """Zähler offener Ereignisse in der Statuszeile aktualisieren (auch nach Änderungen durch andere Programme)."""
         log = self.event_log()
         try:
             if log.changed_on_disk():                     # z. B. von einem anderen Programm quittiert
@@ -1930,6 +1975,7 @@ class MainWindow(QMainWindow):
 
     # Notiz von Hand ins Ereignisprotokoll (offline mit dem Zeitpunkt von Lineal 1).
     def add_note(self):
+        """Notiz ins Ereignisprotokoll – offline zur Zeit des ersten Lineals, sonst jetzt."""
         from plc_event_viewer import add_note
         when = self.ruler_t[0] if not self.online and self.ruler_t[0] is not None else None
         if add_note(self, self.event_log(), when):
@@ -1940,6 +1986,7 @@ class MainWindow(QMainWindow):
 
     # Ereignis-Viewer öffnen (nicht modal; bleibt neben dem Hauptfenster offen).
     def show_events(self):
+        """Ereignisanzeige öffnen bzw. nach vorn holen."""
         if self.event_viewer is None:
             from plc_event_viewer import EventViewer
             self.event_viewer = EventViewer(self.event_log(), self, on_change=self.update_event_button,
@@ -2055,6 +2102,7 @@ class MainWindow(QMainWindow):
 
     # Menü 'Diagramme auf der Seite': Anordnung ändern -> Seiten neu aufbauen und Kurven wieder füllen.
     def set_page_mode(self, mode):
+        """Anordnung der Seiten (Tabs, untereinander …) ändern und die Diagramme neu aufbauen."""
         if mode == self.page_mode:
             return
         self.page_mode = mode
@@ -2063,6 +2111,7 @@ class MainWindow(QMainWindow):
 
     # Menü 'Raster-Spalten' (0 = automatisch); wirkt nur im Raster, gilt bis zum nächsten Laden der Konfiguration.
     def set_columns(self, n):
+        """Spaltenzahl im Raster ändern."""
         self.conn["raster_spalten"] = n
         if self.page_mode == "raster":
             self._rebuild()
@@ -2070,6 +2119,7 @@ class MainWindow(QMainWindow):
 
     # Nach einem Neuaufbau der Anzeige die Kurven mit den vorhandenen Daten füllen.
     def _reload_curves(self):
+        """Nach Neuaufbau die Kurven füllen: online beim nächsten Takt, offline sofort."""
         if self.online:
             self.dirty = True
         else:
@@ -2080,6 +2130,7 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # Dialog 'Konfiguration laden': beliebiger Dateiname (JSON); die Wahl wird für den nächsten Start gemerkt.
     def load_config_file(self):
+        """Andere Konfiguration wählen und laden."""
         start = os.path.dirname(self.config_path) or BASE_DIR
         path, _ = plc_filedlg.open_name(self, tr("Konfiguration laden"), start,
                                         tr("Konfiguration (*.json);;Alle Dateien (*)"))
@@ -2088,6 +2139,7 @@ class MainWindow(QMainWindow):
 
     # Konfigurationsdatei laden: beendet eine laufende Aufzeichnung (ohne Archivierung) und baut die Anzeige neu auf.
     def set_config(self, path):
+        """Konfiguration ``path`` übernehmen: Aufzeichnung beenden, Modell und Oberfläche neu aufbauen."""
         try:
             conn, charts, variables = load_config(path)
             plcs = load_plcs(path)
@@ -2127,6 +2179,8 @@ class MainWindow(QMainWindow):
     # ---------------------------------------------------------------------------------------
     # Webserver passend zur Konfiguration starten, neu starten (geänderte Einstellungen) oder beenden.
     def _apply_web(self):
+        """Webserver nach Konfiguration starten, neu starten (geänderte Einstellungen) oder beenden; im Client-Betrieb
+        keiner."""
         from plc_web import web_settings
         want = bool(self.conn.get("web_aktiv")) and self.client is None    # Client: kein eigener Webserver
         key = web_settings(self.conn)
@@ -2148,6 +2202,7 @@ class MainWindow(QMainWindow):
 
     # Menü 'Webserver-Adresse': zeigt die Adresse für Tablet/Smartphone und kopiert sie in die Zwischenablage.
     def show_web_url(self):
+        """Webserver-Adresse mit QR-Code anzeigen (zum Kopieren und für das Handy)."""
         if self.web is None:
             QMessageBox.information(self, tr("Webserver"), tr("Der Webserver ist nicht aktiviert.\n"
                                     "Aktivierung: Konfigurationsprogramm → Webserver."))
@@ -2258,6 +2313,7 @@ class MainWindow(QMainWindow):
 
     # Kontrollkästchen vor einem Namen in der Wertetabelle: Kurve ein-/ausblenden (das Diagramm macht die Arbeit).
     def on_item_changed(self, item):
+        """Häkchen in der Werteanzeige: Kurve ein-/ausblenden."""
         if item.column() == 0:
             i = item.data(Qt.ItemDataRole.UserRole)
             panel = self.panel_of_var.get(i)
@@ -2281,15 +2337,18 @@ class MainWindow(QMainWindow):
 
     # CSV-Ordner als absoluter Pfad (relativ = ab dem Basisordner des Programms).
     def csv_dir(self):
+        """CSV-Ordner als absoluter Pfad (relativ zum Datenordner)."""
         d = self.conn["csv_ordner"]
         return d if os.path.isabs(d) else os.path.join(BASE_DIR, d)
 
     # Start-Taste angehakt -> start(), abgehakt -> stop().
     def on_run_toggled(self, on):
+        """Knopf Start/Stop."""
         self.start() if on else self.stop()
 
     # Start-Taste abhaken, ohne on_run_toggled auszulösen.
     def _uncheck_run(self):
+        """Knopf Start/Stop zurücksetzen, ohne erneut zu stoppen."""
         self.act_run.blockSignals(True)
         self.act_run.setChecked(False)
         self.act_run.blockSignals(False)
@@ -2297,6 +2356,8 @@ class MainWindow(QMainWindow):
     # Aufzeichnung starten: Konfiguration neu laden (Änderungen wirken so sofort), Recorder anlegen, Anzeige neu aufbauen,
     # dann starten (CSV-Datei öffnen, je Steuerung ein Lese-Thread).
     def start(self):
+        """Aufzeichnung starten (Konfiguration frisch laden, Recorder anlegen); im Client-Betrieb die Verbindung zum
+        Server."""
         if self.client is not None:
             return self._start_client()
         try:
@@ -2344,6 +2405,7 @@ class MainWindow(QMainWindow):
     # Aufzeichnung beenden: Threads stoppen, CSV-Datei schließen (bleibt ungepackt im CSV-Ordner; archiviert wird beim
     # Beenden des Programms, Einstellung 'archiv_beenden'). Die Daten bleiben für den Offline-Modus erhalten.
     def stop(self):
+        """Aufzeichnung beenden (wartet auf die Lese-Threads, Sanduhr)."""
         if self.rec is not None and self.rec.running:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             try:
@@ -2446,6 +2508,7 @@ class MainWindow(QMainWindow):
     # ---------------- Online / Offline ----------------
     # Zwischen Online (fortlaufend) und Offline (Rückblick mit Scrollleiste und Linealen) umschalten.
     def set_online(self, flag):
+        """Online (laufende Anzeige) bzw. Offline (Scrollen, Lineale) umschalten."""
         self.online = flag
         if flag and self.source == "client":         # Client: vom Server geladener Zeitraum -> wieder live
             self.source = "rec"
@@ -2459,6 +2522,7 @@ class MainWindow(QMainWindow):
 
     # Daten einer Kurve setzen. BOOL-Kurven werden als Treppenlinie gezeichnet; 'finite' trennt die Linie bei fehlenden Werten (NaN).
     def set_curve(self, i, tt, yy):
+        """Daten einer Kurve setzen; BOOL als Stufenlinie."""
         c = self.curves[i]
         if c is None:
             return
@@ -2529,6 +2593,7 @@ class MainWindow(QMainWindow):
 
     # Sichtbaren Ausschnitt aus Scrollleiste und Fensterbreite berechnen und auf die Zeitachse anwenden.
     def apply_offline_view(self, *_):
+        """Offline: angezeigten Zeitbereich aus Fensterbreite und Scrollposition setzen."""
         if self.online or self._block or len(self.t) == 0 or not self.master:
             return
         w = self.win_spin.value()
@@ -2664,6 +2729,7 @@ class MainWindow(QMainWindow):
 
     # Fensterbreite geändert: online beim nächsten Takt neu zeichnen, offline den Ausschnitt neu berechnen.
     def on_window_changed(self, *_):
+        """Neue Fensterbreite (Sekunden) für alle Diagramme übernehmen."""
         if self._block:
             return
         # Eine neue Fensterbreite gilt für alle Diagramme (gleicht die Zeitachsen an).
@@ -2692,6 +2758,7 @@ class MainWindow(QMainWindow):
     # Lineal k (0 = L1, 1 = L2) in allen Diagrammen auf die Zeit pos setzen. _rblock verhindert Endlosschleifen, weil das Setzen
     # selbst wieder das Signal 'Lineal verschoben' auslöst.
     def set_rulers(self, k, pos):
+        """Lineal ``k`` (0/1) in allen Diagrammen auf ``pos`` setzen (ohne Rückkopplung)."""
         self._rblock = True
         for p in self.panels:
             p.rulers[k].setValue(pos)
@@ -2700,6 +2767,7 @@ class MainWindow(QMainWindow):
 
     # Der Benutzer hat ein Lineal in einem Diagramm verschoben: in allen anderen nachziehen und die Werte aktualisieren.
     def on_ruler(self, k, pos):
+        """Lineal in einem Diagramm gezogen: in allen nachführen, Werte und Delta anzeigen."""
         if self._rblock:
             return
         self.set_rulers(k, pos)
@@ -2767,11 +2835,13 @@ class MainWindow(QMainWindow):
 
     # Legenden aller Diagramme mit den Werten des Messpunkts idx aktualisieren.
     def update_legends(self, idx):
+        """Legendenwerte aller Diagramme auf Zeile ``idx``."""
         for p in self.panels:
             p.set_legend_values({vi: self.y[vi][idx] for vi in p.var_idx})
 
     # Balken der Diagramme mit den Werten des Messpunkts idx setzen (nur sichtbare Balken).
     def update_bars(self, idx):
+        """Balken aller Diagramme auf Zeile ``idx``."""
         for p in self.panels:
             if p.bars.isVisible():
                 p.bars.set_values([self.y[vi][idx] for vi in p.bar_idx])
