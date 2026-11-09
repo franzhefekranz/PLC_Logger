@@ -5261,7 +5261,7 @@ writing much better than an SD card.
 **Which system?** Recommended: **Ubuntu Server 24.04 LTS (64 bit)** – the logger has been
 tried on it, updates are available until 2029. The Pi boots **without desktop**; a desktop
 (XFCE) only runs when needed via **remote desktop (xrdp)**. On a connected **touchscreen**
-the **network panel** shows the IP addresses and sets up Ethernet and WLAN (step 6).
+the **network panel** shows the IP addresses and sets up Ethernet and WLAN (step 7).
 Alternatives: Raspberry Pi OS Lite (64 bit, already includes NetworkManager) or DietPi (very
 lean) – the ``.deb`` fits both, but the logger has not been tried there yet.
 
@@ -5298,7 +5298,7 @@ erases the SSD):
 
 ``nofail`` makes sure the Pi also boots without SSD. The link puts the logger's
 configuration, CSV files, archive and log file on the SSD (the SD card wears out otherwise);
-the VictoriaMetrics data follow in step 5. If ``~/PLCDatenlogger`` exists already (the logger
+the VictoriaMetrics data follow in step 6. If ``~/PLCDatenlogger`` exists already (the logger
 has run before), stop the logger first and move the folder:
 
 .. code-block:: console
@@ -5311,7 +5311,7 @@ has run before), stop the logger first and move the folder:
    rm -r ~/PLCDatenlogger.alt                       # only once everything runs
 
 The path ``~/PLCDatenlogger/…`` stays the same – services and launchers need no change, only
-the line ``RequiresMountsFor=/data`` in the logger's service (step 4).
+the line ``RequiresMountsFor=/data`` in the logger's service (step 5).
 
 **2. Basic setup:**
 
@@ -5324,7 +5324,7 @@ the line ``RequiresMountsFor=/data`` in the logger's service (step 4).
   after a power failure – and with it the time stamps. In a plant network without internet,
   enter a reachable time server (``/etc/systemd/timesyncd.conf``, line ``NTP=192.168.0.1``,
   then ``sudo systemctl restart systemd-timesyncd``) or use an RTC module.
-* **Network via NetworkManager:** the network panel (step 6) and ``nmcli`` set up Ethernet
+* **Network via NetworkManager:** the network panel (step 7) and ``nmcli`` set up Ethernet
   and WLAN. Ubuntu Server uses systemd-networkd at first; switch over (preferably with
   keyboard and screen on the Pi, the SSH connection may drop):
 
@@ -5347,7 +5347,76 @@ the line ``RequiresMountsFor=/data`` in the logger's service (step 4).
           ipv4.addresses 192.168.0.50/24 ipv4.gateway 192.168.0.1 ipv4.dns 192.168.0.1
      sudo nmcli connection up "Wired connection 1"
 
-**3. Install the logger** (adjust the version number):
+**3. Remote desktop (XFCE and xrdp)** – a desktop only when needed: the Pi keeps booting
+without user interface (the network panel runs on the display), and a remote desktop
+connection from the PC opens an XFCE session on the Pi.
+
+*a) Install the packages* – with ``--no-install-recommends``, otherwise ``xfce4`` pulls in
+the login screen ``lightdm``, which would open the desktop on the Pi's display at boot.
+``xorgxrdp`` is the graphics part of xrdp and therefore has to be listed explicitly:
+
+.. code-block:: console
+
+   sudo apt update
+   sudo apt install -y --no-install-recommends xfce4 xfce4-terminal xfce4-taskmanager \
+        thunar mousepad dbus-x11 xrdp xorgxrdp fonts-dejavu adwaita-icon-theme
+   sudo snap install firefox                        # browser for Grafana (optional)
+
+*b) No desktop at boot* – the Pi stays in text mode, even if a login screen gets installed
+later:
+
+.. code-block:: console
+
+   sudo systemctl set-default multi-user.target
+   systemctl get-default                            # must show multi-user.target
+
+*c) Set up xrdp* – XFCE as the user's session, access to the certificate, enable the
+service:
+
+.. code-block:: console
+
+   echo xfce4-session > ~/.xsession                 # for every user who logs in
+   sudo adduser xrdp ssl-cert
+   sudo systemctl enable --now xrdp
+   systemctl status xrdp                            # active (running)
+
+*d) Stop the “Authentication required” prompt* – without this rule XFCE asks in the remote
+session after every login for the password for a “color managed device” (colord). File
+``/etc/polkit-1/rules.d/45-xrdp-colord.rules``:
+
+.. code-block:: javascript
+
+   polkit.addRule(function(action, subject) {
+       if (action.id.indexOf("org.freedesktop.color-manager.") == 0 && subject.isInGroup("sudo")) {
+           return polkit.Result.YES;
+       }
+   });
+
+*e) Connect:* on the PC connect to ``logger-kessel`` (port 3389) with *Remote Desktop
+Connection* (Windows: ``mstsc``, Linux: Remmina, macOS: *Windows App*), session *Xorg*, user
+and password of the Pi. The following steps can then be done comfortably in the session's
+terminal; afterwards the configuration program, the logger's user interface, the IO check
+and Grafana in the browser (launchers from step 6) run there; **File › Show/stop headless
+loggers …** sees the logger service because it runs under the same user. Logging out via the
+XFCE menu ends the session; just closing the window keeps it running (the next connection
+continues there).
+
+If the window stays black after login or closes immediately: check ``~/.xsession`` and look at
+the messages (``cat ~/.xsession-errors``, ``sudo journalctl -u xrdp-sesman``). The same user
+must not be logged in graphically on the Pi's display at the same time – which is not the case
+here anyway because of ``multi-user.target``.
+
+*Alternative Lubuntu (LXQt):* looks like the logger's programs (also Qt) but is much larger
+(many additional programs, its own login screen ``sddm``, which stays unused because of
+``multi-user.target``); XFCE runs most reliably with xrdp. Instead of a) and the first line of
+c):
+
+.. code-block:: console
+
+   sudo apt install -y lubuntu-desktop xrdp xorgxrdp
+   echo startlxqt > ~/.xsession
+
+**4. Install the logger** (adjust the version number):
 
 .. code-block:: console
 
@@ -5366,10 +5435,10 @@ tab *Web server & headless*: web server on, *Headless mode* on, tab *Database*: 
 
 Whether the logger runs with or without user interface is decided by the option *Headless
 mode* in the configuration. Without a graphical session (service, SSH) it always runs
-headless; in the remote desktop (step 7) ``plc-datenlogger`` opens the user interface if the
+headless; in the remote desktop (step 3) ``plc-datenlogger`` opens the user interface if the
 option is off – stop the service first, otherwise two loggers read the same controllers.
 
-**4. Logger as a service** – starts at power-on and again after a crash. File
+**5. Logger as a service** – starts at power-on and again after a crash. File
 ``/etc/systemd/system/plc-datenlogger.service`` (adjust the user name):
 
 .. code-block:: ini
@@ -5402,7 +5471,7 @@ option is off – stop the service first, otherwise two loggers read the same co
 configuration program (`Headless operation <headless_>`__) or with ``systemctl stop``, it
 stays off.
 
-**5. VictoriaMetrics and Grafana** (Docker). VictoriaMetrics runs permanently and starts
+**6. VictoriaMetrics and Grafana** (Docker). VictoriaMetrics runs permanently and starts
 again after every reboot; **Grafana only when needed** – the logger's web server is there for
 the live display (``http://logger-kessel:8080``):
 
@@ -5473,7 +5542,7 @@ Start and stop **Grafana**:
    ~/plc-docker/docker/desktop-starter.sh   # once in the remote desktop: launchers "Grafana starten/beenden"
 
 The launchers are then on the desktop and in the application menu of the remote desktop
-session (step 7); without desktop, ``grafana.sh start`` via SSH and the browser on the PC
+session (step 3); without desktop, ``grafana.sh start`` via SSH and the browser on the PC
 are enough. Grafana: ``http://logger-kessel:3000``, the data source *VictoriaMetrics* is
 already set up; upload the dashboard from **File › Export Grafana dashboard …** via
 *Dashboards › New › Import*. After a reboot of the Pi, Grafana is off.
@@ -5514,7 +5583,7 @@ the two options (then ``docker compose up -d --no-deps victoriametrics``):
 A firewall such as ``ufw`` does not help here: Docker adds published ports to the rules itself
 and bypasses it.
 
-**6. Network panel on the touchscreen** (``plc-netzwerk``): full screen, without desktop. It
+**7. Network panel on the touchscreen** (``plc-netzwerk``): full screen, without desktop. It
 shows host name, time, Ethernet and WLAN with IP addresses, the state of the logger service
 and the address of the web server with a QR code (to open it on a tablet). The buttons
 **Ethernet** and **WLAN** set DHCP or a fixed address (IP/prefix, gateway, DNS), search for
@@ -5534,7 +5603,7 @@ properly); only unplug once the green LED has stopped blinking.
 **Logger** lists the configuration files in the folder ``PLCDatenlogger`` (in the users' home
 folders and next to the file given at start) with their project name. Choose one and **Start
 (headless)** – a logger that is already running is stopped first. If the service
-``plc-datenlogger`` (step 4) is set up, the panel switches it to the chosen file (drop-in
+``plc-datenlogger`` (step 5) is set up, the panel switches it to the chosen file (drop-in
 ``/etc/systemd/system/plc-datenlogger.service.d/konfig.conf``), enables and restarts it – the
 file then also starts after booting. Without the service the panel starts the logger directly
 under the file's owner, until the next reboot. **Stop** stops the logger and disables the
@@ -5647,74 +5716,6 @@ recording come from the Pi):
   a terminal in the remote desktop, the panel always appears full screen on the Pi's display
   (``sudo timeout 600 plc-netzwerk`` ends it after 10 minutes by itself). As a window in the
   remote desktop: ``sudo plc-netzwerk --fenster``.
-
-**7. Remote desktop (XFCE and xrdp)** – a desktop only when needed: the Pi keeps booting
-without user interface (the network panel runs on the display), and a remote desktop
-connection from the PC opens an XFCE session on the Pi.
-
-*a) Install the packages* – with ``--no-install-recommends``, otherwise ``xfce4`` pulls in
-the login screen ``lightdm``, which would open the desktop on the Pi's display at boot.
-``xorgxrdp`` is the graphics part of xrdp and therefore has to be listed explicitly:
-
-.. code-block:: console
-
-   sudo apt update
-   sudo apt install -y --no-install-recommends xfce4 xfce4-terminal xfce4-taskmanager \
-        thunar mousepad dbus-x11 xrdp xorgxrdp fonts-dejavu adwaita-icon-theme
-   sudo snap install firefox                        # browser for Grafana (optional)
-
-*b) No desktop at boot* – the Pi stays in text mode, even if a login screen gets installed
-later:
-
-.. code-block:: console
-
-   sudo systemctl set-default multi-user.target
-   systemctl get-default                            # must show multi-user.target
-
-*c) Set up xrdp* – XFCE as the user's session, access to the certificate, enable the
-service:
-
-.. code-block:: console
-
-   echo xfce4-session > ~/.xsession                 # for every user who logs in
-   sudo adduser xrdp ssl-cert
-   sudo systemctl enable --now xrdp
-   systemctl status xrdp                            # active (running)
-
-*d) Stop the “Authentication required” prompt* – without this rule XFCE asks in the remote
-session after every login for the password for a “color managed device” (colord). File
-``/etc/polkit-1/rules.d/45-xrdp-colord.rules``:
-
-.. code-block:: javascript
-
-   polkit.addRule(function(action, subject) {
-       if (action.id.indexOf("org.freedesktop.color-manager.") == 0 && subject.isInGroup("sudo")) {
-           return polkit.Result.YES;
-       }
-   });
-
-*e) Connect:* on the PC connect to ``logger-kessel`` (port 3389) with *Remote Desktop
-Connection* (Windows: ``mstsc``, Linux: Remmina, macOS: *Windows App*), session *Xorg*, user
-and password of the Pi. The configuration program, the logger's user interface, the IO check
-and Grafana in the browser (launchers from step 5) run there; **File › Show/stop headless
-loggers …** sees the logger service because it runs under the same user. Logging out via the
-XFCE menu ends the session; just closing the window keeps it running (the next connection
-continues there).
-
-If the window stays black after login or closes immediately: check ``~/.xsession`` and look at
-the messages (``cat ~/.xsession-errors``, ``sudo journalctl -u xrdp-sesman``). The same user
-must not be logged in graphically on the Pi's display at the same time – which is not the case
-here anyway because of ``multi-user.target``.
-
-*Alternative Lubuntu (LXQt):* looks like the logger's programs (also Qt) but is much larger
-(many additional programs, its own login screen ``sddm``, which stays unused because of
-``multi-user.target``); XFCE runs most reliably with xrdp. Instead of a) and the first line of
-c):
-
-.. code-block:: console
-
-   sudo apt install -y lubuntu-desktop xrdp xorgxrdp
-   echo startlxqt > ~/.xsession
 
 **8. Operation:**
 
