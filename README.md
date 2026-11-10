@@ -55,7 +55,7 @@ can be mixed in **one** recording.
 |---|---|---|
 | `s7` | Siemens S7-300/400/1200/1500, PUT/GET (python-snap7) | ✅ real PLC · 🧪 PLCSIM via NetToPLCsim · CI: snap7 server |
 | `tia` | Siemens S7-1200/1500 **symbolic**, also optimized blocks, without PUT/GET (s7commplus) | ✅ real S7-1516-3 PN/DP and S7-1511F-1 PN (optimized DBs), FW 2.9 (user reports) · 🧪 S7-PLCSIM Advanced (Windows) · CI: s7commplus emulator |
-| `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ⬜ untested |
+| `logo` | Siemens LOGO! 0BA7/0BA8 (python-snap7) | ✅ real LOGO! 8.4: digital inputs and AI1 (feedback) |
 | `s5as511` | Siemens S5 via the PG interface (AS511) | ⬜ untested |
 | `clx` | Allen-Bradley ControlLogix, CompactLogix, Micro800 (libplctag, pycomm3) | ✅ real PLC (Windows, Linux, Raspberry Pi, macOS) |
 | `pccc` | Allen-Bradley MicroLogix 1100/1400, SLC 500 (pycomm3) | ⬜ untested |

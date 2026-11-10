@@ -1842,7 +1842,8 @@ Treiber ``logo`` – Siemens LOGO! (0BA7/0BA8)
 ----------------------------------------------------------------------
 
 Für LOGO! 7 (0BA7) und LOGO! 8 (0BA8, 8.FS4, 8.3, 8.4) über S7-Kommunikation;
-Bibliothek ``python-snap7`` (wie beim Treiber ``s7``).
+Bibliothek ``python-snap7`` (wie beim Treiber ``s7``). An einer echten LOGO! 8.4 getestet
+(digitale Eingänge und Analogeingang AI1).
 
 **In der LOGO! einrichten:** In LOGO!Soft Comfort unter *Extras › Ethernet-Verbindungen*
 (LOGO! 8: *Online-Einstellungen › Zugriffskontrolle*) den Zugriff für HMI bzw. eine

@@ -1798,7 +1798,8 @@ Driver ``logo`` – Siemens LOGO! (0BA7/0BA8)
 ----------------------------------------------------------------------
 
 For LOGO! 7 (0BA7) and LOGO! 8 (0BA8, 8.FS4, 8.3, 8.4) via S7 communication; library
-``python-snap7`` (as for the ``s7`` driver).
+``python-snap7`` (as for the ``s7`` driver). Tested with a real LOGO! 8.4 (digital inputs and
+analog input AI1).
 
 **Set up in the LOGO!:** In LOGO!Soft Comfort under *Tools › Ethernet Connections*
 (LOGO! 8: *Online Settings › Access control*) enable HMI access or create a **server

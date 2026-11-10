@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+* **Teststand** in Anleitung, README und Webseite: Treiber `logo` an einer echten LOGO! 8.4 erfolgreich getestet – digitale Eingänge (I3–I6, I9–I12)
+  und Analogeingang AI1 (Rückmeldung aus dem SPS-Forum).
+
 ## [3.18.1] – 2026-11-09
 
 ### Behoben
