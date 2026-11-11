@@ -5604,7 +5604,7 @@ der ersten Zeile von c):
 
 .. code-block:: console
 
-   VER=3.19.0
+   VER=3.20.0
    wget https://github.com/franzhefekranz/PLC_Logger/releases/download/v$VER/plc-datenlogger_${VER}_arm64.deb
    sudo apt install ./plc-datenlogger_${VER}_arm64.deb
 
