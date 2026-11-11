@@ -592,6 +592,15 @@ def s_config_dialogs():
     job("web_benutzer", over=lambda: cw, size=(560, 380), margin=160)
     cw.edit_web_users()
 
+    def mqtt(d):
+        d.chk_on.setChecked(True)
+        d.ed_host.setText("homeassistant.local")
+        d.ed_user.setText("plc")
+        d.ed_pw.setText("geheim123")
+        d.chk_ha.setChecked(True)
+    job("mqtt", prep=mqtt, over=lambda: cw, margin=120)
+    cw.edit_mqtt()
+
     # Laufende Headless-Logger: Statusdateien in einem eigenen Ordner, im Bild ein typischer Datenordner.
     import plc_headless
     run_dir, keep = tempfile.mkdtemp(), plc_headless.RUN_DIR
@@ -785,8 +794,57 @@ def s_iocheck():
     w.set_status(sigs[0:6], "ok")
     w.set_status(sigs[6:7], "fehler")
     w.set_status(sigs[24:27], "ok")
+    w.set_status(sigs[7:8], "wiederholen")
+    w.set_status(sigs[8:9], "uebersprungen")
+    w.chk_tone.setChecked(True)
     wait(800)
     save("iocheck_fenster", w)
+
+    # Spaltenfilter: Rechtsklick auf die Überschrift „Gruppe“ (Menü über dem Fenster, Ausschnitt)
+    from PySide6.QtCore import QPoint
+    col = d.COL["group"]
+    hh = w.view.horizontalHeader()
+    menu = w.column_filter_menu(col)
+    at = hh.mapTo(w, QPoint(hh.sectionViewportPosition(col) + 10, hh.height()))
+    menu.popup(hh.mapToGlobal(QPoint(hh.sectionViewportPosition(col) + 10, hh.height())))
+    wait(600)
+    save("iocheck_spaltenfilter", compose(w, menu, (at.x(), at.y()), margin=140))
+    menu.hide()
+
+    def new_sig(dlg):
+        dlg.ed_addr.setText("EW272")
+        dlg.ed_sym.setText("PT205")
+        dlg.ed_com.setText("Druck Vorlauf")
+        dlg.ed_bmk.setText("=K1+S2-BP205")
+        dlg.ed_range.setText("0..16 bar")
+    job("iocheck_signal_neu", prep=new_sig, over=lambda: w, margin=120)
+    w.add_signal()
+
+    # Fotos eines Signals (Prüfstand mit Fotoordner; die Bilder sind gezeichnete Beispiele)
+    from PySide6.QtGui import QColor, QFont, QImage, QPainter
+    from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QRect
+    w.project.path = os.path.join(CTX["folder"], "Kesselhaus" + io.EXTENSION)
+    sig = sigs[1]
+    for text, bg in (("X1:12  B1  Endlage", "#37474f"), ("Sensor B1", "#455a64"), ("Klemmleiste X1", "#546e7a")):
+        img = QImage(640, 480, QImage.Format.Format_RGB32)
+        img.fill(QColor(bg))
+        p = QPainter(img)
+        for i in range(8):                              # Klemmen
+            p.fillRect(QRect(60 + i * 66, 150, 54, 180), QColor("#cfd8dc" if i != 3 else "#ffb300"))
+            p.fillRect(QRect(70 + i * 66, 170, 34, 34), QColor("#90a4ae"))
+        p.setPen(QColor("white"))
+        p.setFont(QFont("Arial", 26))
+        p.drawText(QRect(0, 380, 640, 80), 0x84, text)
+        p.end()
+        ba = QByteArray()
+        buf = QBuffer(ba)
+        buf.open(QIODevice.OpenModeFlag.WriteOnly)
+        img.save(buf, "JPG", 85)
+        io.add_photo(sig, io.photo_dir(w.project.path), bytes(ba.data()))
+    w.model.refresh_rows([sig])
+    w.view.selectRow(w.proxy.mapFromSource(w.model.index(1, 0)).row())
+    job("iocheck_fotos", over=lambda: w, margin=100)
+    w.edit_photos()
     ai = next((i for i, s in enumerate(sigs) if s.kind == "AI"), None)
     if ai is not None:
         w.view.selectRow(w.proxy.mapFromSource(w.model.index(ai, 0)).row())   # Tabelle ist sortierbar
@@ -879,6 +937,8 @@ def s_web():
         page.click("button[type=submit]")
         page.wait_for_timeout(1500)
         page.goto(base + "io")
+        page.evaluate("localStorage.setItem('io_ton', '1')")      # Signalton an (🔔 im Bild)
+        page.reload()
         page.wait_for_timeout(2500)
         page.click("#r7")
         page.wait_for_timeout(1200)
