@@ -25,9 +25,10 @@ from plc_i18n import is_dark, tr
 import plc_filedlg
 
 # Farben: Zeilen/Zellen je Prüfstatus, LEDs
-STATUS_BG = {"ok": "#c8e6c9", "fehler": "#ffcdd2", "uebersprungen": "#e0e0e0"}
-STATUS_FG = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#455a64"}
-STATUS_MARK = {"ok": "✓", "fehler": "✗", "uebersprungen": "–", "offen": ""}
+STATUS_BG = {"ok": "#c8e6c9", "fehler": "#ffcdd2", "uebersprungen": "#e0e0e0", "wiederholen": "#ffe0b2"}
+STATUS_FG = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#455a64",
+             "wiederholen": "#e65100"}
+STATUS_MARK = {"ok": "✓", "fehler": "✗", "uebersprungen": "–", "offen": "", "wiederholen": "↻"}
 LED_ON_IN, LED_ON_OUT, LED_OFF, LED_NONE = "#2ecc71", "#f5a623", "#9aa3ad", "#e5484d"
 FLASH_S = 1.5                     # so lange wird ein Wechsel hervorgehoben
 EDITABLE = ("address", "symbol", "comment", "bmk", "group", "remark")   # in der Tabelle änderbar (Doppelklick)
@@ -36,6 +37,56 @@ COLS = [("status", "Status"), ("value", "Wert"), ("address", "Adresse"), ("symbo
         ("comment", "Kommentar"), ("bmk", "BMK"), ("group", "Gruppe"), ("kind", "Typ"), ("plc", "Steuerung"),
         ("checked_at", "Geprüft am"), ("checker", "Prüfer"), ("photos", "Fotos"), ("remark", "Bemerkung")]
 COL = {k: i for i, (k, _t) in enumerate(COLS)}
+
+
+_TONE_FILE = []
+
+
+def play_ok_tone():
+    """Kurzer Zweiklang (Signal richtig geschaltet): Windows über winsound, Linux/macOS als WAV-Datei über
+    paplay/pw-play/aplay bzw. afplay; ohne Abspielprogramm der Systemton. Blockiert nicht."""
+    import subprocess
+    import sys
+    import threading
+    if sys.platform == "win32":
+        import winsound
+
+        def _play():
+            """Zweiklang über den Lautsprecher (blockiert, daher im Hintergrund)."""
+            try:
+                for f in (880, 1320):
+                    winsound.Beep(f, 110)
+            except RuntimeError:                    # kein Lautsprecher/Soundtreiber
+                pass
+        threading.Thread(target=_play, daemon=True).start()
+        return
+    import shutil
+    player = next((p for p in (["afplay"] if sys.platform == "darwin" else ["paplay", "pw-play", "aplay"])
+                   if shutil.which(p)), None)
+    if player is None:
+        QApplication.beep()
+        return
+    if not _TONE_FILE:
+        import struct
+        import tempfile
+        import wave
+        rate, data = 22050, bytearray()
+        for f in (880, 1320):                       # zwei Töne à 110 ms, ausklingend
+            n = int(rate * 0.11)
+            for i in range(n):
+                data += struct.pack("<h", int(9000 * (1 - i / n) * math.sin(2 * math.pi * f * i / rate)))
+        path = os.path.join(tempfile.gettempdir(), "plc_iocheck_ton.wav")
+        with wave.open(path, "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(rate)
+            w.writeframes(bytes(data))
+        _TONE_FILE.append(path)
+    args = [player] + (["-q"] if player == "aplay" else []) + [_TONE_FILE[0]]
+    try:
+        subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        QApplication.beep()
 
 
 def status_fg(status):
@@ -478,7 +529,7 @@ class MatrixWidget(QWidget):
         self.update()
         if ev.button() == Qt.MouseButton.RightButton:
             menu = QMenu(self)
-            for st in ("ok", "fehler", "uebersprungen", "offen"):
+            for st in ("ok", "fehler", "uebersprungen", "wiederholen", "offen"):
                 a = menu.addAction(f"{STATUS_MARK[st] or '○'}  " + (tr("Zurücksetzen") if st == "offen"
                                                                     else tr(io.STATUS[st])))
                 a.triggered.connect(lambda _=False, s=st: self.status_request.emit(sig, s))
@@ -494,6 +545,77 @@ class MatrixWidget(QWidget):
 # ---------------------------------------------------------------------------------------------------------------------
 # Dialog: Bereiche scannen
 # ---------------------------------------------------------------------------------------------------------------------
+class AddSignalDialog(QDialog):
+    """Dialog „Signal hinzufügen“: Adresse, Texte, Signalart (automatisch aus der Adresse), Messbereich, Steuerung.
+    Ergebnis in ``signal`` (plc_iocheck.IoSignal)."""
+
+    def __init__(self, parent, plcs, groups=(), group=""):
+        """Felder anlegen; ``plcs``: Steuerungen der Konfiguration, ``groups``: vorhandene Gruppen zur Auswahl."""
+        super().__init__(parent)
+        self.setWindowTitle(tr("Signal hinzufügen"))
+        self.signal = None
+        f = QFormLayout(self)
+        self.ed_addr = QLineEdit()
+        self.ed_addr.setPlaceholderText(tr("z. B. E12.3, EW256, A4.0, DB10.DBX2.1"))
+        f.addRow(tr("Adresse:"), self.ed_addr)
+        self.ed_sym = QLineEdit()
+        f.addRow(tr("Symbol:"), self.ed_sym)
+        self.ed_com = QLineEdit()
+        f.addRow(tr("Kommentar:"), self.ed_com)
+        self.ed_bmk = QLineEdit()
+        f.addRow(tr("BMK:"), self.ed_bmk)
+        self.cb_group = QComboBox()
+        self.cb_group.setEditable(True)
+        self.cb_group.addItems([""] + [g for g in groups if g])
+        self.cb_group.setCurrentText(group)
+        f.addRow(tr("Gruppe:"), self.cb_group)
+        self.cb_kind = QComboBox()
+        self.cb_kind.addItem(tr("automatisch (aus der Adresse)"), "")
+        for k in io.KINDS:
+            self.cb_kind.addItem(f"{k} – {tr(io.KIND_TEXT[k])}", k)
+        f.addRow(tr("Typ:"), self.cb_kind)
+        self.ed_range = QLineEdit()
+        self.ed_range.setPlaceholderText(tr("nur Analog, z. B. 0..10 bar"))
+        f.addRow(tr("Messbereich:"), self.ed_range)
+        self.cb_plc = QComboBox()
+        for p in plcs:
+            self.cb_plc.addItem(p.name, p.name)
+        self.cb_plc.setVisible(len(plcs) > 1)
+        if len(plcs) > 1:
+            f.addRow(tr("Steuerung:"), self.cb_plc)
+        self.lbl = QLabel()
+        self.lbl.setObjectName("muted")
+        f.addRow("", self.lbl)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        bb.accepted.connect(self._ok)
+        bb.rejected.connect(self.reject)
+        f.addRow(bb)
+        self.ed_addr.textChanged.connect(self._guess)
+        self.cb_kind.currentIndexChanged.connect(self._guess)
+
+    def _guess(self, *_):
+        """Erkannte Signalart und Datentyp unter den Feldern anzeigen."""
+        addr = self.ed_addr.text().strip()
+        if not addr:
+            self.lbl.setText("")
+            return
+        kind, dtype = io.guess_kind_dtype(addr, self.cb_kind.currentData() or "")
+        self.lbl.setText(f"{kind} – {tr(io.KIND_TEXT[kind])}, {dtype}")
+
+    def _ok(self):
+        """Signal anlegen; ohne Adresse Hinweis und Dialog offen lassen."""
+        try:
+            self.signal = io.new_signal(self.ed_addr.text(), self.ed_sym.text(), self.ed_com.text(),
+                                        self.ed_bmk.text(), self.cb_group.currentText(),
+                                        self.cb_kind.currentData() or "",
+                                        self.cb_plc.currentData() if self.cb_plc.count() > 1 else "",
+                                        self.ed_range.text())
+        except ValueError as e:
+            QMessageBox.warning(self, self.windowTitle(), str(e))
+            return
+        self.accept()
+
+
 class ScanDialog(QDialog):
     """Dialog „Bereiche scannen“: Liste der Scan-Bereiche (Steuerung, Startadresse, Anzahl Bits); Ergebnis in ``scans``.
     """
@@ -1103,13 +1225,15 @@ class IoCheckWindow(QMainWindow):
                        ("photos", 45)):
             self.view.setColumnWidth(COL[key], w)
         self.view.selectionModel().currentRowChanged.connect(self._row_changed)
+        self.view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self._table_menu)
         self.view.doubleClicked.connect(
             lambda ix: self.edit_photos() if COLS[ix.column()][0] == "photos" else None)
         v.addWidget(self.view, 1)
         brow = QHBoxLayout()
         for st, text, key in (("ok", tr("✓ OK"), "Ctrl+1"), ("fehler", tr("✗ Fehler …"), "Ctrl+2"),
-                              ("uebersprungen", tr("– Übersprungen"), "Ctrl+3"), ("offen", tr("Zurücksetzen"),
-                                                                                    "Ctrl+0")):
+                              ("uebersprungen", tr("– Übersprungen"), "Ctrl+3"),
+                              ("wiederholen", tr("↻ Wiederholen"), "Ctrl+4"), ("offen", tr("Zurücksetzen"), "Ctrl+0")):
             b = QPushButton(text)
             b.setToolTip(f"{text} ({key})")
             b.clicked.connect(lambda _=False, s=st: self.set_selected_status(s))
@@ -1119,6 +1243,10 @@ class IoCheckWindow(QMainWindow):
             self.addAction(a)
             brow.addWidget(b)
         brow.addStretch(1)
+        b_add = QPushButton(tr("＋ Signal …"))
+        b_add.setToolTip(tr("Signal von Hand zur IO-Liste hinzufügen (Rechtsklick in die Liste: weitere Befehle)"))
+        b_add.clicked.connect(self.add_signal)
+        brow.addWidget(b_add)
         v.addLayout(brow)
         self.analog = AnalogPanel(self.tracker)
         self.analog.changed.connect(self._signal_edited)
@@ -1140,6 +1268,7 @@ class IoCheckWindow(QMainWindow):
             f"<span style='color:{LED_OFF}'>●</span> 0 &nbsp; "
             f"<span style='background:{STATUS_BG['ok']}'>&nbsp;✓&nbsp;</span> {tr('geprüft')} &nbsp; "
             f"<span style='background:{STATUS_BG['fehler']}'>&nbsp;✗&nbsp;</span> {tr('Fehler')} &nbsp; "
+            f"<span style='background:{STATUS_BG['wiederholen']}'>&nbsp;↻&nbsp;</span> {tr('wiederholen')} &nbsp; "
             f"<span style='color:#1e88e5'>●</span> {tr('0→1 gesehen')} &nbsp; "
             f"<span style='color:#fbc02d'>▢</span> {tr('eben gewechselt')}")
         mrow.addWidget(legend)
@@ -1171,6 +1300,16 @@ class IoCheckWindow(QMainWindow):
                                          "gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen."))
         self.chk_only_open.toggled.connect(self._options_changed)
         sv.addWidget(self.chk_only_open)
+        self.chk_tone = QCheckBox(tr("Signalton bei richtigem Wechsel"))
+        self.chk_tone.setToolTip(tr("Kurzer Ton, wenn das gewählte Digitalsignal 0→1→0 bzw. 1→0→1 gewechselt hat (Sensor "
+                                    "betätigt und losgelassen) – man muss nicht auf den Bildschirm sehen"))
+        try:
+            from plc_common import load_settings
+            self.chk_tone.setChecked(bool(load_settings().get("iocheck_ton", False)))
+        except Exception:
+            pass
+        self.chk_tone.toggled.connect(lambda on: self._save_setting(iocheck_ton=bool(on)))
+        sv.addWidget(self.chk_tone)
         self.lbl_expected = QLabel()
         self.lbl_expected.setWordWrap(True)
         sv.addWidget(self.lbl_expected)
@@ -1407,6 +1546,8 @@ class IoCheckWindow(QMainWindow):
         self.progress.setValue(done)
         text = tr("{0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen").format(
             done, pr["gesamt"], pr["ok"], pr["fehler"], pr["uebersprungen"])
+        if pr["wiederholen"]:
+            text += ", " + tr("{0} wiederholen").format(pr["wiederholen"])
         shown = self.proxy.rowCount()
         if shown < pr["gesamt"]:                       # Filter aktiv: Anzahl der sichtbaren Zeilen dazu
             text += " – " + tr("{0} angezeigt").format(shown)
@@ -1423,6 +1564,101 @@ class IoCheckWindow(QMainWindow):
             self.cb_group.addItem(g, g)
         self.cb_group.setCurrentIndex(max(0, self.cb_group.findData(cur)))
         self.cb_group.blockSignals(False)
+
+    def _table_menu(self, pos):
+        """Rechtsklick in die Signalliste: Status, Signal hinzufügen, Scan-Signale übernehmen, Signale entfernen."""
+        self.table_menu().exec(self.view.viewport().mapToGlobal(pos))
+
+    def table_menu(self):
+        """Kontextmenü der Signalliste für die markierten Signale bauen (eigene Methode für Tests)."""
+        sigs = self.selected_signals()
+        menu = QMenu(self)
+        for st in ("ok", "fehler", "uebersprungen", "wiederholen", "offen"):
+            a = menu.addAction(f"{STATUS_MARK[st] or '○'}  " + (tr("Zurücksetzen") if st == "offen"
+                                                                else tr(io.STATUS[st])))
+            a.setEnabled(bool(sigs))
+            a.triggered.connect(lambda _=False, s=st: self.set_status(self.selected_signals(), s))
+        menu.addSeparator()
+        menu.addAction(tr("Signal hinzufügen …"), self.add_signal)
+        scanned = [s for s in sigs if s.scanned]
+        a = menu.addAction(tr("In die IO-Liste übernehmen ({0})").format(len(scanned)),
+                           lambda: self.adopt_signals(scanned))
+        a.setEnabled(bool(scanned))
+        a.setToolTip(tr("Signale aus Scan-Bereichen fest in die Liste übernehmen"))
+        listed = [s for s in sigs if not s.scanned]
+        a = menu.addAction(tr("Aus der IO-Liste entfernen ({0}) …").format(len(listed)),
+                           lambda: self.remove_signals(listed))
+        a.setEnabled(bool(listed))
+        menu.setToolTipsVisible(True)
+        return menu
+
+    def add_signal(self):
+        """Signal von Hand anlegen (Dialog) und in die IO-Liste aufnehmen; gibt es die Adresse schon, wird das Signal
+        gewählt (aus einem Scan-Bereich: mit den eingegebenen Texten in die Liste übernommen)."""
+        plcs = self.plcs or ([Plc(name="Demo", driver="s7")] if self.chk_demo.isChecked() else [])
+        cur = self.selected_signals()
+        dlg = AddSignalDialog(self, plcs, sorted({s.group for s in self.all_signals if s.group}),
+                              cur[0].group if cur else "")
+        if not dlg.exec() or dlg.signal is None:
+            return
+        self.insert_signal(dlg.signal)
+
+    def insert_signal(self, sig):
+        """Signal in die IO-Liste aufnehmen (siehe add_signal) und wählen. Rückgabe: das Signal in der Liste."""
+        other = next((s for s in self.all_signals if s.key == sig.key), None)
+        if other is not None and not other.scanned:
+            QMessageBox.information(self, tr("Signal hinzufügen"), tr("Die Adresse {0} gibt es schon ({1}).").format(
+                sig.address, other.label))
+            self.select_signal(other)
+            return other
+        if other is not None:                          # aus einem Scan-Bereich: Texte übernehmen, Prüfstand bleibt
+            for k in ("symbol", "comment", "bmk", "group"):
+                if getattr(sig, k):
+                    setattr(other, k, getattr(sig, k))
+            io.adopt_scanned(self.project, [other])
+            sig = other
+        else:
+            self.project.signals.append(sig)
+        self._rebuild()
+        self._mark_dirty()
+        self.select_signal(sig)
+        return sig
+
+    def adopt_signals(self, sigs):
+        """Signale aus Scan-Bereichen fest in die IO-Liste übernehmen."""
+        n = io.adopt_scanned(self.project, sigs)
+        if n:
+            self._rebuild()
+            self._mark_dirty()
+            self.statusBar().showMessage(tr("{0} Signale in die IO-Liste übernommen.").format(n), 6000)
+
+    def remove_signals(self, sigs):
+        """Signale aus der IO-Liste entfernen (mit Rückfrage; bei schon geprüften Signalen ausdrücklich)."""
+        sigs = [s for s in sigs if not s.scanned]
+        if not sigs:
+            return
+        done = sum(1 for s in sigs if s.status != "offen")
+        text = tr("{0} Signale aus der IO-Liste entfernen?").format(len(sigs)) if len(sigs) > 1 else \
+            tr("{0} aus der IO-Liste entfernen?").format(sigs[0].label)
+        if done:
+            text += "\n\n" + tr("Davon {0} mit Prüfeintrag – er geht verloren.").format(done)
+        if QMessageBox.question(self, tr("Signale entfernen"), text) != QMessageBox.StandardButton.Yes:
+            return
+        gone = {id(s) for s in sigs}
+        self.project.signals = [s for s in self.project.signals if id(s) not in gone]
+        self._rebuild()
+        self._mark_dirty()
+
+    def select_signal(self, sig):
+        """Zeile eines Signals in der Signalliste wählen und anzeigen (Filter verbergen es ggf.)."""
+        try:
+            row = self.model.signals.index(sig)
+        except ValueError:
+            return
+        idx = self.proxy.mapFromSource(self.model.index(row, 0))
+        if idx.isValid():
+            self.view.selectRow(idx.row())
+            self.view.scrollTo(idx)
 
     def _text_edited(self, sig):
         """Feld in der Tabelle geändert: Gruppenauswahl, Matrix und Analogfeld nachziehen, speichern."""
@@ -1872,6 +2108,8 @@ class IoCheckWindow(QMainWindow):
 
     def _set_expected(self, sig):
         """Erwartetes (gerade geprüftes) Signal setzen: Tracker, Matrix, Analogfeld und Anzeige „Erwartet“."""
+        if self.tracker.expected is not sig:
+            sig.half = 0                                # Impuls für den Signalton neu beginnen
         self.tracker.expected = sig
         self.matrix.current = sig
         self.matrix.update()
@@ -1984,6 +2222,8 @@ class IoCheckWindow(QMainWindow):
                 for k, (sig, v) in enumerate(zip(self.reader_signals.get(idx, []), values)):
                     self.tracker.feed(sig, v, ts, errors.get(k, ""))
                 got = True
+        if self.tracker.pop_pulses() and self.chk_tone.isChecked():
+            play_ok_tone()
         changed = self.tracker.pop_status_changes() + self._web_commands()
         self.tracker.watched = self.bridge.watched()
         if changed:

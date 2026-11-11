@@ -2912,6 +2912,9 @@
 @ übersprungen
 > 
 
+@ wiederholen
+> 
+
 @ Kein JPEG- oder PNG-Bild.
 > 
 
@@ -2967,6 +2970,9 @@
 > 
 
 @ Zeile {0}: Adresse {1} doppelt – übersprungen
+> 
+
+@ Bitte eine Adresse eintragen.
 > 
 
 @ Eingänge
@@ -3059,6 +3065,9 @@
 @ {0} von {1} Signalen geprüft ({2:.0f} %): {3} OK, {4} Fehler, {5} übersprungen, {6} offen
 > 
 
+@ {0} wiederholen
+> 
+
 @ Zusammenfassung
 > 
 
@@ -3113,6 +3122,39 @@
 > 
 
 @ Zurücksetzen
+> 
+
+@ Signal hinzufügen
+> 
+
+@ z. B. E12.3, EW256, A4.0, DB10.DBX2.1
+> 
+
+@ Symbol:
+> 
+
+@ Kommentar:
+> 
+
+@ BMK:
+> 
+
+@ Gruppe:
+> 
+
+@ automatisch (aus der Adresse)
+> 
+
+@ Typ:
+> 
+
+@ nur Analog, z. B. 0..10 bar
+> 
+
+@ Messbereich:
+> 
+
+@ Steuerung:
 > 
 
 @ Bereiche scannen
@@ -3343,6 +3385,15 @@
 @ – Übersprungen
 > 
 
+@ ↻ Wiederholen
+> 
+
+@ ＋ Signal …
+> 
+
+@ Signal von Hand zur IO-Liste hinzufügen (Rechtsklick in die Liste: weitere Befehle)
+> 
+
 @ Signalliste
 > 
 
@@ -3377,6 +3428,12 @@
 > 
 
 @ Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.
+> 
+
+@ Signalton bei richtigem Wechsel
+> 
+
+@ Kurzer Ton, wenn das gewählte Digitalsignal 0→1→0 bzw. 1→0→1 gewechselt hat (Sensor betätigt und losgelassen) – man muss nicht auf den Bildschirm sehen
 > 
 
 @ Signal
@@ -3421,13 +3478,40 @@
 @ Alle Gruppen
 > 
 
+@ Signal hinzufügen …
+> 
+
+@ In die IO-Liste übernehmen ({0})
+> 
+
+@ Signale aus Scan-Bereichen fest in die Liste übernehmen
+> 
+
+@ Aus der IO-Liste entfernen ({0}) …
+> 
+
+@ Die Adresse {0} gibt es schon ({1}).
+> 
+
+@ {0} Signale in die IO-Liste übernommen.
+> 
+
+@ {0} Signale aus der IO-Liste entfernen?
+> 
+
+@ {0} aus der IO-Liste entfernen?
+> 
+
+@ Davon {0} mit Prüfeintrag – er geht verloren.
+> 
+
+@ Signale entfernen
+> 
+
 @ Adresse ändern
 > 
 
 @ Das Signal stammt aus einem Scan-Bereich; die Adressen ergeben sich aus dem Bereich (Matrix › Bereiche scannen …).
-> 
-
-@ Die Adresse {0} gibt es schon ({1}).
 > 
 
 @ {0} ist bereits geprüft ({1}). Prüfeintrag zurücksetzen?\n\nJa: Status wieder „offen“ (die neue Adresse muss neu geprüft werden). Nein: Prüfeintrag behalten (z. B. nur Schreibfehler in der Liste).
@@ -3582,6 +3666,9 @@
 
 # ---------------- plc_iocheck_web.py
 
+@ Signalton, wenn das gewählte Signal 0→1→0 bzw. 1→0→1 gewechselt hat
+> 
+
 @ Abnahmeprotokoll als PDF
 > 
 
@@ -3625,6 +3712,9 @@
 > 
 
 @ Übersprungen
+> 
+
+@ Wiederholen
 > 
 
 @ Zurück

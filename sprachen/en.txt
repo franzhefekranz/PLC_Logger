@@ -2912,6 +2912,9 @@
 @ übersprungen
 > skipped
 
+@ wiederholen
+> repeat
+
 @ Kein JPEG- oder PNG-Bild.
 > Not a JPEG or PNG image.
 
@@ -2968,6 +2971,9 @@
 
 @ Zeile {0}: Adresse {1} doppelt – übersprungen
 > Row {0}: address {1} duplicated – skipped
+
+@ Bitte eine Adresse eintragen.
+> Please enter an address.
 
 @ Eingänge
 > Inputs
@@ -3059,6 +3065,9 @@
 @ {0} von {1} Signalen geprüft ({2:.0f} %): {3} OK, {4} Fehler, {5} übersprungen, {6} offen
 > {0} of {1} signals checked ({2:.0f} %): {3} OK, {4} faults, {5} skipped, {6} open
 
+@ {0} wiederholen
+> {0} to repeat
+
 @ Zusammenfassung
 > Summary
 
@@ -3114,6 +3123,39 @@
 
 @ Zurücksetzen
 > Reset
+
+@ Signal hinzufügen
+> Add signal
+
+@ z. B. E12.3, EW256, A4.0, DB10.DBX2.1
+> e.g. I12.3, IW256, Q4.0, DB10.DBX2.1
+
+@ Symbol:
+> Symbol:
+
+@ Kommentar:
+> Comment:
+
+@ BMK:
+> Device tag:
+
+@ Gruppe:
+> Group:
+
+@ automatisch (aus der Adresse)
+> automatic (from the address)
+
+@ Typ:
+> Type:
+
+@ nur Analog, z. B. 0..10 bar
+> analog only, e.g. 0..10 bar
+
+@ Messbereich:
+> Measuring range:
+
+@ Steuerung:
+> Controller:
 
 @ Bereiche scannen
 > Scan ranges
@@ -3343,6 +3385,15 @@
 @ – Übersprungen
 > – Skipped
 
+@ ↻ Wiederholen
+> ↻ Repeat
+
+@ ＋ Signal …
+> ＋ Signal …
+
+@ Signal von Hand zur IO-Liste hinzufügen (Rechtsklick in die Liste: weitere Befehle)
+> Add a signal to the IO list by hand (right-click in the list: more commands)
+
 @ Signalliste
 > Signal list
 
@@ -3378,6 +3429,12 @@
 
 @ Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.
 > Do not report changes of signals with status OK, error or skipped (e.g. a constantly jumping analog value). The selected signal is always reported; to check it again, reset its status to “open”.
+
+@ Signalton bei richtigem Wechsel
+> Beep on correct change
+
+@ Kurzer Ton, wenn das gewählte Digitalsignal 0→1→0 bzw. 1→0→1 gewechselt hat (Sensor betätigt und losgelassen) – man muss nicht auf den Bildschirm sehen
+> Short tone when the selected digital signal has changed 0→1→0 or 1→0→1 (sensor actuated and released) – no need to look at the screen
 
 @ Signal
 > Signal
@@ -3421,14 +3478,41 @@
 @ Alle Gruppen
 > All groups
 
+@ Signal hinzufügen …
+> Add signal …
+
+@ In die IO-Liste übernehmen ({0})
+> Add to the IO list ({0})
+
+@ Signale aus Scan-Bereichen fest in die Liste übernehmen
+> Add signals from scan ranges permanently to the list
+
+@ Aus der IO-Liste entfernen ({0}) …
+> Remove from the IO list ({0}) …
+
+@ Die Adresse {0} gibt es schon ({1}).
+> The address {0} already exists ({1}).
+
+@ {0} Signale in die IO-Liste übernommen.
+> {0} signals added to the IO list.
+
+@ {0} Signale aus der IO-Liste entfernen?
+> Remove {0} signals from the IO list?
+
+@ {0} aus der IO-Liste entfernen?
+> Remove {0} from the IO list?
+
+@ Davon {0} mit Prüfeintrag – er geht verloren.
+> {0} of them have a check entry – it will be lost.
+
+@ Signale entfernen
+> Remove signals
+
 @ Adresse ändern
 > Change address
 
 @ Das Signal stammt aus einem Scan-Bereich; die Adressen ergeben sich aus dem Bereich (Matrix › Bereiche scannen …).
 > The signal comes from a scan range; the addresses result from the range (Matrix › Scan ranges …).
-
-@ Die Adresse {0} gibt es schon ({1}).
-> The address {0} already exists ({1}).
 
 @ {0} ist bereits geprüft ({1}). Prüfeintrag zurücksetzen?\n\nJa: Status wieder „offen“ (die neue Adresse muss neu geprüft werden). Nein: Prüfeintrag behalten (z. B. nur Schreibfehler in der Liste).
 > {0} has already been checked ({1}). Reset the test entry?\n\nYes: status back to “open” (the new address must be checked again). No: keep the test entry (e.g. only a typo in the list).
@@ -3582,6 +3666,9 @@
 
 # ---------------- plc_iocheck_web.py
 
+@ Signalton, wenn das gewählte Signal 0→1→0 bzw. 1→0→1 gewechselt hat
+> Beep when the selected signal has changed 0→1→0 or 1→0→1
+
 @ Abnahmeprotokoll als PDF
 > Acceptance protocol as PDF
 
@@ -3626,6 +3713,9 @@
 
 @ Übersprungen
 > Skipped
+
+@ Wiederholen
+> Repeat
 
 @ Zurück
 > Back

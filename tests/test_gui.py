@@ -497,6 +497,26 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     assert w.readers and sum(len(v) for v in w.reader_signals.values()) == 26
     w.stop_reading()
     w.chk_visible.setChecked(False)
+    # Signal von Hand anlegen, Scan-Signal übernehmen, Signal entfernen, Status „wiederholen“, Kontextmenü, Signalton
+    io_m = __import__("plc_iocheck")
+    new = w.insert_signal(io_m.new_signal("E5.0", "B50", "neu"))
+    assert len(w.all_signals) == 27 and new in w.project.signals
+    sc = next(s for s in w.all_signals if s.scanned)
+    w.adopt_signals([sc])
+    assert not sc.scanned and sc in w.project.signals and len(w.all_signals) == 27
+    question = d.QMessageBox.question
+    d.QMessageBox.question = staticmethod(lambda *a, **k: d.QMessageBox.StandardButton.Yes)
+    try:
+        w.remove_signals([new])
+    finally:
+        d.QMessageBox.question = question
+    assert len(w.all_signals) == 26 and new not in w.project.signals
+    w.set_status([sc], "wiederholen")
+    assert sc.status == "wiederholen" and "wiederholen" in w.progress.format()
+    w.select_signal(sc)
+    assert len([a for a in w.table_menu().actions() if not a.isSeparator()]) == 8
+    io_m.set_status(sc, "offen")
+    d.play_ok_tone()
     assert w.tracker.only_open and w._options()["only_open"]
     w.chk_only_open.setChecked(False)
     assert not w.tracker.only_open

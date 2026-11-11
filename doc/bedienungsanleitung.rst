@@ -4426,8 +4426,22 @@ das entlastet Steuerung und Netz bei großen Listen. Ändert sich der Filter, st
 Lesen nach einem Augenblick mit der neuen Auswahl neu; nicht gelesene Signale zeigen „–“.
 
 * **✓ OK** (Strg+1), **✗ Fehler …** (Strg+2, fragt nach einer Bemerkung),
-  **– Übersprungen** (Strg+3), **Zurücksetzen** (Strg+0) – für die markierten Zeilen.
-  Zeit und Prüfer werden eingetragen.
+  **– Übersprungen** (Strg+3), **↻ Wiederholen** (Strg+4), **Zurücksetzen** (Strg+0) – für
+  die markierten Zeilen (auch per Rechtsklick in die Liste). Zeit und Prüfer werden
+  eingetragen. **Wiederholen** markiert ein Signal, das noch einmal geprüft werden muss
+  (z. B. nach einer Reparatur der Verdrahtung): Es zählt nicht als geprüft, wird orange
+  hervorgehoben, im Protokoll bei den offenen Signalen aufgeführt und wie ein offenes
+  Signal automatisch abgehakt bzw. unter „Was hat sich bewegt?“ gemeldet; Zeit und Prüfer
+  zeigen, wer die Wiederholung angeordnet hat.
+* **＋ Signal …** (rechts unter der Liste, auch per Rechtsklick) legt ein Signal von Hand
+  an: Adresse, Symbol, Kommentar, BMK, Gruppe, Typ (Vorgabe: aus der Adresse abgeleitet),
+  bei Analogwerten der Messbereich (z. B. ``0..10 bar``) und bei mehreren Steuerungen die
+  Steuerung. Das Signal kommt in die IO-Liste des Prüfstands. Gibt es die Adresse schon,
+  wird sie gewählt; stammt sie aus einem Scan-Bereich, wird sie mit den eingegebenen Texten
+  in die Liste übernommen.
+* **Rechtsklick in die Liste:** Status setzen, Signal hinzufügen, **In die IO-Liste
+  übernehmen** (Signale aus Scan-Bereichen fest übernehmen, siehe unten) und **Aus der
+  IO-Liste entfernen …** (mit Rückfrage; ein Prüfeintrag geht dabei verloren).
 * **Prüfer: …** in der Werkzeugleiste legt fest, wer beim Abhaken am PC eingetragen
   wird: Klartextname (z. B. „Max Mustermann“) oder Kürzel („MM“). Vorgabe ist der
   angemeldete Windows- bzw. Linux-Benutzer; ein leeres Feld stellt ihn wieder her. Die
@@ -4470,6 +4484,12 @@ Wechsel von Signalen mit Status *OK*, *Fehler* oder *übersprungen* werden nicht
 erledigte Signale stören dann nicht mehr, z. B. ein Analogeingang mit codiertem Signal, dessen
 Wert ständig springt: einfach auf *übersprungen* (oder nach der Prüfung *OK*) setzen. Das gewählte
 Signal wird immer gemeldet; zum erneuten Prüfen den Status auf *offen* zurücksetzen.
+
+**Signalton bei richtigem Wechsel** (Seitenleiste, aus; persönliche Einstellung): Hat das
+gewählte Digitalsignal 0→1→0 oder 1→0→1 gewechselt (Sensor betätigt und losgelassen),
+ertönt ein kurzer Zweiklang. Unter Windows über den Lautsprecher, unter Linux über
+``paplay``/``pw-play``/``aplay``, unter macOS über ``afplay``. Auf dem Smartphone gibt es
+denselben Ton (siehe unten).
 
 Der Knopf **Was hat sich bewegt?** in der Werkzeugleiste blendet die Seitenleiste aus
 und wieder ein (mehr Platz für die Signalliste; die Wahl wird gemerkt). Die Warnung bei
@@ -4524,7 +4544,8 @@ Der Reiter **Matrix** zeigt alle Binärsignale als **LEDs**: Siemens-Bitadressen
 Adressen der Reihe nach.
 
 * LED grün = Eingang 1, orange = Ausgang 1, grau = 0, rot = nicht lesbar.
-* Hintergrund grün mit ✓ = geprüft, rot mit ✗ = Fehler, grau mit – = übersprungen.
+* Hintergrund grün mit ✓ = geprüft, rot mit ✗ = Fehler, grau mit – = übersprungen,
+  orange mit ↻ = wiederholen.
   Ein blauer Punkt bedeutet: 0→1 gesehen, aber noch nicht wieder 1→0. Ein gelber
   Rahmen markiert einen eben erfolgten Wechsel, ein blauer Rahmen das gewählte Signal.
 * Klick wählt das Signal (auch in der Liste), Doppelklick schaltet OK ein/aus,
@@ -4543,6 +4564,12 @@ Adressen der Reihe nach.
 es noch keine Liste gibt. Adressen in der Schreibweise des Treibers der gewählten
 Steuerung; Signale, die in der IO-Liste stehen, behalten deren Symbol und Status. Für
 ``s7`` werden benachbarte Adressen mit einer Anfrage je Bereich gelesen.
+
+Gescannte Signale stehen sofort in der Signalliste und lassen sich wie alle anderen prüfen,
+beschriften und speichern. Fest **in die IO-Liste übernehmen**: in der Signalliste markieren
+(z. B. Filter auf die Spalte *Steuerung* oder die Adressen), Rechtsklick › **In die IO-Liste
+übernehmen**. Übernommene Signale bleiben auch, wenn der Scan-Bereich entfernt wird, und
+ihre Adresse lässt sich ändern.
 
 Speichern und Ergebnis
 ----------------------------------------------------------------------
@@ -4580,7 +4607,7 @@ Port belegt, der nächste freie).
 
 * Reiter **Liste** (Suche, Filter nach Gruppe und Status), **Matrix** (LEDs wie am PC) und
   **Bewegt** (letzte Wechsel). Ein Antippen wählt ein Signal; unten erscheinen Wert,
-  **✓ OK**, **✗ Fehler** (mit Bemerkung), **Übersprungen**, **Zurück**, das Bemerkungsfeld
+  **✓ OK**, **✗ Fehler** (mit Bemerkung), **Übersprungen**, **Wiederholen**, **Zurück**, das Bemerkungsfeld
   und bei Analogeingängen die Drahtbruchprüfung und die Prüfpunkte (automatische Übernahme wie am PC, solange das
   Signal auf dem Gerät gewählt ist).
 
@@ -4593,6 +4620,9 @@ Port belegt, der nächste freie).
 
 * Das gewählte Signal gilt auf diesem Gerät als *erwartet*: Wechselt ein anderer
   Digitaleingang, erscheint die Warnung „Vertauschung?“ und das Gerät vibriert.
+* **🔕/🔔** oben rechts schaltet den **Signalton** ein: Hat das gewählte Digitalsignal
+  0→1→0 bzw. 1→0→1 gewechselt, ertönt ein kurzer Zweiklang – der Monteur hört, dass das
+  Signal richtig ankommt, ohne auf das Display zu sehen. Die Wahl merkt sich der Browser.
 * **Prüfer** ist der **Anmeldename** im Webserver (Benutzer im Konfigurationsprogramm
   anlegen, siehe `HTTPS und Anmeldung <https-anmeldung_>`__); er steht in Liste, Ergebnis
   und Protokoll. Ohne Anmeldung wird „Web (Zugriffscode)“ bzw. „Web (IP-Adresse)“

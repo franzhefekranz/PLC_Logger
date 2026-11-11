@@ -21,6 +21,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   Auswahl der vorkommenden Werte); gefilterte Spalten sind markiert, der Fortschritt zeigt die Anzahl angezeigter Signale.
 * **IO-Check:** **Nur angezeigte lesen** (Werkzeugleiste, im Prüfstand gespeichert) – gelesen werden nur die Signale,
   die die Filter zeigen; bei geänderten Filtern startet das Lesen mit der neuen Auswahl neu.
+* **IO-Check:** neuer Status **wiederholen** (Strg+4, orange ↻) für Signale, die erneut geprüft werden müssen – zählt
+  nicht als geprüft, steht im Protokoll bei den offenen Signalen, wird wieder automatisch abgehakt; auch am Smartphone.
+* **IO-Check:** **＋ Signal …** legt Signale von Hand an (Adresse, Texte, Typ aus der Adresse, Messbereich).
+  Rechtsklick in die Signalliste: Status, Signal hinzufügen, Scan-Signale **in die IO-Liste übernehmen**, Signale
+  **aus der IO-Liste entfernen**.
+* **IO-Check:** optionaler **Signalton**, wenn das gewählte Digitalsignal 0→1→0 bzw. 1→0→1 gewechselt hat – am PC
+  (Seitenleiste „Was hat sich bewegt?“) und auf dem Smartphone (🔔 oben rechts).
 
 ## [3.19.0] – 2026-11-11
 

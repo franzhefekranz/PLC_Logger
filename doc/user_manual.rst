@@ -4319,7 +4319,21 @@ network with large lists. When the filter changes, reading restarts with the new
 after a moment; signals not read show “–”.
 
 * **✓ OK** (Ctrl+1), **✗ Fault …** (Ctrl+2, asks for a remark), **– Skipped**
-  (Ctrl+3), **Reset** (Ctrl+0) – for the selected rows. Time and checker are entered.
+  (Ctrl+3), **↻ Repeat** (Ctrl+4), **Reset** (Ctrl+0) – for the selected rows (also via
+  right-click in the list). Time and checker are entered. **Repeat** marks a signal that
+  has to be checked again (e.g. after the wiring was repaired): it does not count as
+  checked, is highlighted orange, listed with the open signals in the protocol and, like an
+  open signal, checked off automatically or reported under “What has moved?”; time and
+  checker show who ordered the repetition.
+* **＋ Signal …** (right below the list, also via right-click) adds a signal by hand:
+  address, symbol, comment, device tag, group, type (default: derived from the address),
+  for analog values the measuring range (e.g. ``0..10 bar``) and with several controllers
+  the controller. The signal goes into the IO list of the test project. If the address
+  already exists, it is selected; if it comes from a scan range, it is added to the list
+  with the texts entered.
+* **Right-click in the list:** set the status, add a signal, **Add to the IO list** (add
+  signals from scan ranges permanently, see below) and **Remove from the IO list …** (with
+  confirmation; a check entry is lost).
 * **Checked by: …** in the toolbar sets who is entered when signals are checked off on
   the PC: full name (e.g. “John Smith”) or initials (“JS”). The default is the Windows or
   Linux user logged in; an empty field restores it. The setting applies to all test
@@ -4361,6 +4375,11 @@ project): changes of signals with status *OK*, *error* or *skipped* are not repo
 signals no longer get in the way, e.g. an analog input with a coded signal whose value jumps
 constantly: simply set it to *skipped* (or *OK* after the check). The selected signal is always
 reported; to check it again, reset its status to *open*.
+
+**Beep on correct change** (side panel, off; personal setting): when the selected digital
+signal has changed 0→1→0 or 1→0→1 (sensor actuated and released), a short two-tone sound
+plays. On Windows via the speaker, on Linux via ``paplay``/``pw-play``/``aplay``, on macOS
+via ``afplay``. The same sound is available on the smartphone (see below).
 
 The button **What has moved?** in the toolbar hides and shows the side panel (more room
 for the signal list; the choice is remembered). The swap warning then appears in the
@@ -4414,7 +4433,8 @@ The **Matrix** tab shows all binary signals as **LEDs**: Siemens bit addresses b
 in sequence.
 
 * LED green = input 1, orange = output 1, grey = 0, red = not readable.
-* Background green with ✓ = checked, red with ✗ = fault, grey with – = skipped. A blue
+* Background green with ✓ = checked, red with ✗ = fault, grey with – = skipped, orange
+  with ↻ = repeat. A blue
   dot means: 0→1 seen, but not yet 1→0 again. A yellow frame marks a change that has
   just happened, a blue frame the selected signal.
 * Click selects the signal (also in the list), double-click switches OK on/off,
@@ -4433,6 +4453,12 @@ in sequence.
 if there is no list yet. Addresses in the notation of the driver of the selected
 controller; signals that are in the IO list keep their symbol and status. For ``s7``
 neighbouring addresses are read with one request per range.
+
+Scanned signals appear in the signal list at once and can be checked, labelled and saved
+like all others. To **add them to the IO list** permanently: select them in the signal list
+(e.g. filter on the column *Controller* or the addresses), right-click › **Add to the IO
+list**. Added signals stay even when the scan range is removed, and their address can be
+changed.
 
 Saving and result
 ----------------------------------------------------------------------
@@ -4470,7 +4496,7 @@ free one).
 
 * Tabs **List** (search, filter by group and status), **Matrix** (LEDs as on the PC) and
   **Moved** (latest changes). Tapping selects a signal; at the bottom the value,
-  **✓ OK**, **✗ Fault** (with remark), **Skipped**, **Back**, the remark field and for
+  **✓ OK**, **✗ Fault** (with remark), **Skipped**, **Repeat**, **Back**, the remark field and for
   analog inputs the wire break test and the test points appear (automatic take-over as on the PC while the
   signal is selected on the device).
 
@@ -4483,6 +4509,9 @@ free one).
 
 * The selected signal is *expected* on this device: if another digital input changes,
   the warning “Swapped?” appears and the device vibrates.
+* **🔕/🔔** at the top right switches on the **beep**: when the selected digital signal has
+  changed 0→1→0 or 1→0→1, a short two-tone sound plays – the fitter hears that the signal
+  arrives correctly without looking at the display. The browser remembers the choice.
 * The **checker** is the **login name** in the web server (create users in the
   configuration program, see `HTTPS and login <https-anmeldung_>`__); it appears in the
   list, the result and the protocol. Without login “Web (Zugriffscode)” or “Web (IP

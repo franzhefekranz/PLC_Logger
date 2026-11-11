@@ -159,6 +159,36 @@ def test_iocheck_sort_key():
     assert sorted([a, b, c], key=lambda s: io.sort_key(s, "value")) == [b, a, c]
 
 
+def test_iocheck_repeat_pulse_and_manual_signals():
+    """Status „wiederholen“: zählt nicht als geprüft, setzt Flanken zurück und wird wieder automatisch abgehakt;
+    Impulse 0→1→0 und 1→0→1 des gewählten Signals (Signalton); Signal von Hand anlegen und Scan-Signale übernehmen."""
+    import plc_iocheck as io
+    t = io.IoTracker()
+    t.auto_ok, t.only_open = True, True
+    a = io.IoSignal("E0.0")
+    io.set_status(a, "ok")
+    a.seen = io.SEEN_RISE | io.SEEN_FALL
+    io.set_status(a, "wiederholen")
+    assert a.seen == 0 and a.checked_at and io.progress([a])["wiederholen"] == 1
+    t.expected = a
+    for v, ts in ((1, 1), (0, 2), (1, 3), (0, 4)):          # 1 -> 0 -> 1: ein Impuls, 1 -> 0: noch einer
+        assert t.feed(a, v, ts) is not None or ts == 1         # „wiederholen“ wird gemeldet
+    assert a.pulses == 1 and t.pop_pulses() == 1 and t.pop_pulses() == 0
+    assert a.status == "ok"                                     # 0→1→0 gesehen: wieder abgehakt
+    assert sorted(["ok", "wiederholen", "offen"], key=lambda st: io.STATUS_ORDER[st]) == ["offen", "wiederholen", "ok"]
+    s = io.new_signal(" %EW258 ", "PT2", group="+S1", range_text="0..10 bar")
+    assert (s.address, s.kind, s.dtype, s.eng_max, s.unit) == ("EW258", "AI", "INT", 10.0, "bar")
+    try:
+        io.new_signal("")
+        raise AssertionError("ValueError erwartet")
+    except ValueError:
+        pass
+    proj = io.IoProject(signals=[s])
+    sc = io.IoSignal("E1.0", scanned=True, remark="x")
+    proj.scanned = [sc]
+    assert io.adopt_scanned(proj, [sc, s]) == 1 and not sc.scanned and proj.signals[-1] is sc and not proj.scanned
+
+
 def test_iocheck_tracker_only_open():
     """„Nur offene Signale“: Wechsel erledigter Signale (OK, Fehler, übersprungen) werden nicht gemeldet, das gewählte
     Signal aber immer; ohne die Option wie bisher."""

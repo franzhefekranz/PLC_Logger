@@ -31,7 +31,9 @@ EXTENSION = ".iocheck.json"
 KINDS = ("DI", "DO", "AI", "AO")
 KIND_TEXT = {"DI": N_("Digitaleingang"), "DO": N_("Digitalausgang"), "AI": N_("Analogeingang"),
              "AO": N_("Analogausgang")}
-STATUS = {"offen": N_("offen"), "ok": N_("OK"), "fehler": N_("Fehler"), "uebersprungen": N_("übersprungen")}
+STATUS = {"offen": N_("offen"), "ok": N_("OK"), "fehler": N_("Fehler"), "uebersprungen": N_("übersprungen"),
+          "wiederholen": N_("wiederholen")}
+PENDING = ("offen", "wiederholen")        # noch (erneut) zu prüfen: automatisch abhaken, „Nur offene Signale“
 POINTS = (0, 50, 100)                     # Prüfpunkte der Analogwerte in % des Messbereichs
 S7_RAW_MAX = 27648                        # Nennbereich der S7-Analogbaugruppen (0 … 27648)
 
@@ -76,6 +78,8 @@ class IoSignal:
         self.stable_since = 0.0           # Analog: Wert seit … in der Nähe eines Prüfpunkts
         self.stable_point = None
         self.logged = math.nan            # Analog: zuletzt gemeldeter Wert („Was hat sich bewegt?“)
+        self.half = 0                     # Digital: erste Flanke eines Impulses (+1 = 0→1, -1 = 1→0, 0 = keine)
+        self.pulses = 0                   # Digital: vollständige Impulse 0→1→0 bzw. 1→0→1 (für den Signalton)
 
     @property
     def key(self):
@@ -232,11 +236,14 @@ def now_text() -> str:
 
 
 def set_status(sig: IoSignal, status: str, remark=None, checker=None):
-    """Prüfstatus setzen (mit Zeit und Prüfer); "offen" setzt auch Zeit, Prüfer, Flanken und Messpunkte zurück."""
+    """Prüfstatus setzen (mit Zeit und Prüfer); "offen" setzt auch Zeit, Prüfer, Flanken und Messpunkte zurück,
+    "wiederholen" Flanken und Messpunkte (Zeit und Prüfer halten fest, wer die Wiederholung angeordnet hat)."""
     sig.status = status
     if status == "offen":
         sig.checked_at, sig.checker, sig.seen, sig.points = "", "", 0, {}
     else:
+        if status == "wiederholen":
+            sig.seen, sig.points = 0, {}
         sig.checked_at, sig.checker = now_text(), user_name() if checker is None else checker
     if remark is not None:
         sig.remark = remark
@@ -439,7 +446,8 @@ def parse_range(text):
 
 _STATUS_IN = {"ok": "ok", "io": "ok", "i.o.": "ok", "geprüft": "ok", "fehler": "fehler", "nio": "fehler",
               "n.i.o.": "fehler", "error": "fehler", "übersprungen": "uebersprungen", "skipped": "uebersprungen",
-              "entfällt": "uebersprungen"}
+              "entfällt": "uebersprungen", "wiederholen": "wiederholen", "wdh": "wiederholen", "repeat": "wiederholen",
+              "retest": "wiederholen"}
 
 
 def import_rows(header, rows, aliases=None):
@@ -487,6 +495,36 @@ def import_rows(header, rows, aliases=None):
         seen.add(sig.key)
         signals.append(sig)
     return signals, warnings
+
+
+def new_signal(address, symbol="", comment="", bmk="", group="", kind="", plc="", range_text="") -> IoSignal:
+    """Signal von Hand anlegen (wie eine Zeile der IO-Liste): Signalart und Datentyp aus der Adresse, wenn ``kind``
+    leer ist; ``range_text`` z. B. „0..10 bar“. ValueError ohne Adresse."""
+    address = (address or "").strip()
+    if not address:
+        raise ValueError(tr("Bitte eine Adresse eintragen."))
+    kind, dtype = guess_kind_dtype(address, kind)
+    sig = IoSignal(address=address.lstrip("%") if s7_parts(address) else address, symbol=symbol.strip(),
+                   comment=comment.strip(), bmk=bmk.strip(), group=group.strip(), kind=kind, dtype=dtype, plc=plc)
+    rng = parse_range(range_text or "")
+    if rng:
+        sig.eng_min, sig.eng_max, sig.unit = rng[0], rng[1], rng[2]
+    return sig
+
+
+def adopt_scanned(project, sigs) -> int:
+    """Signale aus Scan-Bereichen fest in die IO-Liste des Prüfstands übernehmen (bleiben auch ohne den Bereich, Texte
+    wie in der Liste). Rückgabe: Anzahl übernommener Signale."""
+    n = 0
+    keys = {s.key for s in project.signals}
+    for s in sigs:
+        if s.scanned and s.key not in keys:
+            s.scanned = False
+            project.signals.append(s)
+            keys.add(s.key)
+            n += 1
+    project.scanned = [s for s in project.scanned if s.scanned]
+    return n
 
 
 def read_list(path):
@@ -703,6 +741,7 @@ class IoTracker:
         self.history = []                 # neueste zuerst
         self.status_changed = []          # Signale, deren Status sich automatisch geändert hat (seit dem Abholen)
         self.watched = set()              # zusätzlich beobachtete Signale (auf Smartphones gewählt): Analog-Prüfpunkte
+        self.pulsed = []                  # vollständige Impulse des erwarteten Signals (seit dem Abholen, Signalton)
         self.seq = 0
 
     def _log(self, ch: Change):
@@ -736,7 +775,7 @@ class IoTracker:
                 sig.seen = (sig.seen | SEEN_BREAK) & ~SEEN_BACK if broke else sig.seen
             elif sig.seen & SEEN_BREAK and not sig.seen & SEEN_BACK:
                 sig.seen |= SEEN_BACK
-                if self.auto_ok and sig.status == "offen":
+                if self.auto_ok and sig.status in PENDING:
                     set_status(sig, "ok", remark=sig.remark or tr("automatisch (Drahtbruch erkannt, wieder gültig)"))
                     sig.seen = SEEN_BREAK | SEEN_BACK
                     self.status_changed.append(sig)
@@ -746,8 +785,17 @@ class IoTracker:
         if sig.binary:
             if value == old:
                 return None
+            # Impuls: auf eine Flanke folgt die Gegenflanke (0→1→0 oder 1→0→1) – Signalton für das gewählte Signal
+            edge = 1 if value else -1
+            if sig.half == -edge:
+                sig.half = 0
+                sig.pulses += 1
+                if sig is self.expected:
+                    self.pulsed.append(sig)
+            else:
+                sig.half = edge
             sig.seen |= SEEN_RISE if value else (SEEN_FALL if sig.seen & SEEN_RISE else 0)
-            if self.auto_ok and sig.status == "offen" and sig.seen & SEEN_RISE and sig.seen & SEEN_FALL:
+            if self.auto_ok and sig.status in PENDING and sig.seen & SEEN_RISE and sig.seen & SEEN_FALL:
                 set_status(sig, "ok", remark=sig.remark or tr("automatisch (0→1→0 erkannt)"))
                 sig.seen = SEEN_RISE | SEEN_FALL
                 self.status_changed.append(sig)
@@ -758,7 +806,7 @@ class IoTracker:
                 return None                   # Rauschen: erst ab 2 % des Messbereichs melden
             old, sig.logged = sig.logged, value
         # Erledigte Signale (OK, Fehler, übersprungen) nicht melden – außer dem gerade gewählten
-        if self.only_open and sig.status != "offen" and sig is not self.expected:
+        if self.only_open and sig.status not in PENDING and sig is not self.expected:
             return None
         ch = Change(ts, sig, old, value)
         exp = self.expected
@@ -790,7 +838,7 @@ class IoTracker:
             return
         if ts - sig.stable_since >= self.STABLE_S and str(hit) not in sig.points:
             sig.points[str(hit)] = round(eng, 6)
-            if all(str(p) in sig.points for p in POINTS) and sig.status == "offen":
+            if all(str(p) in sig.points for p in POINTS) and sig.status in PENDING:
                 set_status(sig, "ok", remark=sig.remark or tr("Prüfpunkte 0/50/100 % in Toleranz"))
                 self.status_changed.append(sig)
 
@@ -801,7 +849,7 @@ class IoTracker:
         if math.isnan(eng):
             return False
         sig.points[str(pct)] = round(eng, 6)
-        if sig.status == "offen" and all(str(p) in sig.points and point_ok(sig, p, sig.points[str(p)], self.tolerance)
+        if sig.status in PENDING and all(str(p) in sig.points and point_ok(sig, p, sig.points[str(p)], self.tolerance)
                                          for p in POINTS):
             set_status(sig, "ok", remark=sig.remark or tr("Prüfpunkte 0/50/100 % in Toleranz"), checker=checker)
         return point_ok(sig, pct, eng, self.tolerance)
@@ -811,10 +859,16 @@ class IoTracker:
         out, self.status_changed = self.status_changed, []
         return out
 
+    def pop_pulses(self):
+        """Vollständige Impulse (0→1→0 bzw. 1→0→1) des erwarteten Signals seit dem letzten Abruf -> Anzahl."""
+        n, self.pulsed = len(self.pulsed), []
+        return n
+
 
 def progress(signals):
-    """{"gesamt", "ok", "fehler", "uebersprungen", "offen"} für die Fortschrittsanzeige."""
-    out = {"gesamt": len(signals), "ok": 0, "fehler": 0, "uebersprungen": 0, "offen": 0}
+    """{"gesamt", "ok", "fehler", "uebersprungen", "wiederholen", "offen"} für die Fortschrittsanzeige („wiederholen“
+    zählt nicht als geprüft)."""
+    out = {"gesamt": len(signals), "ok": 0, "fehler": 0, "uebersprungen": 0, "wiederholen": 0, "offen": 0}
     for s in signals:
         out[s.status if s.status in out else "offen"] += 1
     return out
@@ -823,7 +877,7 @@ def progress(signals):
 # ---------------------------------------------------------------------------------------------------------------------
 # Sortieren der Signalliste
 # ---------------------------------------------------------------------------------------------------------------------
-STATUS_ORDER = {"offen": 0, "fehler": 1, "uebersprungen": 2, "ok": 3}
+STATUS_ORDER = {"offen": 0, "wiederholen": 1, "fehler": 2, "uebersprungen": 3, "ok": 4}
 
 
 def natural_key(text) -> tuple:
@@ -915,8 +969,9 @@ def result_rows(signals):
 
 
 # Farben im Excel-Ergebnis (wie in der Signalliste): Zeilenhintergrund und Schrift der Statusspalte
-RESULT_FILL = {"ok": "C8E6C9", "fehler": "FFCDD2", "uebersprungen": "E0E0E0"}
-RESULT_FONT = {"ok": "1B5E20", "fehler": "B71C1C", "uebersprungen": "616161", "offen": "455A64"}
+RESULT_FILL = {"ok": "C8E6C9", "fehler": "FFCDD2", "uebersprungen": "E0E0E0", "wiederholen": "FFE0B2"}
+RESULT_FONT = {"ok": "1B5E20", "fehler": "B71C1C", "uebersprungen": "616161", "offen": "455A64",
+               "wiederholen": "E65100"}
 
 
 def write_result(path, signals, colors=True):
@@ -1152,7 +1207,7 @@ class IoWebBridge:
         for s in sigs:
             v = None if math.isnan(s.value) else round(s.value, 4)
             dyn.append([s.status, v, s.error, round(now - s.changed, 1) if s.changed else -1, s.seen,
-                        s.checked_at, s.checker, s.remark, s.points, list(s.photos)])
+                        s.checked_at, s.checker, s.remark, s.points, list(s.photos), s.pulses])
         changes = []
         if tracker is not None:
             for ch in tracker.history[:40]:
@@ -1273,7 +1328,8 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
         photos = protocol_photos()
     sigs = protocol_signals(signals)
     txt, mute, head = "#1b2430", "#5b6878", "#0d47a1"
-    colors = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#b26a00"}
+    colors = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "offen": "#b26a00",
+              "wiederholen": "#e65100"}
     doc = _Doc(tr("IO-Check – Abnahmeprotokoll"), project or os.path.basename(source), logos, landscape)
     p = doc.pdf
     pr = progress(sigs)
@@ -1284,7 +1340,8 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
              (tr("Prüfzeitraum:"), f"{times[0][:16]} – {times[-1][:16]}" if times else "—"),
              (tr("Ergebnis:"), tr("{0} von {1} Signalen geprüft ({2:.0f} %): {3} OK, {4} Fehler, {5} übersprungen, "
                                   "{6} offen").format(done, pr["gesamt"], 100.0 * done / max(1, pr["gesamt"]),
-                                                      pr["ok"], pr["fehler"], pr["uebersprungen"], pr["offen"]))]
+                                                      pr["ok"], pr["fehler"], pr["uebersprungen"], pr["offen"])
+              + (", " + tr("{0} wiederholen").format(pr["wiederholen"]) if pr["wiederholen"] else ""))]
     for k, v in lines:
         p.text(MARGIN, doc.y, k, 9, bold=True, color=txt)
         p.text(MARGIN + 80, doc.y, v, 9, color=txt)
@@ -1303,7 +1360,8 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
                 continue
             c = progress(part)
             rows.append([key or "—", str(c["gesamt"]), (str(c["ok"]), colors["ok"]), (str(c["fehler"]), colors["fehler"]),
-                         str(c["uebersprungen"]), (str(c["offen"]), colors["offen"] if c["offen"] else txt)])
+                         str(c["uebersprungen"]), (str(c["offen"] + c["wiederholen"]),
+                                                    colors["offen"] if c["offen"] + c["wiederholen"] else txt)])
         return rows
     heads = [tr("Signalart"), tr("Gesamt"), tr("OK"), tr("Fehler"), tr("übersprungen"), tr("offen")]
     w6 = [175, 68, 68, 68, 68, 68]
@@ -1317,7 +1375,7 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
     # Prüfer
     by = {}
     for s in sigs:
-        if s.status != "offen":
+        if s.status not in PENDING:
             by[s.checker or "—"] = by.get(s.checker or "—", 0) + 1
     if by:
         doc.heading(tr("Prüfer"))
@@ -1355,7 +1413,7 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
         return [s.address, s.symbol, s.comment, s.bmk, s.kind, (tr(STATUS[s.status]), colors[s.status]),
                 _short_date(s.checked_at), s.checker, note]
 
-    bad = [s for s in sigs if s.status in ("fehler", "offen")]
+    bad = [s for s in sigs if s.status in ("fehler",) + PENDING]
     doc.heading(tr("Fehler und offene Signale"))
     if bad:
         _table(doc, cols, [row(s) for s in sorted(bad, key=lambda s: (s.status != "fehler", s.group, s.address))],

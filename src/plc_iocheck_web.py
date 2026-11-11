@@ -16,9 +16,9 @@ IO_HTML = r"""<!doctype html>
 <title>{{T:IO-Check}} – PLC Datenlogger</title>
 <style>
 :root{--bg:#10151b;--card:#18202a;--fg:#dfe6ee;--mute:#8b98a7;--line:#2a3544;--accent:#4aa3ff;--in:#2ecc71;--out:#f5a623;
- --off:#5d6875;--nan:#e5484d;--okbg:#1d3b24;--errbg:#47201f;--skbg:#2a2f36;--fl:#fbc02d;color-scheme:dark}
+ --off:#5d6875;--nan:#e5484d;--okbg:#1d3b24;--errbg:#47201f;--skbg:#2a2f36;--rpbg:#4a3313;--fl:#fbc02d;color-scheme:dark}
 @media (prefers-color-scheme:light){:root{--bg:#f2f4f7;--card:#fff;--fg:#1b2430;--mute:#5b6878;--line:#d5dbe3;
- --accent:#0a6fd6;--off:#b7c0ca;--okbg:#c8e6c9;--errbg:#ffcdd2;--skbg:#e0e0e0;color-scheme:light}}
+ --accent:#0a6fd6;--off:#b7c0ca;--okbg:#c8e6c9;--errbg:#ffcdd2;--skbg:#e0e0e0;--rpbg:#ffe0b2;color-scheme:light}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.35 system-ui,"Segoe UI",Roboto,Arial,sans-serif;
  padding-bottom:calc(var(--sheet,0px) + env(safe-area-inset-bottom))}
@@ -27,6 +27,7 @@ header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px 
 h1{font-size:17px;margin:0;font-weight:600}
 .sub{color:var(--mute);font-size:13px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lnk{color:var(--mute);text-decoration:none;font-size:13px;border:1px solid var(--line);border-radius:6px;padding:3px 7px}
+button.lnk{background:none;font:inherit;font-size:13px;cursor:pointer}
 .bar{height:16px;border-radius:8px;background:var(--bg);border:1px solid var(--line);overflow:hidden;margin:7px 0 3px;
  position:relative}
 .bar i{display:block;height:100%;background:var(--in);width:0}
@@ -46,7 +47,7 @@ main{padding:8px}
  border-radius:6px;padding:8px;font:inherit}
 .r{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;
  padding:8px 10px;margin-bottom:5px;cursor:pointer}
-.r.st-ok{background:var(--okbg)}.r.st-fehler{background:var(--errbg)}.r.st-uebersprungen{background:var(--skbg)}
+.r.st-ok{background:var(--okbg)}.r.st-fehler{background:var(--errbg)}.r.st-uebersprungen{background:var(--skbg)}.r.st-wiederholen{background:var(--rpbg)}
 .r.sel{outline:2px solid var(--accent)}
 .r.fl .v{background:var(--fl);color:#000;border-radius:4px}
 .led{flex:none;width:18px;height:18px;border-radius:50%;background:var(--off);box-shadow:0 0 0 1px rgba(0,0,0,.3) inset}
@@ -56,7 +57,7 @@ main{padding:8px}
 .c{color:var(--mute);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .v{flex:none;font-variant-numeric:tabular-nums;padding:0 4px;min-width:2ch;text-align:right}
 .st{flex:none;width:22px;text-align:center;font-weight:700;font-size:17px}
-.st.ok{color:#2e9d4b}.st.fehler{color:#e5484d}.st.uebersprungen{color:var(--mute)}
+.st.ok{color:#2e9d4b}.st.fehler{color:#e5484d}.st.uebersprungen{color:var(--mute)}.st.wiederholen{color:#e65100}
 .sec{font-weight:700;margin:12px 0 4px}
 .grid{display:grid;grid-template-columns:58px repeat(8,minmax(0,46px));gap:4px;align-items:center}
 .grid .lb{font-size:12.5px;color:var(--mute);text-align:right;padding-right:4px}
@@ -64,7 +65,7 @@ main{padding:8px}
 .cell{aspect-ratio:1;border:1px solid var(--line);border-radius:6px;background:var(--card);position:relative;
  display:flex;align-items:center;justify-content:center;cursor:pointer}
 .cell .led{width:58%;height:58%}
-.cell.st-ok{background:var(--okbg)}.cell.st-fehler{background:var(--errbg)}.cell.st-uebersprungen{background:var(--skbg)}
+.cell.st-ok{background:var(--okbg)}.cell.st-fehler{background:var(--errbg)}.cell.st-uebersprungen{background:var(--skbg)}.cell.st-wiederholen{background:var(--rpbg)}
 .cell b{position:absolute;right:2px;bottom:0;font-size:11px}
 .cell.seen::after{content:"";position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:#1e88e5}
 .cell.fl{box-shadow:0 0 0 3px var(--fl) inset}.cell.sel{outline:2px solid var(--accent);outline-offset:1px}
@@ -78,7 +79,7 @@ main{padding:8px}
  padding:10px 12px calc(10px + env(safe-area-inset-bottom));max-height:70vh;overflow:auto;box-shadow:0 -6px 20px rgba(0,0,0,.35)}
 #sheet .x{float:right;background:none;border:0;color:var(--mute);font-size:22px;line-height:1;padding:0 4px}
 .sv{font-size:28px;font-weight:700;margin:4px 0}
-.btns{display:grid;grid-template-columns:1fr 1fr 1.5fr 1fr;gap:6px;margin:8px 0}
+.btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
 .btns button{font-size:13.5px!important;padding:10px 2px!important;white-space:nowrap}
 .btns button,.pt button,.rm button{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);
  background:var(--bg);color:var(--fg);padding:12px 4px;min-height:46px}
@@ -103,6 +104,7 @@ main{padding:8px}
 <body>
 <header id="hdr">
  <div class="row"><h1>{{T:IO-Check}}</h1><span class="sub" id="title"></span>
+  <button class="lnk" id="tone" onclick="toneToggle()" title="{{T:Signalton, wenn das gewählte Signal 0→1→0 bzw. 1→0→1 gewechselt hat}}">🔕</button>
   <a class="lnk" id="pdf" href="api/io/protokoll.pdf" target="_blank" title="{{T:Abnahmeprotokoll als PDF}}">PDF</a>__LOGOUT__</div>
  <div class="bar"><i id="barv"></i><span id="bart"></span></div>
  <div class="plcs" id="plcs"></div>
@@ -114,7 +116,8 @@ main{padding:8px}
  <section id="list">
   <div class="filt"><input id="q" type="search" placeholder="{{T:Suchen …}}" autocomplete="off">
    <select id="fg"></select><select id="fs"><option value="">{{T:Alle Status}}</option><option value="offen">{{T:offen}}</option>
-   <option value="ok">{{T:OK}}</option><option value="fehler">{{T:Fehler}}</option><option value="uebersprungen">{{T:übersprungen}}</option></select></div>
+   <option value="ok">{{T:OK}}</option><option value="fehler">{{T:Fehler}}</option><option value="uebersprungen">{{T:übersprungen}}</option>
+   <option value="wiederholen">{{T:wiederholen}}</option></select></div>
   <div id="rows"><div class="msg">{{T:Verbinde …}}</div></div>
  </section>
  <section id="matrix" hidden><div id="mx"></div></section>
@@ -129,7 +132,8 @@ function api(u){return TOKEN?u+(u.indexOf('?')<0?'?':'&')+'token='+encodeURIComp
 document.getElementById('pdf').href=api('api/io/protokoll.pdf');
 var SWAPS={},S=null,VER=-1,D=[],SEL=-1,TAB='list',lastSeq=-1,TOL=1,rowEl=[],cellEl=[],swapUntil=0,remarkDirty=false,
  lastSheet='',camFor=-1,UP=0,WR=true;
-var ST={offen:'{{J:offen}}',ok:'{{J:OK}}',fehler:'{{J:Fehler}}',uebersprungen:'{{J:übersprungen}}'},MK={offen:'',ok:'✓',fehler:'✗',uebersprungen:'–'};
+var ST={offen:'{{J:offen}}',ok:'{{J:OK}}',fehler:'{{J:Fehler}}',uebersprungen:'{{J:übersprungen}}',wiederholen:'{{J:wiederholen}}'},
+ MK={offen:'',ok:'✓',fehler:'✗',uebersprungen:'–',wiederholen:'↻'};
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function bin(i){var k=S.sig[i][5];return k=='DI'||k=='DO';}
 function isIn(i){var k=S.sig[i][5];return k=='DI'||k=='AI';}
@@ -206,7 +210,8 @@ function sheet(){var sh=document.getElementById('sheet');if(SEL<0||!S||!S.sig[SE
    '</span>'+(WR?'<button onclick="cmd(\'point\',{pct:'+p+'})">{{J:Übernehmen}}</button>':'<span></span>')+'</div>';});
   if(WR)h+='<div class="muted" style="margin-top:6px">'+'{{J:Wert 1 s lang in Toleranz (±{0} %) → Messpunkt wird automatisch übernommen.}}'.replace('{0}',TOL)+'</div>';}
  if(WR)h+='<div class="btns"><button class="ok" onclick="setst(\'ok\')">✓ {{J:OK}}</button><button class="fehler" onclick="setst(\'fehler\')">✗ {{J:Fehler}}</button>'+
-  '<button onclick="setst(\'uebersprungen\')">– {{J:Übersprungen}}</button><button onclick="setst(\'offen\')">↺ {{J:Zurück}}</button></div>';
+  '<button onclick="setst(\'uebersprungen\')">– {{J:Übersprungen}}</button><button onclick="setst(\'wiederholen\')">↻ {{J:Wiederholen}}</button>'+
+  '<button onclick="setst(\'offen\')">↺ {{J:Zurück}}</button></div>';
  h+='<div class="muted"'+(WR?'':' style="margin-top:8px"')+'>{{J:Status}}: <b>'+ST[d[0]||'offen']+'</b>'+(d[5]?' · '+esc(d[5])+' · '+esc(d[6]):'')+'</div>';
  if(!WR)h+=(d[7]?'<div style="margin-top:6px">'+esc(d[7])+'</div>':'')+'<div class="muted" style="margin-top:6px">{{J:Nur Leserecht – Status, Bemerkung und Fotos können nicht geändert werden.}}</div>';
  else h+='<div class="rm" style="margin-top:6px"><input id="rmk" placeholder="{{J:Bemerkung}}" value="'+esc(d[7])+'" oninput="remarkDirty=true">'+
@@ -243,6 +248,17 @@ function cmd(c,extra){if(SEL<0)return;var body={ver:VER,cmd:c,i:SEL};for(var k i
  fetch(api('api/io/cmd'),{method:'POST',headers:{'Content-Type':'application/json','X-Token':TOKEN},body:JSON.stringify(body)})
  .then(function(r){if(r.status==409)VER=-1;if(r.status==401)location.href='login';if(r.status==403){WR=false;sheet();}});}
 
+// Signalton bei vollständigem Impuls des gewählten Signals (Zähler d[10] vom Server); ein/aus wird im Browser gemerkt
+var TONE=false,AC=null,PULSE={};
+try{TONE=localStorage.getItem('io_ton')=='1';}catch(e){}
+function toneShow(){document.getElementById('tone').textContent=TONE?'🔔':'🔕';}
+function toneToggle(){TONE=!TONE;try{localStorage.setItem('io_ton',TONE?'1':'0');}catch(e){}toneShow();if(TONE)beep();}
+function beep(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume();
+ [[880,0],[1320,0.12]].forEach(function(f){var o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+f[1];
+  o.frequency.value=f[0];o.connect(g);g.connect(AC.destination);g.gain.setValueAtTime(0.25,t);
+  g.gain.exponentialRampToValueAtTime(0.001,t+0.11);o.start(t);o.stop(t+0.12);});}catch(e){}}
+function pulseCheck(){if(SEL<0||!D[SEL])return;var n=D[SEL][10]||0,k=S?S.sig[SEL][0]:'';
+ if(PULSE.k===k&&n>PULSE.n&&TONE)beep();PULSE={k:k,n:n};}
 function poll(){fetch(api('api/io?ver='+VER+'&sel='+SEL),{cache:'no-store'}).then(function(r){if(r.status==401){location.href='login';throw 0;}return r.json();})
  .then(function(j){if(!j.active){document.getElementById('rows').innerHTML='<div class="msg">{{J:Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.}}</div>';VER=-1;S=null;return;}
   if(j.static){S=j.static;VER=j.ver;D=j.dyn;build();}D=j.dyn;TOL=j.tol;WR=j.write!==false;
@@ -250,7 +266,7 @@ function poll(){fetch(api('api/io?ver='+VER+'&sel='+SEL),{cache:'no-store'}).the
   var p=j.progress,done=p.ok+p.fehler+p.uebersprungen;document.getElementById('barv').style.width=(100*done/Math.max(1,p.gesamt))+'%';
   document.getElementById('bart').textContent='{{J:{0} / {1} geprüft · {2} OK · {3} Fehler}}'.replace('{0}',done).replace('{1}',p.gesamt).replace('{2}',p.ok).replace('{3}',p.fehler);
   document.getElementById('plcs').innerHTML=j.plcs.map(function(x){return '<span title="'+esc(x[2])+'"><span class="dot '+esc(x[1])+'"></span>'+esc(x[0])+'</span>';}).join('');
-  swapCheck(j.changes);update();if(TAB=='moved')moved(j.changes);else window._chs=j.changes;sheet();})
+  swapCheck(j.changes);pulseCheck();update();if(TAB=='moved')moved(j.changes);else window._chs=j.changes;sheet();})
  .catch(function(){}).then(function(){setTimeout(poll,700);});}
 
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){TAB=b.dataset.t;
@@ -260,7 +276,7 @@ document.querySelectorAll('nav button').forEach(function(b){b.onclick=function()
 ['q','fg','fs'].forEach(function(id){document.getElementById(id).addEventListener('input',filter);});
 function hh(){document.documentElement.style.setProperty('--hh',document.getElementById('hdr').offsetHeight+'px');}
 window.addEventListener('resize',hh);hh();
-poll();
+toneShow();poll();
 </script>
 </body>
 </html>
