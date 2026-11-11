@@ -471,7 +471,7 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     # Sortieren natürlich (E0.2 vor E0.10) und Spaltenfilter (Rechtsklick auf die Überschrift)
     w.view.sortByColumn(d.COL["address"], Qt.SortOrder.AscendingOrder)
     addrs = [w.proxy.index(r, d.COL["address"]).data() for r in range(w.proxy.rowCount())]
-    assert addrs.index("E0.2") < addrs.index("E0.10")
+    assert addrs == sorted(addrs, key=__import__("plc_iocheck").natural_key) and addrs[0] == "A4.0"
     menu = w.column_filter_menu(d.COL["comment"])
     menu.edit.setText("endlage")
     menu.apply_filter()
