@@ -505,7 +505,8 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     w.start_reading()
     wait(1500)
     assert any(s.value == s.value for s in w.all_signals), "keine Werte gelesen"
-    w.view.selectRow(3)                                     # Analogsignal wählen: Analog-Feld
+    w.view.selectRow(next(r for r in range(w.proxy.rowCount())    # Analogsignal wählen: Analog-Feld
+                          if w.proxy.index(r, d.COL["address"]).data() == "EW256"))
     wait(300)
     assert w.analog.isVisible()
     w.set_status([w.all_signals[0]], "ok")
