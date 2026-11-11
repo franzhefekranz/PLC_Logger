@@ -1094,6 +1094,14 @@ class IoCheckWindow(QMainWindow):
         sv.setContentsMargins(4, 0, 0, 0)
         title = QLabel(f"<b>{tr('Was hat sich bewegt?')}</b>")
         sv.addWidget(title)
+        self.chk_only_open = QCheckBox(tr("Nur offene Signale"))
+        self.chk_only_open.setChecked(True)
+        self.tracker.only_open = True
+        self.chk_only_open.setToolTip(tr("Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden "
+                                         "(z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer "
+                                         "gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen."))
+        self.chk_only_open.toggled.connect(self._options_changed)
+        sv.addWidget(self.chk_only_open)
         self.lbl_expected = QLabel()
         self.lbl_expected.setWordWrap(True)
         sv.addWidget(self.lbl_expected)
@@ -1330,12 +1338,14 @@ class IoCheckWindow(QMainWindow):
 
     def _options(self):
         """Optionen für die Prüfstand-Datei."""
-        return {"auto_ok": self.chk_auto.isChecked(), "tolerance": self.sp_tol.value()}
+        return {"auto_ok": self.chk_auto.isChecked(), "tolerance": self.sp_tol.value(),
+                "only_open": self.chk_only_open.isChecked()}
 
     def _options_changed(self, *_):
         """Optionen an den Tracker weitergeben."""
         self.tracker.auto_ok = self.chk_auto.isChecked()
         self.tracker.tolerance = self.sp_tol.value()
+        self.tracker.only_open = self.chk_only_open.isChecked()
         self.analog.refresh()
 
     # ------------------------------------------------------------------ Datei
@@ -1439,6 +1449,7 @@ class IoCheckWindow(QMainWindow):
         self.project = proj
         self.chk_auto.setChecked(bool(proj.options.get("auto_ok", False)))
         self.sp_tol.setValue(float(proj.options.get("tolerance", 1.0)))
+        self.chk_only_open.setChecked(bool(proj.options.get("only_open", True)))
         self.dirty = False
         self._rebuild()
         self._remember(path)

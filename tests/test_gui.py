@@ -467,6 +467,10 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     wait(50)
     assert w.proxy.rowCount() == 1
     w.ed_filter.setText("")
+    assert w.tracker.only_open and w._options()["only_open"]
+    w.chk_only_open.setChecked(False)
+    assert not w.tracker.only_open
+    w.chk_only_open.setChecked(True)
     w.chk_auto.setChecked(True)
     w.start_reading()
     wait(1500)

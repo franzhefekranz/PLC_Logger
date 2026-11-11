@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** „Was hat sich bewegt?“ meldet mit **Nur offene Signale** (Vorgabe an, im Prüfstand gespeichert) keine
+  Wechsel von Signalen mit Status OK, Fehler oder übersprungen mehr – z. B. ein ständig springender Analogwert stört
+  nach „übersprungen“ nicht mehr. Das gewählte Signal wird immer gemeldet (Wunsch aus dem SPS-Forum).
+
 ### Geändert
 
 * **Teststand** in Anleitung, README und Webseite: Treiber `logo` an einer echten LOGO! 8.4 erfolgreich getestet – digitale Eingänge (I3–I6, I9–I12)

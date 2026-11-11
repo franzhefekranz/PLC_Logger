@@ -4450,6 +4450,12 @@ stattdessen ein anderer Digitaleingang (und das erwartete nicht), erscheint eine
 Warnung „Vertauschung? Erwartet B12, gekommen B13“ mit Signalton; der Eintrag wird rot
 markiert.
 
+**Nur offene Signale** (oben in der Seitenleiste, Vorgabe an, wird im Prüfstand gespeichert):
+Wechsel von Signalen mit Status *OK*, *Fehler* oder *übersprungen* werden nicht gemeldet –
+erledigte Signale stören dann nicht mehr, z. B. ein Analogeingang mit codiertem Signal, dessen
+Wert ständig springt: einfach auf *übersprungen* (oder nach der Prüfung *OK*) setzen. Das gewählte
+Signal wird immer gemeldet; zum erneuten Prüfen den Status auf *offen* zurücksetzen.
+
 Der Knopf **Was hat sich bewegt?** in der Werkzeugleiste blendet die Seitenleiste aus
 und wieder ein (mehr Platz für die Signalliste; die Wahl wird gemerkt). Die Warnung bei
 einer Vertauschung erscheint dann in der Statuszeile.

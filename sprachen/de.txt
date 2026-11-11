@@ -3361,6 +3361,12 @@
 @ Matrix
 > 
 
+@ Nur offene Signale
+> 
+
+@ Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.
+> 
+
 @ Signal
 > 
 

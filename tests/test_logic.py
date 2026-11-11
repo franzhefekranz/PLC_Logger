@@ -146,6 +146,25 @@ def test_iocheck_tracker_digital_and_swap():
     assert ch.expected is b and "B" not in ch.note[:0]
 
 
+def test_iocheck_tracker_only_open():
+    """„Nur offene Signale“: Wechsel erledigter Signale (OK, Fehler, übersprungen) werden nicht gemeldet, das gewählte
+    Signal aber immer; ohne die Option wie bisher."""
+    import plc_iocheck as io
+    t = io.IoTracker()
+    t.only_open = True
+    s = io.IoSignal("EW256", kind="AI", dtype="INT")
+    d = io.IoSignal("E0.0")
+    io.set_status(s, "uebersprungen")
+    t.feed(s, 1000, 1)
+    t.feed(d, 0, 1)
+    assert t.feed(s, 20000, 2) is None and not t.history
+    assert t.feed(d, 1, 2) is not None                       # offen: gemeldet
+    t.expected = s
+    assert t.feed(s, 5000, 3) is not None                    # gewählt: immer gemeldet
+    t.expected, t.only_open = None, False
+    assert t.feed(s, 25000, 4) is not None
+
+
 def test_iocheck_wire_break():
     """Analogsignal: Wert am Anschlag gilt als Drahtbruch, die Rückkehr in den Messbereich als „ok“."""
     import plc_iocheck as io

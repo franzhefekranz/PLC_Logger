@@ -685,7 +685,9 @@ class IoTracker:
     expected: das Signal, das gerade geprüft wird (Auswahl in der Liste) – wechselt stattdessen ein anderes
     Eingangssignal, meldet der Tracker eine mögliche Vertauschung.
     auto_points: Analog-Prüfpunkte des erwarteten Signals automatisch übernehmen, wenn der Wert 1 s lang innerhalb
-    der Toleranz um 0/50/100 % liegt."""
+    der Toleranz um 0/50/100 % liegt.
+    only_open: nur Wechsel offener Signale (und des erwarteten) melden – geprüfte, fehlerhafte und übersprungene
+    Signale (z. B. ein ständig springender Analogwert) füllen die Liste dann nicht mehr."""
 
     HISTORY = 200
     STABLE_S = 1.0
@@ -696,6 +698,7 @@ class IoTracker:
         self.auto_ok = False
         self.auto_points = True
         self.tolerance = 1.0              # % des Messbereichs
+        self.only_open = False            # nur Wechsel offener Signale melden
         self.expected = None
         self.history = []                 # neueste zuerst
         self.status_changed = []          # Signale, deren Status sich automatisch geändert hat (seit dem Abholen)
@@ -754,6 +757,9 @@ class IoTracker:
             if not broke and not math.isnan(sig.logged) and abs(value - sig.logged) < 0.02 * span:
                 return None                   # Rauschen: erst ab 2 % des Messbereichs melden
             old, sig.logged = sig.logged, value
+        # Erledigte Signale (OK, Fehler, übersprungen) nicht melden – außer dem gerade gewählten
+        if self.only_open and sig.status != "offen" and sig is not self.expected:
+            return None
         ch = Change(ts, sig, old, value)
         exp = self.expected
         # Vertauschung: anderes Eingangssignal hat gewechselt (digital) bzw. Drahtbruch gemeldet (analog), das gewählte

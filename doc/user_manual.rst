@@ -4342,6 +4342,12 @@ The **selected signal** in the list or matrix is regarded as *expected*. If anot
 digital input changes instead (and the expected one does not), a red warning “Swapped?
 Expected B12, got B13” appears with a beep; the entry is marked red.
 
+**Open signals only** (at the top of the side panel, on by default, saved with the test
+project): changes of signals with status *OK*, *error* or *skipped* are not reported – finished
+signals no longer get in the way, e.g. an analog input with a coded signal whose value jumps
+constantly: simply set it to *skipped* (or *OK* after the check). The selected signal is always
+reported; to check it again, reset its status to *open*.
+
 The button **What has moved?** in the toolbar hides and shows the side panel (more room
 for the signal list; the choice is remembered). The swap warning then appears in the
 status bar.

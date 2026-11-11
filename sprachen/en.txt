@@ -3361,6 +3361,12 @@
 @ Matrix
 > Matrix
 
+@ Nur offene Signale
+> Open signals only
+
+@ Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.
+> Do not report changes of signals with status OK, error or skipped (e.g. a constantly jumping analog value). The selected signal is always reported; to check it again, reset its status to “open”.
+
 @ Signal
 > Signal
 
