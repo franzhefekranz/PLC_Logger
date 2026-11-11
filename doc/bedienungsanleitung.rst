@@ -3388,6 +3388,13 @@ einem Broker aufzeichnen: Treiber ``mqtt`` (siehe `Steuerungen und Treiber`_).
 
 **Einschalten:** Konfigurationsprogramm, Reiter *Webserver & Headless*, **MQTT …**:
 
+.. figure:: images/mqtt.png
+   :alt: Dialog MQTT
+   :width: 60%
+   :align: center
+
+   Dialog MQTT: Broker, Topics, Senden und Home-Assistant-Discovery.
+
 * **Broker:** Adresse und Port (1883, mit TLS meist 8883), **TLS** mit
   *Zertifikat prüfen* (aus = auch selbstsignierte annehmen) und optional eigenem
   CA-Zertifikat, **Benutzer**/**Passwort**, **Client-ID** (leer = automatisch).
@@ -4420,6 +4427,13 @@ aufheben** alle. Gefilterte Spalten sind fett und mit „▾“ markiert; der Fo
 zeigt dann zusätzlich, wie viele Signale angezeigt werden. Spaltenfilter, Suchfeld und
 Auswahllisten wirken zusammen.
 
+.. figure:: images/iocheck_spaltenfilter.png
+   :alt: Spaltenfilter
+   :width: 70%
+   :align: center
+
+   Spaltenfilter: Rechtsklick auf die Überschrift, hier die Gruppen.
+
 **Nur angezeigte lesen** (Werkzeugleiste, wird im Prüfstand gespeichert): Gelesen werden
 nur die Signale, die die Filter gerade zeigen – z. B. nur ein Schrank oder eine Gruppe;
 das entlastet Steuerung und Netz bei großen Listen. Ändert sich der Filter, startet das
@@ -4466,6 +4480,20 @@ Lesen nach einem Augenblick mit der neuen Auswahl neu; nicht gelesene Signale ze
   OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen)
   bzw. ein Analogeingang die Drahtbruchprüfung bestanden hat (siehe unten). Abgehakt werden nur Signale, die in der IO-Liste bzw. einem Scan-Bereich
   stehen; welche Signale zu prüfen sind, bestimmt also die Liste.
+
+.. figure:: images/iocheck_signal_neu.png
+   :alt: Signal hinzufügen
+   :width: 55%
+   :align: center
+
+   Ein Signal von Hand hinzufügen; Typ und Datentyp ergeben sich aus der Adresse.
+
+.. figure:: images/iocheck_fotos.png
+   :alt: Fotos eines Signals
+   :width: 65%
+   :align: center
+
+   Fotos eines Signals (am PC hinzugefügt oder mit dem Smartphone aufgenommen).
 
 Was hat sich bewegt? (Vertauschungen)
 ----------------------------------------------------------------------

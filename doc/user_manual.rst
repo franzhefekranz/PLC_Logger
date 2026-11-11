@@ -3289,6 +3289,13 @@ optional and runs as long as the recording runs (also headless). To record value
 
 **Switching on:** configuration program, tab *Web server & headless*, **MQTT …**:
 
+.. figure:: images/en/mqtt.png
+   :alt: MQTT dialog
+   :width: 60%
+   :align: center
+
+   MQTT dialog: broker, topics, sending and Home Assistant discovery.
+
 * **Broker:** address and port (1883, with TLS usually 8883), **TLS** with *Check
   certificate* (off = also accept self-signed ones) and optionally an own CA certificate,
   **User**/**Password**, **Client ID** (empty = automatic). **Test connection** logs in
@@ -4313,6 +4320,13 @@ filter of this column: text (*contains …*) and/or a selection of the values pr
 progress then also shows how many signals are displayed. Column filters, search field and
 selection lists work together.
 
+.. figure:: images/en/iocheck_spaltenfilter.png
+   :alt: Column filter
+   :width: 70%
+   :align: center
+
+   Column filter: right-click on the header, here the groups.
+
 **Read displayed only** (toolbar, saved with the test project): only the signals currently
 shown by the filters are read – e.g. just one cabinet or group; this relieves controller and
 network with large lists. When the filter changes, reading restarts with the new selection
@@ -4357,6 +4371,20 @@ after a moment; signals not read show “–”.
   becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and
   released) or an analog input has passed the wire break test (see below). Only signals in the IO list or a scan range are checked off; the list
   therefore determines which signals are to be tested.
+
+.. figure:: images/en/iocheck_signal_neu.png
+   :alt: Add signal
+   :width: 55%
+   :align: center
+
+   Adding a signal by hand; type and data type follow from the address.
+
+.. figure:: images/en/iocheck_fotos.png
+   :alt: Photos of a signal
+   :width: 65%
+   :align: center
+
+   Photos of a signal (added on the PC or taken with the smartphone).
 
 What has moved? (swapped signals)
 ----------------------------------------------------------------------
