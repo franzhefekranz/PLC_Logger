@@ -923,6 +923,9 @@ class IoCheckWindow(QMainWindow):
         except Exception:                         # ohne Flask: keine Webseite
             pass
 
+        self._restart_timer = QTimer(self)             # Lesen nach Filteränderung neu starten (verzögert)
+        self._restart_timer.setSingleShot(True)
+        self._restart_timer.timeout.connect(self._restart_reading)
         self._build_toolbar(demo)
         self._build_central()
         self.statusBar().addPermanentWidget(self.lbl_plc)
@@ -1007,6 +1010,12 @@ class IoCheckWindow(QMainWindow):
         self.chk_demo.setToolTip(tr("Simulierte Werte statt Verbindung zur Steuerung"))
         self.chk_demo.setChecked(bool(demo))
         tb.addWidget(self.chk_demo)
+        self.chk_visible = QCheckBox(tr("Nur angezeigte lesen"))
+        self.chk_visible.setToolTip(tr("Nur die Signale lesen, die Suchfeld, Auswahllisten und Spaltenfilter gerade "
+                                       "anzeigen (weniger Last für Steuerung und Netz); ändert sich der Filter, wird "
+                                       "neu gestartet"))
+        self.chk_visible.toggled.connect(self._reading_filter_changed)
+        tb.addWidget(self.chk_visible)
         tb.addSeparator()
         # Seitenleiste „Was hat sich bewegt?“ ein-/ausblenden (persönliche Einstellung, Standard: sichtbar)
         self.act_moved = QAction(tr("Was hat sich bewegt?"), self)
@@ -1338,12 +1347,14 @@ class IoCheckWindow(QMainWindow):
                     values = chosen
             self.proxy.set_column_filter(key, ed.text(), values)
             self._update_progress()
+            self._reading_filter_changed()
             menu.close()
 
         def clear():
             """Filter dieser Spalte aufheben."""
             self.proxy.set_column_filter(key)
             self._update_progress()
+            self._reading_filter_changed()
             menu.close()
 
         row = QHBoxLayout()
@@ -1362,7 +1373,8 @@ class IoCheckWindow(QMainWindow):
         menu.addSeparator()
         act_all = menu.addAction(tr("Alle Spaltenfilter aufheben"))
         act_all.setEnabled(bool(self.proxy.columns))
-        act_all.triggered.connect(lambda: (self.proxy.clear_column_filters(), self._update_progress()))
+        act_all.triggered.connect(lambda: (self.proxy.clear_column_filters(), self._update_progress(),
+                                           self._reading_filter_changed()))
         menu.apply_filter, menu.clear_filter, menu.edit, menu.values = apply, clear, ed, lst   # für Tests
         return menu
 
@@ -1371,6 +1383,7 @@ class IoCheckWindow(QMainWindow):
         self.proxy.set_filter(self.ed_filter.text(), self.cb_group.currentData() or "",
                               self.cb_kind.currentData() or "", self.cb_status.currentData() or "")
         self._update_progress()
+        self._reading_filter_changed()
 
     def _plc_for(self, name):
         """Steuerung zum Namen aus der IO-Liste (leer = erste); ohne Konfiguration im Demo-Modus eine Demo-Steuerung."""
@@ -1489,7 +1502,7 @@ class IoCheckWindow(QMainWindow):
     def _options(self):
         """Optionen für die Prüfstand-Datei."""
         return {"auto_ok": self.chk_auto.isChecked(), "tolerance": self.sp_tol.value(),
-                "only_open": self.chk_only_open.isChecked()}
+                "only_open": self.chk_only_open.isChecked(), "read_visible": self.chk_visible.isChecked()}
 
     def _options_changed(self, *_):
         """Optionen an den Tracker weitergeben."""
@@ -1600,6 +1613,7 @@ class IoCheckWindow(QMainWindow):
         self.chk_auto.setChecked(bool(proj.options.get("auto_ok", False)))
         self.sp_tol.setValue(float(proj.options.get("tolerance", 1.0)))
         self.chk_only_open.setChecked(bool(proj.options.get("only_open", True)))
+        self.chk_visible.setChecked(bool(proj.options.get("read_visible", False)))
         self.dirty = False
         self._rebuild()
         self._remember(path)
@@ -1892,7 +1906,16 @@ class IoCheckWindow(QMainWindow):
         if not plcs:
             QMessageBox.information(self, tr("IO-Check"), tr("In der Konfiguration ist keine Steuerung angelegt."))
             return
-        groups, unknown = io.assign_plcs(self.all_signals, plcs)
+        sigs = self._signals_to_read()
+        if not sigs:
+            self.statusBar().showMessage(tr("Keine Signale angezeigt – nichts zu lesen."), 8000)
+            return
+        chosen = {id(s) for s in sigs}
+        for s in self.all_signals:                     # nicht gelesene Signale ohne (veralteten) Wert
+            if id(s) not in chosen:
+                s.value, s.error = math.nan, ""
+        self.model.refresh_values()
+        groups, unknown = io.assign_plcs(sigs, plcs)
         if unknown:
             self.statusBar().showMessage(tr("Unbekannte Steuerung in der IO-Liste: {0}").format(", ".join(unknown)),
                                          10000)
@@ -1905,6 +1928,30 @@ class IoCheckWindow(QMainWindow):
             self.readers.append(r)
         self.act_run.setText(tr("■ Lesen stoppen"))
         self.chk_demo.setEnabled(False)
+
+    def _signals_to_read(self):
+        """Zu lesende Signale: alle oder mit „Nur angezeigte lesen“ die Zeilen, die die Filter gerade zeigen."""
+        if not self.chk_visible.isChecked():
+            return list(self.all_signals)
+        sigs = self.model.signals
+        return [sigs[self.proxy.mapToSource(self.proxy.index(r, 0)).row()] for r in range(self.proxy.rowCount())]
+
+    def _reading_filter_changed(self, *_):
+        """Filter oder „Nur angezeigte lesen“ geändert: läuft das Lesen, kurz verzögert mit der neuen Auswahl neu
+        starten (beim Tippen im Suchfeld nicht bei jedem Buchstaben)."""
+        if self.readers and (self.chk_visible.isChecked() or self.sender() is self.chk_visible):
+            self._restart_timer.start(600)
+
+    def _restart_reading(self):
+        """Lese-Threads mit der aktuellen Auswahl neu starten (die alten beenden sich im Hintergrund)."""
+        if not self.readers:
+            return
+        for r in self.readers:
+            r.stop()
+        self.readers = []
+        self.start_reading()
+        if not self.readers:                           # nichts zu lesen: Anzeige wie gestoppt
+            self.stop_reading()
 
     def stop_reading(self):
         """Alle Lese-Threads beenden und die Anzeige der Steuerungen zurücksetzen."""

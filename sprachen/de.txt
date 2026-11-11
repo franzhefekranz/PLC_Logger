@@ -3301,6 +3301,12 @@
 @ Simulierte Werte statt Verbindung zur Steuerung
 > 
 
+@ Nur angezeigte lesen
+> 
+
+@ Nur die Signale lesen, die Suchfeld, Auswahllisten und Spaltenfilter gerade anzeigen (weniger Last für Steuerung und Netz); ändert sich der Filter, wird neu gestartet
+> 
+
 @ Was hat sich bewegt?
 > 
 
@@ -3551,6 +3557,9 @@
 > 
 
 @ In der Konfiguration ist keine Steuerung angelegt.
+> 
+
+@ Keine Signale angezeigt – nichts zu lesen.
 > 
 
 @ Unbekannte Steuerung in der IO-Liste: {0}

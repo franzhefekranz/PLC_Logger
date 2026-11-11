@@ -4313,6 +4313,11 @@ filter of this column: text (*contains …*) and/or a selection of the values pr
 progress then also shows how many signals are displayed. Column filters, search field and
 selection lists work together.
 
+**Read displayed only** (toolbar, saved with the test project): only the signals currently
+shown by the filters are read – e.g. just one cabinet or group; this relieves controller and
+network with large lists. When the filter changes, reading restarts with the new selection
+after a moment; signals not read show “–”.
+
 * **✓ OK** (Ctrl+1), **✗ Fault …** (Ctrl+2, asks for a remark), **– Skipped**
   (Ctrl+3), **Reset** (Ctrl+0) – for the selected rows. Time and checker are entered.
 * **Checked by: …** in the toolbar sets who is entered when signals are checked off on

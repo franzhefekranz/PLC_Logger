@@ -4420,6 +4420,11 @@ aufheben** alle. Gefilterte Spalten sind fett und mit „▾“ markiert; der Fo
 zeigt dann zusätzlich, wie viele Signale angezeigt werden. Spaltenfilter, Suchfeld und
 Auswahllisten wirken zusammen.
 
+**Nur angezeigte lesen** (Werkzeugleiste, wird im Prüfstand gespeichert): Gelesen werden
+nur die Signale, die die Filter gerade zeigen – z. B. nur ein Schrank oder eine Gruppe;
+das entlastet Steuerung und Netz bei großen Listen. Ändert sich der Filter, startet das
+Lesen nach einem Augenblick mit der neuen Auswahl neu; nicht gelesene Signale zeigen „–“.
+
 * **✓ OK** (Strg+1), **✗ Fehler …** (Strg+2, fragt nach einer Bemerkung),
   **– Übersprungen** (Strg+3), **Zurücksetzen** (Strg+0) – für die markierten Zeilen.
   Zeit und Prüfer werden eingetragen.

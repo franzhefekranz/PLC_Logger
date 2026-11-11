@@ -3301,6 +3301,12 @@
 @ Simulierte Werte statt Verbindung zur Steuerung
 > Simulated values instead of a connection to the controller
 
+@ Nur angezeigte lesen
+> Read displayed only
+
+@ Nur die Signale lesen, die Suchfeld, Auswahllisten und Spaltenfilter gerade anzeigen (weniger Last für Steuerung und Netz); ändert sich der Filter, wird neu gestartet
+> Read only the signals currently shown by search field, selection lists and column filters (less load for controller and network); reading restarts when the filter changes
+
 @ Was hat sich bewegt?
 > What has moved?
 
@@ -3552,6 +3558,9 @@
 
 @ In der Konfiguration ist keine Steuerung angelegt.
 > No controller is defined in the configuration.
+
+@ Keine Signale angezeigt – nichts zu lesen.
+> No signals displayed – nothing to read.
 
 @ Unbekannte Steuerung in der IO-Liste: {0}
 > Unknown controller in the IO list: {0}

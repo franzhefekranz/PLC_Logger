@@ -19,6 +19,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 * **IO-Check:** Signalliste nach jeder Spalte sortieren – Adressen natürlich (`E0.2` vor `E0.10`), Status in
   Prüfreihenfolge, Werte als Zahl – und filtern: Rechtsklick auf die Spaltenüberschrift (Text enthält … und/oder
   Auswahl der vorkommenden Werte); gefilterte Spalten sind markiert, der Fortschritt zeigt die Anzahl angezeigter Signale.
+* **IO-Check:** **Nur angezeigte lesen** (Werkzeugleiste, im Prüfstand gespeichert) – gelesen werden nur die Signale,
+  die die Filter zeigen; bei geänderten Filtern startet das Lesen mit der neuen Auswahl neu.
 
 ## [3.19.0] – 2026-11-11
 

@@ -486,6 +486,17 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     assert w.proxy.rowCount() == 1                                   # Symbolfilter gilt noch
     w.proxy.clear_column_filters()
     assert w.proxy.rowCount() == 26
+    # Nur angezeigte lesen: Filter auf ein Signal, Lesen läuft nur dafür, Filter weg -> neu gestartet mit allen
+    w.chk_visible.setChecked(True)
+    w.ed_filter.setText("Ventil")
+    wait(50)
+    w.start_reading()
+    assert sum(len(v) for v in w.reader_signals.values()) == 1
+    w.ed_filter.setText("")
+    wait(900)
+    assert w.readers and sum(len(v) for v in w.reader_signals.values()) == 26
+    w.stop_reading()
+    w.chk_visible.setChecked(False)
     assert w.tracker.only_open and w._options()["only_open"]
     w.chk_only_open.setChecked(False)
     assert not w.tracker.only_open
