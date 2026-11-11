@@ -4304,6 +4304,15 @@ check time, checker and remark. A change flashes yellow briefly. Above the table
 search field, filters for group, type and status and the progress (“312 of 480 checked –
 305 OK, 4 faults, 3 skipped”).
 
+**Sorting and column filters:** a click on a column header sorts (click again: descending).
+Addresses and texts are sorted naturally (``E0.2`` before ``E0.10``), the status in check
+order (open, fault, skipped, OK), values as numbers. **Right-click on the header** opens the
+filter of this column: text (*contains …*) and/or a selection of the values present (*All*,
+*None*, tick single ones), then **Filter**; **Clear** removes the filter of the column,
+**Clear all column filters** all of them. Filtered columns are bold and marked with “▾”; the
+progress then also shows how many signals are displayed. Column filters, search field and
+selection lists work together.
+
 * **✓ OK** (Ctrl+1), **✗ Fault …** (Ctrl+2, asks for a remark), **– Skipped**
   (Ctrl+3), **Reset** (Ctrl+0) – for the selected rows. Time and checker are entered.
 * **Checked by: …** in the toolbar sets who is entered when signals are checked off on

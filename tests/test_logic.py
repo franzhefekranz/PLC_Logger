@@ -146,6 +146,19 @@ def test_iocheck_tracker_digital_and_swap():
     assert ch.expected is b and "B" not in ch.note[:0]
 
 
+def test_iocheck_sort_key():
+    """Sortieren der Signalliste: Adressen natürlich, Status in Prüfreihenfolge, Werte als Zahl (ohne Wert zuletzt)."""
+    import math
+    import plc_iocheck as io
+    assert sorted(["E0.10", "E0.2", "e1.0", "A4.0"], key=io.natural_key) == ["A4.0", "E0.2", "E0.10", "e1.0"]
+    a, b, c = io.IoSignal("E0.0"), io.IoSignal("E0.1"), io.IoSignal("E0.2")
+    io.set_status(a, "ok")
+    io.set_status(b, "fehler")
+    assert sorted([a, b, c], key=lambda s: io.sort_key(s, "status")) == [c, b, a]
+    a.value, b.value, c.value = 1.0, 0.0, math.nan
+    assert sorted([a, b, c], key=lambda s: io.sort_key(s, "value")) == [b, a, c]
+
+
 def test_iocheck_tracker_only_open():
     """„Nur offene Signale“: Wechsel erledigter Signale (OK, Fehler, übersprungen) werden nicht gemeldet, das gewählte
     Signal aber immer; ohne die Option wie bisher."""

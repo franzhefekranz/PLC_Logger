@@ -3100,6 +3100,12 @@
 @ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
 > 
 
+@ Gefiltert – Rechtsklick ändert den Filter
+> 
+
+@ Klick sortiert, Rechtsklick filtert
+> 
+
 @ Wert: {0}
 > 
 
@@ -3382,10 +3388,28 @@
 @ Name oder Kürzel des Prüfers (für Liste und Protokoll).\nLeer lassen: angemeldeter Benutzer „{0}“.
 > 
 
+@ enthält …
+> 
+
+@ (leer)
+> 
+
+@ Filtern
+> 
+
+@ Aufheben
+> 
+
+@ Alle Spaltenfilter aufheben
+> 
+
 @ (nicht gespeichert)
 > 
 
 @ {0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen
+> 
+
+@ {0} angezeigt
 > 
 
 @ Alle Gruppen

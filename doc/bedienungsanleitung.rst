@@ -4410,6 +4410,16 @@ Prüfzeit, Prüfer und Bemerkung. Ein Wechsel leuchtet kurz gelb auf. Über der 
 Suchfeld, Filter nach Gruppe, Typ und Status sowie der Fortschritt („312 von 480
 geprüft – 305 OK, 4 Fehler, 3 übersprungen“).
 
+**Sortieren und Spaltenfilter:** Klick auf eine Spaltenüberschrift sortiert (noch einmal
+klicken: absteigend). Adressen und Texte werden natürlich sortiert (``E0.2`` vor ``E0.10``),
+der Status in Prüfreihenfolge (offen, Fehler, übersprungen, OK), Werte als Zahl.
+**Rechtsklick auf die Überschrift** öffnet den Filter dieser Spalte: Text (*enthält …*)
+und/oder Auswahl der vorkommenden Werte (*Alle*, *Keine*, einzelne anhaken), dann
+**Filtern**; **Aufheben** nimmt den Filter der Spalte zurück, **Alle Spaltenfilter
+aufheben** alle. Gefilterte Spalten sind fett und mit „▾“ markiert; der Fortschritt
+zeigt dann zusätzlich, wie viele Signale angezeigt werden. Spaltenfilter, Suchfeld und
+Auswahllisten wirken zusammen.
+
 * **✓ OK** (Strg+1), **✗ Fehler …** (Strg+2, fragt nach einer Bemerkung),
   **– Übersprungen** (Strg+3), **Zurücksetzen** (Strg+0) – für die markierten Zeilen.
   Zeit und Prüfer werden eingetragen.

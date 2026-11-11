@@ -452,6 +452,7 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     Projekt speichern, Ergebnis/Protokoll exportieren, mobile Ansicht starten und beim Schließen wieder beenden.
     """
     import plc_iocheck_dialog as d
+    from PySide6.QtCore import Qt
     csv = tmp_path / "io.csv"
     csv.write_text("Adresse;Symbol;Kommentar;Schrank;Messbereich\nE0.0;B1;Endlage;+S1;\nE0.1;B2;Endlage 2;+S1;\n"
                    "A4.0;Y1;Ventil;+S2;\nEW256;PT1;Druck;+S2;0..10 bar\n", encoding="utf-8")
@@ -467,6 +468,24 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     wait(50)
     assert w.proxy.rowCount() == 1
     w.ed_filter.setText("")
+    # Sortieren natürlich (E0.2 vor E0.10) und Spaltenfilter (Rechtsklick auf die Überschrift)
+    w.view.sortByColumn(d.COL["address"], Qt.SortOrder.AscendingOrder)
+    addrs = [w.proxy.index(r, d.COL["address"]).data() for r in range(w.proxy.rowCount())]
+    assert addrs.index("E0.2") < addrs.index("E0.10")
+    menu = w.column_filter_menu(d.COL["comment"])
+    menu.edit.setText("endlage")
+    menu.apply_filter()
+    assert w.proxy.rowCount() == 2 and "▾" in w.proxy.headerData(d.COL["comment"], Qt.Orientation.Horizontal)
+    menu = w.column_filter_menu(d.COL["symbol"])
+    lst = menu.values
+    for i in range(lst.count()):
+        lst.item(i).setCheckState(Qt.CheckState.Checked if lst.item(i).text() == "B2" else Qt.CheckState.Unchecked)
+    menu.apply_filter()
+    assert w.proxy.rowCount() == 1 and "angezeigt" in w.progress.format()
+    w.column_filter_menu(d.COL["comment"]).clear_filter()
+    assert w.proxy.rowCount() == 1                                   # Symbolfilter gilt noch
+    w.proxy.clear_column_filters()
+    assert w.proxy.rowCount() == 26
     assert w.tracker.only_open and w._options()["only_open"]
     w.chk_only_open.setChecked(False)
     assert not w.tracker.only_open

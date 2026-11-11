@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** Signalliste nach jeder Spalte sortieren – Adressen natürlich (`E0.2` vor `E0.10`), Status in
+  Prüfreihenfolge, Werte als Zahl – und filtern: Rechtsklick auf die Spaltenüberschrift (Text enthält … und/oder
+  Auswahl der vorkommenden Werte); gefilterte Spalten sind markiert, der Fortschritt zeigt die Anzahl angezeigter Signale.
+
 ## [3.19.0] – 2026-11-11
 
 ### Neu

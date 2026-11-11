@@ -3100,6 +3100,12 @@
 @ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
 > Measuring range {0} … {1} {2} (raw value {3} … {4})
 
+@ Gefiltert – Rechtsklick ändert den Filter
+> Filtered – right-click changes the filter
+
+@ Klick sortiert, Rechtsklick filtert
+> Click sorts, right-click filters
+
 @ Wert: {0}
 > Value: {0}
 
@@ -3382,11 +3388,29 @@
 @ Name oder Kürzel des Prüfers (für Liste und Protokoll).\nLeer lassen: angemeldeter Benutzer „{0}“.
 > Name or initials of the tester (for list and protocol).\nLeave empty: logged-in user “{0}”.
 
+@ enthält …
+> contains …
+
+@ (leer)
+> (empty)
+
+@ Filtern
+> Filter
+
+@ Aufheben
+> Clear
+
+@ Alle Spaltenfilter aufheben
+> Clear all column filters
+
 @ (nicht gespeichert)
 > (not saved)
 
 @ {0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen
 > {0} of {1} checked – {2} OK, {3} faults, {4} skipped
+
+@ {0} angezeigt
+> {0} shown
 
 @ Alle Gruppen
 > All groups

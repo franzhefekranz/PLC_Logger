@@ -821,6 +821,32 @@ def progress(signals):
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# Sortieren der Signalliste
+# ---------------------------------------------------------------------------------------------------------------------
+STATUS_ORDER = {"offen": 0, "fehler": 1, "uebersprungen": 2, "ok": 3}
+
+
+def natural_key(text) -> tuple:
+    """Sortierschlüssel mit Zahlen als Zahlen: „E0.2“ vor „E0.10“, „B2“ vor „B10“; Groß-/Kleinschreibung egal."""
+    return tuple((0, int(p), "") if p.isdigit() else (1, 0, p.lower())
+                 for p in re.split(r"(\d+)", str(text)) if p)
+
+
+def sort_key(sig: IoSignal, key: str) -> tuple:
+    """Sortierschlüssel einer Spalte der Signalliste: Status in Prüfreihenfolge (offen, Fehler, übersprungen, OK),
+    Wert als Zahl (skaliert, ohne Wert zuletzt), Fotos als Anzahl, sonst natürlich (Zahlen im Text als Zahlen)."""
+    if key == "status":
+        return (STATUS_ORDER.get(sig.status, 9),)
+    if key == "value":
+        if math.isnan(sig.value):
+            return (1, 0.0)
+        return (0, sig.value if sig.binary else scale(sig, sig.value))
+    if key == "photos":
+        return (len(sig.photos),)
+    return natural_key(getattr(sig, key, ""))
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 # Speichern, Laden, Ergebnis
 # ---------------------------------------------------------------------------------------------------------------------
 @dataclass

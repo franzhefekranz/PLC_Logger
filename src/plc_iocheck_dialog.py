@@ -139,6 +139,16 @@ class SignalModel(QAbstractTableModel):
             return tr(COLS[section][1])
         return None
 
+    def cell_text(self, sig, key):
+        """Text einer Zelle wie angezeigt (für die Spaltenfilter)."""
+        if key == "status":
+            return tr(io.STATUS.get(sig.status, sig.status))
+        if key == "value":
+            return value_text(sig)
+        if key == "photos":
+            return str(len(sig.photos)) if sig.photos else ""
+        return str(getattr(sig, key, "") or "")
+
     def flags(self, index):
         """Zellen wählbar; Adresse, Symbol, Kommentar, BMK, Gruppe und Bemerkung zusätzlich editierbar (Doppelklick,
         F2)."""
@@ -232,22 +242,69 @@ class SignalModel(QAbstractTableModel):
 
 
 class SignalFilter(QSortFilterProxyModel):
-    """Filter der Signalliste: Suchtext (alle Wörter in Adresse, Symbol, Kommentar, BMK oder Bemerkung), Gruppe, Typ und
-    Status.
+    """Filter der Signalliste: Suchtext (alle Wörter in Adresse, Symbol, Kommentar, BMK oder Bemerkung), Gruppe, Typ,
+    Status und Spaltenfilter (Rechtsklick auf die Überschrift: Text enthält … und/oder Auswahl von Werten). Sortiert
+    wird natürlich (E0.2 vor E0.10), Status in Prüfreihenfolge, Werte als Zahl (siehe plc_iocheck.sort_key).
     """
     def __init__(self, parent=None):
         """Ohne Filter (alles sichtbar)."""
         super().__init__(parent)
         self.text, self.group, self.kind, self.status = "", "", "", ""
+        self.columns = {}                 # Spalte -> (Text enthält, erlaubte Werte oder None)
 
     def set_filter(self, text, group, kind, status):
         """Neue Filterwerte setzen und die Liste neu filtern."""
         self.text, self.group, self.kind, self.status = text.lower(), group, kind, status
         self.invalidateFilter()
 
+    def set_column_filter(self, key, text="", values=None):
+        """Spaltenfilter setzen (leerer Text und ``values`` None = Filter der Spalte aufheben)."""
+        text = (text or "").strip().lower()
+        if text or values is not None:
+            self.columns[key] = (text, None if values is None else set(values))
+        else:
+            self.columns.pop(key, None)
+        self.invalidateFilter()
+        self.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(COLS) - 1)
+
+    def clear_column_filters(self):
+        """Alle Spaltenfilter aufheben."""
+        self.columns.clear()
+        self.invalidateFilter()
+        self.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, len(COLS) - 1)
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        """Überschrift; gefilterte Spalten mit „▾“ und fett."""
+        key = COLS[section][0] if orientation == Qt.Orientation.Horizontal and 0 <= section < len(COLS) else None
+        if key in self.columns:
+            if role == Qt.ItemDataRole.DisplayRole:
+                return tr(COLS[section][1]) + " ▾"
+            if role == Qt.ItemDataRole.FontRole:
+                f = QFont()
+                f.setBold(True)
+                return f
+            if role == Qt.ItemDataRole.ToolTipRole:
+                return tr("Gefiltert – Rechtsklick ändert den Filter")
+        elif key and role == Qt.ItemDataRole.ToolTipRole:
+            return tr("Klick sortiert, Rechtsklick filtert")
+        return super().headerData(section, orientation, role)
+
+    def lessThan(self, left, right):
+        """Sortierreihenfolge zweier Zeilen (natürlich, Status in Prüfreihenfolge, Werte als Zahl)."""
+        sigs = self.sourceModel().signals
+        key = COLS[left.column()][0]
+        return io.sort_key(sigs[left.row()], key) < io.sort_key(sigs[right.row()], key)
+
     def filterAcceptsRow(self, row, parent):
         """Zeile anzeigen? (von Qt für jede Zeile des Quellmodells aufgerufen)"""
-        s = self.sourceModel().signals[row]
+        model = self.sourceModel()
+        s = model.signals[row]
+        for key, (text, values) in self.columns.items():
+            cell = model.cell_text(s, key)
+            if values is not None and cell not in values:
+                return False
+            if text and text not in cell.lower():
+                return False
         if self.group and s.group != self.group:
             return False
         if self.kind and s.kind != self.kind:
@@ -1024,6 +1081,9 @@ class IoCheckWindow(QMainWindow):
         self.view.setItemDelegate(SelectionDelegate(self.view))
         self.view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.view.setSortingEnabled(True)
+        hh = self.view.horizontalHeader()
+        hh.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        hh.customContextMenuRequested.connect(self._header_menu)          # Spaltenfilter
         self.view.verticalHeader().setVisible(False)
         self.view.verticalHeader().setDefaultSectionSize(22)
         self.view.horizontalHeader().setStretchLastSection(True)
@@ -1221,10 +1281,96 @@ class IoCheckWindow(QMainWindow):
         for key, _t in COLS:
             self.view.setColumnHidden(COL[key], key in off)
 
+    def _header_menu(self, pos):
+        """Rechtsklick auf eine Spaltenüberschrift: Spaltenfilter (Text enthält …, Auswahl der vorkommenden Werte)."""
+        col = self.view.horizontalHeader().logicalIndexAt(pos)
+        if col < 0:
+            return
+        menu = self.column_filter_menu(col)
+        menu.exec(self.view.horizontalHeader().mapToGlobal(pos))
+
+    def column_filter_menu(self, col):
+        """Menü mit dem Filter der Spalte ``col`` bauen (eigene Methode für Tests)."""
+        from PySide6.QtWidgets import QListWidget, QListWidgetItem, QWidgetAction
+        key, title = COLS[col]
+        text0, values0 = self.proxy.columns.get(key, ("", None))
+        menu = QMenu(self)
+        box = QWidget(menu)
+        lay = QVBoxLayout(box)
+        lay.setContentsMargins(8, 6, 8, 6)
+        lay.addWidget(QLabel(f"<b>{tr(title)}</b>"))
+        ed = QLineEdit(text0)
+        ed.setPlaceholderText(tr("enthält …"))
+        ed.setClearButtonEnabled(True)
+        lay.addWidget(ed)
+        lst = None
+        if key != "value":                    # Live-Werte: nur Text
+            empty = tr("(leer)")
+            found = sorted({self.model.cell_text(s, key) for s in self.model.signals}, key=io.natural_key)
+            if 0 < len(found) <= 500:
+                lst = QListWidget()
+                lst.setMinimumHeight(min(260, 22 * len(found) + 8))
+                for val in found:
+                    it = QListWidgetItem(val or empty)
+                    it.setData(Qt.ItemDataRole.UserRole, val)
+                    it.setFlags(it.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                    it.setCheckState(Qt.CheckState.Checked if values0 is None or val in values0
+                                     else Qt.CheckState.Unchecked)
+                    lst.addItem(it)
+                lst.itemClicked.connect(lambda it: it.setCheckState(
+                    Qt.CheckState.Unchecked if it.checkState() == Qt.CheckState.Checked else Qt.CheckState.Checked))
+                row = QHBoxLayout()
+                for label, state in ((tr("Alle"), Qt.CheckState.Checked), (tr("Keine"), Qt.CheckState.Unchecked)):
+                    b = QPushButton(label)
+                    b.clicked.connect(lambda _c=False, st=state: [lst.item(i).setCheckState(st)
+                                                                   for i in range(lst.count())])
+                    row.addWidget(b)
+                lay.addLayout(row)
+                lay.addWidget(lst)
+
+        def apply():
+            """Filter übernehmen; alle Werte angehakt = keine Werteauswahl."""
+            values = None
+            if lst is not None:
+                chosen = [lst.item(i).data(Qt.ItemDataRole.UserRole) for i in range(lst.count())
+                          if lst.item(i).checkState() == Qt.CheckState.Checked]
+                if len(chosen) < lst.count():
+                    values = chosen
+            self.proxy.set_column_filter(key, ed.text(), values)
+            self._update_progress()
+            menu.close()
+
+        def clear():
+            """Filter dieser Spalte aufheben."""
+            self.proxy.set_column_filter(key)
+            self._update_progress()
+            menu.close()
+
+        row = QHBoxLayout()
+        b_ok = QPushButton(tr("Filtern"))
+        b_ok.setDefault(True)
+        b_ok.clicked.connect(apply)
+        b_clear = QPushButton(tr("Aufheben"))
+        b_clear.clicked.connect(clear)
+        row.addWidget(b_ok)
+        row.addWidget(b_clear)
+        lay.addLayout(row)
+        ed.returnPressed.connect(apply)
+        wa = QWidgetAction(menu)
+        wa.setDefaultWidget(box)
+        menu.addAction(wa)
+        menu.addSeparator()
+        act_all = menu.addAction(tr("Alle Spaltenfilter aufheben"))
+        act_all.setEnabled(bool(self.proxy.columns))
+        act_all.triggered.connect(lambda: (self.proxy.clear_column_filters(), self._update_progress()))
+        menu.apply_filter, menu.clear_filter, menu.edit, menu.values = apply, clear, ed, lst   # für Tests
+        return menu
+
     def _apply_filter(self, *_):
         """Suchfeld und Auswahl (Gruppe, Typ, Status) auf die Signalliste anwenden."""
         self.proxy.set_filter(self.ed_filter.text(), self.cb_group.currentData() or "",
                               self.cb_kind.currentData() or "", self.cb_status.currentData() or "")
+        self._update_progress()
 
     def _plc_for(self, name):
         """Steuerung zum Namen aus der IO-Liste (leer = erste); ohne Konfiguration im Demo-Modus eine Demo-Steuerung."""
@@ -1246,8 +1392,12 @@ class IoCheckWindow(QMainWindow):
         done = pr["ok"] + pr["fehler"] + pr["uebersprungen"]
         self.progress.setMaximum(max(1, pr["gesamt"]))
         self.progress.setValue(done)
-        self.progress.setFormat(tr("{0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen").format(
-            done, pr["gesamt"], pr["ok"], pr["fehler"], pr["uebersprungen"]))
+        text = tr("{0} von {1} geprüft – {2} OK, {3} Fehler, {4} übersprungen").format(
+            done, pr["gesamt"], pr["ok"], pr["fehler"], pr["uebersprungen"])
+        shown = self.proxy.rowCount()
+        if shown < pr["gesamt"]:                       # Filter aktiv: Anzahl der sichtbaren Zeilen dazu
+            text += " – " + tr("{0} angezeigt").format(shown)
+        self.progress.setFormat(text)
 
     def _fill_groups(self):
         """Auswahl „Gruppe“ mit den Gruppen der Signale füllen (die gewählte bleibt, wenn es sie noch gibt)."""
