@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.19.0] – 2026-11-11
+
 ### Neu
 
 * **IO-Check:** „Was hat sich bewegt?“ meldet mit **Nur offene Signale** (Vorgabe an, im Prüfstand gespeichert) keine
@@ -691,7 +693,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.18.1...HEAD
+[Unveröffentlicht]: ../../compare/v3.19.0...HEAD
+[3.19.0]: ../../releases/tag/v3.19.0
 [3.18.1]: ../../releases/tag/v3.18.1
 [3.18.0]: ../../releases/tag/v3.18.0
 [3.17.0]: ../../releases/tag/v3.17.0
