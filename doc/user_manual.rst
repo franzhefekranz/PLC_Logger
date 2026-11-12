@@ -4338,7 +4338,12 @@ after a moment; signals not read show “–”.
   has to be checked again (e.g. after the wiring was repaired): it does not count as
   checked, is highlighted orange, listed with the open signals in the protocol and, like an
   open signal, checked off automatically or reported under “What has moved?”; time and
-  checker show who ordered the repetition.
+  checker show who ordered the repetition, the **remark is kept**. **Reset** deletes
+  status, time, checker and **remark** (photos are kept).
+* **Column No.:** row number in the order of the IO list; a click on the header sorts back
+  into this order. **Select all:** Ctrl+A or right-click › *Select all* – e.g. select
+  everything for a new round of checks and **Reset** (with confirmation). With a filter,
+  Ctrl+A selects only the signals displayed.
 * **＋ Signal …** (right below the list, also via right-click) adds a signal by hand:
   address, symbol, comment, device tag, group, type (default: derived from the address),
   for analog values the measuring range (e.g. ``0..10 bar``) and with several controllers

@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 
 import plc_iocheck as io
 from plc_common import Plc, load_plcs
-from plc_i18n import is_dark, tr
+from plc_i18n import N_, is_dark, tr
 import plc_filedlg
 
 # Farben: Zeilen/Zellen je Prüfstatus, LEDs
@@ -33,7 +33,8 @@ LED_ON_IN, LED_ON_OUT, LED_OFF, LED_NONE = "#2ecc71", "#f5a623", "#9aa3ad", "#e5
 FLASH_S = 1.5                     # so lange wird ein Wechsel hervorgehoben
 EDITABLE = ("address", "symbol", "comment", "bmk", "group", "remark")   # in der Tabelle änderbar (Doppelklick)
 
-COLS = [("status", "Status"), ("value", "Wert"), ("address", "Adresse"), ("symbol", "Symbol"),
+COLS = [("nr", N_("Nr.")), ("status", "Status"), ("value", "Wert"), ("address", "Adresse"),
+        ("symbol", "Symbol"),
         ("comment", "Kommentar"), ("bmk", "BMK"), ("group", "Gruppe"), ("kind", "Typ"), ("plc", "Steuerung"),
         ("checked_at", "Geprüft am"), ("checker", "Prüfer"), ("photos", "Fotos"), ("remark", "Bemerkung")]
 COL = {k: i for i, (k, _t) in enumerate(COLS)}
@@ -174,6 +175,8 @@ class SignalModel(QAbstractTableModel):
         """Neue Signalliste übernehmen (Ansicht wird komplett neu aufgebaut)."""
         self.beginResetModel()
         self.signals = list(signals)
+        for i, s in enumerate(self.signals, 1):        # Zeilennummer = Reihenfolge der IO-Liste
+            s.nr = i
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
@@ -198,6 +201,8 @@ class SignalModel(QAbstractTableModel):
             return value_text(sig)
         if key == "photos":
             return str(len(sig.photos)) if sig.photos else ""
+        if key == "nr":
+            return str(sig.nr)
         return str(getattr(sig, key, "") or "")
 
     def flags(self, index):
@@ -223,6 +228,8 @@ class SignalModel(QAbstractTableModel):
                 return value_text(s)
             if key == "photos":
                 return str(len(s.photos)) if s.photos else ""
+            if key == "nr":
+                return s.nr
             return getattr(s, key)
         if role == Qt.ItemDataRole.BackgroundRole:
             if key == "value" and time.time() - s.changed < FLASH_S:
@@ -251,6 +258,10 @@ class SignalModel(QAbstractTableModel):
             if s.error:
                 tip.append(f"<span style='color:#c62828'>⚠ {s.error}</span>")
             return "<br>".join(t for t in tip if t)
+        if role == Qt.ItemDataRole.TextAlignmentRole and key == "nr":
+            return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        if role == Qt.ItemDataRole.ForegroundRole and key == "nr" and s.status not in STATUS_BG:
+            return QBrush(QColor(status_fg("offen")))
         if role == Qt.ItemDataRole.FontRole and key == "status" and s.status != "offen":
             f = QFont()
             f.setBold(True)
@@ -1212,6 +1223,7 @@ class IoCheckWindow(QMainWindow):
         self.view.setItemDelegate(SelectionDelegate(self.view))
         self.view.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.view.setSortingEnabled(True)
+        self.view.sortByColumn(COL["nr"], Qt.SortOrder.AscendingOrder)     # Reihenfolge der IO-Liste
         hh = self.view.horizontalHeader()
         hh.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         hh.customContextMenuRequested.connect(self._header_menu)          # Spaltenfilter
@@ -1220,7 +1232,7 @@ class IoCheckWindow(QMainWindow):
         self.view.horizontalHeader().setStretchLastSection(True)
         self.view.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked
                                   | QAbstractItemView.EditTrigger.EditKeyPressed)
-        for key, w in (("status", 110), ("value", 150), ("address", 90), ("symbol", 150), ("comment", 200),
+        for key, w in (("nr", 42), ("status", 110), ("value", 150), ("address", 90), ("symbol", 150), ("comment", 200),
                        ("bmk", 90), ("group", 80), ("kind", 40), ("plc", 70), ("checked_at", 130), ("checker", 80),
                        ("photos", 45)):
             self.view.setColumnWidth(COL[key], w)
@@ -1452,7 +1464,7 @@ class IoCheckWindow(QMainWindow):
         ed.setClearButtonEnabled(True)
         lay.addWidget(ed)
         lst = None
-        if key != "value":                    # Live-Werte: nur Text
+        if key not in ("value", "nr"):        # Live-Werte und Nummern: nur Text
             empty = tr("(leer)")
             found = sorted({self.model.cell_text(s, key) for s in self.model.signals}, key=io.natural_key)
             if 0 < len(found) <= 500:
@@ -1573,6 +1585,8 @@ class IoCheckWindow(QMainWindow):
         """Kontextmenü der Signalliste für die markierten Signale bauen (eigene Methode für Tests)."""
         sigs = self.selected_signals()
         menu = QMenu(self)
+        menu.addAction(tr("Alle markieren"), self.view.selectAll).setShortcut(QKeySequence.StandardKey.SelectAll)
+        menu.addSeparator()
         for st in ("ok", "fehler", "uebersprungen", "wiederholen", "offen"):
             a = menu.addAction(f"{STATUS_MARK[st] or '○'}  " + (tr("Zurücksetzen") if st == "offen"
                                                                 else tr(io.STATUS[st])))
@@ -2063,6 +2077,13 @@ class IoCheckWindow(QMainWindow):
         if not sigs:
             return
         remark = None
+        if status == "offen" and len(sigs) > 1:          # z. B. alle markiert (Strg+A) für eine neue Prüfrunde
+            n = sum(1 for s in sigs if s.status != "offen" or s.remark)
+            if n and QMessageBox.question(
+                    self, tr("Zurücksetzen"),
+                    tr("{0} Signale zurücksetzen?\n\nStatus, Prüfzeit, Prüfer und Bemerkung von {1} Signalen werden "
+                       "gelöscht (Fotos bleiben).").format(len(sigs), n)) != QMessageBox.StandardButton.Yes:
+                return
         if status == "fehler":
             text, ok = QInputDialog.getText(self, tr("Fehler"), tr("Bemerkung (z. B. Verdrahtung, Sensor defekt):"),
                                             text=sigs[0].remark)

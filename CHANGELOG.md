@@ -14,6 +14,15 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** Spalte **Nr.** (Zeilennummer in der Reihenfolge der IO-Liste, sortierbar); **Alle markieren** im
+  Rechtsklick-Menü (Strg+A); Zurücksetzen mehrerer Signale mit Rückfrage – z. B. für eine neue Prüfrunde.
+
+### Geändert
+
+* **IO-Check:** **Zurücksetzen** löscht auch die Bemerkung; bei **Wiederholen** bleibt sie erhalten.
+
 ## [3.20.0] – 2026-11-11
 
 ### Neu

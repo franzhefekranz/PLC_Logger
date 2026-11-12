@@ -3106,6 +3106,9 @@
 
 # ---------------- plc_iocheck_dialog.py
 
+@ Nr.
+> 
+
 @ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
 > 
 
@@ -3478,6 +3481,9 @@
 @ Alle Gruppen
 > 
 
+@ Alle markieren
+> 
+
 @ Signal hinzufügen …
 > 
 
@@ -3632,6 +3638,9 @@
 > 
 
 @ Die Fotos liegen in einem Ordner neben der Prüfstand-Datei. Prüfstand jetzt speichern?
+> 
+
+@ {0} Signale zurücksetzen?\n\nStatus, Prüfzeit, Prüfer und Bemerkung von {1} Signalen werden gelöscht (Fotos bleiben).
 > 
 
 @ Bemerkung (z. B. Verdrahtung, Sensor defekt):

@@ -168,13 +168,17 @@ def test_iocheck_repeat_pulse_and_manual_signals():
     a = io.IoSignal("E0.0")
     io.set_status(a, "ok")
     a.seen = io.SEEN_RISE | io.SEEN_FALL
+    a.remark = "Ader 12 vertauscht"
     io.set_status(a, "wiederholen")
     assert a.seen == 0 and a.checked_at and io.progress([a])["wiederholen"] == 1
+    assert a.remark == "Ader 12 vertauscht"                     # wiederholen: Bemerkung bleibt
     t.expected = a
     for v, ts in ((1, 1), (0, 2), (1, 3), (0, 4)):          # 1 -> 0 -> 1: ein Impuls, 1 -> 0: noch einer
         assert t.feed(a, v, ts) is not None or ts == 1         # „wiederholen“ wird gemeldet
     assert a.pulses == 1 and t.pop_pulses() == 1 and t.pop_pulses() == 0
     assert a.status == "ok"                                     # 0→1→0 gesehen: wieder abgehakt
+    io.set_status(a, "offen")
+    assert a.remark == "" and a.checked_at == ""                # zurücksetzen: Bemerkung gelöscht
     assert sorted(["ok", "wiederholen", "offen"], key=lambda st: io.STATUS_ORDER[st]) == ["offen", "wiederholen", "ok"]
     s = io.new_signal(" %EW258 ", "PT2", group="+S1", range_text="0..10 bar")
     assert (s.address, s.kind, s.dtype, s.eng_max, s.unit) == ("EW258", "AI", "INT", 10.0, "bar")

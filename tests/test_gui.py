@@ -514,8 +514,25 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     w.set_status([sc], "wiederholen")
     assert sc.status == "wiederholen" and "wiederholen" in w.progress.format()
     w.select_signal(sc)
-    assert len([a for a in w.table_menu().actions() if not a.isSeparator()]) == 8
+    assert len([a for a in w.table_menu().actions() if not a.isSeparator()]) == 9
     io_m.set_status(sc, "offen")
+    # Zeilennummer: Reihenfolge der Liste, sortierbar; alle markieren und zurücksetzen (mit Rückfrage)
+    w.view.sortByColumn(d.COL["nr"], Qt.SortOrder.DescendingOrder)
+    assert int(w.proxy.index(0, d.COL["nr"]).data()) == len(w.all_signals)
+    w.view.sortByColumn(d.COL["nr"], Qt.SortOrder.AscendingOrder)
+    assert int(w.proxy.index(0, d.COL["nr"]).data()) == 1
+    w.set_status(w.all_signals[:2], "ok")
+    w.view.selectAll()
+    assert len(w.selected_signals()) == len(w.all_signals)
+    d.QMessageBox.question = staticmethod(lambda *a, **k: d.QMessageBox.StandardButton.No)
+    try:
+        w.set_selected_status("offen")                          # abgelehnt: nichts geändert
+        assert any(s.status != "offen" for s in w.all_signals)
+        d.QMessageBox.question = staticmethod(lambda *a, **k: d.QMessageBox.StandardButton.Yes)
+        w.set_selected_status("offen")
+        assert all(s.status == "offen" and not s.remark for s in w.all_signals)
+    finally:
+        d.QMessageBox.question = question
     d.play_ok_tone()
     assert w.tracker.only_open and w._options()["only_open"]
     w.chk_only_open.setChecked(False)

@@ -80,6 +80,7 @@ class IoSignal:
         self.logged = math.nan            # Analog: zuletzt gemeldeter Wert („Was hat sich bewegt?“)
         self.half = 0                     # Digital: erste Flanke eines Impulses (+1 = 0→1, -1 = 1→0, 0 = keine)
         self.pulses = 0                   # Digital: vollständige Impulse 0→1→0 bzw. 1→0→1 (für den Signalton)
+        self.nr = 0                       # Zeilennummer in der Signalliste (Reihenfolge der IO-Liste, ab 1)
 
     @property
     def key(self):
@@ -236,11 +237,12 @@ def now_text() -> str:
 
 
 def set_status(sig: IoSignal, status: str, remark=None, checker=None):
-    """Prüfstatus setzen (mit Zeit und Prüfer); "offen" setzt auch Zeit, Prüfer, Flanken und Messpunkte zurück,
-    "wiederholen" Flanken und Messpunkte (Zeit und Prüfer halten fest, wer die Wiederholung angeordnet hat)."""
+    """Prüfstatus setzen (mit Zeit und Prüfer); "offen" setzt auch Zeit, Prüfer, Bemerkung, Flanken und Messpunkte
+    zurück, "wiederholen" Flanken und Messpunkte (Bemerkung bleibt; Zeit und Prüfer halten fest, wer die Wiederholung
+    angeordnet hat). Fotos bleiben immer erhalten."""
     sig.status = status
     if status == "offen":
-        sig.checked_at, sig.checker, sig.seen, sig.points = "", "", 0, {}
+        sig.checked_at, sig.checker, sig.seen, sig.points, sig.remark = "", "", 0, {}, ""
     else:
         if status == "wiederholen":
             sig.seen, sig.points = 0, {}
@@ -897,6 +899,8 @@ def sort_key(sig: IoSignal, key: str) -> tuple:
         return (0, sig.value if sig.binary else scale(sig, sig.value))
     if key == "photos":
         return (len(sig.photos),)
+    if key == "nr":
+        return (sig.nr,)
     return natural_key(getattr(sig, key, ""))
 
 

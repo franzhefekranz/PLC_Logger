@@ -4446,7 +4446,13 @@ Lesen nach einem Augenblick mit der neuen Auswahl neu; nicht gelesene Signale ze
   (z. B. nach einer Reparatur der Verdrahtung): Es zählt nicht als geprüft, wird orange
   hervorgehoben, im Protokoll bei den offenen Signalen aufgeführt und wie ein offenes
   Signal automatisch abgehakt bzw. unter „Was hat sich bewegt?“ gemeldet; Zeit und Prüfer
-  zeigen, wer die Wiederholung angeordnet hat.
+  zeigen, wer die Wiederholung angeordnet hat, die **Bemerkung bleibt**.
+  **Zurücksetzen** löscht Status, Zeit, Prüfer und **Bemerkung** (Fotos bleiben).
+* **Spalte Nr.:** Zeilennummer in der Reihenfolge der IO-Liste; ein Klick auf die
+  Überschrift sortiert wieder in diese Reihenfolge. **Alle markieren:** Strg+A oder
+  Rechtsklick › *Alle markieren* – z. B. für eine neue Prüfrunde alles markieren und
+  **Zurücksetzen** (mit Rückfrage). Mit einem Filter markiert Strg+A nur die angezeigten
+  Signale.
 * **＋ Signal …** (rechts unter der Liste, auch per Rechtsklick) legt ein Signal von Hand
   an: Adresse, Symbol, Kommentar, BMK, Gruppe, Typ (Vorgabe: aus der Adresse abgeleitet),
   bei Analogwerten der Messbereich (z. B. ``0..10 bar``) und bei mehreren Steuerungen die

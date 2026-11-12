@@ -3106,6 +3106,9 @@
 
 # ---------------- plc_iocheck_dialog.py
 
+@ Nr.
+> No.
+
 @ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
 > Measuring range {0} … {1} {2} (raw value {3} … {4})
 
@@ -3478,6 +3481,9 @@
 @ Alle Gruppen
 > All groups
 
+@ Alle markieren
+> Select all
+
 @ Signal hinzufügen …
 > Add signal …
 
@@ -3633,6 +3639,9 @@
 
 @ Die Fotos liegen in einem Ordner neben der Prüfstand-Datei. Prüfstand jetzt speichern?
 > The photos are kept in a folder next to the test progress file. Save the test progress file now?
+
+@ {0} Signale zurücksetzen?\n\nStatus, Prüfzeit, Prüfer und Bemerkung von {1} Signalen werden gelöscht (Fotos bleiben).
+> Reset {0} signals?\n\nStatus, check time, checker and remark of {1} signals will be deleted (photos are kept).
 
 @ Bemerkung (z. B. Verdrahtung, Sensor defekt):
 > Remark (e.g. wiring, sensor defective):
