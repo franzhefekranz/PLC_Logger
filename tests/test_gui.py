@@ -561,6 +561,13 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     ew.value = 27648.0
     assert d.value_text(ew).endswith("(16#6C00)")
     w.analog.cb_raw.setCurrentIndex(w.analog.cb_raw.findData("dez"))
+    w.cb_tone.setCurrentIndex(w.cb_tone.findData("dauer"))     # Dauerton wie ein Durchgangsprüfer
+    assert plc_common.load_settings()["iocheck_ton"] == "dauer"
+    w.tone.set(True)
+    assert w.tone.on
+    w.tone.set(False)
+    assert not w.tone.on and w.tone.proc is None
+    w.cb_tone.setCurrentIndex(w.cb_tone.findData("aus"))
     monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
     cd = d.ColumnsDialog(w, {})
     cd.table.item(cd.fields.index("bmk"), 1).setText("")             # BMK abschalten

@@ -3127,6 +3127,12 @@
 @ Nr.
 > 
 
+@ bei richtigem Wechsel
+> 
+
+@ Dauerton bei 1 (wie Durchgangsprüfer)
+> 
+
 @ Messbereich {0} … {1} {2} (Rohwert {3} … {4})
 > 
 
@@ -3460,10 +3466,10 @@
 @ Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.
 > 
 
-@ Signalton bei richtigem Wechsel
+@ Signalton:
 > 
 
-@ Kurzer Ton, wenn das gewählte Digitalsignal 0→1→0 bzw. 1→0→1 gewechselt hat (Sensor betätigt und losgelassen) – man muss nicht auf den Bildschirm sehen
+@ Für das gewählte Digitalsignal – man muss nicht auf den Bildschirm sehen:\nbei richtigem Wechsel: kurzer Ton nach 0→1→0 bzw. 1→0→1 (Sensor betätigt und losgelassen)\nDauerton: Ton, solange das Signal 1 ist (wie ein Durchgangsprüfer)
 > 
 
 @ Signal
@@ -3702,7 +3708,7 @@
 
 # ---------------- plc_iocheck_web.py
 
-@ Signalton, wenn das gewählte Signal 0→1→0 bzw. 1→0→1 gewechselt hat
+@ Signalton für das gewählte Signal: aus – bei richtigem Wechsel (0→1→0) – Dauerton bei 1
 > 
 
 @ Abnahmeprotokoll als PDF

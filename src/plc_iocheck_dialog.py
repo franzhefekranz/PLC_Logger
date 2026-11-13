@@ -40,7 +40,45 @@ COLS = [("nr", N_("Nr.")), ("status", "Status"), ("value", "Wert"), ("address", 
 COL = {k: i for i, (k, _t) in enumerate(COLS)}
 
 
-_TONE_FILE = []
+TONE_MODES = {"aus": N_("aus"), "wechsel": N_("bei richtigem Wechsel"),
+              "dauer": N_("Dauerton bei 1 (wie Durchgangsprüfer)")}
+_TONE_FILES = {}
+
+
+def _tone_player():
+    """Abspielprogramm für WAV-Dateien (Linux: paplay/pw-play/aplay, macOS: afplay) oder None."""
+    import shutil
+    import sys
+    return next((p for p in (["afplay"] if sys.platform == "darwin" else ["paplay", "pw-play", "aplay"])
+                 if shutil.which(p)), None)
+
+
+def _tone_file(kind):
+    """WAV-Datei des Tons erzeugen (einmal je Programmlauf): „ok“ = Zweiklang 880/1320 Hz, ausklingend;
+    „dauer“ = 1600 Hz, 10 s (wird beim Wechsel auf 0 abgebrochen bzw. bei Windows endlos wiederholt)."""
+    if kind in _TONE_FILES:
+        return _TONE_FILES[kind]
+    import struct
+    import tempfile
+    import wave
+    rate, data = 22050, bytearray()
+    if kind == "ok":
+        for f in (880, 1320):                       # zwei Töne à 110 ms, ausklingend
+            n = int(rate * 0.11)
+            for i in range(n):
+                data += struct.pack("<h", int(9000 * (1 - i / n) * math.sin(2 * math.pi * f * i / rate)))
+    else:
+        f, n = 1600, rate * 10                      # ganze Schwingungen je Sekunde: nahtlos wiederholbar
+        for i in range(n):
+            data += struct.pack("<h", int(7000 * math.sin(2 * math.pi * f * i / rate)))
+    path = os.path.join(tempfile.gettempdir(), f"plc_iocheck_ton_{kind}.wav")
+    with wave.open(path, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(bytes(data))
+    _TONE_FILES[kind] = path
+    return path
 
 
 def play_ok_tone():
@@ -61,33 +99,74 @@ def play_ok_tone():
                 pass
         threading.Thread(target=_play, daemon=True).start()
         return
-    import shutil
-    player = next((p for p in (["afplay"] if sys.platform == "darwin" else ["paplay", "pw-play", "aplay"])
-                   if shutil.which(p)), None)
+    player = _tone_player()
     if player is None:
         QApplication.beep()
         return
-    if not _TONE_FILE:
-        import struct
-        import tempfile
-        import wave
-        rate, data = 22050, bytearray()
-        for f in (880, 1320):                       # zwei Töne à 110 ms, ausklingend
-            n = int(rate * 0.11)
-            for i in range(n):
-                data += struct.pack("<h", int(9000 * (1 - i / n) * math.sin(2 * math.pi * f * i / rate)))
-        path = os.path.join(tempfile.gettempdir(), "plc_iocheck_ton.wav")
-        with wave.open(path, "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(rate)
-            w.writeframes(bytes(data))
-        _TONE_FILE.append(path)
-    args = [player] + (["-q"] if player == "aplay" else []) + [_TONE_FILE[0]]
+    args = [player] + (["-q"] if player == "aplay" else []) + [_tone_file("ok")]
     try:
         subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
         QApplication.beep()
+
+
+class ContinuousTone:
+    """Dauerton wie ein Durchgangsprüfer: ``set(True)`` startet ihn (läuft schon: nichts), ``set(False)`` beendet ihn.
+    Windows: WAV in Schleife über winsound (asynchron); Linux/macOS: 10-s-WAV über das Abspielprogramm, wird bei
+    Bedarf neu gestartet und beim Ausschalten abgebrochen. Ohne Abspielprogramm: kurze Systemtöne."""
+
+    def __init__(self):
+        """Ton aus."""
+        self.on = False
+        self.proc = None
+
+    def set(self, on):
+        """Ton ein- oder ausschalten (bei jedem Messzyklus aufgerufen)."""
+        import subprocess
+        import sys
+        if not on:
+            if self.on:
+                self.stop()
+            return
+        if sys.platform == "win32":
+            if not self.on:
+                import winsound
+                try:
+                    winsound.PlaySound(_tone_file("dauer"), winsound.SND_FILENAME | winsound.SND_ASYNC
+                                       | winsound.SND_LOOP | winsound.SND_NODEFAULT)
+                except RuntimeError:
+                    pass
+            self.on = True
+            return
+        self.on = True
+        if self.proc is not None and self.proc.poll() is None:
+            return                                      # läuft noch
+        player = _tone_player()
+        if player is None:
+            QApplication.beep()
+            return
+        try:
+            self.proc = subprocess.Popen([player] + (["-q"] if player == "aplay" else []) + [_tone_file("dauer")],
+                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            self.proc = None
+
+    def stop(self):
+        """Ton sofort beenden."""
+        import sys
+        self.on = False
+        if sys.platform == "win32":
+            try:
+                import winsound
+                winsound.PlaySound(None, 0)
+            except Exception:
+                pass
+        if self.proc is not None:
+            try:
+                self.proc.terminate()
+            except OSError:
+                pass
+            self.proc = None
 
 
 def status_fg(status):
@@ -1347,16 +1426,26 @@ class IoCheckWindow(QMainWindow):
                                          "gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen."))
         self.chk_only_open.toggled.connect(self._options_changed)
         sv.addWidget(self.chk_only_open)
-        self.chk_tone = QCheckBox(tr("Signalton bei richtigem Wechsel"))
-        self.chk_tone.setToolTip(tr("Kurzer Ton, wenn das gewählte Digitalsignal 0→1→0 bzw. 1→0→1 gewechselt hat (Sensor "
-                                    "betätigt und losgelassen) – man muss nicht auf den Bildschirm sehen"))
+        row = QHBoxLayout()
+        row.addWidget(QLabel(tr("Signalton:")))
+        self.cb_tone = QComboBox()
+        for k, label in TONE_MODES.items():
+            self.cb_tone.addItem(tr(label), k)
+        self.cb_tone.setToolTip(tr("Für das gewählte Digitalsignal – man muss nicht auf den Bildschirm sehen:\n"
+                                   "bei richtigem Wechsel: kurzer Ton nach 0→1→0 bzw. 1→0→1 (Sensor betätigt und "
+                                   "losgelassen)\nDauerton: Ton, solange das Signal 1 ist (wie ein Durchgangsprüfer)"))
         try:
             from plc_common import load_settings
-            self.chk_tone.setChecked(bool(load_settings().get("iocheck_ton", False)))
+            mode = load_settings().get("iocheck_ton", "aus")
+            mode = {True: "wechsel", False: "aus"}.get(mode, mode)          # früher: an/aus
+            self.cb_tone.setCurrentIndex(max(0, self.cb_tone.findData(mode)))
         except Exception:
             pass
-        self.chk_tone.toggled.connect(lambda on: self._save_setting(iocheck_ton=bool(on)))
-        sv.addWidget(self.chk_tone)
+        self.cb_tone.currentIndexChanged.connect(
+            lambda *_: self._save_setting(iocheck_ton=self.cb_tone.currentData()))
+        row.addWidget(self.cb_tone, 1)
+        sv.addLayout(row)
+        self.tone = ContinuousTone()
         self.lbl_expected = QLabel()
         self.lbl_expected.setWordWrap(True)
         sv.addWidget(self.lbl_expected)
@@ -2250,6 +2339,8 @@ class IoCheckWindow(QMainWindow):
 
     def stop_reading(self):
         """Alle Lese-Threads beenden und die Anzeige der Steuerungen zurücksetzen."""
+        if hasattr(self, "tone"):
+            self.tone.stop()
         for r in self.readers:
             r.stop()
         for r in self.readers:
@@ -2279,8 +2370,11 @@ class IoCheckWindow(QMainWindow):
                 for k, (sig, v) in enumerate(zip(self.reader_signals.get(idx, []), values)):
                     self.tracker.feed(sig, v, ts, errors.get(k, ""))
                 got = True
-        if self.tracker.pop_pulses() and self.chk_tone.isChecked():
+        tone = self.cb_tone.currentData()
+        if self.tracker.pop_pulses() and tone == "wechsel":
             play_ok_tone()
+        exp = self.tracker.expected                    # Dauerton, solange das gewählte Digitalsignal 1 ist
+        self.tone.set(tone == "dauer" and bool(self.readers) and exp is not None and exp.binary and exp.value == 1)
         changed = self.tracker.pop_status_changes() + self._web_commands()
         self.tracker.watched = self.bridge.watched()
         if changed:

@@ -4430,10 +4430,15 @@ signals no longer get in the way, e.g. an analog input with a coded signal whose
 constantly: simply set it to *skipped* (or *OK* after the check). The selected signal is always
 reported; to check it again, reset its status to *open*.
 
-**Beep on correct change** (side panel, off; personal setting): when the selected digital
-signal has changed 0→1→0 or 1→0→1 (sensor actuated and released), a short two-tone sound
-plays. On Windows via the speaker, on Linux via ``paplay``/``pw-play``/``aplay``, on macOS
-via ``afplay``. The same sound is available on the smartphone (see below).
+**Beep** (side panel, default *off*; personal setting) for the selected digital signal:
+
+* **on correct change:** when the signal has changed 0→1→0 or 1→0→1 (sensor actuated and
+  released), a short two-tone sound plays.
+* **continuous tone at 1 (like a continuity tester):** a tone sounds as long as the signal is
+  1 – e.g. when disconnecting or testing a wire.
+
+On Windows via the sound output, on Linux via ``paplay``/``pw-play``/``aplay``, on macOS via
+``afplay``. The same tones are available on the smartphone (see below).
 
 The button **What has moved?** in the toolbar hides and shows the side panel (more room
 for the signal list; the choice is remembered). The swap warning then appears in the
@@ -4570,9 +4575,10 @@ free one).
 
 * The selected signal is *expected* on this device: if another digital input changes,
   the warning “Swapped?” appears and the device vibrates.
-* **🔕/🔔** at the top right switches on the **beep**: when the selected digital signal has
-  changed 0→1→0 or 1→0→1, a short two-tone sound plays – the fitter hears that the signal
-  arrives correctly without looking at the display. The browser remembers the choice.
+* **🔕/🔔/🔊** at the top right switches the **beep** for the selected digital signal:
+  🔔 = short two-tone sound after 0→1→0 or 1→0→1, 🔊 = continuous tone as long as the signal
+  is 1 (like a continuity tester) – the fitter hears that the signal arrives correctly without
+  looking at the display. The browser remembers the choice.
 * The **checker** is the **login name** in the web server (create users in the
   configuration program, see `HTTPS and login <https-anmeldung_>`__); it appears in the
   list, the result and the protocol. Without login “Web (Zugriffscode)” or “Web (IP

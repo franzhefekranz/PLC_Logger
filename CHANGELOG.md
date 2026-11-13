@@ -14,6 +14,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** Signalton wahlweise als **Dauerton bei 1** wie ein Durchgangsprüfer – am PC (Seitenleiste
+  *Signalton*: aus / bei richtigem Wechsel / Dauerton) und auf dem Smartphone (🔕 → 🔔 → 🔊).
+
 ## [3.23.0] – 2026-11-13
 
 ### Neu

@@ -104,7 +104,7 @@ main{padding:8px}
 <body>
 <header id="hdr">
  <div class="row"><h1>{{T:IO-Check}}</h1><span class="sub" id="title"></span>
-  <button class="lnk" id="tone" onclick="toneToggle()" title="{{T:Signalton, wenn das gewählte Signal 0→1→0 bzw. 1→0→1 gewechselt hat}}">🔕</button>
+  <button class="lnk" id="tone" onclick="toneToggle()" title="{{T:Signalton für das gewählte Signal: aus – bei richtigem Wechsel (0→1→0) – Dauerton bei 1}}">🔕</button>
   <a class="lnk" id="pdf" href="api/io/protokoll.pdf" target="_blank" title="{{T:Abnahmeprotokoll als PDF}}">PDF</a>__LOGOUT__</div>
  <div class="bar"><i id="barv"></i><span id="bart"></span></div>
  <div class="plcs" id="plcs"></div>
@@ -240,7 +240,7 @@ function upload(ev){var f=ev.target.files&&ev.target.files[0],i=camFor;if(!f||i<
   .then(function(j){if(j&&j.error&&j.error!='version')alert(j.error);}).catch(function(){})
   .then(function(){UP--;sheet();});});}
 document.getElementById('cam').addEventListener('change',upload);document.getElementById('gal').addEventListener('change',upload);
-function pick(i){SEL=i;remarkDirty=false;if(i>=0&&rowEl[i]&&TAB=='list')rowEl[i].e.scrollIntoView({block:'nearest'});
+function pick(i){SEL=i;remarkDirty=false;contCheck();if(i>=0&&rowEl[i]&&TAB=='list')rowEl[i].e.scrollIntoView({block:'nearest'});
  update();sheet();}
 function setst(st){var extra={status:st};if(st=='fehler'){var r=prompt('{{J:Bemerkung (z. B. Verdrahtung, Sensor defekt):}}',(D[SEL]||[])[7]||'');
  if(r===null)return;extra.remark=r;}cmd('status',extra);}
@@ -249,16 +249,24 @@ function cmd(c,extra){if(SEL<0)return;var body={ver:VER,cmd:c,i:SEL};for(var k i
  .then(function(r){if(r.status==409)VER=-1;if(r.status==401)location.href='login';if(r.status==403){WR=false;sheet();}});}
 
 // Signalton bei vollständigem Impuls des gewählten Signals (Zähler d[10] vom Server); ein/aus wird im Browser gemerkt
-var TONE=false,AC=null,PULSE={};
-try{TONE=localStorage.getItem('io_ton')=='1';}catch(e){}
-function toneShow(){document.getElementById('tone').textContent=TONE?'🔔':'🔕';}
-function toneToggle(){TONE=!TONE;try{localStorage.setItem('io_ton',TONE?'1':'0');}catch(e){}toneShow();if(TONE)beep();}
+// TONE: 0 = aus, 1 = bei richtigem Wechsel (🔔), 2 = Dauerton bei 1 wie ein Durchgangsprüfer (🔊)
+var TONE=0,AC=null,PULSE={},OSC=null;
+try{TONE=parseInt(localStorage.getItem('io_ton')||'0',10)||0;}catch(e){}
+function toneShow(){document.getElementById('tone').textContent=['🔕','🔔','🔊'][TONE]||'🔕';}
+function toneToggle(){TONE=(TONE+1)%3;try{localStorage.setItem('io_ton',String(TONE));}catch(e){}toneShow();
+ if(TONE==1)beep();contCheck();}
+function contTone(on){try{if(on&&!OSC){AC=AC||new(window.AudioContext||window.webkitAudioContext)();
+  if(AC.state=='suspended')AC.resume();var g=AC.createGain();g.gain.value=0.2;OSC=AC.createOscillator();
+  OSC.frequency.value=1600;OSC.connect(g);g.connect(AC.destination);OSC.start();}
+ else if(!on&&OSC){OSC.stop();OSC.disconnect();OSC=null;}}catch(e){OSC=null;}}
+function contCheck(){var s=SEL>=0&&D[SEL]&&S?S.sig[SEL]:null;
+ contTone(TONE==2&&!!s&&(s[5]=='DI'||s[5]=='DO')&&D[SEL][1]==1);}
 function beep(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume();
  [[880,0],[1320,0.12]].forEach(function(f){var o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+f[1];
   o.frequency.value=f[0];o.connect(g);g.connect(AC.destination);g.gain.setValueAtTime(0.25,t);
   g.gain.exponentialRampToValueAtTime(0.001,t+0.11);o.start(t);o.stop(t+0.12);});}catch(e){}}
 function pulseCheck(){if(SEL<0||!D[SEL])return;var n=D[SEL][10]||0,k=S?S.sig[SEL][0]:'';
- if(PULSE.k===k&&n>PULSE.n&&TONE)beep();PULSE={k:k,n:n};}
+ if(PULSE.k===k&&n>PULSE.n&&TONE==1)beep();PULSE={k:k,n:n};contCheck();}
 function poll(){fetch(api('api/io?ver='+VER+'&sel='+SEL),{cache:'no-store'}).then(function(r){if(r.status==401){location.href='login';throw 0;}return r.json();})
  .then(function(j){if(!j.active){document.getElementById('rows').innerHTML='<div class="msg">{{J:Kein IO-Check geöffnet – am PC <b>Analyse › IO-Check</b> öffnen.}}</div>';VER=-1;S=null;return;}
   if(j.static){S=j.static;VER=j.ver;D=j.dyn;build();}D=j.dyn;TOL=j.tol;WR=j.write!==false;

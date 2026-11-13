@@ -4542,11 +4542,16 @@ erledigte Signale stören dann nicht mehr, z. B. ein Analogeingang mit codiertem
 Wert ständig springt: einfach auf *übersprungen* (oder nach der Prüfung *OK*) setzen. Das gewählte
 Signal wird immer gemeldet; zum erneuten Prüfen den Status auf *offen* zurücksetzen.
 
-**Signalton bei richtigem Wechsel** (Seitenleiste, aus; persönliche Einstellung): Hat das
-gewählte Digitalsignal 0→1→0 oder 1→0→1 gewechselt (Sensor betätigt und losgelassen),
-ertönt ein kurzer Zweiklang. Unter Windows über den Lautsprecher, unter Linux über
-``paplay``/``pw-play``/``aplay``, unter macOS über ``afplay``. Auf dem Smartphone gibt es
-denselben Ton (siehe unten).
+**Signalton** (Seitenleiste, Vorgabe *aus*; persönliche Einstellung) für das gewählte
+Digitalsignal:
+
+* **bei richtigem Wechsel:** Hat das Signal 0→1→0 oder 1→0→1 gewechselt (Sensor betätigt
+  und losgelassen), ertönt ein kurzer Zweiklang.
+* **Dauerton bei 1 (wie Durchgangsprüfer):** Ein Ton klingt, solange das Signal 1 ist –
+  z. B. beim Abklemmen oder Durchmessen einer Ader.
+
+Unter Windows über die Soundausgabe, unter Linux über ``paplay``/``pw-play``/``aplay``,
+unter macOS über ``afplay``. Auf dem Smartphone gibt es dieselben Töne (siehe unten).
 
 Der Knopf **Was hat sich bewegt?** in der Werkzeugleiste blendet die Seitenleiste aus
 und wieder ein (mehr Platz für die Signalliste; die Wahl wird gemerkt). Die Warnung bei
@@ -4684,9 +4689,10 @@ Port belegt, der nächste freie).
 
 * Das gewählte Signal gilt auf diesem Gerät als *erwartet*: Wechselt ein anderer
   Digitaleingang, erscheint die Warnung „Vertauschung?“ und das Gerät vibriert.
-* **🔕/🔔** oben rechts schaltet den **Signalton** ein: Hat das gewählte Digitalsignal
-  0→1→0 bzw. 1→0→1 gewechselt, ertönt ein kurzer Zweiklang – der Monteur hört, dass das
-  Signal richtig ankommt, ohne auf das Display zu sehen. Die Wahl merkt sich der Browser.
+* **🔕/🔔/🔊** oben rechts schaltet den **Signalton** für das gewählte Digitalsignal
+  um: 🔔 = kurzer Zweiklang nach 0→1→0 bzw. 1→0→1, 🔊 = Dauerton, solange das Signal 1 ist
+  (wie ein Durchgangsprüfer) – der Monteur hört, dass das Signal richtig ankommt, ohne auf
+  das Display zu sehen. Die Wahl merkt sich der Browser.
 * **Prüfer** ist der **Anmeldename** im Webserver (Benutzer im Konfigurationsprogramm
   anlegen, siehe `HTTPS und Anmeldung <https-anmeldung_>`__); er steht in Liste, Ergebnis
   und Protokoll. Ohne Anmeldung wird „Web (Zugriffscode)“ bzw. „Web (IP-Adresse)“

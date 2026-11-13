@@ -796,7 +796,7 @@ def s_iocheck():
     w.set_status(sigs[24:27], "ok")
     w.set_status(sigs[7:8], "wiederholen")
     w.set_status(sigs[8:9], "uebersprungen")
-    w.chk_tone.setChecked(True)
+    w.cb_tone.setCurrentIndex(w.cb_tone.findData("wechsel"))
     wait(800)
     save("iocheck_fenster", w)
 
