@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.23.0] – 2026-11-13
+
 ### Neu
 
 * **IO-Check:** Tag-Export aus **Studio 5000** (CSV) direkt als IO-Liste importieren – Alias-Tags auf E/A-Kanäle
@@ -747,7 +749,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.22.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.23.0...HEAD
+[3.23.0]: ../../releases/tag/v3.23.0
 [3.22.0]: ../../releases/tag/v3.22.0
 [3.21.0]: ../../releases/tag/v3.21.0
 [3.20.0]: ../../releases/tag/v3.20.0
