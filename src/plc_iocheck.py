@@ -299,10 +299,11 @@ def guess_kind_dtype(address: str, kind_text: str = "", dtype_text: str = ""):
         if clx:                                   # Allen-Bradley Modul-Tag: Local:1:I.Data.0, Rack:3:O.Ch0Data
             out = clx.group(1).upper() == "O"
             rest = clx.group(2) or ""
-            analog = bool(re.search(r"(^|\.)Ch\d+", rest, re.I)) and not re.search(r"\.\d{1,2}$", rest)
+            analog = bool(re.search(r"(^|\.)Ch\[?\d+", rest, re.I)) and not re.search(r"(\.\d{1,2}|Fault|Status)$",
+                                                                                      rest, re.I)
             if not dtype:
-                dtype = "REAL" if analog else "BOOL" if re.search(r"(\.\d{1,2}|\.Pt\d+\.Data|\.Pt\d+Data)$",
-                                                                   rest, re.I) else ""
+                dtype = "REAL" if analog else "BOOL" if re.search(r"(\.\d{1,2}|(^|\.)Pt\d+\.?Data)$", rest,
+                                                                   re.I) else ""
             if not kind and dtype:
                 kind = ("AO" if out else "AI") if dtype != "BOOL" else ("DO" if out else "DI")
     dtype = dtype or ("BOOL" if kind in ("DI", "DO") else "INT" if kind else "BOOL")
@@ -498,6 +499,8 @@ def import_rows(header, rows, aliases=None):
             sig.unit = sig.unit or rng[2]
         sig.eng_min = _num(cell(row, "eng_min"), sig.eng_min)
         sig.eng_max = _num(cell(row, "eng_max"), sig.eng_max)
+        if dtype in ("REAL", "LREAL"):         # Gleitkomma liefert meist schon den technischen Wert (z. B. Logix)
+            sig.raw_min, sig.raw_max = sig.eng_min, sig.eng_max
         sig.raw_min = _num(cell(row, "raw_min"), sig.raw_min)
         sig.raw_max = _num(cell(row, "raw_max"), sig.raw_max)
         st = _STATUS_IN.get(cell(row, "status").lower())
@@ -523,6 +526,8 @@ def new_signal(address, symbol="", comment="", bmk="", group="", kind="", plc=""
     rng = parse_range(range_text or "")
     if rng:
         sig.eng_min, sig.eng_max, sig.unit = rng[0], rng[1], rng[2]
+    if dtype in ("REAL", "LREAL"):             # Gleitkomma: Rohwert = technischer Wert
+        sig.raw_min, sig.raw_max = sig.eng_min, sig.eng_max
     return sig
 
 
@@ -543,17 +548,95 @@ def adopt_scanned(project, sigs) -> int:
 
 def read_list(path):
     """Tabelle einer IO-Liste lesen -> (Kopfzeile, Zeilen); leere Datei: ValueError."""
+    return read_list_ex(path)[:2]
+
+
+def read_list_ex(path):
+    """Wie read_list, dazu Hinweise für die Meldung nach dem Import -> (Kopfzeile, Zeilen, Hinweise). Ein Tag-Export
+    aus Studio 5000 (CSV) wird erkannt und in eine E/A-Liste umgesetzt (siehe ``studio5000_rows``)."""
+    if str(path).lower().endswith(".csv"):
+        with open(path, "rb") as f:
+            raw = f.read()
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw.decode("cp1252", "replace")                      # Studio 5000 schreibt Windows-1252
+        res = studio5000_rows(text)
+        if res is not None:
+            header, rows, skipped = res
+            if not rows:
+                raise ValueError(tr("Der Studio-5000-Export enthält keine Alias-Tags auf E/A-Kanäle."))
+            notes = [tr("Studio-5000-Tag-Export: {0} E/A-Kanäle aus Alias-Tags übernommen (Adresse = Kanal, "
+                        "Symbol = Alias, Kommentar = Beschreibung).").format(len(rows))]
+            if skipped:
+                notes.append(tr("{0} Aliase auf Diagnose (z. B. .Fault) übergangen.").format(skipped))
+            return header, rows, notes
     from plc_export import read_table
     header, rows = read_table(path)
     if not header:
         raise ValueError(tr("Die Datei enthält keine Daten."))
-    return header, rows
+    return header, rows, []
+
+
+_RE_CLX_DATA = re.compile(r"^([A-Za-z_]\w*:\d+):[IO]\.(Data\.\d{1,2}|Pt\d+\.?Data|Ch\[?\d+\]?\.?Data)$", re.I)
+
+
+def studio5000_rows(text):
+    """Tag-Export aus Studio 5000 / RSLogix 5000 (CSV mit ``TYPE;SCOPE;NAME;DESCRIPTION;DATATYPE;SPECIFIER``) -> E/A-
+    Liste (Kopfzeile, Zeilen, Anzahl übergangener E/A-Aliase) oder None, wenn es kein solcher Export ist.
+
+    Übernommen werden Alias-Tags auf Kanäle der E/A-Baugruppen (``B101 → Local:1:I.Data.0``): Adresse = Ziel (das
+    Modul-Tag, das gelesen wird), Symbol = Alias-Name, Kommentar = Beschreibung des Alias, Gruppe = Baugruppe
+    (``Local:1``); außerdem Kommentare (COMMENT-Zeilen) direkt an solchen Kanälen. Aliase auf Diagnose (``.Fault``,
+    ``.Status`` …) und auf interne Tags entfallen."""
+    import csv
+    lines = text.splitlines()
+    head = next((i for i, ln in enumerate(lines[:40]) if ln.startswith("TYPE") and "SPECIFIER" in ln), None)
+    if head is None:
+        return None
+    delim = ";" if lines[head].count(";") > lines[head].count(",") else ","
+    rows = list(csv.reader(lines[head:], delimiter=delim))
+    names = [c.strip().upper() for c in rows[0]]
+    try:
+        ix = {k: names.index(k) for k in ("TYPE", "NAME", "DESCRIPTION", "SPECIFIER")}
+    except ValueError:
+        return None
+    out, seen, skipped = [], {}, 0
+
+    def get(r, k):
+        """Zelle der Spalte ``k`` (leer, wenn die Zeile zu kurz ist)."""
+        return r[ix[k]].strip() if ix[k] < len(r) else ""
+    for r in rows[1:]:
+        if not r:
+            continue
+        kind, name, desc, spec = get(r, "TYPE").upper(), get(r, "NAME"), get(r, "DESCRIPTION"), get(r, "SPECIFIER")
+        if kind == "ALIAS":
+            target, symbol = spec, name
+        elif kind == "COMMENT" and spec.startswith(name + "."):          # Kommentar an einem Kanal der Baugruppe
+            target, symbol = spec, ""
+        else:
+            continue
+        m = _RE_CLX_DATA.match(target)
+        if not m:
+            if kind == "ALIAS" and _RE_CLX_IO.match(target):
+                skipped += 1                                             # z. B. Local:3:I.Ch0.Fault
+            continue
+        if target in seen:                                               # Alias und Kommentar am selben Kanal
+            row = out[seen[target]]
+            row[1] = row[1] or symbol
+            row[2] = row[2] or desc
+            continue
+        seen[target] = len(out)
+        out.append([target, symbol, desc, m.group(1)])
+    out.sort(key=lambda r: natural_key(r[0]))      # Reihenfolge der Hardware: Baugruppe, Kanal
+    return ["Adresse", "Symbol", "Kommentar", "Gruppe"], out, skipped
 
 
 def import_file(path, aliases=None):
     """IO-Liste aus einer CSV-, Excel- oder ODS-Datei importieren -> (Signale, Warnungen)."""
-    header, rows = read_list(path)
-    return import_rows(header, rows, aliases)
+    header, rows, notes = read_list_ex(path)
+    sigs, warnings = import_rows(header, rows, aliases)
+    return sigs, notes + warnings
 
 
 # ---------------------------------------------------------------------------------------------------------------------

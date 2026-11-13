@@ -2975,6 +2975,15 @@
 @ Bitte eine Adresse eintragen.
 > 
 
+@ Der Studio-5000-Export enthält keine Alias-Tags auf E/A-Kanäle.
+> 
+
+@ Studio-5000-Tag-Export: {0} E/A-Kanäle aus Alias-Tags übernommen (Adresse = Kanal, Symbol = Alias, Kommentar = Beschreibung).
+> 
+
+@ {0} Aliase auf Diagnose (z. B. .Fault) übergangen.
+> 
+
 @ Eingänge
 > 
 

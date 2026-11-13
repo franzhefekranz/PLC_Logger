@@ -4294,6 +4294,14 @@ address, as shown in Studio 5000:
 * **Controller tags** (alias tags, e.g. ``B101_Endlage``, ``Program:Main.Ventil[2].Auf``): the
   signal kind cannot be derived from the name – supply the columns *Type* (DI/DO/AI/AO) and for
   analog values *Data type* (INT, DINT, REAL); without them a tag counts as a digital input.
+* **Tag export from Studio 5000** (*Tools › Export › Tags and Logic Comments*, CSV): can be
+  imported directly as an IO list. Every **alias tag on an I/O channel** becomes a signal:
+  address = channel (``Local:1:I.Data.2`` – the terminal is read), symbol = alias name,
+  comment = description of the alias, group = module (``Local:1``); comments directly on
+  channels are taken over as well. Aliases on diagnostics (``.Fault``, ``.Status``) and on
+  internal tags are skipped; the list is sorted by module and channel. Analog channels (REAL)
+  show the module's value without conversion – enter measuring range and unit in the field
+  *Analog value* if needed.
 
 **Taking over a changed IO list:** if a list already exists, a second import asks:
 

@@ -1806,8 +1806,9 @@ class IoCheckWindow(QMainWindow):
         if not path:
             return
         try:
-            header, rows = io.read_list(path)
+            header, rows, notes = io.read_list_ex(path)
             sigs, warnings = io.import_rows(header, rows)
+            warnings = notes + warnings
         except Exception as e:
             QMessageBox.warning(self, tr("IO-Liste importieren"), str(e))
             return

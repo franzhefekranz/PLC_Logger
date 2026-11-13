@@ -165,6 +165,36 @@ def test_iocheck_clx_module_tags():
     assert not check_tag_name("Local:1") and not check_tag_name("Local:x:I")
 
 
+def test_iocheck_studio5000_export(tmp_path):
+    """Tag-Export aus Studio 5000 (CSV, Windows-1252, Semikolon): Alias-Tags auf E/A-Kanäle werden Signale (Adresse =
+    Kanal, Symbol = Alias, Kommentar = Beschreibung, Gruppe = Baugruppe), Diagnose-Aliase und interne Tags entfallen,
+    Reihenfolge nach Hardware; REAL-Kanäle ohne Umrechnung."""
+    import plc_iocheck as io
+    text = (
+        'remark;"CSV-Import-Export"\r\n0.3\r\nTYPE;SCOPE;NAME;DESCRIPTION;DATATYPE;SPECIFIER;ATTRIBUTES\r\n'
+        'TAG;;Local:1:I;"";"AB:1756_DI:I:0";"";"(ExternalAccess := Read/Write)"\r\n'
+        'ALIAS;;B2;"Endlage hinten";;"Local:1:I.Data.10";"(RADIX := Decimal)"\r\n'
+        'ALIAS;;B1;"Endlage vorn ä";;"Local:1:I.Data.2";"(RADIX := Decimal)"\r\n'
+        'ALIAS;;Y1;"Ventil";;"L:3:O.Pt00.Data";""\r\n'
+        'ALIAS;;PT1;"Druck";;"Z1:2:I.Ch3.Data";""\r\n'
+        'ALIAS;;PT1_F;"Druck Fehler";;"Z1:2:I.Ch3.Fault";""\r\n'
+        'ALIAS;;AO1;"Sollwert";;"Local:5:O.Ch[1].Data";""\r\n'
+        'ALIAS;;Intern;"";;"setALF[0]";""\r\n'
+        'COMMENT;;Local:1:I;"Not-Halt";;"Local:1:I.Data.0"\r\n')
+    f = tmp_path / "Controller_Tags.CSV"
+    f.write_bytes(text.encode("cp1252"))
+    sigs, warn = io.import_file(str(f))
+    assert [s.address for s in sigs] == ["L:3:O.Pt00.Data", "Local:1:I.Data.0", "Local:1:I.Data.2",
+                                         "Local:1:I.Data.10", "Local:5:O.Ch[1].Data", "Z1:2:I.Ch3.Data"]
+    b1 = sigs[2]
+    assert (b1.symbol, b1.comment, b1.group, b1.kind, b1.dtype) == ("B1", "Endlage vorn ä", "Local:1", "DI", "BOOL")
+    assert sigs[1].comment == "Not-Halt" and not sigs[1].symbol
+    assert (sigs[0].kind, sigs[4].kind, sigs[5].kind, sigs[5].dtype) == ("DO", "AO", "AI", "REAL")
+    assert io.scale(sigs[5], 42.0) == 42.0                         # REAL: Rohwert = technischer Wert
+    assert "1 " in warn[1] and "Studio" in warn[0]
+    assert io.studio5000_rows("Adresse;Symbol\nE0.0;B1") is None
+
+
 def test_iocheck_raw_text():
     """Rohwert dezimal, hexadezimal und binär in der Breite des Datentyps (Zweierkomplement); REAL immer dezimal."""
     import plc_iocheck as io

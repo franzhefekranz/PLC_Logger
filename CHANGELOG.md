@@ -14,6 +14,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** Tag-Export aus **Studio 5000** (CSV) direkt als IO-Liste importieren – Alias-Tags auf E/A-Kanäle
+  werden Signale (Adresse = Kanal, Symbol = Alias, Kommentar = Beschreibung des Alias, Gruppe = Baugruppe); Diagnose-
+  Aliase und interne Tags entfallen.
+
+### Geändert
+
+* **IO-Check:** Analogsignale mit Datentyp REAL/LREAL ohne Rohwert-Umrechnung (Rohwert = technischer Wert) statt
+  0 … 27648.
+
 ## [3.22.0] – 2026-11-13
 
 ### Neu

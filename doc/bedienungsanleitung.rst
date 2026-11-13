@@ -4401,6 +4401,14 @@ eintragen, wie er in Studio 5000 steht:
   Aus dem Namen lässt sich die Signalart nicht ableiten – dafür die Spalten *Typ*
   (DI/DO/AI/AO) und bei Analogwerten *Datentyp* (INT, DINT, REAL) mitliefern; ohne sie gilt
   ein Tag als Digitaleingang.
+* **Tag-Export aus Studio 5000** (*Tools › Export › Tags and Logic Comments*, CSV): lässt sich
+  direkt als IO-Liste importieren. Jedes **Alias-Tag auf einen E/A-Kanal** wird ein Signal:
+  Adresse = Kanal (``Local:1:I.Data.2`` – gelesen wird die Klemme), Symbol = Alias-Name,
+  Kommentar = Beschreibung des Alias, Gruppe = Baugruppe (``Local:1``); Kommentare direkt an
+  Kanälen werden ebenfalls übernommen. Aliase auf Diagnose (``.Fault``, ``.Status``) und auf
+  interne Tags entfallen; die Liste ist nach Baugruppe und Kanal sortiert. Analogkanäle (REAL)
+  zeigen den Wert der Baugruppe ohne Umrechnung – Messbereich und Einheit bei Bedarf im Feld
+  *Analogwert* eintragen.
 
 **Geänderte IO-Liste übernehmen:** Gibt es schon eine Liste, fragt ein zweiter Import:
 
