@@ -16,9 +16,16 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Neu
 
+* **IO-Check, Allen-Bradley:** Modul-Tags der E/A-Baugruppen (`Local:1:I.Data.0`, `Local:3:I.Ch0Data`,
+  `Rack2:3:O.Data.5` …) werden erkannt – Eingang/Ausgang, digital/analog ergeben sich aus dem Namen.
 * **IO-Check:** Rohwert von Analogsignalen auch hexadezimal (`16#6C00`) und binär (`2#0110_1100_…`) – im Feld
   *Analogwert* alle drei Darstellungen, in der Signalliste umschaltbar (*Rohwert in der Liste*); für Analogwerte mit
   Diagnosebits.
+
+### Behoben
+
+* **Treiber clx:** Modul-Tags mit Steckplatz (`Local:1:I.Data`, `Rack2:3:O.Ch0Data`) wurden als ungültiger Tag-Name
+  abgewiesen.
 
 ## [3.21.0] – 2026-11-12
 

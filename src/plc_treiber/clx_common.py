@@ -27,7 +27,8 @@ def pycomm3_path(p) -> str:
     return "/".join([p.ip] + parts)
 
 
-_TAG_RE = re.compile(r"^(Program:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(\[\d+(,\d+){0,2}\])?"
+# Auch Modul-Tags der E/A-Baugruppen: Local:1:I.Data.0, Rack2:3:O.Ch0Data (Name:Steckplatz:I/O/C/S)
+_TAG_RE = re.compile(r"^(Program:[A-Za-z_]\w*\.)?[A-Za-z_]\w*(:\d+:[A-Za-z]+)?(\[\d+(,\d+){0,2}\])?"
                      r"(\.[A-Za-z_]\w*(\[\d+(,\d+){0,2}\])?)*(\.\d{1,2})?$")
 
 

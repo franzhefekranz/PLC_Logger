@@ -4282,6 +4282,19 @@ removed, for ``ads`` the TwinCAT notation (``%IX0.1``) and for ``tia`` the symbo
 (``IArea.<Name>``) is used. Rows without address (intermediate headings) and duplicate
 addresses are skipped. The message after the import names the recognized columns.
 
+**Allen-Bradley ControlLogix/CompactLogix (driver** ``clx``\ **):** enter the tag name as the
+address, as shown in Studio 5000:
+
+* **Module tags** of the I/O modules: ``Local:1:I.Data.0`` (digital input, slot 1, bit 0),
+  ``Local:2:O.Data.5`` (digital output), newer modules ``Local:1:I.Pt05.Data``, analog
+  ``Local:3:I.Ch0Data`` or ``Local:3:I.Ch00.Data``, output ``Local:4:O.Ch0Data``; remote I/O
+  with the name of the adapter, e.g. ``Rack2:3:I.Data.7``. Type and data type follow from it:
+  ``:I`` = input, ``:O`` = output, bit number or ``Pt…Data`` = digital (BOOL), ``Ch…`` =
+  analog (REAL). Analog modules in integer mode: column *Data type* ``INT``.
+* **Controller tags** (alias tags, e.g. ``B101_Endlage``, ``Program:Main.Ventil[2].Auf``): the
+  signal kind cannot be derived from the name – supply the columns *Type* (DI/DO/AI/AO) and for
+  analog values *Data type* (INT, DINT, REAL); without them a tag counts as a digital input.
+
 **Taking over a changed IO list:** if a list already exists, a second import asks:
 
 * **Update list** (default) – the new list applies: changed symbols, comments, device tags,

@@ -4387,6 +4387,21 @@ und ``P`` entfernt, für ``ads`` die TwinCAT-Schreibweise (``%IX0.1``) und für 
 der Symbolname (``IArea.<Name>``) verwendet. Zeilen ohne Adresse (Zwischenüberschriften)
 und doppelte Adressen entfallen. Die Meldung nach dem Import nennt die erkannten Spalten.
 
+**Allen-Bradley ControlLogix/CompactLogix (Treiber** ``clx``\ **):** Als Adresse den Tag-Namen
+eintragen, wie er in Studio 5000 steht:
+
+* **Modul-Tags** der E/A-Baugruppen: ``Local:1:I.Data.0`` (Digitaleingang, Steckplatz 1,
+  Bit 0), ``Local:2:O.Data.5`` (Digitalausgang), neuere Baugruppen ``Local:1:I.Pt05.Data``,
+  Analog ``Local:3:I.Ch0Data`` bzw. ``Local:3:I.Ch00.Data``, Ausgang ``Local:4:O.Ch0Data``;
+  dezentrale E/A mit dem Namen des Adapters, z. B. ``Rack2:3:I.Data.7``. Typ und Datentyp
+  ergeben sich daraus: ``:I`` = Eingang, ``:O`` = Ausgang, Bitnummer bzw. ``Pt…Data`` = digital
+  (BOOL), ``Ch…`` = analog (REAL). Analogbaugruppen im Ganzzahlmodus: Spalte *Datentyp*
+  ``INT``.
+* **Controller-Tags** (Alias-Tags, z. B. ``B101_Endlage``, ``Program:Main.Ventil[2].Auf``):
+  Aus dem Namen lässt sich die Signalart nicht ableiten – dafür die Spalten *Typ*
+  (DI/DO/AI/AO) und bei Analogwerten *Datentyp* (INT, DINT, REAL) mitliefern; ohne sie gilt
+  ein Tag als Digitaleingang.
+
 **Geänderte IO-Liste übernehmen:** Gibt es schon eine Liste, fragt ein zweiter Import:
 
 * **Liste aktualisieren** (Vorgabe) – die neue Liste gilt: geänderte Symbole, Kommentare, BMK,

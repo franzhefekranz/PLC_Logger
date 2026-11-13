@@ -146,6 +146,25 @@ def test_iocheck_tracker_digital_and_swap():
     assert ch.expected is b and "B" not in ch.note[:0]
 
 
+def test_iocheck_clx_module_tags():
+    """Allen-Bradley Modul-Tags im IO-Check: Richtung aus :I/:O, Bit bzw. Pt…Data = digital, Ch… = analog (REAL);
+    der Treiber clx nimmt sie als gültige Tag-Namen an."""
+    import plc_iocheck as io
+    from plc_treiber.clx_common import check_tag_name
+    g = io.guess_kind_dtype
+    assert g("Local:1:I.Data.0") == ("DI", "BOOL")
+    assert g("Local:2:O.Data.15") == ("DO", "BOOL")
+    assert g("Remote_IO:1:I.Pt05.Data") == ("DI", "BOOL")
+    assert g("Local:3:I.Ch0Data") == ("AI", "REAL")
+    assert g("Local:3:I.Ch00.Data") == ("AI", "REAL")
+    assert g("Local:4:O.Ch1Data") == ("AO", "REAL")
+    assert g("Local:3:I.Ch0Data", dtype_text="INT") == ("AI", "INT")
+    assert g("B101_Endlage") == ("DI", "BOOL") and g("FT101_Durchfluss", "AI") == ("AI", "INT")
+    for tag in ("Local:1:I.Data.0", "Rack2:3:O.Ch0Data", "Local:1:I.Pt05.Data", "Program:Main.Ventil[2].Auf"):
+        assert check_tag_name(tag), tag
+    assert not check_tag_name("Local:1") and not check_tag_name("Local:x:I")
+
+
 def test_iocheck_raw_text():
     """Rohwert dezimal, hexadezimal und binär in der Breite des Datentyps (Zweierkomplement); REAL immer dezimal."""
     import plc_iocheck as io

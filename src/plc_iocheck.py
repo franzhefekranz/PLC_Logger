@@ -257,6 +257,7 @@ def set_status(sig: IoSignal, status: str, remark=None, checker=None):
 _RE_S7 = re.compile(r"^%?(P?)([EIAQM])([XBWD]?)(\d+)(?:\.([0-7]))?$")
 _RE_DBX = re.compile(r"^DB(\d+)\.DB([XBWD])(\d+)(?:\.([0-7]))?$")
 _IN, _OUT = {"E", "I"}, {"A", "Q"}
+_RE_CLX_IO = re.compile(r"^[A-Za-z_]\w*:\d+:([IO])(?:\.(.+))?$", re.I)     # Allen-Bradley Modul-Tag
 _DTYPES = {"BOOL": "BOOL", "BIT": "BOOL", "BYTE": "BYTE", "WORD": "WORD", "INT": "INT", "DINT": "DINT",
            "DWORD": "DWORD", "REAL": "REAL", "UINT": "UINT", "UDINT": "UDINT", "USINT": "USINT", "SINT": "SINT",
            "LREAL": "LREAL", "FLOAT": "REAL", "DOUBLE": "LREAL", "SHORT": "INT"}
@@ -293,6 +294,17 @@ def guess_kind_dtype(address: str, kind_text: str = "", dtype_text: str = ""):
                 kind = "DI" if binary else "AI"
             elif area in ("A", "Q"):
                 kind = "DO" if binary else "AO"
+    elif not kind or not dtype:
+        clx = _RE_CLX_IO.match(address or "")
+        if clx:                                   # Allen-Bradley Modul-Tag: Local:1:I.Data.0, Rack:3:O.Ch0Data
+            out = clx.group(1).upper() == "O"
+            rest = clx.group(2) or ""
+            analog = bool(re.search(r"(^|\.)Ch\d+", rest, re.I)) and not re.search(r"\.\d{1,2}$", rest)
+            if not dtype:
+                dtype = "REAL" if analog else "BOOL" if re.search(r"(\.\d{1,2}|\.Pt\d+\.Data|\.Pt\d+Data)$",
+                                                                   rest, re.I) else ""
+            if not kind and dtype:
+                kind = ("AO" if out else "AI") if dtype != "BOOL" else ("DO" if out else "DI")
     dtype = dtype or ("BOOL" if kind in ("DI", "DO") else "INT" if kind else "BOOL")
     kind = kind or ("DI" if dtype == "BOOL" else "AI")
     return kind, dtype
