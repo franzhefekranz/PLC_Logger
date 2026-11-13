@@ -908,7 +908,7 @@ class AnalogPanel(QGroupBox):
         self.lbl_value.setText("–" if math.isnan(eng) else f"{eng:.4g}{unit}")
         if math.isnan(s.value):
             raw = "–"
-        elif s.value == int(s.value):                  # ganzzahlig: auch hex und binär (Diagnosebits)
+        elif s.dtype in io.RAW_BITS or s.value == int(s.value):    # ganzzahlig: auch hex und binär (Diagnosebits)
             raw = "  ·  ".join(io.raw_text(s, s.value, m) for m in io.RAW_MODES)
         else:
             raw = f"{s.value:g}"

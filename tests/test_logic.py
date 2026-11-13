@@ -153,7 +153,7 @@ def test_iocheck_raw_text():
     assert io.raw_text(s, 27648, "dez") == "27648"
     assert io.raw_text(s, 27648, "hex") == "16#6C00"
     assert io.raw_text(s, 27648, "bin") == "2#0110_1100_0000_0000"
-    assert io.raw_text(s, -1, "hex") == "16#FFFF"
+    assert io.raw_text(s, -1, "hex") == "16#FFFF" and io.raw_text(s, 14883.2, "hex") == "16#3A23"
     d = io.IoSignal("ED10", kind="AI", dtype="DINT")
     assert io.raw_text(d, 1, "hex") == "16#00000001"
     r = io.IoSignal("DB1.DBD0", kind="AI", dtype="REAL")

@@ -558,8 +558,8 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     ew = next(x for x in w.all_signals if x.address == "EW256")      # Rohwert hex in der Liste (Diagnosebits)
     w.analog.cb_raw.setCurrentIndex(w.analog.cb_raw.findData("hex"))
     assert plc_common.load_settings()["iocheck_roh"] == "hex"
-    if ew.value == ew.value:
-        assert "16#" in d.value_text(ew)
+    ew.value = 27648.0
+    assert d.value_text(ew).endswith("(16#6C00)")
     w.analog.cb_raw.setCurrentIndex(w.analog.cb_raw.findData("dez"))
     monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
     cd = d.ColumnsDialog(w, {})

@@ -655,10 +655,11 @@ def raw_text(sig: IoSignal, raw: float, mode: str = "dez") -> str:
     (negative Werte im Zweierkomplement) – für Analogwerte mit Diagnosebits. Gleitkommawerte immer dezimal."""
     if math.isnan(raw):
         return "–"
-    if mode not in ("hex", "bin") or raw != int(raw):
+    bits = RAW_BITS.get(sig.dtype)
+    if mode not in ("hex", "bin") or (not bits and raw != int(raw)):
         return f"{raw:g}"
-    v = int(raw)
-    bits = RAW_BITS.get(sig.dtype) or (16 if -32768 <= v < 65536 else 32)
+    v = int(round(raw))                       # Ganzzahltyp: gerundet (z. B. simulierte Werte)
+    bits = bits or (16 if -32768 <= v < 65536 else 32)
     v &= (1 << bits) - 1
     if mode == "hex":
         return f"16#{v:0{bits // 4}X}"
