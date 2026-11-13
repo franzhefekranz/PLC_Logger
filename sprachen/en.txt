@@ -2987,6 +2987,15 @@
 @ Weitere Signale
 > Other signals
 
+@ dezimal
+> decimal
+
+@ hexadezimal
+> hexadecimal
+
+@ binär
+> binary
+
 @ Überlauf bzw. Drahtbruch (32767)
 > Overflow or wire break (32767)
 
@@ -3199,8 +3208,17 @@
 @ Analogwert
 > Analog value
 
+@ Rohwert dezimal, hexadezimal und binär – z. B. für Diagnosebits im Analogwert
+> Raw value decimal, hexadecimal and binary – e.g. for diagnostic bits in the analog value
+
 @ Drahtbruchprüfung: Verdrahtung öffnen (Klemme lösen) – die Baugruppe meldet einen Fehlerwert – und wieder schließen. Bei 0 … 10 V und 0 … 20 mA ist eine Unterbrechung nicht erkennbar: dann die Prüfpunkte verwenden oder von Hand abhaken.
 > Wire break test: open the wiring (loosen the terminal) – the module reports a fault value – and close it again. With 0 … 10 V and 0 … 20 mA an interruption cannot be detected: then use the test points or check off by hand.
+
+@ Darstellung des Rohwerts in der Spalte „Wert“ der Signalliste
+> Display of the raw value in the column “Value” of the signal list
+
+@ Rohwert in der Liste
+> Raw value in the list
 
 @ Prüfpunkte (optional, z. B. mit Kalibrator)
 > Test points (optional, e.g. with a calibrator)
@@ -6756,12 +6774,6 @@
 
 @ „{0}“: {1} wird {2} gezählt
 > "{0}": {1} is numbered in {2}
-
-@ dezimal
-> decimal
-
-@ hexadezimal
-> hexadecimal
 
 @ Bitgeräte haben keine Bitnummer: {0}
 > Bit devices have no bit number: {0}

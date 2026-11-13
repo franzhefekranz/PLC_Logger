@@ -4543,6 +4543,13 @@ Ist ein Analogsignal gewählt, zeigt das Feld **Analogwert** den skalierten Wert
 Rohwert und Fehlerwerte. Messbereich (Rohwert bei 0 und 100 %, technischer Bereich,
 Einheit) lässt sich dort anpassen.
 
+Der **Rohwert** steht dort dezimal, hexadezimal und binär nebeneinander, z. B.
+``27648 · 16#6C00 · 2#0110_1100_0000_0000`` – praktisch, wenn der Analogwert
+Diagnosebits enthält. Breite nach Datentyp (INT/WORD 16 Bit, DINT/DWORD 32 Bit), negative
+Werte im Zweierkomplement; REAL-Werte nur dezimal. **Rohwert in der Liste** stellt ein,
+wie der Rohwert in der Spalte *Wert* der Signalliste erscheint (dezimal, hexadezimal oder
+binär; persönliche Einstellung).
+
 * **Drahtbruchprüfung** (Analogeingänge, üblicher Weg): Verdrahtung des Signals öffnen
   (Klemme lösen) – die Baugruppe meldet einen Fehlerwert, Schritt 1 wird abgehakt – und
   wieder schließen – der Wert ist wieder gültig, Schritt 2 wird abgehakt. Danach das

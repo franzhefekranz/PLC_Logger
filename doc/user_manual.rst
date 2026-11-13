@@ -4432,6 +4432,13 @@ If an analog signal is selected, the **Analog value** box shows the scaled value
 raw value and fault values. The measuring range (raw value at 0 and 100 %, engineering
 range, unit) can be adjusted there.
 
+The **raw value** is shown there decimal, hexadecimal and binary side by side, e.g.
+``27648 · 16#6C00 · 2#0110_1100_0000_0000`` – useful when the analog value contains
+diagnostic bits. Width according to the data type (INT/WORD 16 bit, DINT/DWORD 32 bit),
+negative values in two's complement; REAL values decimal only. **Raw value in the list**
+sets how the raw value appears in the column *Value* of the signal list (decimal,
+hexadecimal or binary; personal setting).
+
 * **Wire break test** (analog inputs, the usual way): open the wiring of the signal
   (loosen the terminal) – the module reports a fault value, step 1 is checked – and close
   it again – the value is valid again, step 2 is checked. Then confirm the signal with

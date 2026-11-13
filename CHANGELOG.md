@@ -14,6 +14,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **IO-Check:** Rohwert von Analogsignalen auch hexadezimal (`16#6C00`) und binär (`2#0110_1100_…`) – im Feld
+  *Analogwert* alle drei Darstellungen, in der Signalliste umschaltbar (*Rohwert in der Liste*); für Analogwerte mit
+  Diagnosebits.
+
 ## [3.21.0] – 2026-11-12
 
 ### Neu

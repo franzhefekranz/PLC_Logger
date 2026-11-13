@@ -2987,6 +2987,15 @@
 @ Weitere Signale
 > 
 
+@ dezimal
+> 
+
+@ hexadezimal
+> 
+
+@ binär
+> 
+
 @ Überlauf bzw. Drahtbruch (32767)
 > 
 
@@ -3199,7 +3208,16 @@
 @ Analogwert
 > 
 
+@ Rohwert dezimal, hexadezimal und binär – z. B. für Diagnosebits im Analogwert
+> 
+
 @ Drahtbruchprüfung: Verdrahtung öffnen (Klemme lösen) – die Baugruppe meldet einen Fehlerwert – und wieder schließen. Bei 0 … 10 V und 0 … 20 mA ist eine Unterbrechung nicht erkennbar: dann die Prüfpunkte verwenden oder von Hand abhaken.
+> 
+
+@ Darstellung des Rohwerts in der Spalte „Wert“ der Signalliste
+> 
+
+@ Rohwert in der Liste
 > 
 
 @ Prüfpunkte (optional, z. B. mit Kalibrator)
@@ -6755,12 +6773,6 @@
 > 
 
 @ „{0}“: {1} wird {2} gezählt
-> 
-
-@ dezimal
-> 
-
-@ hexadezimal
 > 
 
 @ Bitgeräte haben keine Bitnummer: {0}

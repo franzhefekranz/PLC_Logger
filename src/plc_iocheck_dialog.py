@@ -137,9 +137,12 @@ class SelectionDelegate(QStyledItemDelegate):
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
 
 
+RAW_MODE = ["dez"]         # Anzeige des Rohwerts in der Signalliste: dez, hex oder bin (Einstellung iocheck_roh)
+
+
 def value_text(sig) -> str:
-    """Wert eines Signals für Tabelle und Tooltip: digital 0/1, analog skaliert mit Einheit und Rohwert; Lesefehler mit
-    ⚠.
+    """Wert eines Signals für Tabelle und Tooltip: digital 0/1, analog skaliert mit Einheit und Rohwert (dezimal, hex
+    oder binär, siehe RAW_MODE); Lesefehler mit ⚠.
     """
     if sig.error and math.isnan(sig.value):
         return "⚠ " + sig.error
@@ -149,7 +152,7 @@ def value_text(sig) -> str:
         return "1" if sig.value else "0"
     eng = io.scale(sig, sig.value)
     unit = f" {sig.unit}" if sig.unit else ""
-    return f"{eng:.4g}{unit}  ({sig.value:g})"
+    return f"{eng:.4g}{unit}  ({io.raw_text(sig, sig.value, RAW_MODE[0])})"
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -760,10 +763,11 @@ class ColumnsDialog(QDialog):
 # Analogwert des gewählten Signals
 # ---------------------------------------------------------------------------------------------------------------------
 class AnalogPanel(QGroupBox):
-    """Feld unter der Signalliste für das gewählte Analogsignal: großer Wert, Rohwert, Fehlerwerte, Drahtbruchprüfung,
-    Skalierung und die Prüfpunkte 0/50/100 %.
+    """Feld unter der Signalliste für das gewählte Analogsignal: großer Wert, Rohwert (dezimal, hex, binär), Fehlerwerte,
+    Drahtbruchprüfung, Skalierung und die Prüfpunkte 0/50/100 %.
     """
     changed = Signal(object)
+    raw_mode_changed = Signal()
 
     def __init__(self, tracker, parent=None):
         """Felder anlegen; ``tracker`` liefert die Toleranz und übernimmt Prüfpunkte."""
@@ -776,6 +780,8 @@ class AnalogPanel(QGroupBox):
         f.setBold(True)
         self.lbl_value.setFont(f)
         self.lbl_raw = QLabel()
+        self.lbl_raw.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.lbl_raw.setToolTip(tr("Rohwert dezimal, hexadezimal und binär – z. B. für Diagnosebits im Analogwert"))
         self.lbl_fault = QLabel()
         self.lbl_fault.setStyleSheet("color:#c62828;font-weight:bold")
         grid.addWidget(self.lbl_value, 0, 0, 1, 2)
@@ -798,6 +804,18 @@ class AnalogPanel(QGroupBox):
             sp.editingFinished.connect(self._edited)
             self.ed[key] = sp
             form.addRow(tr(text), sp)
+        self.cb_raw = QComboBox()
+        for k, label in io.RAW_MODES.items():
+            self.cb_raw.addItem(tr(label), k)
+        try:
+            from plc_common import load_settings
+            RAW_MODE[0] = load_settings().get("iocheck_roh", "dez")
+        except Exception:
+            pass
+        self.cb_raw.setCurrentIndex(max(0, self.cb_raw.findData(RAW_MODE[0])))
+        self.cb_raw.setToolTip(tr("Darstellung des Rohwerts in der Spalte „Wert“ der Signalliste"))
+        self.cb_raw.currentIndexChanged.connect(self._raw_mode)
+        form.addRow(tr("Rohwert in der Liste"), self.cb_raw)
         self.ed_unit = QLineEdit()
         self.ed_unit.setMaximumWidth(90)
         self.ed_unit.editingFinished.connect(self._edited)
@@ -868,6 +886,16 @@ class AnalogPanel(QGroupBox):
             self.refresh()
             self.changed.emit(self.sig)
 
+    def _raw_mode(self, *_):
+        """Darstellung des Rohwerts in der Liste umschalten und als persönliche Einstellung merken."""
+        RAW_MODE[0] = self.cb_raw.currentData() or "dez"
+        try:
+            from plc_common import save_settings
+            save_settings(iocheck_roh=RAW_MODE[0])
+        except Exception:
+            pass
+        self.raw_mode_changed.emit()
+
     def refresh(self):
         """Anzeige mit dem aktuellen Wert aktualisieren: skalierter Wert, Fehler, Fortschritt der Drahtbruchprüfung,
         Soll/Ist der Prüfpunkte.
@@ -878,7 +906,13 @@ class AnalogPanel(QGroupBox):
         eng = io.scale(s, s.value)
         unit = f" {s.unit}" if s.unit else ""
         self.lbl_value.setText("–" if math.isnan(eng) else f"{eng:.4g}{unit}")
-        self.lbl_raw.setText(tr("Rohwert: {0}").format("–" if math.isnan(s.value) else f"{s.value:g}"))
+        if math.isnan(s.value):
+            raw = "–"
+        elif s.value == int(s.value):                  # ganzzahlig: auch hex und binär (Diagnosebits)
+            raw = "  ·  ".join(io.raw_text(s, s.value, m) for m in io.RAW_MODES)
+        else:
+            raw = f"{s.value:g}"
+        self.lbl_raw.setText(tr("Rohwert: {0}").format(raw))
         self.lbl_fault.setText(io.analog_fault(s, s.value) or s.error)
         if s.is_input:
             ok1, ok2 = bool(s.seen & io.SEEN_BREAK), bool(s.seen & io.SEEN_BACK)
@@ -1262,6 +1296,7 @@ class IoCheckWindow(QMainWindow):
         v.addLayout(brow)
         self.analog = AnalogPanel(self.tracker)
         self.analog.changed.connect(self._signal_edited)
+        self.analog.raw_mode_changed.connect(self.model.refresh_values)
         self.analog.setVisible(False)
         v.addWidget(self.analog)
         self.tabs.addTab(page, tr("Signalliste"))

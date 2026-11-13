@@ -646,6 +646,26 @@ def matrix_rows(signals, per_row: int = 8):
 # ---------------------------------------------------------------------------------------------------------------------
 # Analogwerte
 # ---------------------------------------------------------------------------------------------------------------------
+RAW_BITS = {"BYTE": 8, "SINT": 8, "USINT": 8, "WORD": 16, "INT": 16, "UINT": 16, "DINT": 32, "DWORD": 32, "UDINT": 32}
+RAW_MODES = {"dez": N_("dezimal"), "hex": N_("hexadezimal"), "bin": N_("binär")}
+
+
+def raw_text(sig: IoSignal, raw: float, mode: str = "dez") -> str:
+    """Rohwert als Text: dezimal, hexadezimal (16#6C00) oder binär (2#0110_1100_0000_0000) in der Breite des Datentyps
+    (negative Werte im Zweierkomplement) – für Analogwerte mit Diagnosebits. Gleitkommawerte immer dezimal."""
+    if math.isnan(raw):
+        return "–"
+    if mode not in ("hex", "bin") or raw != int(raw):
+        return f"{raw:g}"
+    v = int(raw)
+    bits = RAW_BITS.get(sig.dtype) or (16 if -32768 <= v < 65536 else 32)
+    v &= (1 << bits) - 1
+    if mode == "hex":
+        return f"16#{v:0{bits // 4}X}"
+    b = f"{v:0{bits}b}"
+    return "2#" + "_".join(b[i:i + 4] for i in range(0, bits, 4))
+
+
 def scale(sig: IoSignal, raw: float) -> float:
     """Rohwert in die technische Einheit umrechnen (lineare Skalierung Rohwert min/max -> Messbereich min/max)."""
     span = sig.raw_max - sig.raw_min

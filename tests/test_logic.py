@@ -146,6 +146,20 @@ def test_iocheck_tracker_digital_and_swap():
     assert ch.expected is b and "B" not in ch.note[:0]
 
 
+def test_iocheck_raw_text():
+    """Rohwert dezimal, hexadezimal und binär in der Breite des Datentyps (Zweierkomplement); REAL immer dezimal."""
+    import plc_iocheck as io
+    s = io.IoSignal("EW256", kind="AI", dtype="INT")
+    assert io.raw_text(s, 27648, "dez") == "27648"
+    assert io.raw_text(s, 27648, "hex") == "16#6C00"
+    assert io.raw_text(s, 27648, "bin") == "2#0110_1100_0000_0000"
+    assert io.raw_text(s, -1, "hex") == "16#FFFF"
+    d = io.IoSignal("ED10", kind="AI", dtype="DINT")
+    assert io.raw_text(d, 1, "hex") == "16#00000001"
+    r = io.IoSignal("DB1.DBD0", kind="AI", dtype="REAL")
+    assert io.raw_text(r, 1.5, "bin") == "1.5" and io.raw_text(r, float("nan"), "hex") == "–"
+
+
 def test_iocheck_sort_key():
     """Sortieren der Signalliste: Adressen natürlich, Status in Prüfreihenfolge, Werte als Zahl (ohne Wert zuletzt)."""
     import math
