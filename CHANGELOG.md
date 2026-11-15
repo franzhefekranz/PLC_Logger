@@ -16,6 +16,20 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Neu
 
+* **IO-Check:** Spalte **Ort** (Import aus „Ort“, „Ortskennzeichen“, „Einbauort“, „Location“ …; bearbeitbar, im
+  Ergebnis-Export, in der Zusammenfassung des Protokolls und am Smartphone).
+* **IO-Check:** Spalten der Signalliste per Haken **ein- und ausblenden** (Pfeil am Knopf *Spalten …* oder Rechtsklick
+  auf die Überschrift; persönliche Einstellung).
+* **IO-Check:** **Kurzbericht (PDF)** – nur die Zusammenfassung mit Fortschrittsbalken gesamt, je Signalart, Gruppe und
+  Ort (Pfeil am Knopf *Protokoll (PDF) …*).
+
+### Geändert
+
+* **IO-Check:** Die Importspalten „Ort“ und „Ortskennzeichen“ füllen jetzt das neue Feld *Ort* statt *Gruppe*; das
+  Ergebnis-Export (CSV/Excel) hat die zusätzliche Spalte *Ort*.
+
+### Neu
+
 * **IO-Check:** Signalton wahlweise als **Dauerton bei 1** wie ein Durchgangsprüfer – am PC (Seitenleiste
   *Signalton*: aus / bei richtigem Wechsel / Dauerton) und auf dem Smartphone (🔕 → 🔔 → 🔊).
 

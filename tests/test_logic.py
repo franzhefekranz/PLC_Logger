@@ -195,6 +195,21 @@ def test_iocheck_studio5000_export(tmp_path):
     assert io.studio5000_rows("Adresse;Symbol\nE0.0;B1") is None
 
 
+def test_iocheck_location_and_summary(tmp_path):
+    """Spalte „Ort“ (eigene Spalte, nicht mehr Gruppe) und Kurzbericht als PDF mit Fortschrittsbalken."""
+    import plc_iocheck as io
+    sigs, _w = io.import_rows(["Adresse", "Schrank", "Ort"], [["E0.0", "+S1", "Halle 2"], ["A0.0", "+S1", ""]])
+    assert (sigs[0].group, sigs[0].location) == ("+S1", "Halle 2")
+    assert io.IoSignal.from_dict(sigs[0].to_dict()).location == "Halle 2"
+    assert io.new_signal("E1.0", location=" Kesselhaus ").location == "Kesselhaus"
+    io.set_status(sigs[0], "ok")
+    parts = io.summary_parts(sigs, lambda s: s.location, ["Halle 2", "", "fehlt"])
+    assert [(k, c["gesamt"], c["ok"]) for k, c in parts] == [("Halle 2", 1, 1), ("", 1, 0)]
+    path = io.write_summary(str(tmp_path / "kurz.pdf"), sigs, "Test")
+    assert open(path, "rb").read(5) == b"%PDF-"
+    assert io.result_rows(sigs)[0][6] == "Halle 2"
+
+
 def test_iocheck_raw_text():
     """Rohwert dezimal, hexadezimal und binär in der Breite des Datentyps (Zweierkomplement); REAL immer dezimal."""
     import plc_iocheck as io
@@ -311,7 +326,7 @@ def test_iocheck_project_roundtrip_and_protocol(tmp_path):
     ws = openpyxl.load_workbook(tmp_path / "r.xlsx").active
     assert ws.cell(1, 1).font.bold
     assert ws.cell(2, 1).fill.start_color.rgb.endswith("C8E6C9") and ws.cell(3, 3).fill.start_color.rgb.endswith("FFCDD2")
-    assert ws.cell(2, 8).font.color.rgb.endswith("1B5E20") and ws.cell(4, 1).fill.fill_type is None
+    assert ws.cell(2, 9).font.color.rgb.endswith("1B5E20") and ws.cell(4, 1).fill.fill_type is None
     io.write_result(str(tmp_path / "r2.xlsx"), q.signals, colors=False)
     assert openpyxl.load_workbook(tmp_path / "r2.xlsx").active.cell(2, 1).fill.fill_type is None
     rows = io.matrix_rows(q.signals)

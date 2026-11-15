@@ -31,11 +31,11 @@ STATUS_FG = {"ok": "#1b5e20", "fehler": "#b71c1c", "uebersprungen": "#616161", "
 STATUS_MARK = {"ok": "✓", "fehler": "✗", "uebersprungen": "–", "offen": "", "wiederholen": "↻"}
 LED_ON_IN, LED_ON_OUT, LED_OFF, LED_NONE = "#2ecc71", "#f5a623", "#9aa3ad", "#e5484d"
 FLASH_S = 1.5                     # so lange wird ein Wechsel hervorgehoben
-EDITABLE = ("address", "symbol", "comment", "bmk", "group", "remark")   # in der Tabelle änderbar (Doppelklick)
+EDITABLE = ("address", "symbol", "comment", "bmk", "group", "location", "remark")   # in der Tabelle änderbar (Doppelklick)
 
-COLS = [("nr", N_("Nr.")), ("status", "Status"), ("value", "Wert"), ("address", "Adresse"),
-        ("symbol", "Symbol"),
-        ("comment", "Kommentar"), ("bmk", "BMK"), ("group", "Gruppe"), ("kind", "Typ"), ("plc", "Steuerung"),
+COLS = [("nr", N_("Nr.")), ("status", "Status"), ("value", "Wert"), ("address", "Adresse"), ("symbol", "Symbol"),
+        ("comment", "Kommentar"), ("bmk", "BMK"), ("group", "Gruppe"), ("location", N_("Ort")), ("kind", "Typ"),
+        ("plc", "Steuerung"),
         ("checked_at", "Geprüft am"), ("checker", "Prüfer"), ("photos", "Fotos"), ("remark", "Bemerkung")]
 COL = {k: i for i, (k, _t) in enumerate(COLS)}
 
@@ -167,6 +167,15 @@ class ContinuousTone:
             except OSError:
                 pass
             self.proc = None
+
+
+def hidden_columns():
+    """In der Signalliste ausgeblendete Spalten (persönliche Einstellung ``iocheck_spalten_aus``)."""
+    try:
+        from plc_common import load_settings
+        return {str(k) for k in load_settings().get("iocheck_spalten_aus", []) if str(k) in COL}
+    except Exception:
+        return set()
 
 
 def status_fg(status):
@@ -330,6 +339,7 @@ class SignalModel(QAbstractTableModel):
             return QColor((LED_ON_IN if s.is_input else LED_ON_OUT) if s.value else LED_OFF)
         if role == Qt.ItemDataRole.ToolTipRole:
             tip = [f"<b>{s.address}</b> {s.symbol}", s.comment, s.bmk and f"BMK: {s.bmk}",
+                   s.location and f"{tr('Ort')}: {s.location}",
                    tr(io.KIND_TEXT.get(s.kind, s.kind))]
             if not s.binary:
                 tip.append(tr("Messbereich {0} … {1} {2} (Rohwert {3} … {4})").format(
@@ -456,7 +466,7 @@ class SignalFilter(QSortFilterProxyModel):
         if self.status and s.status != self.status:
             return False
         if self.text:
-            hay = " ".join((s.address, s.symbol, s.comment, s.bmk, s.remark)).lower()
+            hay = " ".join((s.address, s.symbol, s.comment, s.bmk, s.location, s.remark)).lower()
             return all(w in hay for w in self.text.split())
         return True
 
@@ -605,6 +615,7 @@ class MatrixWidget(QWidget):
             self.setToolTip("")
             return
         lines = [f"<b>{sig.address}</b> {sig.symbol}", sig.comment, sig.bmk and f"BMK: {sig.bmk}",
+                 sig.location and f"{tr('Ort')}: {sig.location}",
                  tr("Wert: {0}").format(value_text(sig)), tr("Status: {0}").format(tr(io.STATUS[sig.status]))]
         if sig.checked_at:
             lines.append(f"{sig.checked_at} {sig.checker}")
@@ -657,6 +668,9 @@ class AddSignalDialog(QDialog):
         f.addRow(tr("Kommentar:"), self.ed_com)
         self.ed_bmk = QLineEdit()
         f.addRow(tr("BMK:"), self.ed_bmk)
+        self.ed_loc = QLineEdit()
+        self.ed_loc.setPlaceholderText(tr("z. B. Halle 2, +S1, Kesselhaus"))
+        f.addRow(tr("Ort:"), self.ed_loc)
         self.cb_group = QComboBox()
         self.cb_group.setEditable(True)
         self.cb_group.addItems([""] + [g for g in groups if g])
@@ -702,7 +716,7 @@ class AddSignalDialog(QDialog):
                                         self.ed_bmk.text(), self.cb_group.currentText(),
                                         self.cb_kind.currentData() or "",
                                         self.cb_plc.currentData() if self.cb_plc.count() > 1 else "",
-                                        self.ed_range.text())
+                                        self.ed_range.text(), self.ed_loc.text())
         except ValueError as e:
             QMessageBox.warning(self, self.windowTitle(), str(e))
             return
@@ -1204,8 +1218,15 @@ class IoCheckWindow(QMainWindow):
 
         act(tr("IO-Liste importieren …"), self.import_list,
             tr("Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)"))
-        act(tr("Spalten …"), self.edit_columns,
-            tr("Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt"))
+        a_cols = act(tr("Spalten …"), self.edit_columns,
+                     tr("Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht "
+                        "angezeigt. Pfeil: Spalten der Signalliste ein- und ausblenden"))
+        cols_menu = QMenu(self)
+        cols_menu.aboutToShow.connect(lambda: self.fill_columns_menu(cols_menu))
+        a_cols.setMenu(cols_menu)
+        btn = tb.widgetForAction(a_cols)
+        if isinstance(btn, QToolButton):
+            btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         act(tr("Öffnen …"), lambda: self.open_project(), tr("Gespeicherten IO-Check öffnen"), "Ctrl+O")
         self.act_save = act(tr("Speichern"), lambda: self.save_project(),
                             tr("Prüfstand speichern (*.iocheck.json); Pfeil: automatisch speichern ein/aus"), "Ctrl+S")
@@ -1236,6 +1257,10 @@ class IoCheckWindow(QMainWindow):
         self.act_photos_pdf.setCheckable(True)
         self.act_photos_pdf.setChecked(io.protocol_photos())
         self.act_photos_pdf.toggled.connect(lambda on: self._save_setting(iocheck_protokoll_fotos=bool(on)))
+        menu.addSeparator()
+        menu.addAction(tr("Kurzbericht (PDF) …"), self.make_summary).setToolTip(
+            tr("Nur die Zusammenfassung: Fortschrittsbalken gesamt, je Signalart, Gruppe und Ort"))
+        menu.setToolTipsVisible(True)
         self.act_protocol.setMenu(menu)
         btn = tb.widgetForAction(self.act_protocol)
         if isinstance(btn, QToolButton):
@@ -1346,7 +1371,7 @@ class IoCheckWindow(QMainWindow):
         self.view.setEditTriggers(QAbstractItemView.EditTrigger.DoubleClicked
                                   | QAbstractItemView.EditTrigger.EditKeyPressed)
         for key, w in (("nr", 42), ("status", 110), ("value", 150), ("address", 90), ("symbol", 150), ("comment", 200),
-                       ("bmk", 90), ("group", 80), ("kind", 40), ("plc", 70), ("checked_at", 130), ("checker", 80),
+                       ("bmk", 90), ("group", 80), ("location", 80), ("kind", 40), ("plc", 70), ("checked_at", 130), ("checker", 80),
                        ("photos", 45)):
             self.view.setColumnWidth(COL[key], w)
         self.view.selectionModel().currentRowChanged.connect(self._row_changed)
@@ -1560,10 +1585,43 @@ class IoCheckWindow(QMainWindow):
             pass
 
     def _apply_columns(self):
-        """Spalten abgeschalteter Felder (leere Überschriften, siehe „Spalten …“) in der Signalliste ausblenden."""
-        off = io.disabled_fields()
+        """Spalten ausblenden: abgeschaltete Felder (leere Überschriften, siehe „Spalten …“) und die im Menü
+        „Spalten anzeigen“ abgewählten."""
+        off = io.disabled_fields() | hidden_columns()
         for key, _t in COLS:
             self.view.setColumnHidden(COL[key], key in off)
+
+    def fill_columns_menu(self, menu):
+        """Menü „Spalten anzeigen“: je Spalte ein Haken (persönliche Einstellung). Spalten abgeschalteter Felder sind
+        gesperrt (Einstellung unter „Spalten …“)."""
+        menu.clear()
+        menu.setToolTipsVisible(True)
+        off, hidden = io.disabled_fields(), hidden_columns()
+        for key, title in COLS:
+            a = menu.addAction(tr(title))
+            a.setCheckable(True)
+            a.setChecked(key not in off and key not in hidden)
+            if key in off:
+                a.setEnabled(False)
+                a.setToolTip(tr("Feld unter „Spalten …“ abgeschaltet"))
+            a.toggled.connect(lambda on, k=key: self.show_column(k, on))
+        menu.addSeparator()
+        menu.addAction(tr("Alle Spalten anzeigen"), lambda: self._set_hidden(set()))
+        return menu
+
+    def show_column(self, key, on):
+        """Spalte der Signalliste ein- oder ausblenden (gemerkt)."""
+        hidden = hidden_columns()
+        if on:
+            hidden.discard(key)
+        else:
+            hidden.add(key)
+        self._set_hidden(hidden)
+
+    def _set_hidden(self, hidden):
+        """Ausgeblendete Spalten speichern und anwenden."""
+        self._save_setting(iocheck_spalten_aus=sorted(hidden))
+        self._apply_columns()
 
     def _header_menu(self, pos):
         """Rechtsklick auf eine Spaltenüberschrift: Spaltenfilter (Text enthält …, Auswahl der vorkommenden Werte)."""
@@ -1648,6 +1706,9 @@ class IoCheckWindow(QMainWindow):
         menu.addSeparator()
         act_all = menu.addAction(tr("Alle Spaltenfilter aufheben"))
         act_all.setEnabled(bool(self.proxy.columns))
+        sub = menu.addMenu(tr("Spalten anzeigen"))
+        self.fill_columns_menu(sub)
+        menu.addAction(tr("Spalte „{0}“ ausblenden").format(tr(title)), lambda: self.show_column(key, False))
         act_all.triggered.connect(lambda: (self.proxy.clear_column_filters(), self._update_progress(),
                                            self._reading_filter_changed()))
         menu.apply_filter, menu.clear_filter, menu.edit, menu.values = apply, clear, ed, lst   # für Tests
@@ -1750,7 +1811,7 @@ class IoCheckWindow(QMainWindow):
             self.select_signal(other)
             return other
         if other is not None:                          # aus einem Scan-Bereich: Texte übernehmen, Prüfstand bleibt
-            for k in ("symbol", "comment", "bmk", "group"):
+            for k in ("symbol", "comment", "bmk", "group", "location"):
                 if getattr(sig, k):
                     setattr(other, k, getattr(sig, k))
             io.adopt_scanned(self.project, [other])
@@ -2116,6 +2177,34 @@ class IoCheckWindow(QMainWindow):
         from PySide6.QtCore import QUrl
         from PySide6.QtGui import QDesktopServices
         QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    def make_summary(self, path=None):
+        """Kurzbericht (PDF, nur Zusammenfassung mit Fortschrittsbalken) erzeugen und öffnen; ``path``: ohne Dialog
+        (Tests)."""
+        if not self.all_signals:
+            QMessageBox.information(self, tr("IO-Check"), tr("Zuerst eine IO-Liste importieren oder Bereiche scannen."))
+            return None
+        if path is None:
+            base = os.path.splitext(self.project.path.replace(io.EXTENSION, ""))[0] if self.project.path else "io-check"
+            path, _f = plc_filedlg.save_name(self, tr("Kurzbericht (PDF)"), base + "_kurzbericht.pdf",
+                                             tr("PDF (*.pdf)"))
+            if not path:
+                return None
+            open_it = True
+        else:
+            open_it = False
+        try:
+            from plc_common import logo_paths
+            io.write_summary(path, self.all_signals, self._project_title(), self.project.path, self.plcs,
+                             logo_paths(self._conn()))
+        except Exception as e:
+            QMessageBox.warning(self, tr("Kurzbericht (PDF)"), str(e))
+            return None
+        if open_it:
+            from PySide6.QtCore import QUrl
+            from PySide6.QtGui import QDesktopServices
+            QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        return path
 
     def show_mobile(self):
         """Adresse der Mobilseite mit QR-Code zeigen.

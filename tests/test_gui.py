@@ -568,6 +568,17 @@ def test_iocheck_window(qt_log, demo_config, tmp_path, monkeypatch):
     w.tone.set(False)
     assert not w.tone.on and w.tone.proc is None
     w.cb_tone.setCurrentIndex(w.cb_tone.findData("aus"))
+    # Spalten ein-/ausblenden (Haken, gemerkt) und Kurzbericht
+    w.show_column("bmk", False)
+    assert w.view.isColumnHidden(d.COL["bmk"]) and "bmk" in plc_common.load_settings()["iocheck_spalten_aus"]
+    menu = w.fill_columns_menu(d.QMenu(w))
+    a = next(x for x in menu.actions() if x.text() == "Ort")
+    assert a.isChecked()
+    a.setChecked(False)
+    assert w.view.isColumnHidden(d.COL["location"])
+    w._set_hidden(set())
+    assert not w.view.isColumnHidden(d.COL["location"]) and not w.view.isColumnHidden(d.COL["bmk"])
+    assert open(w.make_summary(str(tmp_path / "kurz.pdf")), "rb").read(5) == b"%PDF-"
     monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
     cd = d.ColumnsDialog(w, {})
     cd.table.item(cd.fields.index("bmk"), 1).setText("")             # BMK abschalten

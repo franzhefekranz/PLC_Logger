@@ -4369,7 +4369,9 @@ werden an ihrer Überschrift erkannt (Groß-/Kleinschreibung egal):
    * - BMK
      - BMK, Betriebsmittelkennzeichen, Kennzeichen, AKZ
    * - Gruppe
-     - Gruppe, Schrank, Baugruppe, Ort, Station, Modul
+     - Gruppe, Schrank, Baugruppe, Station, Modul, Anlagenteil
+   * - Ort
+     - Ort, Ortskennzeichen, Einbauort, Standort, Raum, Location
    * - Typ
      - Typ, Art, Signalart (DI/DO/AI/AO, DE/DA/AE/AA, Eingang/Ausgang …)
    * - Datentyp
@@ -4430,6 +4432,13 @@ schaltet die Spalte ab:** sie wird nicht eingelesen und in der Signalliste nicht
 angezeigt (z. B. BMK oder Steuerung, wenn es sie nicht gibt). Die Adresse ist Pflicht.
 **Vorgabe** stellt die eingebauten Namen wieder her. Die Einstellung gilt für alle
 Prüfstände dieses Benutzers.
+
+**Spalten ein- und ausblenden:** Über den Pfeil am Knopf **Spalten …** (oder Rechtsklick
+auf eine Spaltenüberschrift › *Spalten anzeigen*) wird jede Spalte der Signalliste per
+Haken ein- oder ausgeblendet; *Spalte „…“ ausblenden* im Rechtsklick-Menü blendet die
+angeklickte aus, *Alle Spalten anzeigen* holt alle zurück. Das ist eine persönliche
+Einstellung und ändert nichts am Import – ausgeblendete Spalten werden weiter eingelesen
+und gespeichert.
 
 Signalliste und Prüfstatus
 ----------------------------------------------------------------------
@@ -4727,7 +4736,7 @@ werden gemerkt und gelten auch für **PDF** auf der Mobilseite.
 
 * Kopf: Projekt, Prüfstand, Steuerungen, Prüfzeitraum und Ergebnis (geprüft in %, OK,
   Fehler, übersprungen, offen); darüber Kundenlogo und Logo der Konfiguration.
-* **Zusammenfassung** je Signalart und je Gruppe, **Prüfer** mit Anzahl der geprüften
+* **Zusammenfassung** je Signalart, je Gruppe und je Ort, **Prüfer** mit Anzahl der geprüften
   Signale (PC-Benutzer bzw. Anmeldename im Webserver).
 * **Fehler und offene Signale** – die Restpunkte.
 * **Alle Signale** je Gruppe mit Adresse, Symbol, Kommentar, BMK, Typ, Status, Prüfdatum
@@ -4737,6 +4746,13 @@ werden gemerkt und gelten auch für **PDF** auf der Mobilseite.
 * **Anhang: Fotos** (wenn eingeschaltet): alle Fotos fortlaufend nummeriert, zwei
   nebeneinander (quer: drei), darunter Signal, BMK, Status und Bemerkung; in der Spalte
   Bemerkung steht der Verweis („Foto 3“).
+
+**Kurzbericht (PDF) …** (Pfeil am Knopf *Protokoll (PDF) …*) enthält nur die
+Zusammenfassung auf einer Seite – für den Stand der Inbetriebnahme zwischendurch: Kopf
+(Projekt, Prüfstand, Steuerungen, Prüfzeitraum) und **Fortschrittsbalken** gesamt, je
+Signalart, je Gruppe und je Ort. Jeder Balken zeigt die Anteile OK (grün), Fehler (rot),
+übersprungen (grau), wiederholen (orange) und offen (hell), rechts „geprüft/gesamt (%)“.
+Abschnitte ohne Einträge (z. B. keine Orte in der Liste) entfallen.
 
 Aus Scan-Bereichen erscheinen nur bearbeitete Signale. Das Protokoll entsteht ohne
 Zusatzprogramm (wie die PDF-Berichte); Zeichen außerhalb des westeuropäischen

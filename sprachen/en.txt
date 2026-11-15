@@ -2936,6 +2936,9 @@
 @ Gruppe
 > Group
 
+@ Ort
+> Location
+
 @ Typ (DI/DO/AI/AO)
 > Type (DI/DO/AI/AO)
 
@@ -3065,8 +3068,8 @@
 @ Prüfstand zuerst am PC speichern – die Fotos liegen in einem Ordner daneben.
 > Save the test progress file on the PC first – the photos are kept in a folder next to it.
 
-@ IO-Check – Abnahmeprotokoll
-> IO check – acceptance protocol
+@ IO-Check – Kurzbericht
+> IO check – short report
 
 @ Prüfstand:
 > Test file:
@@ -3076,6 +3079,24 @@
 
 @ Prüfzeitraum:
 > Test period:
+
+@ Gesamt
+> Total
+
+@ Alle Signale
+> All signals
+
+@ {0} OK, {1} Fehler, {2} übersprungen, {3} wiederholen, {4} offen
+> {0} OK, {1} faults, {2} skipped, {3} to repeat, {4} open
+
+@ Signalart
+> Signal type
+
+@ Nach {0}
+> By {0}
+
+@ IO-Check – Abnahmeprotokoll
+> IO check – acceptance protocol
 
 @ Ergebnis:
 > Result:
@@ -3089,12 +3110,6 @@
 @ Zusammenfassung
 > Summary
 
-@ Signalart
-> Signal type
-
-@ Gesamt
-> Total
-
 @ Signale
 > Signals
 
@@ -3106,9 +3121,6 @@
 
 @ Keine – alle Signale geprüft und in Ordnung bzw. übersprungen.
 > None – all signals checked and OK or skipped.
-
-@ Alle Signale
-> All signals
 
 @ Bestätigung
 > Confirmation
@@ -3165,6 +3177,12 @@
 
 @ BMK:
 > Device tag:
+
+@ z. B. Halle 2, +S1, Kesselhaus
+> e.g. Hall 2, +S1, boiler house
+
+@ Ort:
+> Location:
 
 @ Gruppe:
 > Group:
@@ -3316,8 +3334,8 @@
 @ Spalten …
 > Columns …
 
-@ Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt
-> Define the column headings of the IO list; empty fields are neither imported nor shown
+@ Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt. Pfeil: Spalten der Signalliste ein- und ausblenden
+> Define the column headings of the IO list; empty fields are neither read nor displayed. Arrow: show and hide columns of the signal list
 
 @ Öffnen …
 > Open …
@@ -3354,6 +3372,12 @@
 
 @ Fotos anhängen
 > Attach photos
+
+@ Kurzbericht (PDF) …
+> Short report (PDF) …
+
+@ Nur die Zusammenfassung: Fortschrittsbalken gesamt, je Signalart, Gruppe und Ort
+> Summary only: progress bars in total, per signal kind, group and location
 
 @ Fotos …
 > Photos …
@@ -3487,6 +3511,12 @@
 @ Name oder Kürzel des Prüfers (für Liste und Protokoll).\nLeer lassen: angemeldeter Benutzer „{0}“.
 > Name or initials of the tester (for list and protocol).\nLeave empty: logged-in user “{0}”.
 
+@ Feld unter „Spalten …“ abgeschaltet
+> Field switched off under “Columns …”
+
+@ Alle Spalten anzeigen
+> Show all columns
+
 @ enthält …
 > contains …
 
@@ -3501,6 +3531,12 @@
 
 @ Alle Spaltenfilter aufheben
 > Clear all column filters
+
+@ Spalten anzeigen
+> Show columns
+
+@ Spalte „{0}“ ausblenden
+> Hide column “{0}”
 
 @ (nicht gespeichert)
 > (not saved)
@@ -3636,6 +3672,9 @@
 
 @ PDF (*.pdf)
 > PDF (*.pdf)
+
+@ Kurzbericht (PDF)
+> Short report (PDF)
 
 @ Mobil
 > Mobile

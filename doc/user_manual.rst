@@ -4264,6 +4264,8 @@ table (export to Excel) or an own list. The columns are recognized by their head
      - BMK, Device tag, Betriebsmittelkennzeichen
    * - Group
      - Group, Cabinet, Station, Module, Gruppe, Schrank
+   * - Location
+     - Location, Place, Room, Ort, Ortskennzeichen, Einbauort
    * - Type
      - Type, Kind, Signal type (DI/DO/AI/AO, Input/Output …)
    * - Data type
@@ -4322,6 +4324,12 @@ here once. **An empty field switches the column off:** it is neither imported no
 in the signal list (e.g. device tag or controller if they do not exist). The address is
 required. **Default** restores the built-in names. The setting applies to all test
 files of this user.
+
+**Showing and hiding columns:** via the arrow on the button **Columns …** (or right-click
+on a column header › *Show columns*) every column of the signal list is shown or hidden
+with a tick; *Hide column “…”* in the right-click menu hides the clicked one, *Show all
+columns* brings all of them back. This is a personal setting and does not change the import
+– hidden columns are still read and saved.
 
 Signal list and test status
 ----------------------------------------------------------------------
@@ -4613,7 +4621,7 @@ apply to **PDF** on the mobile page.
 
 * Header: project, test progress file, controllers, test period and result (checked in
   %, OK, faults, skipped, open); above it the customer logo and logo of the configuration.
-* **Summary** per signal type and per group, **checkers** with the number of checked
+* **Summary** per signal type, per group and per location, **checkers** with the number of checked
   signals (PC user or login name in the web server).
 * **Faults and open signals** – the remaining items.
 * **All signals** per group with address, symbol, comment, device tag, type, status,
@@ -4623,6 +4631,13 @@ apply to **PDF** on the mobile page.
 * **Appendix: photos** (if switched on): all photos numbered consecutively, two side by
   side (landscape: three), below them signal, device tag, status and remark; the remark
   column contains the reference (“Photo 3”).
+
+**Short report (PDF) …** (arrow on the button *Protocol (PDF) …*) contains only the summary
+on one page – for the commissioning status in between: header (project, test file,
+controllers, test period) and **progress bars** in total, per signal type, per group and per
+location. Each bar shows the shares OK (green), fault (red), skipped (grey), repeat (orange)
+and open (light), on the right “checked/total (%)”. Sections without entries (e.g. no
+locations in the list) are omitted.
 
 From scan ranges only edited signals appear. The protocol is created without additional
 programs (like the PDF reports); characters outside the Western European character set

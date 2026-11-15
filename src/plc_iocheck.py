@@ -50,7 +50,8 @@ class IoSignal:
     symbol: str = ""
     comment: str = ""
     bmk: str = ""                         # Betriebsmittelkennzeichen
-    group: str = ""                       # Schrank, Baugruppe, Ort …
+    group: str = ""                       # Schrank, Baugruppe, Anlagenteil …
+    location: str = ""                    # Ort (Einbauort, Ortskennzeichen, Raum …)
     kind: str = "DI"                      # DI, DO, AI, AO
     dtype: str = "BOOL"
     plc: str = ""                         # Name der Steuerung ("" = erste Steuerung der Konfiguration)
@@ -354,8 +355,9 @@ COLUMNS = {
     "comment": ["Kommentar", "Comment", "Beschreibung", "Description", "Text", "Funktion", "Function",
                 "Bezeichnung"],
     "bmk": ["BMK", "Betriebsmittelkennzeichen", "Kennzeichen", "Betriebsmittel", "Device Tag", "Tag ID", "AKZ"],
-    "group": ["Gruppe", "Schrank", "Baugruppe", "Ort", "Ortskennzeichen", "Group", "Cabinet", "Station", "Modul",
-              "Module", "Anlage", "Anlagenteil"],
+    "group": ["Gruppe", "Schrank", "Baugruppe", "Group", "Cabinet", "Station", "Modul", "Module", "Anlage",
+              "Anlagenteil"],
+    "location": ["Ort", "Ortskennzeichen", "Einbauort", "Location", "Place", "Raum", "Room", "OKZ", "Standort"],
     "kind": ["Typ", "Art", "Signalart", "Kind", "Signal Type", "IO-Typ", "IO Type", "Type"],
     "dtype": ["Datentyp", "Data Type", "DType"],
     "plc": ["Steuerung", "SPS", "PLC", "Controller", "CPU"],
@@ -371,7 +373,7 @@ COLUMNS = {
 
 # Anzeigenamen der Felder im Dialog „Spalten der IO-Liste“ (Reihenfolge = Reihenfolge im Dialog)
 FIELD_TEXT = {"address": N_("Adresse"), "symbol": N_("Symbol"), "comment": N_("Kommentar"), "bmk": N_("BMK"),
-              "group": N_("Gruppe"), "kind": N_("Typ (DI/DO/AI/AO)"), "dtype": N_("Datentyp"), "plc": N_("Steuerung"),
+              "group": N_("Gruppe"), "location": N_("Ort"), "kind": N_("Typ (DI/DO/AI/AO)"), "dtype": N_("Datentyp"), "plc": N_("Steuerung"),
               "range": N_("Messbereich (z. B. 0 … 10 bar)"), "eng_min": N_("Messbereich von"),
               "eng_max": N_("Messbereich bis"), "unit": N_("Einheit"), "raw_min": N_("Rohwert von"),
               "raw_max": N_("Rohwert bis"), "status": N_("Status"), "remark": N_("Bemerkung")}
@@ -491,7 +493,8 @@ def import_rows(header, rows, aliases=None):
             continue
         kind, dtype = guess_kind_dtype(address, cell(row, "kind"), cell(row, "dtype"))
         sig = IoSignal(address=address.lstrip("%") if s7_parts(address) else address, symbol=cell(row, "symbol"),
-                       comment=cell(row, "comment"), bmk=cell(row, "bmk"), group=cell(row, "group"), kind=kind,
+                       comment=cell(row, "comment"), bmk=cell(row, "bmk"), group=cell(row, "group"),
+                       location=cell(row, "location"), kind=kind,
                        dtype=dtype, plc=cell(row, "plc"), unit=cell(row, "unit"), remark=cell(row, "remark"))
         rng = parse_range(cell(row, "range"))
         if rng:
@@ -514,7 +517,8 @@ def import_rows(header, rows, aliases=None):
     return signals, warnings
 
 
-def new_signal(address, symbol="", comment="", bmk="", group="", kind="", plc="", range_text="") -> IoSignal:
+def new_signal(address, symbol="", comment="", bmk="", group="", kind="", plc="", range_text="",
+               location="") -> IoSignal:
     """Signal von Hand anlegen (wie eine Zeile der IO-Liste): Signalart und Datentyp aus der Adresse, wenn ``kind``
     leer ist; ``range_text`` z. B. „0..10 bar“. ValueError ohne Adresse."""
     address = (address or "").strip()
@@ -522,7 +526,8 @@ def new_signal(address, symbol="", comment="", bmk="", group="", kind="", plc=""
         raise ValueError(tr("Bitte eine Adresse eintragen."))
     kind, dtype = guess_kind_dtype(address, kind)
     sig = IoSignal(address=address.lstrip("%") if s7_parts(address) else address, symbol=symbol.strip(),
-                   comment=comment.strip(), bmk=bmk.strip(), group=group.strip(), kind=kind, dtype=dtype, plc=plc)
+                   comment=comment.strip(), bmk=bmk.strip(), group=group.strip(), location=location.strip(),
+                   kind=kind, dtype=dtype, plc=plc)
     rng = parse_range(range_text or "")
     if rng:
         sig.eng_min, sig.eng_max, sig.unit = rng[0], rng[1], rng[2]
@@ -670,7 +675,7 @@ def change_address(sig: IoSignal, address: str):
 def worth_saving(sig: IoSignal) -> bool:
     """Signal aus einem Scan-Bereich mit Inhalt (Status, Bemerkung, Messpunkte oder eingetragene Texte)."""
     return bool(sig.status != "offen" or sig.remark or sig.points or sig.photos or sig.symbol or sig.comment or sig.bmk
-                or sig.group)
+                or sig.group or sig.location)
 
 
 CHECK_FIELDS = ("status", "checked_at", "checker", "remark", "points", "seen", "photos")
@@ -1073,7 +1078,7 @@ class IoProject:
                    config=doc.get("config", ""), options=doc.get("options", {}), path=path)
 
 
-RESULT_HEADER = [N_("Steuerung"), N_("Adresse"), N_("Symbol"), N_("Kommentar"), N_("BMK"), N_("Gruppe"), N_("Typ"),
+RESULT_HEADER = [N_("Steuerung"), N_("Adresse"), N_("Symbol"), N_("Kommentar"), N_("BMK"), N_("Gruppe"), N_("Ort"), N_("Typ"),
                  N_("Status"), N_("Geprüft am"), N_("Prüfer"), N_("Bemerkung"), N_("Messpunkte")]
 
 
@@ -1083,7 +1088,8 @@ def result_rows(signals):
     for s in signals:
         pts = ", ".join(f"{p} %: {s.points[str(p)]:g}{(' ' + s.unit) if s.unit else ''}"
                         for p in POINTS if str(p) in s.points)
-        rows.append([s.plc, s.address, s.symbol, s.comment, s.bmk, s.group, s.kind, tr(STATUS.get(s.status, s.status)),
+        rows.append([s.plc, s.address, s.symbol, s.comment, s.bmk, s.group, s.location, s.kind,
+                     tr(STATUS.get(s.status, s.status)),
                      s.checked_at, s.checker, s.remark, pts])
     return rows
 
@@ -1320,7 +1326,7 @@ class IoWebBridge:
             static = None
             if client_version != version:
                 static = {"sig": [[s.address, s.symbol, s.comment, s.bmk, s.group, s.kind, s.unit, s.eng_min,
-                                   s.eng_max, s.raw_min, s.raw_max, s.plc] for s in sigs],
+                                   s.eng_max, s.raw_min, s.raw_max, s.plc, s.location] for s in sigs],
                           "groups": self.groups, "matrix": self.matrix}
         index = {id(s): i for i, s in enumerate(sigs)}
         dyn = []
@@ -1435,6 +1441,95 @@ def protocol_landscape() -> bool:
         return False
 
 
+SUMMARY_COLORS = {"ok": "#43a047", "fehler": "#e53935", "uebersprungen": "#9e9e9e", "wiederholen": "#fb8c00",
+                  "offen": "#e3e8ee"}
+
+
+def summary_parts(sigs, keyfn, labels):
+    """Fortschritt je Wert von ``keyfn`` (Signalart, Gruppe, Ort) -> [(Bezeichnung, progress-dict)], ohne leere."""
+    out = []
+    for key in labels:
+        part = [s for s in sigs if keyfn(s) == key]
+        if part:
+            out.append((key, progress(part)))
+    return out
+
+
+def write_summary(path, signals, project="", source="", plcs=(), logos=(), landscape=None):
+    """Kurzbericht als PDF: nur die Zusammenfassung – Kopfdaten und Fortschrittsbalken gesamt, je Signalart, je Gruppe
+    und je Ort (Anteile OK, Fehler, übersprungen, wiederholen, offen; rechts „geprüft/gesamt (%)“)."""
+    from plc_report import MARGIN, _Doc, text_width
+    if landscape is None:
+        landscape = protocol_landscape()
+    sigs = protocol_signals(signals)
+    txt, mute = "#1b2430", "#5b6878"
+    doc = _Doc(tr("IO-Check – Kurzbericht"), project or os.path.basename(source), logos, landscape)
+    p = doc.pdf
+    pr = progress(sigs)
+    times = sorted(s.checked_at for s in sigs if s.checked_at)
+    for k, v in ((tr("Projekt:"), project or "—"), (tr("Prüfstand:"), os.path.basename(source) or "—"),
+                 (tr("Steuerungen:"), ", ".join(f"{pl.name} ({pl.summary()})" for pl in plcs) or "—"),
+                 (tr("Prüfzeitraum:"), f"{times[0][:16]} – {times[-1][:16]}" if times else "—")):
+        p.text(MARGIN, doc.y, k, 9, bold=True, color=txt)
+        p.text(MARGIN + 80, doc.y, v, 9, color=txt)
+        doc.y -= 13
+    doc.y -= 4
+    order = ("ok", "fehler", "uebersprungen", "wiederholen", "offen")
+    # Legende
+    x = MARGIN
+    for st in order:
+        p.rect(x, doc.y - 1, 9, 9, fill=SUMMARY_COLORS[st], stroke="#9aa5b1" if st == "offen" else None)
+        label = tr(STATUS[st])
+        p.text(x + 13, doc.y, label, 8.5, color=txt)
+        x += 13 + text_width(label, 8.5) + 16
+    doc.y -= 18
+    width = p.W - 2 * MARGIN
+    label_w, num_w = min(170.0, width * 0.32), 92.0
+
+    def bar(label, c, height=12.0, bold=False):
+        """Eine Zeile: Bezeichnung, gestapelter Balken der Status, rechts geprüft/gesamt und Prozent."""
+        doc.need(height + 8)
+        y = doc.y - height + 3
+        name = label
+        while name and text_width(name, 8.5, bold) > label_w - 6:      # zu lang: kürzen
+            name = name[:-1]
+        p.text(MARGIN, doc.y - height / 2 + 1, name + ("…" if name != label else ""), 8.5, bold=bold, color=txt)
+        x0, bw, total = MARGIN + label_w, width - label_w - num_w, max(1, c["gesamt"])
+        p.rect(x0, y, bw, height, fill=SUMMARY_COLORS["offen"])
+        xx = x0
+        for st in order[:-1]:
+            w = bw * c[st] / total
+            if w > 0:
+                p.rect(xx, y, w, height, fill=SUMMARY_COLORS[st])
+                xx += w
+        p.rect(x0, y, bw, height, stroke="#9aa5b1", width=0.4)
+        done = c["ok"] + c["fehler"] + c["uebersprungen"]
+        p.text(p.W - MARGIN, doc.y - height / 2 + 1, f"{done}/{c['gesamt']}  ({100.0 * done / total:.0f} %)", 8.5,
+               bold=bold, color=txt, align="right")
+        doc.y -= height + 6
+
+    doc.heading(tr("Gesamt"))
+    bar(tr("Alle Signale"), pr, 18.0, True)
+    line = tr("{0} OK, {1} Fehler, {2} übersprungen, {3} wiederholen, {4} offen").format(
+        pr["ok"], pr["fehler"], pr["uebersprungen"], pr["wiederholen"], pr["offen"])
+    p.text(MARGIN + label_w, doc.y, line, 8, color=mute)
+    doc.y -= 14
+    sections = [(tr("Signalart"), [(f"{k} – {tr(KIND_TEXT[k])}", c) for k, c in
+                                   summary_parts(sigs, lambda s: s.kind, KINDS)]),
+                (tr("Gruppe"), summary_parts(sigs, lambda s: s.group, sorted({s.group for s in sigs}, key=natural_key))),
+                (tr("Ort"), summary_parts(sigs, lambda s: s.location,
+                                          sorted({s.location for s in sigs}, key=natural_key)))]
+    for title, parts in sections:
+        if not parts or (len(parts) == 1 and not parts[0][0]):        # Feld nicht belegt: Abschnitt entfällt
+            continue
+        doc.heading(tr("Nach {0}").format(title))
+        for label, c in parts:
+            bar(label or "—", c)
+    os.makedirs(os.path.dirname(os.path.abspath(path)) or ".", exist_ok=True)
+    p.save(path, tr("IO-Check – Kurzbericht"))
+    return path
+
+
 def write_protocol(path, signals, project="", source="", plcs=(), logos=(), landscape=None, photos=None):
     """Abnahmeprotokoll als PDF: Zusammenfassung, Prüfer, Fehler/offene Signale, alle Signale je Gruppe,
     Unterschriftsfelder, als Anhang die Fotos. Prüfer = eingestellter Name am PC bzw. Anmeldename im Webserver;
@@ -1488,9 +1583,12 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
     _table(doc, heads, [[f"{k} – {tr(KIND_TEXT[k])}" if k else r[0]] + r[1:]
                         for k, r in zip([k for k in KINDS if any(s.kind == k for s in sigs)],
                                         count_rows(lambda s: s.kind, KINDS))], w6, ["left"] + ["right"] * 5)
-    groups = sorted({s.group for s in sigs})
+    groups = sorted({s.group for s in sigs}, key=natural_key)
     if len(groups) > 1 or (groups and groups[0]):
         _table(doc, [tr("Gruppe")] + heads[1:], count_rows(lambda s: s.group, groups), w6, ["left"] + ["right"] * 5)
+    places = sorted({s.location for s in sigs}, key=natural_key)
+    if len(places) > 1 or (places and places[0]):
+        _table(doc, [tr("Ort")] + heads[1:], count_rows(lambda s: s.location, places), w6, ["left"] + ["right"] * 5)
 
     # Prüfer
     by = {}
@@ -1592,6 +1690,8 @@ def write_protocol(path, signals, project="", source="", plcs=(), logos=(), land
                 cap = f"{tr('Foto {0}').format(k + j + 1)}: {s.address} {s.symbol}".strip()
                 if s.bmk:
                     cap += f" · {s.bmk}"
+                if s.location:
+                    cap += f" · {s.location}"
                 p.text(x, doc.y - h - 10, fit(cap, 7.5, cw, True), 7.5, bold=True, color=txt)
                 sub = tr(STATUS[s.status]) + (f" – {s.remark}" if s.remark else "")
                 p.text(x, doc.y - h - 19, fit(sub, 7, cw), 7, color=colors[s.status])

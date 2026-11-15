@@ -154,7 +154,7 @@ function fault(i,raw){var s=S.sig[i];if(raw==null)return '';if(s[10]==27648&&(s[
 
 function build(){
  var h='';S.sig.forEach(function(s,i){h+='<div class="r" id="r'+i+'" onclick="pick('+i+')"><span class="led"></span><div class="t"><b>'+esc(s[0])+
-  '</b> '+esc(s[1])+'<div class="c">'+esc(s[2])+(s[3]?' · '+esc(s[3]):'')+'</div></div><div class="v"></div><div class="st"></div></div>';});
+  '</b> '+esc(s[1])+'<div class="c">'+esc(s[2])+(s[3]?' · '+esc(s[3]):'')+(s[12]?' · '+esc(s[12]):'')+'</div></div><div class="v"></div><div class="st"></div></div>';});
  document.getElementById('rows').innerHTML=h||'<div class="msg">{{J:Keine Signale – im Programm eine IO-Liste importieren.}}</div>';
  rowEl=S.sig.map(function(_s,i){var e=document.getElementById('r'+i);return {e:e,led:e.children[0],v:e.children[2],st:e.children[3],k:''};});
  var fg=document.getElementById('fg'),cur=fg.value;fg.innerHTML='<option value="">{{J:Alle Gruppen}}</option>'+S.groups.map(function(g){return '<option>'+esc(g)+'</option>';}).join('');
@@ -169,7 +169,7 @@ function build(){
 
 function filter(){if(!S)return;var q=document.getElementById('q').value.toLowerCase().split(/\s+/).filter(Boolean),
  g=document.getElementById('fg').value,st=document.getElementById('fs').value;
- S.sig.forEach(function(s,i){var ok=(!g||s[4]==g)&&(!st||(D[i]&&D[i][0]==st));if(ok&&q.length){var hay=(s[0]+' '+s[1]+' '+s[2]+' '+s[3]).toLowerCase();
+ S.sig.forEach(function(s,i){var ok=(!g||s[4]==g)&&(!st||(D[i]&&D[i][0]==st));if(ok&&q.length){var hay=(s[0]+' '+s[1]+' '+s[2]+' '+s[3]+' '+(s[12]||'')).toLowerCase();
   ok=q.every(function(w){return hay.indexOf(w)>=0;});}rowEl[i].e.style.display=ok?'':'none';});}
 
 function update(){
@@ -199,7 +199,7 @@ function swapCheck(chs){var fresh=chs.filter(function(c){return c[0]>lastSeq;});
 
 function sheet(){var sh=document.getElementById('sheet');if(SEL<0||!S||!S.sig[SEL]){sh.style.display='none';
   document.body.style.setProperty('--sheet','0px');return;}
- var s=S.sig[SEL],d=D[SEL]||[],h='<div><b>'+esc(s[0])+'</b> '+esc(s[1])+' <span class="muted">'+esc(s[5])+(s[3]?' · '+esc(s[3]):'')+'</span></div>'+
+ var s=S.sig[SEL],d=D[SEL]||[],h='<div><b>'+esc(s[0])+'</b> '+esc(s[1])+' <span class="muted">'+esc(s[5])+(s[3]?' · '+esc(s[3]):'')+(s[12]?' · '+esc(s[12]):'')+'</span></div>'+
   '<div class="muted">'+esc(s[2])+'</div><div class="sv"><span class="'+ledcls(SEL)+'" style="display:inline-block;vertical-align:-2px"></span> '+esc(vtext(SEL))+'</div>';
  if(!bin(SEL)){var f=fault(SEL,d[1]);h+='<div class="muted">{{J:Rohwert}} '+(d[1]==null?'–':d[1])+(f?' · <span class="fault">'+esc(f)+'</span>':'')+'</div>';
   if(isIn(SEL)){var sn=d[4]||0;h+='<div class="wb"><b>{{J:Drahtbruchprüfung}}</b><div>'+(sn&4?'<span class="okm">✓</span>':'○')+' {{J:1. Verdrahtung öffnen → Fehlerwert erkannt}}</div><div>'+

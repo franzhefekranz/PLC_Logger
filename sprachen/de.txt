@@ -2936,6 +2936,9 @@
 @ Gruppe
 > 
 
+@ Ort
+> 
+
 @ Typ (DI/DO/AI/AO)
 > 
 
@@ -3065,7 +3068,7 @@
 @ Prüfstand zuerst am PC speichern – die Fotos liegen in einem Ordner daneben.
 > 
 
-@ IO-Check – Abnahmeprotokoll
+@ IO-Check – Kurzbericht
 > 
 
 @ Prüfstand:
@@ -3075,6 +3078,24 @@
 > 
 
 @ Prüfzeitraum:
+> 
+
+@ Gesamt
+> 
+
+@ Alle Signale
+> 
+
+@ {0} OK, {1} Fehler, {2} übersprungen, {3} wiederholen, {4} offen
+> 
+
+@ Signalart
+> 
+
+@ Nach {0}
+> 
+
+@ IO-Check – Abnahmeprotokoll
 > 
 
 @ Ergebnis:
@@ -3089,12 +3110,6 @@
 @ Zusammenfassung
 > 
 
-@ Signalart
-> 
-
-@ Gesamt
-> 
-
 @ Signale
 > 
 
@@ -3105,9 +3120,6 @@
 > 
 
 @ Keine – alle Signale geprüft und in Ordnung bzw. übersprungen.
-> 
-
-@ Alle Signale
 > 
 
 @ Bestätigung
@@ -3164,6 +3176,12 @@
 > 
 
 @ BMK:
+> 
+
+@ z. B. Halle 2, +S1, Kesselhaus
+> 
+
+@ Ort:
 > 
 
 @ Gruppe:
@@ -3316,7 +3334,7 @@
 @ Spalten …
 > 
 
-@ Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt
+@ Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt. Pfeil: Spalten der Signalliste ein- und ausblenden
 > 
 
 @ Öffnen …
@@ -3353,6 +3371,12 @@
 > 
 
 @ Fotos anhängen
+> 
+
+@ Kurzbericht (PDF) …
+> 
+
+@ Nur die Zusammenfassung: Fortschrittsbalken gesamt, je Signalart, Gruppe und Ort
 > 
 
 @ Fotos …
@@ -3487,6 +3511,12 @@
 @ Name oder Kürzel des Prüfers (für Liste und Protokoll).\nLeer lassen: angemeldeter Benutzer „{0}“.
 > 
 
+@ Feld unter „Spalten …“ abgeschaltet
+> 
+
+@ Alle Spalten anzeigen
+> 
+
 @ enthält …
 > 
 
@@ -3500,6 +3530,12 @@
 > 
 
 @ Alle Spaltenfilter aufheben
+> 
+
+@ Spalten anzeigen
+> 
+
+@ Spalte „{0}“ ausblenden
 > 
 
 @ (nicht gespeichert)
@@ -3635,6 +3671,9 @@
 > 
 
 @ PDF (*.pdf)
+> 
+
+@ Kurzbericht (PDF)
 > 
 
 @ Mobil
