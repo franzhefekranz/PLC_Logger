@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.24.0] – 2026-11-17
+
 ### Neu
 
 * **IO-Check:** Spalte **Ort** (Import aus „Ort“, „Ortskennzeichen“, „Einbauort“, „Location“ …; bearbeitbar, im
@@ -22,6 +24,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   auf die Überschrift; persönliche Einstellung).
 * **IO-Check:** **Kurzbericht (PDF)** – nur die Zusammenfassung mit Fortschrittsbalken gesamt, je Signalart, Gruppe und
   Ort (Pfeil am Knopf *Protokoll (PDF) …*).
+* **IO-Check:** Signalton wahlweise als **Dauerton bei 1** wie ein Durchgangsprüfer – am PC (Seitenleiste
+  *Signalton*: aus / bei richtigem Wechsel / Dauerton) und auf dem Smartphone (🔕 → 🔔 → 🔊).
 
 ### Geändert
 
@@ -29,11 +33,6 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
   Ergebnis-Export (CSV/Excel) hat die zusätzliche Spalte *Ort*.
 * **Anleitung, Raspberry Pi:** Hinweis zur Stromversorgung, wenn der Touch nicht reagiert oder zeitweise ausfällt
   (Netzteil 5,1 V/3 A, Prüfen mit `vcgencmd get_throttled`).
-
-### Neu
-
-* **IO-Check:** Signalton wahlweise als **Dauerton bei 1** wie ein Durchgangsprüfer – am PC (Seitenleiste
-  *Signalton*: aus / bei richtigem Wechsel / Dauerton) und auf dem Smartphone (🔕 → 🔔 → 🔊).
 
 ## [3.23.0] – 2026-11-13
 
@@ -770,7 +769,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.23.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.24.0...HEAD
+[3.24.0]: ../../releases/tag/v3.24.0
 [3.23.0]: ../../releases/tag/v3.23.0
 [3.22.0]: ../../releases/tag/v3.22.0
 [3.21.0]: ../../releases/tag/v3.21.0
