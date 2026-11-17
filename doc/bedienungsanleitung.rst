@@ -5986,6 +5986,13 @@ startet (die Zeitstempel der Aufzeichnung kommen vom Pi):
   einem Terminal im Remotedesktop, das Panel erscheint immer bildschirmfüllend auf dem Display
   des Pi (mit ``sudo timeout 600 plc-netzwerk`` endet es nach 10 Minuten von selbst). Als
   Fenster im Remotedesktop: ``sudo plc-netzwerk --fenster``.
+* **Touch reagiert nicht oder fällt zeitweise aus** (das Bild ist da): meist ist die
+  **Stromversorgung** zu schwach – die Spannung bricht ein, und der Touch-Controller fällt als
+  Erstes aus; ein Kaltstart (Netzteil 30 s trennen) hilft dann nur vorübergehend. Abhilfe:
+  Netzteil mit 5,1 V und mindestens 3 A (offizielles Pi-Netzteil), kurzes, kräftiges
+  USB-C-Kabel, Display und SSD nicht zusätzlich aus einem schwachen USB-Port versorgen.
+  Prüfen mit ``vcgencmd get_throttled``: ``throttled=0x0`` = seit dem Start keine
+  Unterspannung, jeder andere Wert (z. B. ``0x50005``) = Spannung ist eingebrochen.
 
 **8. Betrieb:**
 

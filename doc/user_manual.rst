@@ -5848,6 +5848,13 @@ recording come from the Pi):
   a terminal in the remote desktop, the panel always appears full screen on the Pi's display
   (``sudo timeout 600 plc-netzwerk`` ends it after 10 minutes by itself). As a window in the
   remote desktop: ``sudo plc-netzwerk --fenster``.
+* **Touch does not respond or fails intermittently** (the picture is there): usually the
+  **power supply** is too weak – the voltage drops and the touch controller is the first to
+  fail; a cold start (disconnect the power supply for 30 s) then only helps temporarily.
+  Remedy: power supply with 5.1 V and at least 3 A (official Pi power supply), short, sturdy
+  USB-C cable, do not additionally power display and SSD from a weak USB port. Check with
+  ``vcgencmd get_throttled``: ``throttled=0x0`` = no undervoltage since start, any other
+  value (e.g. ``0x50005``) = the voltage has dropped.
 
 **8. Operation:**
 

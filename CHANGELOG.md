@@ -27,6 +27,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 * **IO-Check:** Die Importspalten „Ort“ und „Ortskennzeichen“ füllen jetzt das neue Feld *Ort* statt *Gruppe*; das
   Ergebnis-Export (CSV/Excel) hat die zusätzliche Spalte *Ort*.
+* **Anleitung, Raspberry Pi:** Hinweis zur Stromversorgung, wenn der Touch nicht reagiert oder zeitweise ausfällt
+  (Netzteil 5,1 V/3 A, Prüfen mit `vcgencmd get_throttled`).
 
 ### Neu
 
