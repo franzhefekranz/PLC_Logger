@@ -18,12 +18,13 @@ import sys
 import getpass
 
 from PySide6.QtCore import QDateTime, Qt, QTimer, QUrl
-from PySide6.QtGui import QAction, QBrush, QColor, QDesktopServices, QFont, QKeySequence
+from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence
 from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComboBox, QDateTimeEdit, QDialog,
                                QDialogButtonBox, QFormLayout, QPlainTextEdit,
                                QHBoxLayout, QHeaderView, QLabel, QLineEdit, QMessageBox, QPushButton,
                                QTableWidget, QTableWidgetItem, QVBoxLayout)
 
+from plc_branding import open_url
 from plc_events import NOTE, PRIORITIES, EventLog, event_log_path
 from plc_i18n import tr
 import plc_filedlg
@@ -367,7 +368,7 @@ class EventViewer(QDialog):
         """Ordner der Ereignisdatei im Dateimanager öffnen."""
         folder = os.path.dirname(self.log.path)
         if os.path.isdir(folder):
-            QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+            open_url(QUrl.fromLocalFile(folder))
         else:
             QMessageBox.information(self, tr("Ordner"), tr("Der Ordner existiert noch nicht:\n{0}\n\nEr wird beim ersten Ereignis angelegt.").format(folder))
 

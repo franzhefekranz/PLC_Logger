@@ -59,6 +59,7 @@ from PySide6.QtWidgets import (
 # legt die Bindung zusätzlich fest (falls neben PySide6 noch PyQt installiert ist).
 os.environ.setdefault("PYQTGRAPH_QT_LIB", "PySide6")
 import pyqtgraph as pg  # nach PySide6 importieren
+from shiboken6 import isValid
 # ItemSample ist das Muster (Linienstück) vor dem Namen in der Legende; wir leiten eigene Muster davon ab.
 from pyqtgraph.graphicsItems.LegendItem import ItemSample
 
@@ -1799,10 +1800,11 @@ class MainWindow(QMainWindow):
         ranges.append((tr("Alle Daten"), first, last))
         dlg = PidTuneDialog(self, self.charts[ci], [v.name for v in self.vars], self._pid_data, ranges)
         dlg.show()
-        self._pid_dialogs = [d for d in getattr(self, "_pid_dialogs", []) if d.isVisible()] + [dlg]
+        self._pid_dialogs = [d for d in getattr(self, "_pid_dialogs", []) if isValid(d) and d.isVisible()] + [dlg]
 
-    def analysis_ranges(self, panel=None):
-        """Wählbare Zeitbereiche für Auswertungen: [(Text, t0, t1)] (zwischen den Linealen, sichtbar, alles)."""
+    def analysis_ranges(self, panel=None, live=False):
+        """Wählbare Zeitbereiche für Auswertungen: [(Text, t0, t1)] (zwischen den Linealen, sichtbar, alles).
+        ``live``: „Alle Daten“ ohne feste Grenzen (Analyse-Dialoge holen bei „Aktualisieren“ auch neue Werte)."""
         t, _y = self._pid_source()
         if len(t) == 0:
             return []
@@ -1817,13 +1819,13 @@ class MainWindow(QMainWindow):
             x0, x1 = max(x0, first), min(x1, last)
             if x1 > x0:
                 ranges.append((tr("Sichtbarer Bereich"), x0, x1))
-        ranges.append((tr("Alle Daten"), first, last))
+        ranges.append((tr("Alle Daten"), -math.inf, math.inf) if live else (tr("Alle Daten"), first, last))
         return ranges
 
     def make_report(self):
         """PDF-Bericht für einen wählbaren Zeitbereich der angezeigten Daten erstellen und öffnen."""
         from PySide6.QtCore import QUrl
-        from PySide6.QtGui import QDesktopServices
+        from plc_branding import open_url
         from PySide6.QtWidgets import QInputDialog
         from plc_report import ReportAccumulator, events_in, write_report
         ranges = self.analysis_ranges()
@@ -1862,7 +1864,7 @@ class MainWindow(QMainWindow):
             return
         QApplication.restoreOverrideCursor()
         self.statusBar().showMessage(tr("Bericht erstellt: {0}").format(path), 10000)
-        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        open_url(QUrl.fromLocalFile(path))
 
     def open_iocheck(self):
         """IO-Check (eigenes Fenster, liest selbst aus den Steuerungen der Konfiguration)."""
@@ -1878,7 +1880,7 @@ class MainWindow(QMainWindow):
     def open_analysis(self, kind):
         """XY-Diagramm oder Frequenzanalyse öffnen (nicht modal)."""
         from plc_analysis_dialog import FftDialog, XYDialog
-        ranges = self.analysis_ranges()
+        ranges = self.analysis_ranges(live=True)
         if not ranges or not self.vars:
             QMessageBox.information(self, tr("Analyse"), tr("Es sind noch keine Messdaten vorhanden. Bitte aufzeichnen "
                                                             "oder eine CSV-Datei laden."))
@@ -1892,7 +1894,7 @@ class MainWindow(QMainWindow):
             first = next((v.name for v in visible if v.dtype != "BOOL"), "")
             dlg = FftDialog(self, self.vars, self._pid_data, ranges, self.csv_dir(), name=first)
         dlg.show()
-        self._pid_dialogs = [d for d in getattr(self, "_pid_dialogs", []) if d.isVisible()] + [dlg]
+        self._pid_dialogs = [d for d in getattr(self, "_pid_dialogs", []) if isValid(d) and d.isVisible()] + [dlg]
 
     # ---------------------------------------------------------------------------------------
     # Ereignisse (Trigger)
@@ -2236,12 +2238,12 @@ class MainWindow(QMainWindow):
                                     "Aktivierung: Konfigurationsprogramm → Webserver."))
             return
         from PySide6.QtCore import QUrl
-        from PySide6.QtGui import QDesktopServices
+        from plc_branding import open_url
         host = "127.0.0.1" if self.web.host in ("0.0.0.0", "") else self.web.host
         url = f"{'https' if self.web.https else 'http'}://{host}:{self.web.port}/prozess"
         if self.web.token and not self.web.users:
             url += "?token=" + self.web.token
-        QDesktopServices.openUrl(QUrl(url))
+        open_url(QUrl(url))
 
     def set_layout(self, mode):
         """Anordnung wechseln: baut die Seiten neu auf (Gruppierung/Ausrichtung hängen vom Modus ab)."""

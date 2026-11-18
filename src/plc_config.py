@@ -633,7 +633,7 @@ class ConfigWindow(QMainWindow):
         wird hineinkopiert, falls sie dort fehlt.
         """
         from PySide6.QtCore import QUrl
-        from PySide6.QtGui import QDesktopServices
+        from plc_branding import open_url
         folder = os.path.join(BASE_DIR, "treiber")
         os.makedirs(folder, exist_ok=True)
         tpl = os.path.join(os.path.dirname(os.path.abspath(__file__)), "plc_treiber", "_vorlage.py")
@@ -645,7 +645,7 @@ class ConfigWindow(QMainWindow):
                 shutil.copy(tpl, target)
             except OSError:
                 pass
-        QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+        open_url(QUrl.fromLocalFile(folder))
 
     def update_title(self):
         """Fenstertitel: Projektname und Dateiname der Konfiguration."""

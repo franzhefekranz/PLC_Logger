@@ -16,7 +16,7 @@ import math
 
 import numpy as np
 
-from plc_i18n import N_
+from plc_i18n import N_, tr
 
 WINDOWS = {"hann": N_("Hann (Standard)"), "hamming": N_("Hamming"), "blackman": N_("Blackman"),
            "rechteck": N_("Rechteck (ohne Fenster)"), "flattop": N_("Flat-Top (genaue Amplituden)")}
@@ -41,26 +41,48 @@ def _window(name, n):
     return np.hanning(n)
 
 
-def resample_uniform(t, y, dt=None):
+MAX_POINTS = 2 ** 19          # höchstens so viele Rasterpunkte (≈ 0,5 Mio.; Speicher und Rechenzeit auch auf dem Pi)
+GAP_FACTOR = 10               # Lücke = mehr als das Zehnfache des üblichen Messabstands
+
+
+def resample_uniform(t, y, dt=None, info=None):
     """Messwerte (t, y) linear auf ein gleichmäßiges Raster umrechnen -> (Zeiten, Werte, dt).
 
-    dt: Rasterabstand in s (Standard: Median der Messabstände). NaN-Werte werden überbrückt."""
+    dt: Rasterabstand in s (Standard: Median der Messabstände). NaN-Werte werden überbrückt. Die Werte werden nach
+    der Zeit sortiert (Zeitsprünge der Uhr). Enthält der Bereich Lücken (Aufzeichnung unterbrochen, mehr als
+    GAP_FACTOR × dt), wird der längste lückenlose Abschnitt verwendet – eine lineare Überbrückung über Stunden ergäbe
+    Scheinfrequenzen. Wären es mehr als MAX_POINTS Punkte, wird das Raster gröber. ``info`` (dict, optional) erhält
+    dann ``gap`` bzw. ``coarser`` = True für die Anzeige."""
     t = np.asarray(t, dtype=float)
     y = np.asarray(y, dtype=float)
     ok = np.isfinite(t) & np.isfinite(y)
     t, y = t[ok], y[ok]
     if len(t) < 2:
-        raise ValueError("zu wenige gültige Messwerte")
+        raise ValueError(tr("zu wenige gültige Messwerte"))
+    if np.any(np.diff(t) < 0):                         # nicht aufsteigend (Uhr zurückgestellt): sortieren
+        o = np.argsort(t, kind="stable")
+        t, y = t[o], y[o]
     d = np.diff(t)
     d = d[d > 0]
     if dt is None:
         if not len(d):
-            raise ValueError("alle Messwerte haben denselben Zeitstempel")
+            raise ValueError(tr("alle Messwerte haben denselben Zeitstempel"))
         dt = float(np.median(d))
+        cuts = np.flatnonzero(np.diff(t) > GAP_FACTOR * dt)
+        if len(cuts):                                  # längsten lückenlosen Abschnitt nehmen
+            edges = np.r_[0, cuts + 1, len(t)]
+            k = int(np.argmax(np.diff(edges)))
+            t, y = t[edges[k]:edges[k + 1]], y[edges[k]:edges[k + 1]]
+            if info is not None:
+                info["gap"] = True
+            if len(t) < 2:
+                raise ValueError(tr("zu wenige gültige Messwerte"))
     n = int(math.floor((t[-1] - t[0]) / dt)) + 1
-    if n > 2_000_000:                                  # Schutz vor riesigen Feldern
-        dt = (t[-1] - t[0]) / 2_000_000
-        n = 2_000_001
+    if n > MAX_POINTS:                                 # Schutz vor riesigen Feldern: gröberes Raster
+        dt = (t[-1] - t[0]) / (MAX_POINTS - 1)
+        n = MAX_POINTS
+        if info is not None:
+            info["coarser"] = True
     tu = t[0] + np.arange(n) * dt
     return tu, np.interp(tu, t, y), dt
 
@@ -69,10 +91,11 @@ def spectrum(t, y, window="hann", detrend="mean"):
     """Amplitudenspektrum -> dict(f, amp, dt, fs, n, df, peaks, rms).
 
     detrend: "mean" (Mittelwert abziehen), "linear" (Gerade abziehen) oder "" (nichts)."""
-    tu, yu, dt = resample_uniform(t, y)
+    info = {}
+    tu, yu, dt = resample_uniform(t, y, info=info)
     n = len(yu)
     if n < 8:
-        raise ValueError("für eine Frequenzanalyse werden mindestens 8 Messwerte benötigt")
+        raise ValueError(tr("für eine Frequenzanalyse werden mindestens 8 Messwerte benötigt"))
     if detrend == "linear":
         k = np.arange(n)
         a, b = np.polyfit(k, yu, 1)
@@ -89,7 +112,8 @@ def spectrum(t, y, window="hann", detrend="mean"):
         amp[-1] /= 2.0
     f = np.fft.rfftfreq(n, dt)
     return {"f": f, "amp": amp, "dt": dt, "fs": 1.0 / dt, "n": n, "df": f[1] - f[0] if len(f) > 1 else 0.0,
-            "peaks": find_peaks(f, amp), "rms": float(np.sqrt(np.mean(yu ** 2)))}
+            "peaks": find_peaks(f, amp), "rms": float(np.sqrt(np.mean(yu ** 2))),
+            "gap": bool(info.get("gap")), "coarser": bool(info.get("coarser"))}
 
 
 def find_peaks(f, amp, count=5, min_rel=0.05):
@@ -99,11 +123,12 @@ def find_peaks(f, amp, count=5, min_rel=0.05):
     a = np.asarray(amp, dtype=float)
     if len(a) < 3:
         return []
-    top = float(a[1:].max()) if len(a) > 1 else 0.0
+    top = float(a[1:].max())
     if top <= 0:
         return []
-    idx = [i for i in range(1, len(a) - 1) if a[i] >= a[i - 1] and a[i] > a[i + 1] and a[i] >= min_rel * top]
-    idx.sort(key=lambda i: a[i], reverse=True)
+    mid = a[1:-1]                                      # lokale Maxima, vektorisiert (schnell auch bei 0,5 Mio. Werten)
+    idx = np.flatnonzero((mid >= a[:-2]) & (mid > a[2:]) & (mid >= min_rel * top)) + 1
+    idx = idx[np.argsort(-a[idx], kind="stable")]
     out = []
     df = f[1] - f[0]
     for i in idx[:count]:

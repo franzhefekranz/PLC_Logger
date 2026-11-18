@@ -266,7 +266,8 @@ def install_qt(app):
 def fill_language_menu(menu, window, restart_cmd):
     """Menü mit allen Sprachen füllen. restart_cmd: Funktion -> Befehlszeile für den Neustart (oder None)."""
     from PySide6.QtCore import QUrl
-    from PySide6.QtGui import QAction, QActionGroup, QDesktopServices
+    from PySide6.QtGui import QAction, QActionGroup
+    from plc_branding import open_url
     grp = QActionGroup(menu)
     grp.setExclusive(True)
     cur = current()
@@ -292,7 +293,7 @@ def fill_language_menu(menu, window, restart_cmd):
                 shutil.copy(tpl, os.path.join(folder, f"{DEFAULT}.txt"))
             except OSError:
                 pass
-        QDesktopServices.openUrl(QUrl.fromLocalFile(folder))
+        open_url(QUrl.fromLocalFile(folder))
     a.triggered.connect(open_folder)
     menu.addAction(a)
     menu.addSeparator()

@@ -26,17 +26,20 @@ Ziele in ``targets_of`` (Zeilen-ID -> {Index: (Diagramm, Achse)}); beim Schließ
 """
 
 
+import contextlib
+import threading
 import time
 
 from PySide6.QtCore import QTimer, Qt, QUrl
-from PySide6.QtGui import QBrush, QColor, QDesktopServices
+from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
-    QApplication, QColorDialog, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout,
+    QColorDialog, QComboBox, QDialog, QDialogButtonBox, QHBoxLayout,
     QHeaderView, QLabel, QMessageBox, QPushButton, QSpinBox, QSplitter, QTableWidget,
     QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
 # Gemeinsames Datenmodell: Block (mit variables()); gelesen wird mit dem Treiber der Steuerung (plc_treiber).
+from plc_branding import open_url
 from plc_common import PALETTE, Block, get_driver, templates_dir
 from plc_i18n import tr
 
@@ -71,6 +74,12 @@ HELP = (
                "Steuerung sammelt je Zyklus einen Datensatz, der Logger holt die Datensätze ab (Bausteine unter "
                "<i>SPS-Vorlagen …</i>).")
 )
+
+
+def _lines(items, n=12):
+    """Höchstens n Zeilen für ein Meldungsfenster, Rest als „… (+k)“."""
+    items = list(items)
+    return "\n".join(items[:n]) + (f"\n… (+{len(items) - n})" if len(items) > n else "")
 
 
 class BlockEditor(QDialog):
@@ -125,6 +134,10 @@ class BlockEditor(QDialog):
         self.tree.setColumnWidth(2, 160)
         self.tree.setColumnWidth(3, 80)
         self.tree.itemExpanded.connect(self.populate)
+        # Nur der Name eines Elements ist änderbar (ItemIsEditable gilt sonst für alle Spalten)
+        self.tree.setEditTriggers(QTreeWidget.EditTrigger.NoEditTriggers)
+        self.tree.itemDoubleClicked.connect(
+            lambda it, col: self.tree.editItem(it, T_NAME) if it.parent() is not None and col == T_NAME else None)
         self.tree.itemChanged.connect(self.on_name_edited)
         # Der Baum wird nicht bei jeder Änderung sofort neu aufgebaut, sondern 300 ms nach der letzten (Timer).
         self.timer = QTimer(self)                 # Baum erst kurz nach der letzten Änderung neu aufbauen
@@ -314,7 +327,10 @@ class BlockEditor(QDialog):
     # Zeile finden, in der das Zellen-Widget 'widget' steht (die Signale der Widgets kennen ihre Zeile nicht).
     def _row_of(self, widget):
         """Nummer der Tabellenzeile, in der das Zellen-Widget steht (-1: nicht gefunden)."""
-        for r in range(self.table.rowCount()):
+        r = self.table.indexAt(widget.pos()).row()
+        if r >= 0 and any(self.table.cellWidget(r, c) is widget for c in range(self.table.columnCount())):
+            return r
+        for r in range(self.table.rowCount()):                 # Rückfallebene (Widget noch nicht platziert)
             for c in range(self.table.columnCount()):
                 if self.table.cellWidget(r, c) is widget:
                     return r
@@ -333,7 +349,11 @@ class BlockEditor(QDialog):
     def remove_rows(self):
         """Markierte Blöcke löschen."""
         for r in sorted({i.row() for i in self.table.selectedIndexes()}, reverse=True):
+            uid = self.row_uid(r)
+            for d in (self.names_of, self.targets_of, self.norec_of, self.nodisp_of):
+                d.pop(uid, None)
             self.table.removeRow(r)
+        self.schedule_tree()                                   # gelöschte Blöcke auch aus dem Baum nehmen
 
     # Farbdialog; die gewählte Farbe wird im Knopf (Eigenschaft + Hintergrund) gespeichert.
     def pick_color(self, btn):
@@ -411,6 +431,16 @@ class BlockEditor(QDialog):
         return {i: t for i, t in self.targets_of.get(self.row_uid(r), {}).items()
                 if 0 <= i < count and t in self.flat and t != block_target}
 
+    @contextlib.contextmanager
+    def _fill(self):
+        """Baum programmgesteuert ändern: Änderungssignale währenddessen ignorieren – auch bei einem Fehler wird die
+        Sperre wieder aufgehoben (sonst gingen alle weiteren Namensänderungen still verloren)."""
+        old, self._filling = self._filling, True
+        try:
+            yield
+        finally:
+            self._filling = old
+
     def schedule_tree(self):
         """Baum nach einer Änderung verzögert neu aufbauen (fasst schnelle Änderungen zusammen)."""
         self.timer.start(300)
@@ -421,21 +451,20 @@ class BlockEditor(QDialog):
         expanded = {self.tree.topLevelItem(i).data(0, Qt.ItemDataRole.UserRole)
                     for i in range(self.tree.topLevelItemCount())
                     if self.tree.topLevelItem(i).isExpanded()}
-        self._filling = True
-        self.tree.clear()
-        # Für jede Tabellenzeile einen Block-Knoten erzeugen (noch ohne Elemente).
-        for r in range(self.table.rowCount()):
-            if self.table.cellWidget(r, C_COUNT) is None:      # Zeile noch im Aufbau
-                continue
-            b = self.block_of_row(r)
-            top = QTreeWidgetItem([b.name, "", b.address_range(), f"{b.count} × {b.dtype}", "",
-                                   f"{b.count - len(b.no_record)}/{b.count}",
-                                   f"{b.count - len(b.no_record) - len(b.no_display)}/{b.count}"])
-            top.setData(0, Qt.ItemDataRole.UserRole, self.row_uid(r))
-            # Ohne Kind-Element würde kein Aufklapp-Pfeil angezeigt; der leere Platzhalter wird beim Aufklappen ersetzt.
-            top.addChild(QTreeWidgetItem())                    # Platzhalter: zeigt den Aufklapp-Pfeil
-            self.tree.addTopLevelItem(top)
-        self._filling = False
+        with self._fill():
+            self.tree.clear()
+            # Für jede Tabellenzeile einen Block-Knoten erzeugen (noch ohne Elemente).
+            for r in range(self.table.rowCount()):
+                if self.table.cellWidget(r, C_COUNT) is None:      # Zeile noch im Aufbau
+                    continue
+                b = self.block_of_row(r)
+                top = QTreeWidgetItem([b.name, "", b.address_range(), f"{b.count} × {b.dtype}", "",
+                                       f"{b.count - len(b.no_record)}/{b.count}",
+                                       f"{b.count - len(b.no_record) - len(b.no_display)}/{b.count}"])
+                top.setData(0, Qt.ItemDataRole.UserRole, self.row_uid(r))
+                # Ohne Kind-Element würde kein Aufklapp-Pfeil angezeigt; der leere Platzhalter wird beim Aufklappen ersetzt.
+                top.addChild(QTreeWidgetItem())                    # Platzhalter: zeigt den Aufklapp-Pfeil
+                self.tree.addTopLevelItem(top)
         # Zuvor aufgeklappte Blöcke wieder aufklappen (das löst populate() aus).
         for i in range(self.tree.topLevelItemCount()):
             it = self.tree.topLevelItem(i)
@@ -463,29 +492,28 @@ class BlockEditor(QDialog):
             return
         # Block aus der Tabellenzeile bauen und seine Elemente (mit eigenen oder Standardnamen) als Kinder anlegen.
         b = self.block_of_row(r)
-        self._filling = True
-        top.takeChild(0)                                       # Platzhalter entfernen
-        uid = top.data(0, Qt.ItemDataRole.UserRole)
-        for i, v in enumerate(b.variables()):
-            child = QTreeWidgetItem([f"[{i}]", v.name, v.address, v.dtype])
-            child.setData(0, Qt.ItemDataRole.UserRole, i)
-            # Nur Spalte 1 (Name) ist editierbar; Spalte 0 zeigt die Nummer [i].
-            child.setFlags(child.flags() | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsUserCheckable)
-            child.setCheckState(T_REC, Qt.CheckState.Checked if v.record else Qt.CheckState.Unchecked)
-            child.setCheckState(T_DISP, Qt.CheckState.Checked if v.display else Qt.CheckState.Unchecked)
-            child.setToolTip(T_REC, REC_TIP)
-            child.setToolTip(T_DISP, DISP_TIP)
-            self._grey(child, v.record, v.display)
-            top.addChild(child)
-            # Spalte 'Diagramm › Y-Achse': Auswahlliste; Eintrag 0 = wie der Block, sonst ein eigenes Ziel des Elements.
-            combo = QComboBox()
-            combo.addItem(tr("(wie Block)"))
-            combo.addItems(self.labels)
-            tgt = self.targets_of.get(uid, {}).get(i)
-            combo.setCurrentIndex(self.flat.index(tgt) + 1 if tgt in self.flat else 0)
-            combo.currentIndexChanged.connect(lambda ix, u=uid, k=i: self.on_target_changed(u, k, ix))
-            self.tree.setItemWidget(child, T_TARGET, combo)
-        self._filling = False
+        with self._fill():
+            top.takeChild(0)                                       # Platzhalter entfernen
+            uid = top.data(0, Qt.ItemDataRole.UserRole)
+            for i, v in enumerate(b.variables()):
+                child = QTreeWidgetItem([f"[{i}]", v.name, v.address, v.dtype])
+                child.setData(0, Qt.ItemDataRole.UserRole, i)
+                # Nur Spalte 1 (Name) ist editierbar; Spalte 0 zeigt die Nummer [i].
+                child.setFlags(child.flags() | Qt.ItemFlag.ItemIsEditable | Qt.ItemFlag.ItemIsUserCheckable)
+                child.setCheckState(T_REC, Qt.CheckState.Checked if v.record else Qt.CheckState.Unchecked)
+                child.setCheckState(T_DISP, Qt.CheckState.Checked if v.display else Qt.CheckState.Unchecked)
+                child.setToolTip(T_REC, REC_TIP)
+                child.setToolTip(T_DISP, DISP_TIP)
+                self._grey(child, v.record, v.display)
+                top.addChild(child)
+                # Spalte 'Diagramm › Y-Achse': Auswahlliste; Eintrag 0 = wie der Block, sonst ein eigenes Ziel des Elements.
+                combo = QComboBox()
+                combo.addItem(tr("(wie Block)"))
+                combo.addItems(self.labels)
+                tgt = self.targets_of.get(uid, {}).get(i)
+                combo.setCurrentIndex(self.flat.index(tgt) + 1 if tgt in self.flat else 0)
+                combo.currentIndexChanged.connect(lambda ix, u=uid, k=i: self.on_target_changed(u, k, ix))
+                self.tree.setItemWidget(child, T_TARGET, combo)
 
     def on_target_changed(self, uid, idx, combo_index):
         """Ziel eines Elements wurde gewählt: 0 = wie der Block (Abweichung entfernen), sonst merken."""
@@ -529,15 +557,14 @@ class BlockEditor(QDialog):
             rec = True
         (norec.discard if rec else norec.add)(idx)
         (nodisp.discard if disp else nodisp.add)(idx)
-        self._filling = True
-        item.setCheckState(T_REC, Qt.CheckState.Checked if rec else Qt.CheckState.Unchecked)
-        item.setCheckState(T_DISP, Qt.CheckState.Checked if rec and disp else Qt.CheckState.Unchecked)
-        self._grey(item, rec, disp)
-        top = item.parent()
-        n = top.childCount()
-        top.setText(T_REC, f"{n - len(norec)}/{n}")
-        top.setText(T_DISP, f"{n - len(norec | nodisp)}/{n}")
-        self._filling = False
+        with self._fill():
+            item.setCheckState(T_REC, Qt.CheckState.Checked if rec else Qt.CheckState.Unchecked)
+            item.setCheckState(T_DISP, Qt.CheckState.Checked if rec and disp else Qt.CheckState.Unchecked)
+            self._grey(item, rec, disp)
+            top = item.parent()
+            n = top.childCount()
+            top.setText(T_REC, f"{n - len(norec)}/{n}")
+            top.setText(T_DISP, f"{n - len(norec | nodisp)}/{n}")
 
     def set_all_flags(self):
         """Aufzeichnen/Anzeigen aus der Auswahlliste für ALLE Elemente des markierten Blocks setzen."""
@@ -578,9 +605,8 @@ class BlockEditor(QDialog):
         else:
             names[idx] = text
         # Normalisierten Text zurück in den Baum schreiben (ohne erneut auszulösen).
-        self._filling = True
-        item.setText(1, text)
-        self._filling = False
+        with self._fill():
+            item.setText(1, text)
 
     # ---------------- Test ----------------
     # Block testen: einmalig aus der SPS lesen; zeigt Anzahl, Lesezeit und die ersten Werte.
@@ -603,20 +629,54 @@ class BlockEditor(QDialog):
         if b.ring:
             self._test_ring(b, plc, drv, variables)
             return
-        # Sanduhr-Cursor, solange die Verbindung aufgebaut wird (kann einige Sekunden dauern).
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
+        self._background(lambda: drv.read_once(plc, variables),
+                         lambda res, ms: self._test_done(b, drv, res, ms))
+
+    def _background(self, fn, done):
+        """``fn()`` in einem eigenen Thread ausführen (Verbindungsaufbau kann bis zum Zeitlimit des Treibers dauern –
+        die Oberfläche bleibt bedienbar); danach ``done(Ergebnis, ms)`` im GUI-Thread, bei einer Ausnahme Meldung.
+        Abbrechen verwirft das Ergebnis (der Lesethread endet von selbst)."""
+        from PySide6.QtWidgets import QProgressDialog
+        box = {}
+
+        def run():
+            """Im Hintergrund: lesen und Ergebnis bzw. Ausnahme ablegen."""
             t0 = time.perf_counter()
-            vals, errs = drv.read_once(plc, variables)
-            ms = (time.perf_counter() - t0) * 1000
-        except Exception as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.critical(self, tr("Block testen"), tr("Lesen fehlgeschlagen:\n{0}").format(e))
-            return
-        QApplication.restoreOverrideCursor()
+            try:
+                box["res"] = fn()
+            except Exception as e:                              # Treiberfehler: als Meldung zeigen
+                box["err"] = e
+            box["ms"] = (time.perf_counter() - t0) * 1000
+        prog = QProgressDialog(tr("Verbindung zur Steuerung …"), tr("Abbrechen"), 0, 0, self)
+        prog.setWindowTitle(tr("Block testen"))
+        prog.setMinimumDuration(300)
+        prog.setWindowModality(Qt.WindowModality.WindowModal)
+        th = threading.Thread(target=run, name="block-test", daemon=True)
+        th.start()
+        timer = QTimer(prog)
+
+        def poll():
+            """Fertig? Dann Fortschrittsanzeige schließen und das Ergebnis zeigen."""
+            if th.is_alive():
+                return
+            timer.stop()
+            prog.reset()
+            prog.deleteLater()
+            if "err" in box:
+                QMessageBox.critical(self, tr("Block testen"), tr("Lesen fehlgeschlagen:\n{0}").format(box["err"]))
+            else:
+                done(box.get("res"), box.get("ms", 0.0))
+        timer.timeout.connect(poll)
+        prog.canceled.connect(timer.stop)
+        prog.canceled.connect(prog.deleteLater)
+        timer.start(50)
+
+    def _test_done(self, b, drv, res, ms):
+        """Ergebnis von „Block testen“ (normaler Block) anzeigen."""
+        vals, errs = res
         if errs:
             QMessageBox.critical(self, tr("Block testen"), tr("{0} (Anzahl {1}):\n").format(b.address_range(), b.count)
-                                 + "\n".join(errs.values()))
+                                 + _lines(errs.values()))
             return
         first = ", ".join(f"{v:g}" for v in vals[:8]) + (" …" if len(vals) > 8 else "")
         QMessageBox.information(
@@ -629,18 +689,14 @@ class BlockEditor(QDialog):
         if err:
             QMessageBox.critical(self, tr("Block testen"), f"„{b.name}“: {err}")
             return
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            t0 = time.perf_counter()
-            rows, errs, counters = drv.read_ring_once(plc, variables)
-            ms = (time.perf_counter() - t0) * 1000
-        except Exception as e:
-            QApplication.restoreOverrideCursor()
-            QMessageBox.critical(self, tr("Block testen"), tr("Lesen fehlgeschlagen:\n{0}").format(e))
-            return
-        QApplication.restoreOverrideCursor()
+        self._background(lambda: drv.read_ring_once(plc, variables),
+                         lambda res, ms: self._test_ring_done(b, res, ms))
+
+    def _test_ring_done(self, b, res, ms):
+        """Ergebnis von „Block testen“ (Ringpuffer) anzeigen."""
+        rows, errs, counters = res
         if errs:
-            QMessageBox.critical(self, tr("Block testen"), "\n".join(errs.values()))
+            QMessageBox.critical(self, tr("Block testen"), _lines(errs.values()))
             return
         text = tr("{0}: Zähler {1}, {2} Datensätze gelesen in {3:.1f} ms (einschließlich Verbindungsaufbau).").format(
             b.name, counters.get(b.name, "?"), len(rows), ms)
@@ -659,7 +715,7 @@ class BlockEditor(QDialog):
     def open_templates(self):
         """Ordner mit den SPS-Vorlagen für Ringpuffer im Dateimanager öffnen."""
         path = templates_dir()
-        if not QDesktopServices.openUrl(QUrl.fromLocalFile(path)):
+        if not open_url(QUrl.fromLocalFile(path)):
             QMessageBox.information(self, tr("SPS-Vorlagen"), tr("Die Vorlagen liegen im Ordner:\n{0}").format(path))
 
     # ---------------- OK ----------------
@@ -692,7 +748,7 @@ class BlockEditor(QDialog):
             if clash:
                 problems.append(tr("{0}: Name kollidiert mit vorhandenen Variablen ({1}).").format(b.name, clash[0]))
         if problems:
-            QMessageBox.warning(self, tr("Blöcke prüfen"), "\n".join(problems))
+            QMessageBox.warning(self, tr("Blöcke prüfen"), _lines(problems, 20))
             return
         self.result_blocks = blocks
         self.accept()

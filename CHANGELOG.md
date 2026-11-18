@@ -14,6 +14,29 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* **Aufräumen (CSV/Archiv):** löscht nur noch Dateien mit dem eigenen Namensschema `<CSV-Name>_JJJJMMTT_hhmmss…` –
+  ein Logger „Anlage“ traf bisher auch die Dateien eines Loggers „Anlage_Halle2“ im selben Ordner; ungültiger CSV-Name
+  oder leerer Ordner löscht nichts; ganz frische Dateien bleiben; wären nach Alter alle Dateien fällig (Uhr vorgestellt,
+  Logger lange aus), bleibt die jüngste.
+* **Client:** Ereignisse werden im Abfrage-Thread geladen statt in der Oberfläche (die bei nicht erreichbarem Server bis
+  zu 10 s hing); Schließen wartet nicht mehr bis zu 12 s; nach drei fehlgeschlagenen Anmeldungen endet die Abfrage;
+  Umleitungen auf andere Adressen werden abgelehnt (Zugriffscode); Benutzer:Passwort aus der Adresse erscheint nicht
+  mehr in Titel und Statuszeile; Antworten sind auf 256 MB begrenzt; Hinweis im Dialog, wenn Anmeldedaten ohne HTTPS
+  übertragen würden.
+* **Block testen:** liest im Hintergrund – der Dialog friert bei nicht erreichbarer Steuerung nicht mehr ein; lange
+  Fehlerlisten werden gekürzt; gelöschte Blöcke verschwinden sofort aus dem Baum; im Baum ist nur der Name änderbar.
+* **XY/FFT:** „Werte speichern“ schreibt keine Werte einer früheren Auswahl mehr; Zeiten in der CSV auf die Millisekunde
+  genau (bisher 9 Stellen); „Alle Daten“ + „Aktualisieren“ holt auch neu aufgezeichnete Werte; FFT sortiert Zeiten,
+  wertet bei Lücken den längsten lückenlosen Abschnitt aus und begrenzt die Punktzahl (Speicher auf dem Pi); große
+  Spektren werden ausgedünnt gezeichnet; Dialoge werden beim Schließen freigegeben.
+* **Hilfe/Über:** Lizenzdateien in anderer Kodierung verhindern den Dialog nicht mehr; F1-Weiterleitung je Benutzer;
+  neueste Anleitung nach Versionsnummer (3.10 nach 3.9); „Über …“ und Fenster mit F1 werden freigegeben.
+* **Gebündelte Linux-Fassungen:** Links, Anleitung und Ordner öffnen über `xdg-open` mit bereinigter Umgebung – Browser
+  und PDF-Anzeige erbten sonst die mitgelieferten Bibliotheken; die Startprotokoll-Datei eines aus einem anderen
+  Programm gestarteten Programms wächst nicht mehr (Ausgabe nach 10 s umgeleitet), kein Zombie-Prozess.
+
 ## [3.24.0] – 2026-11-17
 
 ### Neu

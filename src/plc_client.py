@@ -72,10 +72,34 @@ def normalize_url(url):
     if "://" not in url:
         url = "http://" + url
     p = urllib.parse.urlsplit(url)
-    if p.scheme not in ("http", "https") or not p.hostname:
+    try:
+        port = p.port
+    except ValueError:
+        port = -1
+    if p.scheme not in ("http", "https") or not p.hostname or port == -1:
         raise ClientError(tr("Ungültige Adresse: {0}").format(url))
     path = p.path if p.path.endswith("/") else p.path + "/"
-    return urllib.parse.urlunsplit((p.scheme, p.netloc, path, "", ""))
+    # ohne Benutzer:Passwort@ in der Adresse (sie erschiene sonst in Titelleiste und Statuszeile)
+    host = f"[{p.hostname}]" if ":" in p.hostname else p.hostname
+    return urllib.parse.urlunsplit((p.scheme, host + (f":{port}" if port else ""), path, "", ""))
+
+
+def is_insecure(url, user="", token=""):
+    """True, wenn Passwort bzw. Zugriffscode ohne HTTPS (unverschlüsselt) übertragen würden."""
+    u = (url or "").strip().lower()
+    return bool((user or "").strip() or (token or "").strip() or "token=" in u) and not u.startswith("https://")
+
+
+class _SameOriginRedirect(urllib.request.HTTPRedirectHandler):
+    """Umleitungen nur zur selben Adresse (Schema, Rechner, Port) folgen – sonst ginge der Zugriffscode (Kopf X-Token)
+    an einen fremden Rechner bzw. unverschlüsselt weiter."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        """Umleitung auf eine andere Adresse ablehnen."""
+        a, b = urllib.parse.urlsplit(req.full_url), urllib.parse.urlsplit(newurl)
+        if (a.scheme, a.netloc) != (b.scheme, b.netloc):
+            raise ClientError(tr("Umleitung auf eine andere Adresse abgelehnt: {0}").format(newurl))
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 class _PinnedHTTPSConnection(http.client.HTTPSConnection):
@@ -142,7 +166,7 @@ class Connection:
         """urllib-Opener anlegen: ohne Proxy, mit Cookies (Anmeldung) und – bei bekanntem Zertifikat – mit
         Fingerabdruck-Prüfung."""
         handlers = [urllib.request.ProxyHandler({}),                 # im Anlagennetz nie über einen Proxy
-                    urllib.request.HTTPCookieProcessor(self.cookies)]
+                    urllib.request.HTTPCookieProcessor(self.cookies), _SameOriginRedirect()]
         if self.https and self.hostkey in self.pins:
             handlers.append(_PinnedHTTPSHandler(self.pins[self.hostkey]))
         self._opener = urllib.request.build_opener(*handlers)
@@ -187,7 +211,11 @@ class Connection:
         except urllib.error.URLError as e:
             reason = e.reason
             if isinstance(reason, ssl.SSLCertVerificationError) or "CERTIFICATE_VERIFY_FAILED" in str(reason):
-                raise UntrustedCertificate(self.hostkey, self.server_fingerprint()) from None
+                try:
+                    fp = self.server_fingerprint()
+                except OSError as e2:
+                    raise ClientError(tr("{0} nicht erreichbar: {1}").format(self.hostkey, e2)) from None
+                raise UntrustedCertificate(self.hostkey, fp) from None
             raise ClientError(tr("{0} nicht erreichbar: {1}").format(self.hostkey, reason)) from None
         except (OSError, http.client.HTTPException) as e:
             raise ClientError(tr("{0} nicht erreichbar: {1}").format(self.hostkey, e)) from None
@@ -236,13 +264,31 @@ class Connection:
         return k
 
 
+MAX_BODY = 256 * 1024 * 1024         # größte angenommene Antwort (auch entpackt) – Schutz vor Speicherüberlauf
+
+
 def _read(resp):
-    """Antwortdaten lesen und bei Bedarf entpacken (gzip)."""
-    raw = resp.read()
+    """Antwortdaten lesen und bei Bedarf entpacken (gzip); größer als MAX_BODY: ClientError."""
+    raw = resp.read(MAX_BODY + 1)
+    if len(raw) > MAX_BODY:
+        raise ClientError(tr("Antwort des Servers zu groß"))
     if resp.headers.get("Content-Encoding") == "gzip":
-        import gzip
-        raw = gzip.decompress(raw)
+        import zlib
+        d = zlib.decompressobj(31)                  # gzip-Format
+        try:
+            raw = d.decompress(raw, MAX_BODY)
+        except zlib.error as e:
+            raise ClientError(tr("Antwort des Servers fehlerhaft: {0}").format(e)) from None
+        if d.unconsumed_tail:
+            raise ClientError(tr("Antwort des Servers zu groß"))
     return raw
+
+
+def _matrix(d, n_vars, n):
+    """Werte aus der Antwort (``y``: je Variable eine Liste, None = kein Wert) -> Feld [Variable][Zeile]."""
+    if not n:
+        return np.empty((n_vars, 0))
+    return np.asarray(d.get("y") or [], dtype=float).reshape(n_vars, n)
 
 
 # ---------------------------------------------------------------------------------------------- Konfiguration
@@ -300,7 +346,8 @@ class RemoteEventLog:
         self.version = 0
         self._server_version = None
         self._open = 0
-        self._events = None
+        self._events = None               # None = neu laden (im Abfrage-Thread)
+        self._last = []                   # zuletzt geladene Liste (für events())
         self.open_ids = set()
         self.lock = threading.Lock()
 
@@ -326,28 +373,32 @@ class RemoteEventLog:
             self.version += 1
 
     def events(self):
-        """Ereignisse (der letzten 400 Tage) vom Server, zwischengespeichert; bei Verbindungsfehlern die letzte bekannte
-        Liste."""
+        """Ereignisse (der letzten 400 Tage) – die zuletzt vom Server geholte Liste. Ohne Netzzugriff (wird aus der
+        Oberfläche aufgerufen); geladen wird im Abfrage-Thread (``refresh``), danach steigt ``version``."""
+        with self.lock:
+            return list(self._last)
+
+    def refresh(self):
+        """Im Abfrage-Thread: Ereignisse neu vom Server holen, wenn sie veraltet sind (neue Version, quittiert …).
+        Fehler: alte Liste bleibt, nächster Versuch im nächsten Takt."""
         from plc_events import Event
         with self.lock:
             if self._events is not None:
-                return list(self._events)
+                return
         try:
-            data = self.con.get_json("api/ereignisse", {"tage": 400})
-        except ClientError:
-            return list(self._events or [])
-        out = []
-        for e in data.get("events") or []:
-            out.append(Event(id=int(e["id"]), zeit=e.get("zeit", ""), trigger=e.get("trigger", ""),
-                             prio=e.get("prio_de") or e.get("prio", ""), text=e.get("text", ""),
-                             gegangen=e.get("gegangen", ""), quittiert=e.get("quittiert", ""),
-                             benutzer=e.get("benutzer", ""), pflicht=bool(e.get("pflicht", True)),
-                             notiz=bool(e.get("notiz", False))))
+            data = self.con.get_json("api/ereignisse", {"tage": 400}) or {}
+            out = [Event(id=int(e["id"]), zeit=e.get("zeit", ""), trigger=e.get("trigger", ""),
+                         prio=e.get("prio_de") or e.get("prio", ""), text=e.get("text", ""),
+                         gegangen=e.get("gegangen", ""), quittiert=e.get("quittiert", ""),
+                         benutzer=e.get("benutzer", ""), pflicht=bool(e.get("pflicht", True)),
+                         notiz=bool(e.get("notiz", False))) for e in data.get("events") or []]
+        except (ClientError, KeyError, TypeError, ValueError, AttributeError):
+            return
         with self.lock:
-            self._events = out
+            self._events = self._last = out
             self.open_ids = {e.id for e in out if e.offen}
             self._open = int(data.get("open") or len(self.open_ids))
-        return list(out)
+            self.version += 1
 
     def open_count(self):
         """Zahl der offenen (nicht quittierten) Ereignisse laut letzter Abfrage."""
@@ -409,20 +460,22 @@ class RemoteRecorder:
 
     # ---------------------------------------------------------------- Ablauf
     def start(self):
-        """Abfrage-Thread starten (holt neue Zeilen im Takt des Servers)."""
+        """Abfrage-Thread starten (holt neue Zeilen im Takt des Servers). Jeder Thread hat sein eigenes Stopp-Signal –
+        ein alter, noch in einer Anfrage hängender Thread läuft so nicht nach einem neuen Start weiter."""
         if self.running:
             return
-        self._stop.clear()
+        self._stop = threading.Event()
         self.running = True
-        self._thread = threading.Thread(target=self._loop, name="client", daemon=True)
+        self._thread = threading.Thread(target=self._loop, args=(self._stop,), name="client", daemon=True)
         self._thread.start()
 
     def stop(self):
-        """Abfrage-Thread beenden und auf ihn warten (nicht, wenn stop aus ihm selbst kommt)."""
+        """Abfrage-Thread beenden. Gewartet wird nur kurz (die Oberfläche soll nicht hängen, wenn der Server gerade nicht
+        antwortet); der Thread endet nach der laufenden Anfrage von selbst."""
         self._stop.set()
         th = self._thread
         if th is not None and th.is_alive() and th is not threading.current_thread():
-            th.join(timeout=TIMEOUT_S + 2)
+            th.join(timeout=0.5)
         self._thread = None
         self.running = False
 
@@ -432,12 +485,14 @@ class RemoteRecorder:
         """Meldung für die Statuszeile vormerken (wie Recorder.emit)."""
         self.messages.append(text)
 
-    def _loop(self):
+    def _loop(self, stop):
         """Abfrage-Thread: je Takt die Zeilen seit der letzten holen (beim ersten Mal die jüngsten INITIAL_ROWS), anhängen,
-        Zustand und Ereignis-Version übernehmen; Verbindungsfehler melden und weiter versuchen."""
+        Zustand und Ereignis-Version übernehmen; Verbindungsfehler melden und weiter versuchen. Scheitert die erneute
+        Anmeldung dreimal hintereinander (Passwort am Server geändert?), endet die Abfrage mit einer Meldung."""
         last = 0.0
         failed = False
-        while not self._stop.is_set():
+        bad_login = 0
+        while not stop.is_set():
             t_start = time.monotonic()
             try:
                 params = {"seit": f"{last:.3f}", "max": INITIAL_ROWS if last <= 0 else 20000}
@@ -450,25 +505,30 @@ class RemoteRecorder:
                     break
                 t = np.asarray(d.get("t") or [], dtype=float)
                 if len(t):
-                    y = np.array([[np.nan if v is None else v for v in row] for row in d.get("y") or []],
-                                 dtype=float).reshape(len(self.vars), len(t))
-                    self._append_many(t, y)
+                    self._append_many(t, _matrix(d, len(self.vars), len(t)))
                     last = float(t[-1])
                 self._status = [(p["name"], p["state"], p["text"], float(p.get("read_ms") or 0))
                                 for p in d.get("plcs") or []]
                 self.server_running = bool(d.get("running", True))
                 self._capture = d.get("capture")
                 self.events.update_state(d.get("events"))
+                self.events.refresh()                              # Ereignisse bei Bedarf neu holen (nicht im GUI-Thread)
                 if failed:
                     self.emit(tr("Verbindung zu {0} wiederhergestellt").format(self.con.hostkey))
                 failed = False
                 self._link = ("ok", tr("verbunden"))
-                if d.get("more"):
+                bad_login = 0
+                if d.get("more") and len(t):
                     continue                                       # noch mehr Zeilen: sofort weiter holen
             except LoginRequired as e:
                 self._link = ("error", str(e))
                 try:
                     self.con.login()                               # Sitzung abgelaufen: erneut anmelden
+                except LoginRequired:
+                    bad_login += 1
+                    if bad_login >= 3:
+                        self.emit("⚠ " + tr("Anmeldung am Server fehlgeschlagen – Abfrage beendet (Passwort geändert?)"))
+                        break
                 except ClientError:
                     pass
                 failed = True
@@ -483,8 +543,9 @@ class RemoteRecorder:
                     self.emit("⚠ " + tr("Client: {0}").format(e))
                 failed = True
             wait = self.refresh_s * (5 if failed else 1) - (time.monotonic() - t_start)
-            self._stop.wait(max(wait, 0.05))
-        self.running = False
+            stop.wait(max(wait, 0.05))
+        if stop is self._stop:
+            self.running = False
 
     # ---------------------------------------------------------------- Puffer (wie Recorder)
     def _append_many(self, t, y):
@@ -583,12 +644,11 @@ class RemoteRecorder:
         """Werte t0..t1 vom Server (sein Speicher, davor seine Datenbank) -> (Zeiten, Werte[Variable][Zeile], Quelle,
         Fehlertext). Für „Aus Datenbank laden“ und „Im Diagramm zeigen“ im Client."""
         d = self.con.get_json("api/verlauf", {"t0": f"{t0 - 0.001:.3f}", "t1": f"{t1 + 0.001:.3f}",  # gerundet: Ränder dabei
-                                              "max": int(max_rows)},
+                                              # höchstens ~5 Mio. Werte (Speicher, auch auf dem Pi)
+                                              "max": int(min(max_rows, 5_000_000 // max(1, len(self.vars))))},
                               timeout=120)
         t = np.asarray(d.get("t") or [], dtype=float)
-        y = (np.array([[np.nan if v is None else v for v in row] for row in d.get("y") or []], dtype=float)
-             .reshape(len(self.vars), len(t)) if len(t) else np.empty((len(self.vars), 0)))
-        return t, y, d.get("source", ""), d.get("db_error", "")
+        return t, _matrix(d, len(self.vars), len(t)), d.get("source", ""), d.get("db_error", "")
 
     def describe(self):
         """Kurztext für Titel und Statusleiste."""

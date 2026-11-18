@@ -91,6 +91,15 @@
 @ Flat-Top (genaue Amplituden)
 > 
 
+@ zu wenige gültige Messwerte
+> 
+
+@ alle Messwerte haben denselben Zeitstempel
+> 
+
+@ für eine Frequenzanalyse werden mindestens 8 Messwerte benötigt
+> 
+
 # ---------------- plc_analysis_dialog.py
 
 @ Zeitbereich:
@@ -214,6 +223,12 @@
 > 
 
 @ Stärkste Frequenzen: 
+> 
+
+@ Der Zeitbereich enthält Lücken – ausgewertet ist der längste lückenlose Abschnitt.
+> 
+
+@ Sehr langer Zeitbereich – die Werte wurden auf ein gröberes Raster umgerechnet.
 > 
 
 # ---------------- plc_block_dialog.py
@@ -362,6 +377,12 @@
 @ Die Bibliothek des Treibers fehlt ({0}):\n{1}
 > 
 
+@ Verbindung zur Steuerung …
+> 
+
+@ Abbrechen
+> 
+
 @ Lesen fehlgeschlagen:\n{0}
 > 
 
@@ -437,6 +458,9 @@
 @ Ungültige Adresse: {0}
 > 
 
+@ Umleitung auf eine andere Adresse abgelehnt: {0}
+> 
+
 @ Der Fingerabdruck des Zertifikats hat sich geändert: {0}
 > 
 
@@ -458,6 +482,12 @@
 @ Der Logger zeichnet gerade nicht auf.
 > 
 
+@ Antwort des Servers zu groß
+> 
+
+@ Antwort des Servers fehlerhaft: {0}
+> 
+
 @ Server
 > 
 
@@ -474,6 +504,9 @@
 > 
 
 @ verbunden
+> 
+
+@ Anmeldung am Server fehlgeschlagen – Abfrage beendet (Passwort geändert?)
 > 
 
 @ Client: {0}
@@ -494,6 +527,9 @@
 > 
 
 @ Adresse und Benutzer merken (nicht das Passwort)
+> 
+
+@ ⚠ Ohne HTTPS gehen Passwort bzw. Zugriffscode unverschlüsselt über das Netz – Adresse mit https:// verwenden, wenn der Logger HTTPS anbietet.
 > 
 
 @ Adresse:
@@ -1884,9 +1920,6 @@
 > 
 
 @ Abgebrochen.
-> 
-
-@ Abbrechen
 > 
 
 @ Breche ab …

@@ -157,14 +157,24 @@ def launch(parent, kind: str, *args, title: str = ""):
     from plc_i18n import tr
     title = title or tr("Programm starten")
     log = tempfile.NamedTemporaryFile(prefix="plc_start_", suffix=".log", delete=False)
+    env = child_env()
+    env["PLC_START_LOG"] = log.name             # das Programm leitet seine Ausgabe nach dem Start selbst um
     try:
-        proc = subprocess.Popen(program_command(kind, *args), env=child_env(), stdout=log, stderr=log,
+        proc = subprocess.Popen(program_command(kind, *args), env=env, stdout=log, stderr=log,
                                 stdin=subprocess.DEVNULL)
     except OSError as e:
         log.close()
         QMessageBox.critical(parent, title, tr("Das Programm konnte nicht gestartet werden:\n{0}").format(e))
         return False
     log.close()
+    import threading
+    threading.Thread(target=proc.wait, daemon=True).start()      # Ende abwarten: kein Zombie-Prozess
+    try:
+        from shiboken6 import isValid
+    except ImportError:
+        def isValid(_obj):
+            """Ohne shiboken6: als gültig annehmen."""
+            return True
 
     def check():
         """Nach einigen Sekunden: abgestürzt? Dann Meldung mit der Fehlerausgabe."""
@@ -176,10 +186,41 @@ def launch(parent, kind: str, *args, title: str = ""):
                 tail = "".join(f.readlines()[-15:]).strip()
         except OSError:
             tail = ""
-        QMessageBox.warning(parent, title, tr("Das Programm wurde mit Fehler {0} beendet.").format(code)
+        try:
+            os.remove(log.name)
+        except OSError:
+            pass
+        owner = parent if parent is not None and isValid(parent) else None     # Dialog inzwischen geschlossen?
+        QMessageBox.warning(owner, title, tr("Das Programm wurde mit Fehler {0} beendet.").format(code)
                             + ("\n\n" + tail if tail else ""))
     QTimer.singleShot(5000, check)
     return True
+
+
+def open_url(url) -> bool:
+    """URL oder Datei (QUrl oder Text) mit dem Standardprogramm öffnen. Unter Linux in den gebündelten Fassungen
+    (PyInstaller, AppImage) über ``xdg-open`` mit bereinigter Umgebung (plc_common.child_env) – sonst erben Browser
+    und PDF-Anzeige die mitgelieferten Bibliotheken und starten oft nicht."""
+    from PySide6.QtCore import QUrl
+    from PySide6.QtGui import QDesktopServices
+    if not isinstance(url, QUrl):
+        url = QUrl.fromLocalFile(url) if os.path.exists(str(url)) else QUrl(str(url))
+    if sys.platform.startswith("linux") and getattr(sys, "frozen", False):
+        import shutil
+        import subprocess
+        from plc_common import child_env
+        tool = shutil.which("xdg-open")
+        if tool:
+            env = child_env()
+            env.pop("PYINSTALLER_RESET_ENVIRONMENT", None)
+            try:
+                subprocess.Popen([tool, url.toString(QUrl.ComponentFormattingOption.FullyEncoded)], env=env,
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                 start_new_session=True)
+                return True
+            except OSError:
+                pass
+    return QDesktopServices.openUrl(url)
 
 
 def set_windows_app_id(app_id: str = "PLCDatenlogger"):

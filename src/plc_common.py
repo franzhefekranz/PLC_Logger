@@ -125,6 +125,36 @@ def program_command(kind: str, *args) -> list:
     return [sys.executable, os.path.join(here, "plc_logger.py")] + (switch if kind == "iocheck" else []) + args
 
 
+def _detach_start_log():
+    """Von einem anderen Programm gestartet (plc_branding.launch): Ausgabe geht in eine temporäre Datei, damit der
+    Starter einen frühen Absturz melden kann. Nach 10 s die Ausgabe auf das Null-Gerät umleiten und die Datei löschen
+    – sonst wächst sie im Dauerbetrieb (unter Linux liegt /tmp oft im RAM)."""
+    path = os.environ.pop("PLC_START_LOG", "")
+    if not path:
+        return
+    import threading
+
+    def detach():
+        """Ausgabe umleiten, Datei löschen (Fehler sind unkritisch)."""
+        try:
+            for stream in (sys.stdout, sys.stderr):
+                if stream is not None:
+                    stream.flush()
+            null = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(null, 1)
+            os.dup2(null, 2)
+            os.close(null)
+        except OSError:
+            return
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    t = threading.Timer(10.0, detach)
+    t.daemon = True
+    t.start()
+
+
 def qt_platform_setup():
     """Vor dem Anlegen der QApplication aufrufen: unter Linux mit Wayland Qt über XWayland (``xcb``) starten.
 
@@ -133,6 +163,7 @@ def qt_platform_setup():
     XWayland gibt es diesen Weg nicht, und Fenster lassen sich frei positionieren. Ein selbst gesetztes
     ``QT_QPA_PLATFORM`` gilt weiter; ``PLC_WAYLAND=1`` erzwingt Wayland. Ohne XWayland (``DISPLAY`` leer) bleibt es bei
     Wayland – dann sperrt ``dock_features`` das Verschieben der Docks."""
+    _detach_start_log()
     if not sys.platform.startswith("linux") or os.environ.get("QT_QPA_PLATFORM"):
         return
     wayland = bool(os.environ.get("WAYLAND_DISPLAY")) or os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"

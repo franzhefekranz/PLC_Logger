@@ -25,6 +25,7 @@ Die Prüfung läuft beim Start der Aufzeichnung und danach stündlich (``Cleanup
 """
 import glob
 import os
+import re
 import threading
 import time
 
@@ -32,6 +33,7 @@ from plc_i18n import tr
 
 MB = 1024 * 1024
 INTERVAL_S = 3600.0                  # Abstand der Prüfungen
+FRESH_S = 120.0                      # jüngere Dateien/Ordner nie anfassen (gerade rotiert, ZIP wird geschrieben)
 
 
 def settings(conn) -> dict:
@@ -39,18 +41,34 @@ def settings(conn) -> dict:
     def num(key):
         try:
             return max(0, int(float(conn.get(key, 0) or 0)))
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             return 0
     return {"csv_tage": num("aufr_csv_tage"), "csv_mb": num("aufr_csv_mb"),
             "db_tage": num("aufr_db_tage"), "db_mb": num("aufr_db_mb")}
 
 
+def valid_base(base) -> bool:
+    """Taugt der CSV-Name als Grundlage zum Löschen? Nicht leer, kein Pfad, nicht „.“/„..“."""
+    return bool(base) and base not in (".", "..") and os.path.basename(base) == base and not os.path.isabs(base)
+
+
+def own_name(base):
+    """Muster der Dateinamen dieses Loggers: ``<base>_JJJJMMTT_hhmmss…`` (CSV und daraus gepackte ZIP). So trifft
+    „Anlage“ nicht die Dateien eines Loggers „Anlage_Halle2“ im selben Ordner, und fremde Dateien bleiben."""
+    return re.compile(re.escape(base) + r"_\d{8}_\d{6}", re.I)
+
+
 def csv_files(csv_dir, archive_dir, base):
-    """Aufzeichnungsdateien dieses Loggers -> [(Pfad, Änderungszeit, Größe)], älteste zuerst."""
-    paths = glob.glob(os.path.join(glob.escape(csv_dir), glob.escape(base) + "_*.csv"))
-    root = os.path.join(archive_dir, base)
-    for folder, _dirs, files in os.walk(root):
-        paths += [os.path.join(folder, f) for f in files if f.lower().endswith(".zip")]
+    """Aufzeichnungsdateien dieses Loggers -> [(Pfad, Änderungszeit, Größe)], älteste zuerst. Ohne gültigen CSV-Namen
+    bzw. CSV-Ordner: keine (es wird nie etwas außerhalb der eigenen Dateien gelöscht)."""
+    if not (valid_base(base) and csv_dir):
+        return []
+    own = own_name(base)
+    paths = [p for p in glob.glob(os.path.join(glob.escape(csv_dir), glob.escape(base) + "_*.csv"))
+             if own.match(os.path.basename(p))]
+    if archive_dir:
+        for folder, _dirs, files in os.walk(os.path.join(archive_dir, base)):
+            paths += [os.path.join(folder, f) for f in files if f.lower().endswith(".zip") and own.match(f)]
     out = []
     for p in paths:
         try:
@@ -64,16 +82,28 @@ def csv_files(csv_dir, archive_dir, base):
 def plan(files, now, days=0, max_mb=0, keep=()):
     """Welche Dateien sind zu löschen? ``files`` wie von ``csv_files`` (älteste zuerst); ``keep`` wird nie gelöscht.
 
-    Erst alles älter als ``days`` Tage, dann – solange die Summe über ``max_mb`` liegt – die jeweils älteste Datei."""
-    keep = {os.path.normcase(os.path.abspath(k)) for k in keep if k}
-    files = [f for f in files if os.path.normcase(os.path.abspath(f[0])) not in keep]
+    Erst alles älter als ``days`` Tage, dann – solange die Summe über ``max_mb`` liegt – die jeweils älteste Datei.
+    Nie gelöscht werden Dateien, die jünger als FRESH_S sind (gerade rotiert bzw. ZIP im Entstehen), und – beim
+    Zeitraum – die jüngste Datei, wenn sonst alle fällig wären (Systemuhr vorgestellt oder Logger lange aus: nicht die
+    ganze Historie auf einmal)."""
+    keep_paths = [k for k in keep if k]
+    keep = {os.path.normcase(os.path.abspath(k)) for k in keep_paths}
+    files = [f for f in files if os.path.normcase(os.path.abspath(f[0])) not in keep and now - f[1] >= FRESH_S]
     doomed = []
     if days > 0:
         limit = now - days * 86400.0
         doomed = [f for f in files if f[1] < limit]
+        if doomed and len(doomed) == len(files):
+            doomed = doomed[:-1]
     if max_mb > 0:
-        rest = [f for f in files if f not in doomed]
-        total = sum(f[2] for f in rest) + sum(os.path.getsize(k) for k in keep if os.path.exists(k))
+        dead = {f[0] for f in doomed}
+        rest = [f for f in files if f[0] not in dead]
+        total = sum(f[2] for f in rest)
+        for k in keep_paths:
+            try:
+                total += os.path.getsize(k)
+            except OSError:
+                pass
         for f in rest:
             if total <= max_mb * MB:
                 break
@@ -106,7 +136,8 @@ def clean_csv(csv_dir, archive_dir, base, days=0, max_mb=0, keep=(), now=None):
             freed += sizes.get(p, 0)
         except OSError as e:
             errors.append(f"{os.path.basename(p)}: {e.strerror or e}")
-    _remove_empty_dirs(os.path.join(archive_dir, base))
+    if archive_dir and valid_base(base):
+        _remove_empty_dirs(os.path.join(archive_dir, base))
     return n, freed, errors
 
 

@@ -7,6 +7,7 @@ oder alles) und bleiben neben dem Hauptfenster offen; „Aktualisieren“ holt d
 laufenden Aufzeichnung). Rechenteil: plc_analysis.py.
 """
 import csv
+import html
 import os
 
 import numpy as np
@@ -28,6 +29,7 @@ class _AnalysisBase(QDialog):
     def __init__(self, parent, title, variables, data_fn, ranges, base_dir):
         """variables: [Variable]; data_fn(t0, t1) -> (Zeiten, {Name: Werte}); ranges: [(Text, t0, t1)]."""
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)     # nicht modal: beim Schließen freigeben
         self.setWindowTitle(title)
         self.setWindowFlag(Qt.WindowType.WindowMaximizeButtonHint, True)
         self.resize(1000, 640)
@@ -40,6 +42,8 @@ class _AnalysisBase(QDialog):
             self.cb_range.addItem(text, (a, b))
         self.cb_range.currentIndexChanged.connect(lambda _i: self.recompute())
         self.plot = pg.PlotWidget()
+        self.plot.setDownsampling(auto=True, mode="peak")     # lange Spektren/Kurven nur so fein wie die Anzeige
+        self.plot.setClipToView(True)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
         self.plot.addLegend(offset=(10, 10))
         self.lbl_info = QLabel("")
@@ -107,7 +111,7 @@ class _AnalysisBase(QDialog):
     def save_csv(self):
         """Die berechneten Werte (``export_rows``) als CSV-Datei mit Semikolon speichern (UTF-8 mit BOM für Excel)."""
         head, rows = self.export_rows
-        if not rows:
+        if len(rows) == 0:
             QMessageBox.information(self, tr("Werte speichern"), tr("Es sind keine Werte vorhanden."))
             return
         path, _ = plc_filedlg.save_name(self, tr("Werte speichern"), os.path.join(self.base_dir, "analyse.csv"),
@@ -120,8 +124,10 @@ class _AnalysisBase(QDialog):
             with open(path, "w", newline="", encoding="utf-8-sig") as f:
                 w = csv.writer(f, delimiter=";")
                 w.writerow(head)
-                for r in rows:
-                    w.writerow([f"{x:.9g}" if isinstance(x, float) else x for x in r])
+                # Zeilen erst hier erzeugen (große Spektren); 15 Stellen: Zeitstempel in Sekunden seit 1970 bleiben
+                # auf die Millisekunde genau
+                for r in np.asarray(rows, dtype=float).tolist():
+                    w.writerow([f"{x:.15g}" for x in r])
         except OSError as e:
             QMessageBox.warning(self, tr("Werte speichern"), str(e))
 
@@ -177,6 +183,7 @@ class XYDialog(_AnalysisBase):
     def recompute(self):
         """Je Y-Variable die Wertepaare (X, Y) zeichnen; optional Ausgleichsgerade und Korrelationskoeffizient r."""
         self.plot.clear()
+        self.export_rows = ([], [])                       # keine Werte einer früheren Auswahl speichern
         xn, yns = self.cb_x.currentText(), self.y_names()
         if not xn or not yns:
             self.lbl_info.setText(tr("Bitte eine X-Variable und mindestens eine Y-Variable wählen."))
@@ -197,7 +204,8 @@ class XYDialog(_AnalysisBase):
             x, y = xy_pairs(data[xn], data[yn])
             pen = pg.mkPen(col, width=1.5) if style in ("linie", "beides") else None
             sym = "o" if style in ("punkte", "beides") else None
-            self.plot.plot(x, y, pen=pen, symbol=sym, symbolSize=4, symbolPen=None,
+            step = max(1, len(x) // 20000) if sym else 1    # sehr viele Punkte: nur jeden n-ten zeichnen (Anzeige)
+            self.plot.plot(x[::step], y[::step], pen=pen, symbol=sym, symbolSize=4, symbolPen=None,
                            symbolBrush=pg.mkBrush(col), name=yn)
             head.append(yn)
             cols.append(data[yn])
@@ -207,10 +215,10 @@ class XYDialog(_AnalysisBase):
                     r, a, b = c
                     xs = np.array([x.min(), x.max()])
                     self.plot.plot(xs, a * xs + b, pen=pg.mkPen(col, width=1, style=Qt.PenStyle.DashLine))
-                    info.append(tr("{0}: r = {1:.4f}, Gerade y = {2:.5g}·x {3:+.5g}").format(yn, r, a, b))
+                    info.append(tr("{0}: r = {1:.4f}, Gerade y = {2:.5g}·x {3:+.5g}").format(html.escape(yn), r, a, b))
         n = len(t)
         self.lbl_info.setText(tr("{0} Messpunkte im Zeitbereich.").format(n) + ("  " + "  ·  ".join(info) if info else ""))
-        self.export_rows = (head, [[float(c[i]) for c in cols] for i in range(n)])
+        self.export_rows = (head, np.column_stack([np.asarray(c, dtype=float) for c in cols]))
 
 
 # ---------------------------------------------------------------------------------------------------------- FFT
@@ -259,6 +267,7 @@ class FftDialog(_AnalysisBase):
         und mit Periodendauer aufgelistet.
         """
         self.plot.clear()
+        self.export_rows = ([], [])                       # keine Werte einer früheren Auswahl speichern
         name = self.cb_var.currentText()
         if not name:
             return
@@ -292,6 +301,9 @@ class FftDialog(_AnalysisBase):
         if peaks:
             lines.append(tr("Stärkste Frequenzen: ") + "; ".join(
                 f"{fmt_freq(fp)} – {ap:.4g}" for fp, ap in peaks))
+        if s.get("gap"):
+            lines.append(tr("Der Zeitbereich enthält Lücken – ausgewertet ist der längste lückenlose Abschnitt."))
+        if s.get("coarser"):
+            lines.append(tr("Sehr langer Zeitbereich – die Werte wurden auf ein gröberes Raster umgerechnet."))
         self.lbl_info.setText("<br>".join(lines))
-        self.export_rows = (["Frequenz_Hz", "Periodendauer_s", "Amplitude"],
-                            [[float(fi), float(1.0 / fi), float(ai)] for fi, ai in zip(f, amp)])
+        self.export_rows = (["Frequenz_Hz", "Periodendauer_s", "Amplitude"], np.column_stack((f, 1.0 / f, amp)))

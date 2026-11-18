@@ -66,6 +66,13 @@ class ClientDialog(QDialog):
         self.lbl_err = QLabel("")
         self.lbl_err.setWordWrap(True)
         self.lbl_err.setStyleSheet("color:#c62828")
+        self.lbl_warn = QLabel(tr("⚠ Ohne HTTPS gehen Passwort bzw. Zugriffscode unverschlüsselt über das Netz – "
+                                  "Adresse mit https:// verwenden, wenn der Logger HTTPS anbietet."))
+        self.lbl_warn.setWordWrap(True)
+        self.lbl_warn.setStyleSheet("color:#b26a00")
+        for w in (self.ed_user, self.ed_token):
+            w.textChanged.connect(self._check_secure)
+        self.cb_url.editTextChanged.connect(self._check_secure)
         form = QFormLayout()
         form.addRow(tr("Adresse:"), self.cb_url)
         form.addRow(tr("Benutzer:"), self.ed_user)
@@ -79,9 +86,16 @@ class ClientDialog(QDialog):
         lay.addWidget(info)
         lay.addLayout(form)
         lay.addWidget(self.chk_remember)
+        lay.addWidget(self.lbl_warn)
         lay.addWidget(self.lbl_err)
         lay.addWidget(bb)
         (self.ed_pw if self.ed_user.text() else self.cb_url).setFocus()
+        self._check_secure()
+
+    def _check_secure(self, *_):
+        """Hinweis zeigen, wenn Anmeldedaten ohne HTTPS übertragen würden."""
+        from plc_client import is_insecure
+        self.lbl_warn.setVisible(is_insecure(self.cb_url.currentText(), self.ed_user.text(), self.ed_token.text()))
 
     def _recent_chosen(self, i):
         """Zuletzt benutzte Adresse gewählt: den dazu gemerkten Benutzer eintragen."""

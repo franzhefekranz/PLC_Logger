@@ -102,16 +102,28 @@ def test_cleanup_csv_and_sqlite(tmp_path):
     (arch / "log" / "2026" / "01" / "02").mkdir(parents=True)
     csv_dir.mkdir()
     now = _t.time()
-    files = {csv_dir / "log_alt.csv": 40, csv_dir / "log_neu.csv": 1, csv_dir / "log_aktuell.csv": 0,
-             csv_dir / "anderer_1.csv": 99, arch / "log" / "2026" / "01" / "02" / "log_a.zip": 30}
+    cur = csv_dir / "log_20261118_080000.csv"
+    files = {csv_dir / "log_20251001_120000.csv": 40, csv_dir / "log_20261117_120000.csv": 1, cur: 0,
+             csv_dir / "anderer_1.csv": 99, csv_dir / "log_Halle2_20251001_120000.csv": 40,
+             csv_dir / "log_notizen.csv": 99, arch / "log" / "2026" / "01" / "02" / "log_20251001_120000.zip": 30}
     for f, age_days in files.items():
         f.write_bytes(b"x" * 600_000)
         os.utime(f, (now - age_days * 86400, now - age_days * 86400))
-    n, freed, err = cl.clean_csv(str(csv_dir), str(arch), "log", days=10, keep=[str(csv_dir / "log_aktuell.csv")])
+    n, freed, err = cl.clean_csv(str(csv_dir), str(arch), "log", days=10, keep=[str(cur)])
     assert n == 2 and not err and not (arch / "log" / "2026").exists()          # alte Datei + ZIP, leere Ordner weg
-    assert (csv_dir / "anderer_1.csv").exists() and (csv_dir / "log_aktuell.csv").exists()
-    n, _f, _e = cl.clean_csv(str(csv_dir), str(arch), "log", max_mb=1, keep=[str(csv_dir / "log_aktuell.csv")])
-    assert n == 1 and not (csv_dir / "log_neu.csv").exists()                   # 2 × 0,6 MB > 1 MB
+    assert (csv_dir / "anderer_1.csv").exists() and cur.exists()
+    assert (csv_dir / "log_Halle2_20251001_120000.csv").exists()               # anderer Logger „log_Halle2“
+    assert (csv_dir / "log_notizen.csv").exists()                              # fremde Datei mit gleichem Anfang
+    n, _f, _e = cl.clean_csv(str(csv_dir), str(arch), "log", max_mb=1, keep=[str(cur)])
+    assert n == 1 and not (csv_dir / "log_20261117_120000.csv").exists()       # 2 × 0,6 MB > 1 MB
+    # nie außerhalb der eigenen Dateien: leerer/pfadartiger Name, fehlender Ordner
+    for base in ("", "..", "../x"):
+        assert cl.csv_files(str(csv_dir), str(arch), base) == []
+    assert cl.csv_files("", str(arch), "log") == []
+    # alle Dateien wären nach Alter fällig (Uhr vorgestellt): die jüngste bleibt; ganz frische Dateien bleiben immer
+    fl = [("a", now - 90 * 86400, 1), ("b", now - 80 * 86400, 1), ("c", now - 10, 1)]
+    assert cl.plan(fl, now, days=30) == ["a"]
+    assert cl.settings({"aufr_csv_tage": "inf"})["csv_tage"] == 0
     s = plc_db.db_settings({"db_typ": "sqlite", "db_datei": str(tmp_path / "w.db")})
     b = plc_db.SqliteBackend(s)
     b.connect()
@@ -446,6 +458,21 @@ def test_report_pdf(tmp_path):
     data = open(path, "rb").read()
     assert data.count(b"/Subtype /Image") == 2 and b"/XObject << /Im0" in data
 
+
+def test_analysis_gaps_sorting_and_limits():
+    """FFT-Vorbereitung: unsortierte Zeiten werden sortiert, bei Lücken zählt der längste lückenlose Abschnitt, sehr
+    lange Bereiche werden auf höchstens MAX_POINTS Punkte vergröbert; Peaks vektorisiert."""
+    import numpy as np
+    import plc_analysis as an
+    t = np.r_[np.arange(0, 100, 0.1), np.arange(5000, 5200, 0.1)]       # Lücke von über einer Stunde
+    y = np.sin(2 * np.pi * 1.0 * t)
+    s = an.spectrum(t[::-1], y[::-1])                                  # rückwärts: wird sortiert
+    assert s["gap"] and abs(s["n"] - 2000) <= 2 and abs(s["peaks"][0][0] - 1.0) < 0.02
+    info = {}
+    tu, _yu, _dt = an.resample_uniform(np.array([0.0, 0.001, 0.002, 4000.0]), np.zeros(4), dt=0.001, info=info)
+    assert len(tu) == an.MAX_POINTS and info["coarser"]
+    f = np.arange(10.0)
+    assert an.find_peaks(f, [0, 1, 5, 1, 0, 3, 0, 0.1, 0, 0]) == [(2.0, 5.0), (5.0, 3.0)]
 
 def test_analysis_spectrum():
     """Frequenzanalyse: ein Sinus mit 0,5 Hz ergibt die Spitze bei 0,5 Hz."""
@@ -1556,7 +1583,11 @@ def test_client_remote_recorder(tmp_path, monkeypatch):
         rec.events.come(Trigger(name="Test", prio="Alarm"), "zu heiß")
         time.sleep(1.5)
         assert r.events.open_count() >= 1
-        evs = r.events.events()
+        for _ in range(50):                                     # Ereignisse lädt der Abfrage-Thread nach
+            evs = r.events.events()
+            if any(e.trigger == "Test" for e in evs):
+                break
+            time.sleep(0.1)
         eid = next(e.id for e in evs if e.trigger == "Test")
         assert r.events.acknowledge([eid]) == 1
         e = next(e for e in rec.events.events() if e.id == eid)
@@ -1582,6 +1613,12 @@ def test_client_remote_recorder(tmp_path, monkeypatch):
         srv.stop()
         rec.stop()
     assert pc.normalize_url("logger:8080") == "http://logger:8080/"
+    assert pc.normalize_url("https://chef:geheim@pi:8443/x") == "https://pi:8443/x/"   # ohne Benutzer:Passwort
+    assert pc.normalize_url("http://[fe80::1]:8080") == "http://[fe80::1]:8080/"
+    assert pc.is_insecure("logger:8080", "chef") and not pc.is_insecure("https://pi/", "chef")
+    assert not pc.is_insecure("http://pi/") and pc.is_insecure("http://pi/?token=x")
+    m = pc._matrix({"y": [[1, None], [3, 4]]}, 2, 2)
+    assert m.shape == (2, 2) and np.isnan(m[0, 1]) and pc._matrix({}, 3, 0).shape == (3, 0)
     assert pc.Connection("http://pi:8080/?token=abc").token == "abc"
     assert pc.Connection("http://pi:8080/?token=abc").url == "http://pi:8080/"
     with pytest.raises(pc.ClientError):

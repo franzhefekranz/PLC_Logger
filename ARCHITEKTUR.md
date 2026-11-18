@@ -36,7 +36,8 @@ Grundlagen               plc_common (Datenmodell, Konfiguration), plc_util, plc_
 ```
 
 Regel: Module ohne `_dialog`/`_gui`/`_config` im Namen importieren kein Qt (manche nur optional). Dadurch laufen
-Headless-Betrieb und die Logik-Tests ohne PySide6.
+Headless-Betrieb und die Logik-Tests ohne PySide6. Ausnahmen – reine Oberflächen-Module, die Headless und Kern nie
+importieren: `plc_about`, `plc_branding`, `plc_event_viewer`, `plc_filedlg`, `plc_netpanel`, `plc_splash`.
 
 ## Module
 

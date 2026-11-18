@@ -689,7 +689,11 @@ def test_block_editor_ring(qt_log, monkeypatch):
     monkeypatch.setattr(S7Driver, "read_ring_once", lambda self, plc, v: (
         [([0, 1, 2], 100.0, [1.0, 2.0, 3.0]), ([0, 1, 2], 100.05, [1.5, 2.5, 3.5])], {}, {"Puffer": 2}))
     t.selectRow(0)
-    dlg.test_block()
+    dlg.test_block()                                         # liest im Hintergrund: auf die Meldung warten
+    for _ in range(100):
+        if qt_log.messages and "Zähler" in qt_log.last()[2]:
+            break
+        wait(30)
     assert "Zähler 2" in qt_log.last()[2] and "50.0 ms" in qt_log.last()[2], qt_log.messages
     dlg.open_templates()
     assert qt_log.opened and "vorlagen" in qt_log.opened[-1]

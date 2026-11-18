@@ -91,6 +91,15 @@
 @ Flat-Top (genaue Amplituden)
 > Flat-top (accurate amplitudes)
 
+@ zu wenige gültige Messwerte
+> too few valid values
+
+@ alle Messwerte haben denselben Zeitstempel
+> all values have the same time stamp
+
+@ für eine Frequenzanalyse werden mindestens 8 Messwerte benötigt
+> a frequency analysis needs at least 8 values
+
 # ---------------- plc_analysis_dialog.py
 
 @ Zeitbereich:
@@ -215,6 +224,12 @@
 
 @ Stärkste Frequenzen: 
 > Strongest frequencies: 
+
+@ Der Zeitbereich enthält Lücken – ausgewertet ist der längste lückenlose Abschnitt.
+> The time range contains gaps – the longest section without gaps is analysed.
+
+@ Sehr langer Zeitbereich – die Werte wurden auf ein gröberes Raster umgerechnet.
+> Very long time range – the values were resampled to a coarser grid.
 
 # ---------------- plc_block_dialog.py
 
@@ -362,6 +377,12 @@
 @ Die Bibliothek des Treibers fehlt ({0}):\n{1}
 > The driver's library is missing ({0}):\n{1}
 
+@ Verbindung zur Steuerung …
+> Connecting to the controller …
+
+@ Abbrechen
+> Cancel
+
 @ Lesen fehlgeschlagen:\n{0}
 > Read failed:\n{0}
 
@@ -437,6 +458,9 @@
 @ Ungültige Adresse: {0}
 > Invalid address: {0}
 
+@ Umleitung auf eine andere Adresse abgelehnt: {0}
+> Redirect to another address refused: {0}
+
 @ Der Fingerabdruck des Zertifikats hat sich geändert: {0}
 > The certificate fingerprint has changed: {0}
 
@@ -458,6 +482,12 @@
 @ Der Logger zeichnet gerade nicht auf.
 > The logger is not recording at the moment.
 
+@ Antwort des Servers zu groß
+> Server response too large
+
+@ Antwort des Servers fehlerhaft: {0}
+> Faulty server response: {0}
+
 @ Server
 > server
 
@@ -475,6 +505,9 @@
 
 @ verbunden
 > connected
+
+@ Anmeldung am Server fehlgeschlagen – Abfrage beendet (Passwort geändert?)
+> Login at the server failed – polling stopped (password changed?)
 
 @ Client: {0}
 > Client: {0}
@@ -495,6 +528,9 @@
 
 @ Adresse und Benutzer merken (nicht das Passwort)
 > Remember address and user (not the password)
+
+@ ⚠ Ohne HTTPS gehen Passwort bzw. Zugriffscode unverschlüsselt über das Netz – Adresse mit https:// verwenden, wenn der Logger HTTPS anbietet.
+> ⚠ Without HTTPS, password or access code travel unencrypted over the network – use an address with https:// if the logger offers HTTPS.
 
 @ Adresse:
 > Address:
@@ -1885,9 +1921,6 @@
 
 @ Abgebrochen.
 > Cancelled.
-
-@ Abbrechen
-> Cancel
 
 @ Breche ab …
 > Cancelling …

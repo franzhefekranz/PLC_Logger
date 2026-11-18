@@ -20,13 +20,14 @@ import platform
 import re
 import sys
 import tempfile
+import weakref
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QAction, QDesktopServices, QFontDatabase, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QFontDatabase, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QDialog, QDialogButtonBox, QHBoxLayout, QLabel, QMenu, QMessageBox,
                                QPushButton, QTabWidget, QTextBrowser, QVBoxLayout)
 
-from plc_branding import company_pixmap
+from plc_branding import company_pixmap, open_url
 from plc_common import APP_NAME, APP_VERSION, BASE_DIR
 from plc_i18n import current as current_language, tr
 
@@ -72,20 +73,25 @@ def _search_dirs():
     return [os.path.normpath(d) for d in dirs if d]
 
 
+def _version_key(path):
+    """Sortierschlüssel mit Zahlen als Zahlen: …_3.10.0.pdf ist neuer als …_3.9.0.pdf."""
+    return [(0, int(t), "") if t.isdigit() else (1, 0, t) for t in re.split(r"(\d+)", os.path.basename(path)) if t]
+
+
 def find_file(*names) -> str:
     """Erste vorhandene Datei zu den Namen (Platzhalter * erlaubt) in den Suchordnern, sonst ""."""
     for name in names:
         for folder in _search_dirs():
-            hits = sorted(glob.glob(os.path.join(folder, name)))
+            hits = sorted(glob.glob(os.path.join(glob.escape(folder), name)), key=_version_key)
             if hits:
-                return hits[-1]                       # bei mehreren Versionen die neueste (Sortierung nach Name)
+                return hits[-1]                       # bei mehreren Versionen die neueste (Versionsnummer)
     return ""
 
 
 def open_manual(parent=None):
     """Bedienungsanleitung mit dem Standardprogramm des Systems öffnen (PDF-Anzeige bzw. Browser)."""
     path = (find_file(*MANUAL_FILES_EN) if english_manual() else "") or find_file(*MANUAL_FILES)
-    if path and QDesktopServices.openUrl(QUrl.fromLocalFile(path)):
+    if path and open_url(QUrl.fromLocalFile(path)):
         return
     if path:
         msg = tr("Die Bedienungsanleitung konnte nicht geöffnet werden:\n{0}").format(path)
@@ -172,8 +178,13 @@ def _sections(path):
     except OSError:
         return []
     if key not in _anchor_cache:
-        with open(path, encoding="utf-8", errors="replace") as f:
-            text = f.read()
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError:                                 # z. B. keine Leserechte: F1 öffnet die Anleitung am Anfang
+            return []
+        # Sphinx-HTML: Permalink „¶“ in der Überschrift nicht mitvergleichen
+        text = re.sub(r'<a[^>]*class="headerlink"[^>]*>.*?</a>', "", text, flags=re.S)
         # docutils/Sphinx: <section id="..."> [<span id="label"></span>] <hN>Überschrift</hN>
         pattern = r'<section[^>]*\bid="([^"]+)"[^>]*>\s*(?:<span[^>]*></span>\s*)*<h[1-6][^>]*>(.*?)</h[1-6]>'
         if len(_anchor_cache) > 4:
@@ -230,7 +241,14 @@ def open_help(topic=None, parent=None):
     url = QUrl.fromLocalFile(page)
     url.setFragment(anchor)
     target = url.toString(QUrl.ComponentFormattingOption.FullyEncoded)
-    redirect = os.path.join(tempfile.gettempdir(), "plc_datenlogger_hilfe.html")
+    # je Benutzer eine eigene Datei (ein gemeinsamer Name scheitert am Schreibrecht, wenn ein zweiter Benutzer F1
+    # drückt)
+    try:
+        import getpass
+        user = re.sub(r"[^\w.-]", "_", getpass.getuser())
+    except Exception:
+        user = str(os.getpid())
+    redirect = os.path.join(tempfile.gettempdir(), f"plc_datenlogger_hilfe_{user}.html")
     try:
         with open(redirect, "w", encoding="utf-8") as f:
             f.write("<!DOCTYPE html><meta charset='utf-8'>"
@@ -240,7 +258,7 @@ def open_help(topic=None, parent=None):
     except OSError:
         open_manual(parent)
         return
-    if not QDesktopServices.openUrl(QUrl.fromLocalFile(redirect)):
+    if not open_url(QUrl.fromLocalFile(redirect)):
         open_manual(parent)
 
 
@@ -258,7 +276,10 @@ def _attach_f1(window):
         return
     sc = QShortcut(QKeySequence(Qt.Key.Key_F1), window)
     sc.setContext(Qt.ShortcutContext.WindowShortcut)
-    sc.activated.connect(lambda win=window: _context_help(win))
+    # schwache Referenz: das Lambda in der Verbindung soll das Fenster nicht am Leben halten (Fenster ohne Elternteil
+    # würden sonst nach dem Schließen nie freigegeben)
+    ref = weakref.ref(window)
+    sc.activated.connect(lambda: (lambda w: _context_help(w) if w is not None else None)(ref()))
     window._help_f1 = sc
 
 
@@ -279,10 +300,10 @@ def install_help(app=None):
 
 def _version(dist, module):
     """Version eines Pakets: aus den Paketdaten, sonst aus dem bereits geladenen Modul; None = nicht vorhanden."""
+    from importlib.metadata import PackageNotFoundError, version
     try:
-        from importlib.metadata import version
         return version(dist)
-    except Exception:
+    except (PackageNotFoundError, ValueError):
         pass
     mod = sys.modules.get(module)
     if mod is None:
@@ -302,7 +323,7 @@ def _read(name):
     if not path:
         return ""
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(path, encoding="utf-8", errors="replace") as f:      # z. B. unter Windows als ANSI gespeichert
             return f.read()
     except OSError:
         return ""
@@ -364,7 +385,7 @@ class AboutDialog(QDialog):
         """Link im Text: Internet-Adressen im Browser öffnen, LICENSE/COPYING zur passenden Registerkarte wechseln."""
         target = url.toString()
         if url.scheme() in ("http", "https", "mailto"):
-            QDesktopServices.openUrl(url)
+            open_url(url)
         elif target.endswith("COPYING") and self.tab_gpl is not None:
             self.tabs.setCurrentWidget(self.tab_gpl)
         elif target.endswith("LICENSE") and self.tab_lgpl is not None:
@@ -428,8 +449,11 @@ class AboutDialog(QDialog):
 
 
 def show_about(parent=None):
-    """Dialog „Über …“ modal anzeigen."""
-    AboutDialog(parent).exec()
+    """Dialog „Über …“ modal anzeigen (danach freigegeben, sonst bliebe er bis zum Ende des Hauptfensters im
+    Speicher)."""
+    dlg = AboutDialog(parent)
+    dlg.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+    dlg.exec()
 
 
 def add_help_menu(window):

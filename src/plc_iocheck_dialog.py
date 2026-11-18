@@ -1135,9 +1135,9 @@ class PhotoDialog(QDialog):
     def open_selected(self):
         """Markierte Fotos mit dem Standardprogramm öffnen."""
         from PySide6.QtCore import QUrl
-        from PySide6.QtGui import QDesktopServices
+        from plc_branding import open_url
         for name in self._names():
-            QDesktopServices.openUrl(QUrl.fromLocalFile(os.path.join(self.folder, name)))
+            open_url(QUrl.fromLocalFile(os.path.join(self.folder, name)))
 
     def remove_selected(self):
         """Markierte Fotos entfernen (die Dateien werden gelöscht)."""
@@ -2175,8 +2175,8 @@ class IoCheckWindow(QMainWindow):
             QMessageBox.warning(self, tr("Protokoll (PDF)"), str(e))
             return
         from PySide6.QtCore import QUrl
-        from PySide6.QtGui import QDesktopServices
-        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        from plc_branding import open_url
+        open_url(QUrl.fromLocalFile(path))
 
     def make_summary(self, path=None):
         """Kurzbericht (PDF, nur Zusammenfassung mit Fortschrittsbalken) erzeugen und öffnen; ``path``: ohne Dialog
@@ -2202,8 +2202,8 @@ class IoCheckWindow(QMainWindow):
             return None
         if open_it:
             from PySide6.QtCore import QUrl
-            from PySide6.QtGui import QDesktopServices
-            QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+            from plc_branding import open_url
+            open_url(QUrl.fromLocalFile(path))
         return path
 
     def show_mobile(self):
