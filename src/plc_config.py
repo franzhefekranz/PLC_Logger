@@ -2101,7 +2101,8 @@ class ConfigWindow(QMainWindow):
                 name=t.item(r, C_NAME).text().strip(),
                 plc=t.cellWidget(r, C_PLC).currentIndex(),
                 address=t.item(r, C_TAG).text().strip(),
-                dtype=t.cellWidget(r, C_TYPE).currentText(),
+                # berechnete Variable: immer REAL (die Typspalte gilt nur für Steuerungsvariablen)
+                dtype="REAL" if t.item(r, C_FORMULA).text() else t.cellWidget(r, C_TYPE).currentText(),
                 color=t.cellWidget(r, C_COLOR).property("color"),
                 show_value=t.item(r, C_SHOW).checkState() == Qt.CheckState.Checked,
                 chart=ci, axis=ai,
@@ -2217,7 +2218,8 @@ class ConfigWindow(QMainWindow):
             if not QColor(color).isValid():
                 color = PALETTE[(self.table.rowCount() + len(new)) % len(PALETTE)]
             new.append(Variable(name=name, plc=plc, address="" if formula else cell(row, "Adresse"),
-                                dtype=cell(row, "Typ") or self.driver_of_plc(plc).default_type, color=color,
+                                dtype="REAL" if formula else (cell(row, "Typ") or self.driver_of_plc(plc).default_type),
+                                color=color,
                                 show_value=flag(cell(row, "Werteanzeige"), True), bar=flag(cell(row, "Balken"), True),
                                 chart=ci, axis=ai, formula=formula,
                                 record=flag(cell(row, "Aufzeichnen"), True), display=flag(cell(row, "Anzeigen"), True)))

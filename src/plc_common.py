@@ -1112,6 +1112,8 @@ def load_config(path: str = None, alle: bool = False):
         chart = min(max(s.getint("diagramm", 1) - 1, 0), len(charts) - 1)
         axis = min(max(s.getint("achse", 1) - 1, 0), len(charts[chart].axes) - 1)
         dtype = s.get("typ", "REAL").upper() if s.get("typ", "REAL").upper() in TYPES else "REAL"
+        if s.get("formel", ""):
+            dtype = "REAL"              # berechnet: immer Gleitkomma (sonst schnitte die CSV Nachkommastellen ab)
         variables.append(Variable(
             name=s.get("name", sec),
             address=_address_from(s, dtype),

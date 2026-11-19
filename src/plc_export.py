@@ -8,6 +8,7 @@ denselben Aufbau wie die Aufzeichnung (Zeit;Epoch;Variablen ...) und lassen sich
 Excel (.xlsx) braucht das Paket openpyxl; die Zeit steht dort als echte Datums-/Zeitzelle.
 """
 import csv
+import io
 import math
 import os
 import warnings
@@ -160,21 +161,25 @@ def read_table(path):
     if is_ods(path):
         data = read_ods(path)
     elif is_excel(path):
-
         wb = _openpyxl().load_workbook(path, read_only=True, data_only=True)
         try:
             data = [list(r) for r in wb.worksheets[0].iter_rows(values_only=True)]
         finally:
             wb.close()
     else:
-        with open(path, newline="", encoding="utf-8-sig") as f:
-            text = f.read()
+        with open(path, "rb") as f:
+            raw = f.read()
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:              # Excel „CSV (Trennzeichen-getrennt)“ unter Windows: cp1252
+            text = raw.decode("cp1252", "replace")
         # Trennzeichen erkennen (Semikolon, Komma oder Tabulator; Standard Semikolon).
         try:
             delim = csv.Sniffer().sniff(text[:4096], delimiters=";,\t").delimiter
         except csv.Error:
             delim = ";"
-        data = list(csv.reader(text.splitlines(), delimiter=delim))
+        # StringIO statt splitlines: Felder mit Zeilenumbruch (in Anführungszeichen) bleiben ganz
+        data = list(csv.reader(io.StringIO(text, newline=""), delimiter=delim))
     data = [r for r in data if any(c not in (None, "") for c in r)]
     if not data:
         return [], []
@@ -195,11 +200,10 @@ def downsample(t, y, interval, method="mittel", dtypes=None):
     if len(t) == 0 or interval <= 0:
         return t, y
     start = math.floor(t[0] / interval) * interval
-    # Nummer des Rasterintervalls jeder Messung; first/last = erster und letzter Index jedes belegten Intervalls.
+    # Nummer des Rasterintervalls jeder Messung; first = erster Index jedes belegten Intervalls.
     # reduceat fasst dann je Intervall alle Werte in einem Schritt zusammen (ohne Python-Schleife über die Zeilen).
     bucket = np.floor((t - start) / interval + 1e-9).astype(np.int64)
     first = np.flatnonzero(np.r_[True, bucket[1:] != bucket[:-1]])     # erster Index jedes belegten Intervalls
-    last = np.r_[first[1:] - 1, len(t) - 1]
     t_new = start + bucket[first] * interval
     out = np.empty((y.shape[0], len(first)))
     with warnings.catch_warnings(), np.errstate(invalid="ignore", divide="ignore"):
@@ -218,10 +222,18 @@ def downsample(t, y, interval, method="mittel", dtypes=None):
                 out[k] = np.fmin.reduceat(col, first)
             elif m == "max":
                 out[k] = np.fmax.reduceat(col, first)
-            elif m == "erster":
-                out[k] = col[first]
-            else:                                                   # "letzter"
-                out[k] = col[last]
+            else:                                                   # "erster" / "letzter": erster bzw. letzter
+                vi = np.flatnonzero(~np.isnan(col))                  # gültiger Wert im Intervall (NaN übergehen)
+                res = np.full(len(first), np.nan)
+                if len(vi):
+                    pos = np.searchsorted(bucket[first], bucket[vi])    # Intervall jedes gültigen Werts
+                    if m == "erster":
+                        u, i = np.unique(pos, return_index=True)
+                    else:
+                        u, i = np.unique(pos[::-1], return_index=True)
+                        i = len(vi) - 1 - i
+                    res[u] = col[vi[i]]
+                out[k] = res
     return t_new, out
 
 
@@ -262,7 +274,8 @@ def write_values(path, t, names, dtypes, y):
             row = [cell, ms / 1000]
             for k in range(len(names)):
                 v = y[k, j]
-                row.append(None if math.isnan(v) else (int(v) if ints[k] else float(v)))
+                # NaN/inf leer lassen: openpyxl schriebe „inf“ in die Datei, die Excel dann als beschädigt meldet
+                row.append(None if not math.isfinite(v) else (int(v) if ints[k] else float(v)))
             ws.append(row)
         wb.save(path)
         return

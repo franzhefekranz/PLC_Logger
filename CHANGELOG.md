@@ -16,6 +16,14 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Berechnete Variablen** werden immer als REAL gespeichert. Bisher konnten sie den Typ einer Steuerungsvariable
+  tragen (z. B. INT nach dem Import der Variablenliste bei LOGO/PCCC) – die Aufzeichnungs-CSV und der Export schnitten
+  dann die Nachkommastellen ab, beim Downsampling zählte eine Formel mit Typ BOOL als Schaltsignal.
+* **Werte exportieren:** `inf` (z. B. Division durch 0 in einer Formel) bleibt in Excel leer – die Datei galt sonst als
+  beschädigt; bei Ganzzahltypen bricht auch die CSV nicht mehr ab. Downsampling „Erster/Letzter Wert“ übergeht
+  fehlende Werte im Intervall.
+* **Tabellen importieren (CSV):** Dateien, die Excel unter Windows als „CSV (Trennzeichen-getrennt)“ speichert
+  (Windows-1252), werden gelesen; Felder mit Zeilenumbruch bleiben ganz.
 * **Ereignisprotokoll:** Schreiben Logger und Viewer (anderer Prozess oder Rechner) in dieselbe Datei, entstehen keine
   doppelten IDs mehr, und eine fremde Quittierung geht durch einen eigenen Eintrag nicht mehr verloren; fremde
   Änderungen werden auch innerhalb derselben Zeitstempel-Auflösung erkannt. Die Datei wird nur noch nach fremden

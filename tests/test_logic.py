@@ -61,6 +61,37 @@ def test_read_ods(tmp_path):
     assert [s.address for s in sigs] == ["E0.0", "EW256", "AW272"] and sigs[1].unit == "bar"
 
 
+def test_export_inf_firstlast_cp1252_and_formula_type(tmp_path):
+    """Export/Import: inf in Excel/CSV, Downsampling „Erster/Letzter“ übergeht NaN, CSV aus Excel (cp1252) mit
+    mehrzeiligem Feld; berechnete Variablen werden als REAL geladen (sonst schnitte die CSV Nachkommastellen ab)."""
+    import openpyxl
+    import plc_common as pc
+    import plc_export
+    from plc_util import fmt_csv
+    assert fmt_csv(float("inf"), "INT") == "" and fmt_csv(float("-inf"), "REAL") == "-inf" and fmt_csv(2.5, "REAL") == "2.5"
+    nan = float("nan")
+    t = [0.0, 0.4, 0.8, 1.0, 1.5]
+    y = [[nan, 2.0, 3.0, nan, nan], [1.0, 2.0, nan, 5.0, 6.0]]
+    tn, first = plc_export.downsample(t, y, 1.0, "erster")
+    _tn, last = plc_export.downsample(t, y, 1.0, "letzter")
+    assert list(tn) == [0.0, 1.0] and list(first[0][:1]) == [2.0] and np.isnan(first[0][1]) and list(first[1]) == [1.0, 5.0]
+    assert list(last[0][:1]) == [3.0] and list(last[1]) == [2.0, 6.0]
+    path = str(tmp_path / "w.xlsx")
+    plc_export.write_values(path, [1.79e9, 1.79e9 + 1], ["A", "B"], ["REAL", "INT"], [[1.5, float("inf")], [2, nan]])
+    ws = openpyxl.load_workbook(path).active
+    assert [c.value for c in ws[2]][2:] == [1.5, 2] and [c.value for c in ws[3]][2:] == [None, None]
+    csv_path = tmp_path / "v.csv"
+    csv_path.write_bytes("Name;Kommentar\r\nKühler;\"Zeile 1\r\nZeile 2\"\r\n".encode("cp1252"))
+    header, rows = plc_export.read_table(str(csv_path))
+    assert header == ["Name", "Kommentar"] and rows == [["Kühler", "Zeile 1\r\nZeile 2"]]
+    cfg = str(tmp_path / "k.json")
+    pc.save_config(pc.default_connection(), [pc.Chart()],
+                   [pc.Variable(name="x", dtype="INT", address="VW0"),
+                    pc.Variable(name="y", dtype="INT", formula="{x} / 3")], cfg)
+    _c, _ch, vs = pc.load_config(cfg)
+    assert [v.dtype for v in vs] == ["INT", "REAL"]
+
+
 def test_iocheck_column_aliases():
     """Eigene Spaltenüberschriften ersetzen die Vorgabe; ein leeres Feld wird nicht eingelesen."""
     import plc_iocheck as io

@@ -23,9 +23,10 @@ def fmt_value(v, dtype):
 
 
 def fmt_csv(v, dtype):
-    """Wert für die CSV-Datei: REAL mit 7 signifikanten Stellen, sonst ganzzahlig; NaN = leeres Feld."""
-    if math.isnan(v):
-        return ""
+    """Wert für die CSV-Datei: REAL mit 7 signifikanten Stellen, sonst ganzzahlig; NaN = leeres Feld, ±inf bei REAL
+    als „inf“/„-inf“, bei Ganzzahltypen leer (int(inf) ginge nicht)."""
+    if not math.isfinite(v):
+        return f"{v}" if dtype in ("REAL", "LREAL") and not math.isnan(v) else ""
     return f"{v:.7g}" if dtype in ("REAL", "LREAL") else str(int(v))
 
 
