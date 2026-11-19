@@ -1141,7 +1141,7 @@ _GENERATED = re.compile(r"(Verbindung|Steuerungen|Diagramme|Variablen|Bloecke|St
                         r"Var\d+|Block\d+)")
 
 
-def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs=None, triggers=None):
+def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs=None, triggers=None, fresh=False):
     """Konfiguration in die Datei (JSON) schreiben – in EINEM Schreibvorgang.
 
     conn: Verbindungs-/Anzeigeeinstellungen, charts: Diagramme mit Achsen, variables: normale und
@@ -1149,6 +1149,8 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
     plcs: Steuerungen (ohne Angabe wird eine Steuerung aus conn ip/pfad/cpu/intervall_ms erzeugt),
     triggers: Trigger (plc_events.Trigger); None = die Trigger der vorhandenen Datei bleiben. Abschnitte, die hier nicht
     erzeugt werden (Trigger, unbekannte aus neueren Versionen), werden aus der vorhandenen Datei übernommen.
+    fresh: neue Konfiguration – nichts aus einer vorhandenen Datei übernehmen (z. B. „Neue Konfiguration“ über eine
+    vorhandene Datei: sonst steckten deren Trigger und Benachrichtigungen in der „neuen“).
     """
     path = path or CONFIG_FILE
     if not plcs:
@@ -1219,7 +1221,7 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
                 cp[f"Block{i}"][f"elem_{idx}"] = " ".join(nm.split())
     # Was diese Funktion nicht selbst erzeugt (Trigger, unbekannte Abschnitte), aus der vorhandenen Datei übernehmen.
     try:
-        old = read_config_store(path)
+        old = _new_cp() if fresh else read_config_store(path)
     except (OSError, ValueError):
         old = _new_cp()
     for name in old.sections():

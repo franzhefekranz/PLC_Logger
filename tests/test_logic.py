@@ -248,6 +248,15 @@ def test_config_save_keeps_triggers_and_unknown(tmp_path):
     assert pc.quick_exists("//server/freigabe/x.json") and not pc.quick_exists(str(tmp_path / "fehlt"))
 
 
+    from plc_common import Chart, default_connection, load_config, save_config, read_config_store
+    from plc_events import load_triggers
+    save_config(default_connection(), [Chart()], [], str(path_fresh := tmp_path / "neu.json"))
+    from plc_events import Trigger, save_triggers
+    save_triggers(str(path_fresh), [Trigger(name="alt", bedingung="1")])
+    save_config(default_connection(), [Chart()], [], str(path_fresh), fresh=True)      # „Neue Konfiguration“
+    assert load_triggers(str(path_fresh)) == [] and load_config(str(path_fresh))[2] == []
+    assert not [n for n in read_config_store(str(path_fresh)).sections() if n.startswith("Trigger")]
+
 def test_cleanup_csv_and_sqlite(tmp_path):
     """Aufräumen: CSV/Archiv nach Alter und Gesamtgröße (aktuelle Datei bleibt), SQLite nach Alter und Größe."""
     import datetime as dt

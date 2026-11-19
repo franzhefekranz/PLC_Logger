@@ -16,6 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Neue Konfiguration** (Startbild) über eine vorhandene Datei: übernimmt nicht mehr deren Trigger und unbekannte
+  Abschnitte – die neue Konfiguration ist wirklich leer.
 * **IO-Check auf Smartphone/Tablet:** Die Einheit aus der IO-Liste wird auf der Seite maskiert (bisher konnte ein Eintrag
   mit `<` die Anzeige zerlegen bzw. HTML einschleusen). Die Version der Signalliste ist über alle IO-Check-Fenster
   eindeutig – eine Seite mit der Liste eines anderen Fensters kann keinen Status mehr an ein falsches Signal senden.

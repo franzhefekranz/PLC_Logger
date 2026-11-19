@@ -149,7 +149,7 @@ def run_with_start_window(path, explicit, demo):
         import subprocess
         from plc_common import Chart, default_connection, program_command, save_config
         try:
-            save_config(default_connection(), [Chart()], [], path)
+            save_config(default_connection(), [Chart()], [], path, fresh=True)   # nichts von einer alten Datei
             from plc_common import child_env
             subprocess.Popen(program_command("config", path), env=child_env())
         except OSError as e:
