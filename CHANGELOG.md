@@ -16,6 +16,15 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Ereignisprotokoll:** Schreiben Logger und Viewer (anderer Prozess oder Rechner) in dieselbe Datei, entstehen keine
+  doppelten IDs mehr, und eine fremde Quittierung geht durch einen eigenen Eintrag nicht mehr verloren; fremde
+  Änderungen werden auch innerhalb derselben Zeitstempel-Auflösung erkannt. Die Datei wird nur noch nach fremden
+  Änderungen neu eingelesen (bisher bei jedem Abruf – träge bei großen Protokollen, vor allem auf dem Pi).
+* **Trigger:** Ist das Ereignisprotokoll nicht beschreibbar, erscheint die Meldung höchstens einmal je Minute (bisher bei
+  jeder Messzeile), und die übrigen Trigger werden weiter ausgewertet. Eine ungültige Verzögerung in der
+  Konfigurationsdatei verhindert nicht mehr das Laden.
+* **Ereignis-Viewer:** Spaltenbreiten werden nur aus den neuesten 300 Zeilen bestimmt – kein Stocken mehr bei großen
+  Protokollen; Spaltenkopf „Nr.“ wird übersetzt.
 * **Datenbank (MariaDB, TimescaleDB):** Zeitlimit je Anfrage (120 s) und TCP-Keepalive – ein hängender Server oder
   eine still abgerissene Verbindung hielt den Schreib-Thread bisher unbegrenzt fest (Anzeige weiter „Verbunden“, Puffer
   lief voll).

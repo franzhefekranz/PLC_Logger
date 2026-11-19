@@ -26,13 +26,13 @@ from PySide6.QtWidgets import (QAbstractItemView, QApplication, QCheckBox, QComb
 
 from plc_branding import open_url
 from plc_events import NOTE, PRIORITIES, EventLog, event_log_path
-from plc_i18n import tr
+from plc_i18n import N_, tr
 import plc_filedlg
 
 MAX_ROWS = 20000                     # mehr Zeilen werden nicht angezeigt (neueste zuerst)
 PRIO_COLORS = {"Alarm": "#f8d0d0", "Warnung": "#fbefc4", "Info": "#d9e8fb"}
 NOTE_COLOR = "#e3f4e1"               # Hintergrund von Notizen
-COLUMNS = ["Nr.", tr("Kommt"), tr("Geht"), tr("Priorität"), tr("Trigger"), tr("Meldung"), tr("Quittiert")]
+COLUMNS = [N_("Nr."), N_("Kommt"), N_("Geht"), N_("Priorität"), N_("Trigger"), N_("Meldung"), N_("Quittiert")]
 
 
 def _short(stamp):
@@ -138,7 +138,7 @@ class EventViewer(QDialog):
         lay.addLayout(top)
 
         self.table = QTableWidget(0, len(COLUMNS))
-        self.table.setHorizontalHeaderLabels(COLUMNS)
+        self.table.setHorizontalHeaderLabels([tr(c) for c in COLUMNS])
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -147,6 +147,9 @@ class EventViewer(QDialog):
         for c in range(len(COLUMNS)):
             hh.setSectionResizeMode(c, QHeaderView.ResizeMode.ResizeToContents)
         hh.setSectionResizeMode(5, QHeaderView.ResizeMode.Stretch)
+        # Spaltenbreite nur aus den ersten (neuesten) Zeilen bestimmen – sonst misst Qt bei jedem Neufüllen alle bis
+        # zu MAX_ROWS Zeilen aus (spürbar träge, wenn im Sekundentakt Ereignisse kommen)
+        hh.setResizeContentsPrecision(300)
         self.table.itemSelectionChanged.connect(self._update_buttons)
         # Doppelklick quittiert – aber nur, wenn unter den markierten Zeilen ein offenes Ereignis ist.
         self.table.doubleClicked.connect(

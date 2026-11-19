@@ -84,10 +84,19 @@ def load_triggers(path):
         prio = s.get("prio", "Warnung")
         out.append(Trigger(name=s.get("name", sec), bedingung=s.get("bedingung", ""), text=s.get("text", ""),
                            prio=prio if prio in PRIORITIES else "Warnung",
-                           verzoegerung_s=max(0.0, s.getfloat("verzoegerung_s", 0.0)),
-                           gehen=s.getboolean("gehen", True), quittieren=s.getboolean("quittieren", True),
-                           aktiv=s.getboolean("aktiv", True)))
+                           verzoegerung_s=max(0.0, _get(s.getfloat, "verzoegerung_s", 0.0)),
+                           gehen=_get(s.getboolean, "gehen", True), quittieren=_get(s.getboolean, "quittieren", True),
+                           aktiv=_get(s.getboolean, "aktiv", True)))
     return out
+
+
+def _get(fn, key, default):
+    """Wert mit ``fn`` (getfloat/getboolean) lesen; ungültig (z. B. von Hand „2,5“ oder „ja“) -> Vorgabe, damit ein
+    einzelner Tippfehler nicht das Laden der ganzen Konfiguration verhindert."""
+    try:
+        return fn(key, default)
+    except ValueError:
+        return default
 
 
 def trigger_sections(triggers) -> dict:
@@ -167,6 +176,29 @@ def _stamp(ts=None):
     return datetime.fromtimestamp(ms // 1000).strftime("%Y-%m-%d %H:%M:%S") + f".{ms % 1000:03d}"
 
 
+def _events_from(rows):
+    """Gültige Zeilen des Protokolls -> Ereignisse (neueste zuerst) mit Gehen- und Quittierzeit."""
+    out, by_id = [], {}
+    for r in rows:
+        eid, zeit, kind, trig, prio, text = int(r[0]), r[1], r[2], r[3], r[4], r[5]
+        user = r[6] if len(r) > 6 else ""
+        if kind == "KOMMT":
+            ev = Event(eid, zeit, trig, prio, text, pflicht=(user != "-"))
+            by_id[eid] = ev
+            out.append(ev)
+        elif kind == "NOTIZ":
+            out.append(Event(eid, zeit, NOTE, NOTE, text, benutzer=user, pflicht=False, notiz=True))
+        elif eid in by_id:
+            if kind == "GEHT":
+                by_id[eid].gegangen = zeit
+            else:
+                by_id[eid].quittiert, by_id[eid].benutzer = zeit, user
+    # Die Datei ist nach Schreibzeit geordnet; angezeigt wird nach Ereigniszeit, neueste zuerst.
+    out.reverse()
+    out.sort(key=lambda e: e.zeit, reverse=True)       # neueste zuerst (Notizen dürfen zurückdatiert sein)
+    return out
+
+
 class EventLog:
     """Ereignisprotokoll-Datei mit Quittierung (thread-sicher)."""
 
@@ -180,62 +212,68 @@ class EventLog:
         self.next_id = 1
         self.open_ids = set()           # offene (unquittierte) Ereignisse
         self.version = 0                # wird bei jeder Änderung erhöht (Viewer/Statusleiste aktualisieren)
-        self._mtime = None
+        self._mtime = None              # (Größe, Änderungszeit) nach dem letzten eigenen Lesen/Schreiben
+        self._cache, self._cache_key = [], None     # gelesene Zeilen und (Größe, Änderungszeit) der Datei dazu
         self.reload()
 
     # ---- Lesen
+    def _key(self):
+        """(Größe, Änderungszeit in ns) der Datei oder None, wenn sie (noch) nicht existiert. Mit der Größe wird auch
+        ein fremder Eintrag erkannt, der in dieselbe Zeitstempel-Auflösung fällt (einige ms, bei FAT 2 s)."""
+        try:
+            st = os.stat(self.path)
+            return st.st_size, st.st_mtime_ns
+        except OSError:
+            return None
+
     def _rows(self):
-        """Alle gültigen Zeilen der Datei ohne Kopfzeile (fremde oder beschädigte Zeilen werden übersprungen)."""
+        """Alle gültigen Zeilen der Datei ohne Kopfzeile (fremde oder beschädigte Zeilen werden übersprungen).
+        Aufruf nur mit gehaltener Sperre.
+
+        Die Zeilen werden zwischengespeichert: unveränderte Datei -> kein erneutes Lesen; eigene Einträge hängt
+        ``_write`` direkt an. Neu gelesen wird nur nach fremden Änderungen (anderes Programm)."""
+        key = self._key()
+        if key is not None and key == self._cache_key:
+            return list(self._cache)
         try:
             with open(self.path, encoding="utf-8", newline="") as f:
                 rows = list(csv.reader(f, delimiter=";"))
         except FileNotFoundError:
+            self._cache, self._cache_key = [], None
             return []
-        return [r for r in rows[1:] if len(r) >= 6 and r[0].isdigit() and r[2] in KINDS]
+        self._cache = [r for r in rows[1:] if len(r) >= 6 and r[0].isdigit() and r[2] in KINDS]
+        self._cache_key = key
+        return list(self._cache)
 
     def events(self):
         """Alle Ereignisse (neueste zuerst) mit Gehen- und Quittierzeit."""
         with self.lock:
-            rows = self._rows()
-        out, by_id = [], {}
-        for r in rows:
-            eid, zeit, kind, trig, prio, text = int(r[0]), r[1], r[2], r[3], r[4], r[5]
-            user = r[6] if len(r) > 6 else ""
-            if kind == "KOMMT":
-                ev = Event(eid, zeit, trig, prio, text, pflicht=(user != "-"))
-                by_id[eid] = ev
-                out.append(ev)
-            elif kind == "NOTIZ":
-                out.append(Event(eid, zeit, NOTE, NOTE, text, benutzer=user, pflicht=False, notiz=True))
-            elif eid in by_id:
-                if kind == "GEHT":
-                    by_id[eid].gegangen = zeit
-                else:
-                    by_id[eid].quittiert, by_id[eid].benutzer = zeit, user
-        # Die Datei ist nach Schreibzeit geordnet; angezeigt wird nach Ereigniszeit, neueste zuerst.
-        out.reverse()
-        out.sort(key=lambda e: e.zeit, reverse=True)       # neueste zuerst (Notizen dürfen zurückdatiert sein)
-        return out
+            return _events_from(self._rows())
 
     def reload(self):
         """Zähler und offene Ereignisse aus der Datei neu bestimmen (z. B. nach Änderung durch ein anderes Programm)."""
-        evs = self.events()
         with self.lock:
+            evs = _events_from(self._rows())
             self.next_id = max([e.id for e in evs], default=0) + 1
             self.open_ids = {e.id for e in evs if e.offen}
-            self._mtime = self._file_mtime()
+            self._mtime = self._key()
             self.version += 1
 
-    def _file_mtime(self):
-        """Änderungszeit der Datei oder None, wenn sie (noch) nicht existiert."""
-        try:
-            return os.path.getmtime(self.path)
-        except OSError:
-            return None
+    def _sync(self):
+        """Aufruf mit Sperre, vor jedem Eintrag: hat ein anderes Programm die Datei geändert (Notiz oder Quittierung im
+        Viewer, Headless-Logger), nächste ID und offene Ereignisse aus der Datei übernehmen – sonst vergäben zwei
+        Programme dieselbe ID, und der eigene Eintrag verdeckte die fremde Änderung (``changed_on_disk``)."""
+        if self._key() == self._mtime:
+            return
+        evs = _events_from(self._rows())
+        self.next_id = max([self.next_id] + [e.id + 1 for e in evs])
+        self.open_ids = {e.id for e in evs if e.offen}
+        self._mtime = self._key()
+        self.version += 1
 
     def changed_on_disk(self):
         """True, wenn die Datei seit dem letzten Lesen/Schreiben von außen geändert wurde."""
-        return self._file_mtime() != self._mtime
+        return self._key() != self._mtime
 
     def open_count(self):
         """Anzahl offener Ereignisse (liest die Datei neu, wenn ein anderes Programm sie geändert hat)."""
@@ -255,21 +293,33 @@ class EventLog:
         zweiter Prozess (Viewer, Headless-Logger) keine halben Zeilen sieht. Die eigene Änderungszeit wird gemerkt,
         damit ``changed_on_disk`` nur fremde Änderungen meldet.
         """
-        new = not os.path.exists(self.path)
+        self._sync()
+        key0 = self._key()
         os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
         buf = io.StringIO()
         w = csv.writer(buf, delimiter=";", lineterminator="\r\n")
-        if new:
+        if key0 is None:
             w.writerow(HEADER)
         w.writerows(rows)
+        data = buf.getvalue()
         with open(self.path, "a", encoding="utf-8", newline="") as f:
-            f.write(buf.getvalue())
-        self._mtime = self._file_mtime()
+            f.write(data)
+        key1 = self._key()
+        # Zwischenspeicher fortschreiben, wenn er vorher galt und nur die eigenen Zeilen dazugekommen sind; sonst beim
+        # nächsten Lesen neu einlesen.
+        if (key0 is not None and key0 == self._cache_key and key1 is not None
+                and key1[0] == key0[0] + len(data.encode("utf-8"))):
+            self._cache.extend([str(x) for x in r] for r in rows)
+            self._cache_key = key1
+        else:
+            self._cache_key = None
+        self._mtime = self._key()
         self.version += 1
 
     def come(self, trigger, text, ts=None):
         """Ereignis kommt -> ID."""
         with self.lock:
+            self._sync()
             eid = self.next_id
             self.next_id += 1
             # Benutzerspalte bei KOMMT: "-" = keine Quittierpflicht (sonst leer).
@@ -285,6 +335,7 @@ class EventLog:
             raise ValueError(tr("Die Notiz ist leer."))
         user = user or getpass.getuser()
         with self.lock:
+            self._sync()
             eid = self.next_id
             self.next_id += 1
             self._write([[eid, _stamp(ts), "NOTIZ", NOTE, NOTE, text, user]])
@@ -348,6 +399,7 @@ class TriggerEngine:
         self.log = log
         self.notify = notify
         self.emit = emit or (lambda _t: None)
+        self._err_t = None              # letzte Meldung „Protokoll nicht beschreibbar“ (monotonic)
         self.states, self.errors = [], []
         for t in triggers:
             if not t.aktiv:
@@ -392,7 +444,7 @@ class TriggerEngine:
                     st.since = ts
                 if ts - st.since >= t.verzoegerung_s:
                     text = _REF.sub(lambda m: _fmt(values.get(m.group(1))), t.text) if t.text else t.bedingung
-                    st.eid = self.log.come(t, text, ts)
+                    st.eid = self._log(self.log.come, t, text, ts)
                     st.on = True
                     st.text = text
                     self.emit(f"⚠ {t.prio}: {t.name} – {text}")
@@ -403,9 +455,23 @@ class TriggerEngine:
                 if st.on:
                     st.on = False
                     if t.gehen:
-                        self.log.go(st.eid, t, ts)
+                        if st.eid is not None:
+                            self._log(self.log.go, st.eid, t, ts)
                     if self.notify is not None:
-                        self.notify("GEHT", t.name, t.prio, getattr(st, "text", ""), ts)
+                        self.notify("GEHT", t.name, t.prio, st.text, ts)
+
+    def _log(self, fn, *args):
+        """Eintrag ins Protokoll. Schreibfehler (Platte voll, Netzlaufwerk weg) höchstens einmal je Minute melden; die
+        Auswertung läuft weiter – der Zustand des Triggers wird trotzdem gesetzt, sonst versuchte jede Messzeile
+        denselben Eintrag erneut. Rückgabe von ``fn`` bzw. None bei einem Fehler."""
+        try:
+            return fn(*args)
+        except OSError as e:
+            now = time.monotonic()
+            if self._err_t is None or now - self._err_t > 60.0:
+                self._err_t = now
+                self.emit(tr("⚠ Ereignisprotokoll nicht beschreibbar: {0}").format(e))
+            return None
 
 
 # ---------------------------------------------------------------------------------------

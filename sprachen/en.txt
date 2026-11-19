@@ -1990,6 +1990,9 @@
 
 # ---------------- plc_event_viewer.py
 
+@ Nr.
+> No.
+
 @ Kommt
 > Raised
 
@@ -2144,6 +2147,9 @@
 
 @ Trigger {0} übersprungen: {1}
 > Trigger {0} skipped: {1}
+
+@ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
+> ⚠ Event log not writable: {0}
 
 @ gegangen: {0}
 > gone: {0}
@@ -3177,9 +3183,6 @@
 > Appendix: photos
 
 # ---------------- plc_iocheck_dialog.py
-
-@ Nr.
-> No.
 
 @ bei richtigem Wechsel
 > on correct change
@@ -4857,9 +4860,6 @@
 
 @  – gespeichert in {0}
 >  – saved in {0}
-
-@ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
-> ⚠ Event log not writable: {0}
 
 @ ⚠ Bericht konnte nicht erstellt werden: {0}
 > ⚠ Report could not be created: {0}

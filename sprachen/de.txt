@@ -1990,6 +1990,9 @@
 
 # ---------------- plc_event_viewer.py
 
+@ Nr.
+> 
+
 @ Kommt
 > 
 
@@ -2143,6 +2146,9 @@
 > 
 
 @ Trigger {0} übersprungen: {1}
+> 
+
+@ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
 > 
 
 @ gegangen: {0}
@@ -3177,9 +3183,6 @@
 > 
 
 # ---------------- plc_iocheck_dialog.py
-
-@ Nr.
-> 
 
 @ bei richtigem Wechsel
 > 
@@ -4856,9 +4859,6 @@
 > 
 
 @  – gespeichert in {0}
-> 
-
-@ ⚠ Ereignisprotokoll nicht beschreibbar: {0}
 > 
 
 @ ⚠ Bericht konnte nicht erstellt werden: {0}

@@ -92,6 +92,47 @@ def test_s7_source_array_as_block(tmp_path):
     assert block_spec(bits, 10, 99) == ("Messwerte.Bits", "DB10.DBX83.2", 0, 6, "BOOL")
 
 
+def test_event_log_two_programs_and_write_errors(tmp_path):
+    """Zwei Programme am selben Ereignisprotokoll (Logger und Viewer): keine doppelten IDs, fremde Quittierung wird vor
+    dem eigenen Eintrag übernommen, Zwischenspeicher bleibt aktuell. Schreibfehler: eine Meldung, Auswertung läuft
+    weiter. Ungültige Werte in einem Trigger-Abschnitt -> Vorgaben."""
+    from plc_common import read_config_store, save_config, default_connection, Chart, write_config_store
+    from plc_events import EventLog, Trigger, TriggerEngine, load_triggers, save_triggers
+    path = str(tmp_path / "ev.csv")
+    logger, viewer = EventLog(path), EventLog(path)
+    trig = Trigger(name="T", bedingung="{a} > 1", text="a={a}")
+    e1 = logger.come(trig, "x")
+    n1 = viewer.note("Notiz")                                  # Viewer weiß noch nichts von e1
+    e2 = logger.come(trig, "y")
+    assert len({e1, n1, e2}) == 3
+    assert viewer.acknowledge([e1]) == 1
+    logger.go(e2, trig)                                        # eigener Eintrag nach fremder Quittierung
+    assert logger.open_ids == {e2} and not logger.changed_on_disk()
+    evs = {e.id: e for e in logger.events()}
+    assert evs[e1].quittiert and evs[e2].gegangen and evs[n1].notiz
+    assert [e.id for e in EventLog(path).events()] == [e.id for e in logger.events()]   # Zwischenspeicher = Datei
+
+    class Broken(EventLog):
+        def come(self, *a):
+            raise OSError("Platte voll")
+    msgs = []
+    eng = TriggerEngine([trig, Trigger(name="U", bedingung="{a} > 1", quittieren=False)],
+                        Broken(str(tmp_path / "x" / "ev.csv")), msgs.append, names=["a"])
+    for k in range(5):
+        eng.evaluate(float(k), {"a": 5.0})
+    eng.evaluate(6.0, {"a": 0.0})
+    assert sum("nicht beschreibbar" in m for m in msgs) == 1 and all(st.on is False for st in eng.states)
+
+    cfg = str(tmp_path / "k.json")
+    save_config(default_connection(), [Chart()], [], cfg)
+    save_triggers(cfg, [Trigger(name="T1", bedingung="1", verzoegerung_s=3)])
+    cp = read_config_store(cfg)
+    cp["Trigger1"]["verzoegerung_s"], cp["Trigger1"]["aktiv"] = "2,5", "vielleicht"
+    write_config_store(cp, cfg)
+    t = load_triggers(cfg)[0]
+    assert t.name == "T1" and t.verzoegerung_s == 0.0
+
+
 def test_config_save_keeps_triggers_and_unknown(tmp_path):
     """Speichern in einem Schritt: Trigger und unbekannte Abschnitte/Schlüssel der vorhandenen Datei bleiben erhalten,
     mit triggers=… werden sie ersetzt; atomares Schreiben ohne liegengebliebene Temp-Dateien; kaputte Einstellungen
