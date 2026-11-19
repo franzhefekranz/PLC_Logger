@@ -196,7 +196,10 @@ class FormulaEditor(QDialog):
             # maskieren: Fehlertexte enthalten eingetippten Text (ein „<“ zerlegte sonst die Rich-Text-Anzeige)
             self.lbl_status.setText("<span style='color:#c0392b'>✗ {0}</span>".format(html.escape(err)) if msg else "")
             return None
-        self._fill_table(f.refs)                # liest dabei die eingetragenen Testwerte ein
+        self._fill_table(f.refs)
+        # erneut einlesen: neu hinzugekommene Variablen stehen mit dem Vorgabewert 1 erst in der Tabelle, noch nicht in
+        # self._test (_fill_table liest vor dem Neuaufbau)
+        self._read_test_values()
         # Testwerte als Wörterbuch {Variablenname: Wert}; fehlende Eingaben = NaN.
         vals = {n: self._test.get(n, float("nan")) for n in f.refs}
         f.evaluate(0.0, vals)               # zwei Auswertungen im Abstand von 1 s, damit
