@@ -16,6 +16,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **IO-Check, Analog-Prüfpunkte:** Ein Signal wird nur noch automatisch OK, wenn alle drei Punkte 0/50/100 % in Toleranz
+  liegen – bisher reichte es, dass sie eingetragen waren (auch ein von Hand übernommener Punkt außerhalb der Toleranz).
+  Ein solcher Punkt wird ersetzt, sobald der Wert stabil in Toleranz liegt.
+* **IO-Check:** Prüfstand wird mit `fsync` und eigener Temp-Datei gespeichert (Stromausfall); ein Fehler beim Trennen
+  beendet den Lese-Thread nicht mehr (bisher wurde danach nie wieder verbunden); die Webseite bekommt die Messpunkte
+  als Kopie (gelegentlicher Fehler 500).
 * **Sprache wechseln mit Neustart:** Das Programm startet erst neu, nachdem das alte Fenster geschlossen ist (Aufzeichnung
   beendet, Ports frei); wird das Schließen abgelehnt, startet kein zweites Programm mehr.
 * **Farbschema:** Zurück auf „Wie das System“ stellt den Stil des Systems sofort wieder her (bisher blieb die Oberfläche

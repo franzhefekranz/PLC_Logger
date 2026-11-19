@@ -405,6 +405,33 @@ def test_iocheck_sort_key():
     assert sorted([a, b, c], key=lambda s: io.sort_key(s, "value")) == [b, a, c]
 
 
+def test_iocheck_analog_points_need_tolerance(tmp_path):
+    """Analog-Prüfpunkte: ein von Hand übernommener Punkt außerhalb der Toleranz verhindert das automatische OK und wird
+    durch einen stabilen Wert in Toleranz ersetzt; Prüfstand wird sicher geschrieben (atomic_write)."""
+    import plc_iocheck as io
+    t = io.IoTracker()
+    s = io.new_signal("EW258", "PT2", range_text="0..10 bar")
+    t.expected = s
+
+    def raw(pct):
+        return s.raw_min + (s.raw_max - s.raw_min) * pct / 100.0
+    t.feed(s, raw(40), 0.0)
+    assert not t.take_point(s, 50)                              # 4 bar statt 5 bar: außerhalb der Toleranz
+    ts = 1.0
+    for pct in (0, 100):
+        for _ in range(3):
+            t.feed(s, raw(pct), ts)
+            ts += 0.6
+    assert set(s.points) == {"0", "50", "100"} and s.status == "offen"    # 50 % falsch: kein OK
+    for _ in range(3):
+        t.feed(s, raw(50), ts)
+        ts += 0.6
+    assert abs(s.points["50"] - 5.0) < 1e-6 and s.status == "ok"
+    path = str(tmp_path / "a.iocheck.json")
+    io.IoProject(signals=[s]).save(path)
+    assert io.IoProject.load(path).signals[0].status == "ok" and not [f for f in os.listdir(tmp_path) if "tmp" in f]
+
+
 def test_iocheck_repeat_pulse_and_manual_signals():
     """Status „wiederholen“: zählt nicht als geprüft, setzt Flanken zurück und wird wieder automatisch abgehakt;
     Impulse 0→1→0 und 1→0→1 des gewählten Signals (Signalton); Signal von Hand anlegen und Scan-Signale übernehmen."""

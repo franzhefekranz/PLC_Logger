@@ -23,7 +23,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
-from plc_common import Block, Plc, Variable, get_driver
+from plc_common import Block, Plc, Variable, atomic_write, get_driver
 from plc_i18n import N_, tr
 
 FORMAT = "plc-iocheck"
@@ -959,9 +959,13 @@ class IoTracker:
         if sig.stable_point != hit:
             sig.stable_point, sig.stable_since = hit, ts
             return
-        if ts - sig.stable_since >= self.STABLE_S and str(hit) not in sig.points:
+        old = sig.points.get(str(hit))
+        # fehlenden Punkt eintragen bzw. einen außerhalb der Toleranz liegenden (z. B. von Hand übernommenen) ersetzen
+        if ts - sig.stable_since >= self.STABLE_S and (old is None or not point_ok(sig, hit, old, self.tolerance)):
             sig.points[str(hit)] = round(eng, 6)
-            if all(str(p) in sig.points for p in POINTS) and sig.status in PENDING:
+            # OK nur, wenn ALLE Punkte in Toleranz liegen (nicht bloß eingetragen sind)
+            if sig.status in PENDING and all(str(p) in sig.points and point_ok(sig, p, sig.points[str(p)], self.tolerance)
+                                             for p in POINTS):
                 set_status(sig, "ok", remark=sig.remark or tr("Prüfpunkte 0/50/100 % in Toleranz"))
                 self.status_changed.append(sig)
 
@@ -1058,10 +1062,9 @@ class IoProject:
                "options": self.options, "scans": [asdict(s) for s in self.scans],
                "signals": [s.to_dict() for s in self.signals]
                + [s.to_dict() for s in self.scanned if s not in self.signals]}
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(doc, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, path)
+        # eigene Temp-Datei, fsync, ersetzen: auch bei Stromausfall (Baustelle, Pi am Schaltschrank) bleibt die alte oder
+        # die neue Datei vollständig erhalten
+        atomic_write(path, json.dumps(doc, ensure_ascii=False, indent=1), new_mode=0o644)
         self.path = path
 
     @classmethod
@@ -1198,7 +1201,7 @@ class IoReader(threading.Thread):
                 values = reader.read()
             except Exception as e:
                 connected = False
-                reader.close()
+                _close(reader)
                 self._status("fehler", tr("Lesefehler: {0} – neuer Verbindungsversuch").format(e))
                 self.stop_evt.wait(1.0)
                 continue
@@ -1208,7 +1211,7 @@ class IoReader(threading.Thread):
                     errors[k] = reader.errors[v.address]
             self.out.put(("values", self.idx, time.time(), values, errors))
             self.stop_evt.wait(max(0.0, self.interval - (time.perf_counter() - t0)))
-        reader.close()
+        _close(reader)
         self._status("aus", tr("Getrennt"))
 
     def _run_demo(self):
@@ -1234,6 +1237,15 @@ class IoReader(threading.Thread):
             self.out.put(("values", self.idx, ts, list(state), {}))
             self.stop_evt.wait(self.interval)
         self._status("aus", tr("Getrennt"))
+
+
+def _close(reader):
+    """Verbindung trennen; Fehler dabei (Verbindung ohnehin weg) ignorieren – sonst endete der Lese-Thread und es würde
+    nie wieder verbunden."""
+    try:
+        reader.close()
+    except Exception:
+        pass
 
 
 def assign_plcs(signals, plcs):
@@ -1333,7 +1345,8 @@ class IoWebBridge:
         for s in sigs:
             v = None if math.isnan(s.value) else round(s.value, 4)
             dyn.append([s.status, v, s.error, round(now - s.changed, 1) if s.changed else -1, s.seen,
-                        s.checked_at, s.checker, s.remark, s.points, list(s.photos), s.pulses])
+                        s.checked_at, s.checker, s.remark, dict(s.points), list(s.photos), s.pulses])   # Kopien: der
+            # Fenster-Thread ändert sie evtl., während der Webserver die Antwort umwandelt
         changes = []
         if tracker is not None:
             for ch in tracker.history[:40]:
