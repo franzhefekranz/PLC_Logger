@@ -1300,4 +1300,6 @@ def test_formula_editor(qt_log):
     dlg.ed_name.setText("Doppelt")
     dlg.accept_checked()
     assert dlg.result_name == "Doppelt" and dlg.result_formula == "{Druck} * 2"
-    dlg.close()
+    dlg.timer.stop()                       # Prüf-Timer (nach Texteingabe gestartet) nicht über das Testende laufen lassen
+    dlg.deleteLater()                      # ohne Elternfenster: jetzt löschen, nicht erst beim Beenden des Interpreters
+    wait(50)
