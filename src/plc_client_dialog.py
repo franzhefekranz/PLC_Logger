@@ -6,8 +6,7 @@ dieser Logger als Client anzeigt (siehe plc_client.py).
 Zuletzt benutzte Verbindungen (Adresse und Benutzer, nie das Passwort) und bestätigte Fingerabdrücke selbstsignierter
 Zertifikate stehen in den Einstellungen (``client_zuletzt``, ``client_zertifikate``).
 """
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QLabel,
                                QLineEdit, QMessageBox, QVBoxLayout)
 
 from plc_common import load_settings, save_settings
@@ -112,10 +111,11 @@ class ClientDialog(QDialog):
                "vertrauen?").format(err.host, err.fingerprint)) == QMessageBox.StandardButton.Yes
 
     def try_connect(self):
-        """Mit den eingegebenen Daten verbinden. Unbekanntes Zertifikat: nachfragen und bei Zustimmung den Fingerabdruck
-        merken (ein zweiter Versuch). Bei Erfolg wird die Verbindung in self.connection abgelegt, sonst der Fehler im
-        Dialog angezeigt."""
-        from plc_client import ClientError, Connection, LoginRequired, UntrustedCertificate
+        """Mit den eingegebenen Daten verbinden – im Hintergrund (Anmelden und Konfiguration holen können je bis zum
+        Zeitlimit dauern; der Dialog bleibt bedienbar). Unbekanntes Zertifikat: nachfragen und bei Zustimmung den
+        Fingerabdruck merken und erneut verbinden. Bei Erfolg steht die Verbindung in self.connection, sonst der Fehler im
+        Dialog."""
+        from plc_client import ClientError, Connection
         pins = dict(load_settings().get("client_zertifikate") or {})
         self.lbl_err.setText("")
         try:
@@ -124,30 +124,31 @@ class ClientDialog(QDialog):
         except ClientError as e:
             self.lbl_err.setText(str(e))
             return
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            for _attempt in range(2):
-                try:
-                    con.connect()
-                    break
-                except UntrustedCertificate as e:
-                    QApplication.restoreOverrideCursor()
-                    if not self.ask_trust(e):
-                        return
-                    QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-                    con.trust(e.fingerprint)
-            else:
-                return
-        except LoginRequired as e:
-            self.lbl_err.setText(str(e))
+        self._connect(con, retry=True)
+
+    def _connect(self, con, retry):
+        """Verbindungsaufbau im Hintergrund starten; Ergebnis in _connected bzw. _failed."""
+        from plc_branding import run_in_background
+        self.setEnabled(False)
+        run_in_background(self, tr("Mit Logger verbinden"), con.connect, lambda _k, _ms: self._connected(con),
+                          error=lambda e: self._failed(con, e, retry), text=tr("Verbinde mit {0} …").format(con.url))
+
+    def _failed(self, con, err, retry):
+        """Verbindung gescheitert: unbekanntes Zertifikat -> nachfragen und einmal neu versuchen, sonst Fehler zeigen."""
+        from plc_client import ClientError, LoginRequired, UntrustedCertificate
+        self.setEnabled(True)
+        if isinstance(err, UntrustedCertificate) and retry:
+            if self.ask_trust(err):
+                con.trust(err.fingerprint)
+                self._connect(con, retry=False)
+            return
+        if isinstance(err, LoginRequired):
             self.ed_pw.setFocus()
-            return
-        except ClientError as e:
-            self.lbl_err.setText(str(e))
-            return
-        finally:
-            while QApplication.overrideCursor() is not None:
-                QApplication.restoreOverrideCursor()
+        self.lbl_err.setText(str(err) if isinstance(err, ClientError) else tr("Fehler: {0}").format(err))
+
+    def _connected(self, con):
+        """Verbunden: Adresse/Benutzer bzw. Fingerabdrücke merken und den Dialog schließen."""
+        self.setEnabled(True)
         if self.chk_remember.isChecked():
             remember(con.url, con.user, con.pins)
         else:

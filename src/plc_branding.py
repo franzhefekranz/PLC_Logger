@@ -197,6 +197,55 @@ def launch(parent, kind: str, *args, title: str = ""):
     return True
 
 
+def run_in_background(parent, title, fn, done, error=None, text=None):
+    """``fn()`` in einem eigenen Thread ausführen – für Verbindungsaufbau und Lesen aus der Oberfläche (kann bis zum
+    Zeitlimit des Treibers dauern, das Fenster bleibt bedienbar). Danach im GUI-Thread ``done(Ergebnis, ms)``; bei einer
+    Ausnahme ``error(Ausnahme)`` bzw. eine Meldung. Nach 0,3 s erscheint eine Fortschrittsanzeige mit „Abbrechen“
+    (verwirft das Ergebnis; der Thread endet von selbst)."""
+    import threading
+    import time
+    from PySide6.QtCore import QTimer
+    from PySide6.QtWidgets import QMessageBox, QProgressDialog
+    from plc_i18n import tr
+    box = {}
+
+    def run():
+        """Im Hintergrund: ausführen und Ergebnis bzw. Ausnahme ablegen."""
+        t0 = time.perf_counter()
+        try:
+            box["res"] = fn()
+        except Exception as e:                              # z. B. Treiberfehler: im GUI-Thread melden
+            box["err"] = e
+        box["ms"] = (time.perf_counter() - t0) * 1000
+    prog = QProgressDialog(text or tr("Verbindung zur Steuerung …"), tr("Abbrechen"), 0, 0, parent)
+    prog.setWindowTitle(title)
+    prog.setMinimumDuration(300)
+    prog.setWindowModality(Qt.WindowModality.WindowModal)
+    th = threading.Thread(target=run, name="hintergrund", daemon=True)
+    th.start()
+    timer = QTimer(prog)
+
+    def poll():
+        """Fertig? Dann Fortschrittsanzeige schließen und das Ergebnis weitergeben."""
+        if th.is_alive():
+            return
+        timer.stop()
+        prog.reset()
+        prog.deleteLater()
+        if "err" in box:
+            if error is not None:
+                error(box["err"])
+            else:
+                QMessageBox.critical(parent, title, str(box["err"]))
+        else:
+            done(box.get("res"), box.get("ms", 0.0))
+    timer.timeout.connect(poll)
+    prog.canceled.connect(timer.stop)
+    prog.canceled.connect(prog.deleteLater)
+    timer.start(50)
+    return th
+
+
 def open_url(url) -> bool:
     """URL oder Datei (QUrl oder Text) mit dem Standardprogramm öffnen. Unter Linux in den gebündelten Fassungen
     (PyInstaller, AppImage) über ``xdg-open`` mit bereinigter Umgebung (plc_common.child_env) – sonst erben Browser

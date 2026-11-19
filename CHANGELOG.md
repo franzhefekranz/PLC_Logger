@@ -16,6 +16,17 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Konfiguration speichern:** Einstellungen, Steuerungen, Variablen, Blöcke **und Trigger** in einem Schreibvorgang
+  (bisher zwei – ein Abbruch dazwischen verlor die Trigger); unbekannte Abschnitte und Einstellungen (z. B. aus einer
+  neueren Version) bleiben erhalten; Schreiben mit `fsync` und eigener Temp-Datei (Stromausfall am Pi, mehrere
+  Programme gleichzeitig); neue Dateien nur für den Besitzer lesbar (Passwörter für Datenbank/MQTT).
+* **Persönliche Einstellungen:** gleichzeitiges Schreiben mehrerer Programme konnte die Datei zerstören – danach waren
+  alle Einstellungen weg; jetzt atomar, eine beschädigte Datei wird als `.defekt` beiseitegelegt.
+* **Konfigurationsprogramm:** „Verbindung testen“ liest im Hintergrund (das Fenster fror bei nicht erreichbaren
+  Steuerungen ein); Speichern mit eingeschaltetem Webserver ohne Benutzer und Zugriffscode fragt nach und bietet einen
+  zufälligen Zugriffscode an; eine ungültige Zahl in der Konfiguration nennt den Schlüssel.
+* **Client:** Verbinden im Hintergrund – der Dialog friert bei falscher Adresse nicht mehr ein.
+* **Startbild:** zuletzt benutzte Dateien auf nicht erreichbaren Netzlaufwerken verzögern den Start nicht mehr.
 * **Aufräumen (CSV/Archiv):** löscht nur noch Dateien mit dem eigenen Namensschema `<CSV-Name>_JJJJMMTT_hhmmss…` –
   ein Logger „Anlage“ traf bisher auch die Dateien eines Loggers „Anlage_Halle2“ im selben Ordner; ungültiger CSV-Name
   oder leerer Ordner löscht nichts; ganz frische Dateien bleiben; wären nach Alter alle Dateien fällig (Uhr vorgestellt,

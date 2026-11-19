@@ -92,6 +92,47 @@ def test_s7_source_array_as_block(tmp_path):
     assert block_spec(bits, 10, 99) == ("Messwerte.Bits", "DB10.DBX83.2", 0, 6, "BOOL")
 
 
+def test_config_save_keeps_triggers_and_unknown(tmp_path):
+    """Speichern in einem Schritt: Trigger und unbekannte Abschnitte/Schlüssel der vorhandenen Datei bleiben erhalten,
+    mit triggers=… werden sie ersetzt; atomares Schreiben ohne liegengebliebene Temp-Dateien; kaputte Einstellungen
+    werden beiseitegelegt; ungültige Zahl nennt den Schlüssel."""
+    import json
+    import pytest
+    import plc_common as pc
+    from plc_events import Trigger, load_triggers, save_triggers
+    path = str(tmp_path / "k.json")
+    conn = pc.default_connection()
+    pc.save_config(conn, [pc.Chart()], [], path)
+    save_triggers(path, [Trigger(name="T1", bedingung="1", text="x")])
+    doc = json.load(open(path, encoding="utf-8"))
+    doc["weitere"] = {"Zukunft": {"a": "1"}}
+    doc["einstellungen"]["neu_in_v9"] = "ja"
+    json.dump(doc, open(path, "w", encoding="utf-8"))
+    conn2, charts, variables = pc.load_config(path, alle=True)
+    assert conn2["neu_in_v9"] == "ja"
+    pc.save_config(conn2, charts, variables, path)                       # ohne triggers: bleiben
+    assert [t.name for t in load_triggers(path)] == ["T1"]
+    doc = json.load(open(path, encoding="utf-8"))
+    assert doc["weitere"]["Zukunft"] == {"a": "1"} and doc["einstellungen"]["neu_in_v9"] == "ja"
+    pc.save_config(conn2, charts, variables, path, triggers=[Trigger(name="T2", bedingung="1", text="y")])
+    assert [t.name for t in load_triggers(path)] == ["T2"]
+    assert not [f for f in os.listdir(tmp_path) if f.endswith(".tmp")]
+    doc["einstellungen"]["web_port"] = "achtzig"
+    json.dump(doc, open(path, "w", encoding="utf-8"))
+    with pytest.raises(pc.ConfigFormatError, match="web_port"):
+        pc.load_config(path)
+    old = pc.SETTINGS_FILE
+    try:
+        pc.SETTINGS_FILE = str(tmp_path / "e.json")
+        open(pc.SETTINGS_FILE, "w").write("{kaputt")
+        assert pc.load_settings()["startbild"] is True and os.path.exists(pc.SETTINGS_FILE + ".defekt")
+        pc.save_settings(sprache="en")
+        assert pc.load_settings()["sprache"] == "en"
+    finally:
+        pc.SETTINGS_FILE = old
+    assert pc.quick_exists("//server/freigabe/x.json") and not pc.quick_exists(str(tmp_path / "fehlt"))
+
+
 def test_cleanup_csv_and_sqlite(tmp_path):
     """Aufräumen: CSV/Archiv nach Alter und Gesamtgröße (aktuelle Datei bleibt), SQLite nach Alter und Größe."""
     import datetime as dt

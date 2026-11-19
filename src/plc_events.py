@@ -90,18 +90,24 @@ def load_triggers(path):
     return out
 
 
+def trigger_sections(triggers) -> dict:
+    """Trigger -> Abschnitte der internen Darstellung ({"Trigger": {"anzahl"}, "Trigger1": {…}, …})."""
+    out = {"Trigger": {"anzahl": str(len(triggers))}}
+    for i, t in enumerate(triggers, 1):
+        out[f"Trigger{i}"] = {"name": t.name, "bedingung": " ".join(t.bedingung.split()),
+                              "text": " ".join(t.text.split()), "prio": t.prio,
+                              "verzoegerung_s": f"{t.verzoegerung_s:g}", "gehen": "1" if t.gehen else "0",
+                              "quittieren": "1" if t.quittieren else "0", "aktiv": "1" if t.aktiv else "0"}
+    return out
+
+
 def save_triggers(path, triggers):
     """Trigger in die (bereits geschriebene) Konfigurationsdatei eintragen; vorhandene Trigger-Abschnitte werden ersetzt."""
     from plc_common import read_config_store, write_config_store
     cp = read_config_store(path)
     for sec in [s for s in cp.sections() if s == "Trigger" or re.fullmatch(r"Trigger\d+", s)]:
         cp.remove_section(sec)
-    cp["Trigger"] = {"anzahl": str(len(triggers))}
-    for i, t in enumerate(triggers, 1):
-        cp[f"Trigger{i}"] = {"name": t.name, "bedingung": " ".join(t.bedingung.split()),
-                             "text": " ".join(t.text.split()), "prio": t.prio,
-                             "verzoegerung_s": f"{t.verzoegerung_s:g}", "gehen": "1" if t.gehen else "0",
-                             "quittieren": "1" if t.quittieren else "0", "aktiv": "1" if t.aktiv else "0"}
+    cp.read_dict(trigger_sections(triggers))
     write_config_store(cp, path)
 
 

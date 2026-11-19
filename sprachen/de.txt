@@ -377,12 +377,6 @@
 @ Die Bibliothek des Treibers fehlt ({0}):\n{1}
 > 
 
-@ Verbindung zur Steuerung …
-> 
-
-@ Abbrechen
-> 
-
 @ Lesen fehlgeschlagen:\n{0}
 > 
 
@@ -437,6 +431,12 @@
 > 
 
 @ Das Programm wurde mit Fehler {0} beendet.
+> 
+
+@ Verbindung zur Steuerung …
+> 
+
+@ Abbrechen
 > 
 
 # ---------------- plc_cleanup.py
@@ -551,6 +551,15 @@
 > 
 
 @ Der Logger {0} verwendet ein Zertifikat, das dieser Rechner nicht kennt (z. B. selbstsigniert).\n\nSHA-256-Fingerabdruck:\n{1}\n\nVergleichen Sie ihn mit der Anzeige am Logger (Datei › Webserver-Adresse … bzw. Logdatei im Headless-Betrieb). Stimmt er überein, diesem Zertifikat vertrauen?
+> 
+
+@ Mit Logger verbinden
+> 
+
+@ Verbinde mit {0} …
+> 
+
+@ Fehler: {0}
 > 
 
 # ---------------- plc_common.py
@@ -1487,6 +1496,12 @@
 @ Startbedingung: {0}
 > 
 
+@ Webserver
+> 
+
+@ Der Webserver ist ohne Benutzer und ohne Zugriffscode eingeschaltet: jeder im Netz kann die Seiten öffnen und auch Ereignisse quittieren, Notizen schreiben und das Prozessbild ändern.\n\nEinen zufälligen Zugriffscode erzeugen? (Aufruf dann mit ?token=…; „Nein“ speichert ohne Schutz)
+> 
+
 @ Gespeichert: {0}
 > 
 
@@ -1563,9 +1578,6 @@
 > 
 
 @ Fehler: keine Verbindung
-> 
-
-@ Fehler: {0}
 > 
 
 @ Verbindung fehlgeschlagen
@@ -1729,9 +1741,6 @@
 > 
 
 @ , {0} Ereignisse
-> 
-
-@ Verbinde mit {0} …
 > 
 
 @ Verbindung fehlgeschlagen: {0}
@@ -2696,9 +2705,6 @@
 > 
 
 @ Web: {0}   
-> 
-
-@ Webserver
 > 
 
 @ Der Webserver ist nicht aktiviert.\nAktivierung: Konfigurationsprogramm → Webserver.

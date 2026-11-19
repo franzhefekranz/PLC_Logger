@@ -67,41 +67,75 @@ LOGGER_EXE, CONFIG_EXE, IOCHECK_EXE = "PLCLogger.exe", "PLCKonfiguration.exe", "
 SETTINGS_FILE = os.path.join(BASE_DIR, "plc_einstellungen.json")
 
 
+def atomic_write(path, text, new_mode=0o600):
+    """Text sicher schreiben: eigene temporäre Datei im selben Ordner (mehrere Programme gleichzeitig stören sich nicht),
+    auf den Datenträger zwingen (fsync – Stromausfall am Pi), dann ersetzen. Die Rechte einer vorhandenen Datei bleiben,
+    eine neue erhält ``new_mode`` (Vorgabe: nur der Besitzer, die Datei kann Passwörter enthalten)."""
+    import tempfile
+    folder = os.path.dirname(os.path.abspath(path))
+    fd, tmp = tempfile.mkstemp(prefix="." + os.path.basename(path) + ".", suffix=".tmp", dir=folder)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        try:
+            os.chmod(tmp, os.stat(path).st_mode & 0o777 if os.path.exists(path) else new_mode)
+        except OSError:
+            pass
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
+
 def load_settings() -> dict:
-    """Einstellungen lesen (fehlende Datei oder Fehler: Vorgaben)."""
-    import json
+    """Einstellungen lesen (fehlende Datei oder Fehler: Vorgaben). Eine beschädigte Datei wird als ``….defekt``
+    beiseitegelegt, statt beim nächsten Speichern mit den Vorgaben überschrieben zu werden."""
     data = {"sprache": "", "startbild": True, "zuletzt": []}
     try:
         with open(SETTINGS_FILE, encoding="utf-8") as f:
             stored = json.load(f)
         if isinstance(stored, dict):
             data.update(stored)
-    except (OSError, ValueError):
+    except OSError:
         pass
+    except ValueError:
+        try:
+            os.replace(SETTINGS_FILE, SETTINGS_FILE + ".defekt")
+        except OSError:
+            pass
     return data
 
 
 def save_settings(**changes):
     """Einzelne Einstellungen ändern und speichern (Fehler beim Schreiben sind unkritisch)."""
-    import json
     data = load_settings()
     data.update(changes)
     try:
-        tmp = SETTINGS_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, SETTINGS_FILE)
+        atomic_write(SETTINGS_FILE, json.dumps(data, ensure_ascii=False, indent=2))
     except OSError:
         pass
+
+
+def quick_exists(path) -> bool:
+    """Wie os.path.exists, aber Netzpfade (\\\\Server\\…, //Server/…) gelten ungeprüft als vorhanden – ein nicht
+    erreichbarer Server ließe sonst Startbild und Programmstart je Eintrag bis zum Zeitlimit warten."""
+    return str(path).startswith(("\\\\", "//")) or os.path.exists(path)
 
 
 def recent_configs(limit: int = 10) -> list:
     """Zuletzt benutzte Konfigurationsdateien (neueste zuerst, nur vorhandene)."""
     out = []
     for p in load_settings().get("zuletzt", []):
-        if isinstance(p, str) and p.lower().endswith(".json") and os.path.exists(p) and p not in out:
+        if isinstance(p, str) and p.lower().endswith(".json") and p not in out and quick_exists(p):
             out.append(p)
-    return out[:limit]
+        if len(out) >= limit:
+            break
+    return out
 
 
 def program_command(kind: str, *args) -> list:
@@ -198,9 +232,11 @@ def recent_iochecks(limit: int = 10) -> list:
     """Zuletzt benutzte IO-Check-Prüfstände (*.iocheck.json, neueste zuerst, nur vorhandene)."""
     out = []
     for p in load_settings().get("iocheck_zuletzt", []):
-        if isinstance(p, str) and os.path.exists(p) and p not in out:
+        if isinstance(p, str) and p not in out and quick_exists(p):
             out.append(p)
-    return out[:limit]
+        if len(out) >= limit:
+            break
+    return out
 
 
 def remember_iocheck(path: str):
@@ -276,8 +312,9 @@ class Plc:
         if not self.params:
             try:
                 self.params = get_driver(self.driver).default_params()
-            except Exception:
+            except Exception as e:                  # Treiber fehlt/fehlerhaft: nicht still verschlucken
                 self.params = {}
+                print(f"Steuerung {self.name!r}: Treiber {self.driver!r} – {e}", file=sys.stderr)
 
     def __getattr__(self, name):
         """Fehlendes Attribut als Treiberparameter lesen: ``plc.ip`` liefert ``plc.params["ip"]``.
@@ -673,13 +710,8 @@ def read_config_store(path):
 
 
 def write_config_store(cp, path):
-    """Interne Darstellung als JSON schreiben (erst in eine temporäre Datei, dann ersetzen)."""
-    doc = cp_to_json(cp)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(doc, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp, path)
+    """Interne Darstellung als JSON schreiben (atomar mit fsync, siehe ``atomic_write``)."""
+    atomic_write(path, json.dumps(cp_to_json(cp), ensure_ascii=False, indent=2) + "\n")
 
 
 def convert_ini(ini_path, json_path=None):
@@ -892,9 +924,9 @@ def last_config_path() -> str:
             p = f.read().strip()
         # früher benutzte INI-Datei: gleichnamige, bereits umgewandelte JSON-Datei verwenden
         alt = os.path.splitext(p)[0] + CONFIG_EXT
-        if p and not p.lower().endswith(CONFIG_EXT) and os.path.exists(alt):
+        if p and not p.lower().endswith(CONFIG_EXT) and quick_exists(alt):
             return alt
-        if p and os.path.exists(p):
+        if p and quick_exists(p):
             return p
     except OSError:
         pass
@@ -943,15 +975,13 @@ def _parse_blocks(cp, charts, n_plc=1, plc_drivers=()):
         axis = min(max(s.getint("achse", 1) - 1, 0), len(charts[chart].axes) - 1)
         # Höchstens 1000 Elemente je Block (Schutz vor versehentlich riesigen Blöcken).
         count = max(1, min(s.getint("anzahl", 1), 1000))
-        names = {}                               # eigene Elementnamen: elem_<Index> = Name
+        # Eigene Elementnamen (elem_<Index> = Name) und abweichende Ziele einzelner Elemente
+        # (elemziel_<Index> = "Diagramm,Achse", 1-basiert).
+        names, targets = {}, {}
         for key, val in s.items():
-            if key.startswith("elem_") and key[5:].isdigit() and val.strip():
-                if int(key[5:]) < count:
-                    names[int(key[5:])] = val.strip()
-        # Abweichende Ziele einzelner Elemente: elemziel_<Index> = "Diagramm,Achse" (1-basiert).
-        targets = {}
-        for key, val in s.items():
-            if key.startswith("elemziel_") and key[9:].isdigit() and int(key[9:]) < count:
+            if (m := re.fullmatch(r"elem_(\d+)", key)) and int(m[1]) < count and val.strip():
+                names[int(m[1])] = val.strip()
+            elif (m := re.fullmatch(r"elemziel_(\d+)", key)) and int(m[1]) < count:
                 try:
                     tc, ta = (int(x) for x in val.split(","))
                 except ValueError:
@@ -959,7 +989,7 @@ def _parse_blocks(cp, charts, n_plc=1, plc_drivers=()):
                 tc = min(max(tc - 1, 0), len(charts) - 1)
                 ta = min(max(ta - 1, 0), len(charts[tc].axes) - 1)
                 if (tc, ta) != (chart, axis):
-                    targets[int(key[9:])] = (tc, ta)
+                    targets[int(m[1])] = (tc, ta)
         # Elemente ohne Aufzeichnung bzw. ohne Anzeige: Liste der Indizes (0-basiert), z. B. "1,3,7".
         no_rec, no_disp = (_index_set(s.get(k, ""), count) for k in ("nicht_aufzeichnen", "nicht_anzeigen"))
         plc = min(max(s.getint("steuerung", 1) - 1, 0), max(n_plc - 1, 0))
@@ -1022,15 +1052,23 @@ def load_config(path: str = None, alle: bool = False):
         if conn["seite_anordnung"] not in PAGE_LAYOUTS:
             conn["seite_anordnung"] = ""       # leer = automatisch (aus 'anordnung' abgeleitet)
         # Zahlenwerte mit Vorgabe lesen (ungültiger Text -> ValueError; die Datei wird bewusst nicht still repariert).
-        for key in CONN_INT_KEYS:
-            conn[key] = s.getint(key, conn[key])
-        for key in CONN_FLOAT_KEYS:
-            conn[key] = max(0.0, s.getfloat(key, conn[key]))
+        for key in CONN_INT_KEYS + CONN_FLOAT_KEYS:
+            try:
+                conn[key] = (s.getint(key, conn[key]) if key in CONN_INT_KEYS
+                             else max(0.0, s.getfloat(key, conn[key])))
+            except ValueError:                   # Schlüssel nennen (Headless: sonst rätselhafter Startfehler)
+                raise ConfigFormatError(f"„{os.path.basename(path)}“, Einstellung {key} = {s.get(key)!r}: "
+                                        "keine gültige Zahl") from None
+        # Schlüssel, die diese Version nicht kennt (neuere Version), unverändert durchreichen – sonst gingen sie beim
+        # Speichern verloren
+        known = set(CONN_INT_KEYS) | set(CONN_STR_KEYS) | set(CONN_FLOAT_KEYS) | {"symbolquellen"}
+        for k, v in s.items():
+            if k not in known and k not in conn:
+                conn[k] = v
         if conn["aufz_modus"] not in RECORD_MODES:
             conn["aufz_modus"] = "dauernd"
         # S7-Datenlogger: importierte DB-Quellen in die Treiberdaten des Treibers "s7" übernehmen.
         if s.get("symbolquellen", "").strip() and not conn["treiberdaten"].strip():
-            import json
             conn["treiberdaten"] = json.dumps({"s7": {"symbolquellen": s.get("symbolquellen")}}, ensure_ascii=False)
     plcs = _parse_plcs(cp, conn)
 
@@ -1097,12 +1135,18 @@ def load_config(path: str = None, alle: bool = False):
     return conn, charts, variables
 
 
-def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs=None):
-    """Konfiguration in die Datei (JSON) schreiben.
+_GENERATED = re.compile(r"(Verbindung|Steuerungen|Diagramme|Variablen|Bloecke|Steuerung\d+|Diagramm\d+(_Achse\d+)?|"
+                        r"Var\d+|Block\d+)")
+
+
+def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs=None, triggers=None):
+    """Konfiguration in die Datei (JSON) schreiben – in EINEM Schreibvorgang.
 
     conn: Verbindungs-/Anzeigeeinstellungen, charts: Diagramme mit Achsen, variables: normale und
     berechnete Variablen, blocks: Blockdefinitionen (deren Elemente werden nicht einzeln gespeichert),
-    plcs: Steuerungen (ohne Angabe wird eine Steuerung aus conn ip/pfad/cpu/intervall_ms erzeugt).
+    plcs: Steuerungen (ohne Angabe wird eine Steuerung aus conn ip/pfad/cpu/intervall_ms erzeugt),
+    triggers: Trigger (plc_events.Trigger); None = die Trigger der vorhandenen Datei bleiben. Abschnitte, die hier nicht
+    erzeugt werden (Trigger, unbekannte aus neueren Versionen), werden aus der vorhandenen Datei übernommen.
     """
     path = path or CONFIG_FILE
     if not plcs:
@@ -1171,13 +1215,25 @@ def save_config(conn: dict, charts, variables, path: str = None, blocks=(), plcs
         for idx, nm in sorted(b.names.items()):
             if nm and 0 <= idx < b.count:
                 cp[f"Block{i}"][f"elem_{idx}"] = " ".join(nm.split())
+    # Was diese Funktion nicht selbst erzeugt (Trigger, unbekannte Abschnitte), aus der vorhandenen Datei übernehmen.
+    try:
+        old = read_config_store(path)
+    except (OSError, ValueError):
+        old = _new_cp()
+    for name in old.sections():
+        if not _GENERATED.fullmatch(name) and not cp.has_section(name):
+            if triggers is not None and re.fullmatch(r"Trigger\d*", name):
+                continue
+            cp[name] = dict(old[name])
+    if triggers is not None:
+        from plc_events import trigger_sections
+        cp.read_dict(trigger_sections(triggers))
     # Datei komplett neu schreiben (die Konfiguration ist klein; so bleibt sie immer konsistent).
     write_config_store(cp, path)
 
 
 def driver_store(conn: dict) -> dict:
     """Treibereigene Werte aus der Konfiguration -> {Treiber: {Schlüssel: Wert}}."""
-    import json
     try:
         data = json.loads(conn.get("treiberdaten") or "{}")
         return data if isinstance(data, dict) else {}

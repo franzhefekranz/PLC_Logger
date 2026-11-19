@@ -377,12 +377,6 @@
 @ Die Bibliothek des Treibers fehlt ({0}):\n{1}
 > The driver's library is missing ({0}):\n{1}
 
-@ Verbindung zur Steuerung …
-> Connecting to the controller …
-
-@ Abbrechen
-> Cancel
-
 @ Lesen fehlgeschlagen:\n{0}
 > Read failed:\n{0}
 
@@ -438,6 +432,12 @@
 
 @ Das Programm wurde mit Fehler {0} beendet.
 > The program ended with error {0}.
+
+@ Verbindung zur Steuerung …
+> Connecting to the controller …
+
+@ Abbrechen
+> Cancel
 
 # ---------------- plc_cleanup.py
 
@@ -552,6 +552,15 @@
 
 @ Der Logger {0} verwendet ein Zertifikat, das dieser Rechner nicht kennt (z. B. selbstsigniert).\n\nSHA-256-Fingerabdruck:\n{1}\n\nVergleichen Sie ihn mit der Anzeige am Logger (Datei › Webserver-Adresse … bzw. Logdatei im Headless-Betrieb). Stimmt er überein, diesem Zertifikat vertrauen?
 > The logger {0} uses a certificate this computer does not know (e.g. self-signed).\n\nSHA-256 fingerprint:\n{1}\n\nCompare it with the display on the logger (File › Web server address … or the log file in headless mode). If it matches, trust this certificate?
+
+@ Mit Logger verbinden
+> Connect to logger
+
+@ Verbinde mit {0} …
+> Connecting to {0} …
+
+@ Fehler: {0}
+> Error: {0}
 
 # ---------------- plc_common.py
 
@@ -1487,6 +1496,12 @@
 @ Startbedingung: {0}
 > Start condition: {0}
 
+@ Webserver
+> Web server
+
+@ Der Webserver ist ohne Benutzer und ohne Zugriffscode eingeschaltet: jeder im Netz kann die Seiten öffnen und auch Ereignisse quittieren, Notizen schreiben und das Prozessbild ändern.\n\nEinen zufälligen Zugriffscode erzeugen? (Aufruf dann mit ?token=…; „Nein“ speichert ohne Schutz)
+> The web server is switched on without users and without an access code: anyone on the network can open the pages and also acknowledge events, write notes and change the process image.\n\nGenerate a random access code? (then open with ?token=…; “No” saves without protection)
+
 @ Gespeichert: {0}
 > Saved: {0}
 
@@ -1564,9 +1579,6 @@
 
 @ Fehler: keine Verbindung
 > Error: no connection
-
-@ Fehler: {0}
-> Error: {0}
 
 @ Verbindung fehlgeschlagen
 > Connection failed
@@ -1730,9 +1742,6 @@
 
 @ , {0} Ereignisse
 > , {0} events
-
-@ Verbinde mit {0} …
-> Connecting to {0} …
 
 @ Verbindung fehlgeschlagen: {0}
 > Connection failed: {0}
@@ -2697,9 +2706,6 @@
 
 @ Web: {0}   
 > Web: {0}   
-
-@ Webserver
-> Web server
 
 @ Der Webserver ist nicht aktiviert.\nAktivierung: Konfigurationsprogramm → Webserver.
 > The web server is not enabled.\nEnable it: configuration program → Web server.

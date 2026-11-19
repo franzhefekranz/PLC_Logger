@@ -27,8 +27,6 @@ Ziele in ``targets_of`` (Zeilen-ID -> {Index: (Diagramm, Achse)}); beim Schließ
 
 
 import contextlib
-import threading
-import time
 
 from PySide6.QtCore import QTimer, Qt, QUrl
 from PySide6.QtGui import QBrush, QColor
@@ -633,43 +631,10 @@ class BlockEditor(QDialog):
                          lambda res, ms: self._test_done(b, drv, res, ms))
 
     def _background(self, fn, done):
-        """``fn()`` in einem eigenen Thread ausführen (Verbindungsaufbau kann bis zum Zeitlimit des Treibers dauern –
-        die Oberfläche bleibt bedienbar); danach ``done(Ergebnis, ms)`` im GUI-Thread, bei einer Ausnahme Meldung.
-        Abbrechen verwirft das Ergebnis (der Lesethread endet von selbst)."""
-        from PySide6.QtWidgets import QProgressDialog
-        box = {}
-
-        def run():
-            """Im Hintergrund: lesen und Ergebnis bzw. Ausnahme ablegen."""
-            t0 = time.perf_counter()
-            try:
-                box["res"] = fn()
-            except Exception as e:                              # Treiberfehler: als Meldung zeigen
-                box["err"] = e
-            box["ms"] = (time.perf_counter() - t0) * 1000
-        prog = QProgressDialog(tr("Verbindung zur Steuerung …"), tr("Abbrechen"), 0, 0, self)
-        prog.setWindowTitle(tr("Block testen"))
-        prog.setMinimumDuration(300)
-        prog.setWindowModality(Qt.WindowModality.WindowModal)
-        th = threading.Thread(target=run, name="block-test", daemon=True)
-        th.start()
-        timer = QTimer(prog)
-
-        def poll():
-            """Fertig? Dann Fortschrittsanzeige schließen und das Ergebnis zeigen."""
-            if th.is_alive():
-                return
-            timer.stop()
-            prog.reset()
-            prog.deleteLater()
-            if "err" in box:
-                QMessageBox.critical(self, tr("Block testen"), tr("Lesen fehlgeschlagen:\n{0}").format(box["err"]))
-            else:
-                done(box.get("res"), box.get("ms", 0.0))
-        timer.timeout.connect(poll)
-        prog.canceled.connect(timer.stop)
-        prog.canceled.connect(prog.deleteLater)
-        timer.start(50)
+        """``fn()`` im Hintergrund (siehe plc_branding.run_in_background), danach ``done(Ergebnis, ms)``."""
+        from plc_branding import run_in_background
+        run_in_background(self, tr("Block testen"), fn, done, error=lambda e: QMessageBox.critical(
+            self, tr("Block testen"), tr("Lesen fehlgeschlagen:\n{0}").format(e)))
 
     def _test_done(self, b, drv, res, ms):
         """Ergebnis von „Block testen“ (normaler Block) anzeigen."""

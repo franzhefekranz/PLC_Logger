@@ -59,7 +59,7 @@ from plc_common import (RECORD_MODES, CONFIG_EXT, ConfigFormatError, convert_ini
                         program_command)
 from plc_formula import check as check_formula
 from plc_formula_dialog import FormulaEditor
-from plc_events import EventLog, check_trigger, event_log_path, load_triggers, save_triggers
+from plc_events import EventLog, check_trigger, event_log_path, load_triggers
 from plc_db import DB_TYPES, DEFAULT_PORTS, HTTP_TYPES, METRIC_TYPES, check_table_name, test_connection as test_db
 from plc_i18n import N_, tr
 from plc_treiber import drivers, get_driver, load_errors
@@ -1933,6 +1933,8 @@ class ConfigWindow(QMainWindow):
         """Alle Felder aus einer geladenen Konfiguration füllen: Verbindung/Einstellungen ``conn``, Diagramme, Variablen,
         Blöcke, Steuerungen."""
         self._loading = True
+        known = set(default_connection()) | {"ip", "pfad", "cpu", "rack", "slot", "port", "intervall_ms", "symbolquellen"}
+        self._conn_extra = {k: v for k, v in conn.items() if k not in known}
         self.ed_project.setText(conn.get("projekt", ""))
         # Steuerungen zuerst: die Variablenzeilen brauchen deren Namen für ihre Auswahlliste.
         self.plc_table.setRowCount(0)
@@ -2027,7 +2029,7 @@ class ConfigWindow(QMainWindow):
     def collect_conn(self):
         """Alle Einstellungen der Reiter als dict für den Abschnitt „verbindung“ der Konfiguration."""
         import json
-        return {"projekt": self.ed_project.text().strip(),
+        d = {"projekt": self.ed_project.text().strip(),
                 "treiberdaten": json.dumps(self.store, ensure_ascii=False) if self.store else "",
                 "csv_ordner": self.ed_dir.text().strip() or "logs",
                 "fenster_s": self.sp_win.value(),
@@ -2085,6 +2087,8 @@ class ConfigWindow(QMainWindow):
                 "aufz_vorlauf_s": self.sp_pre.value(),
                 "aufz_nachlauf_s": self.sp_post.value(),
                 "aufz_max_s": self.sp_max.value()}
+        # Schlüssel, die dieses Programm nicht kennt (z. B. aus einer neueren Version), beim Speichern erhalten
+        return {**getattr(self, "_conn_extra", {}), **d}
 
     # Alle Tabellenzeilen als Variable-Objekte einsammeln (einschließlich Zuordnung und Formel).
     def collect(self):
@@ -2462,10 +2466,23 @@ class ConfigWindow(QMainWindow):
                 QMessageBox.warning(self, tr("Aufzeichnung per Trigger"), tr("Startbedingung: {0}").format(err))
                 self.tabs.setCurrentIndex(1)
                 return False
-        # Datei schreiben (Verbindung, Steuerungen, Diagramme/Achsen, Variablen, Blöcke, danach die Trigger).
+        # Webserver ohne Anmeldung und ohne Zugriffscode: jeder im Netz hätte Zugang mit Schreibrecht
+        if self.chk_web.isChecked() and not self.web_users and not self.ed_web_token.text().strip():
+            ans = QMessageBox.question(
+                self, tr("Webserver"),
+                tr("Der Webserver ist ohne Benutzer und ohne Zugriffscode eingeschaltet: jeder im Netz kann die Seiten "
+                   "öffnen und auch Ereignisse quittieren, Notizen schreiben und das Prozessbild ändern.\n\n"
+                   "Einen zufälligen Zugriffscode erzeugen? (Aufruf dann mit ?token=…; „Nein“ speichert ohne Schutz)"),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel)
+            if ans == QMessageBox.StandardButton.Cancel:
+                return False
+            if ans == QMessageBox.StandardButton.Yes:
+                import secrets
+                self.ed_web_token.setText(secrets.token_urlsafe(12))
+        # Datei schreiben – alles in EINEM Schreibvorgang (auch die Trigger): ein Abbruch dazwischen verlöre sie sonst
         try:
-            save_config(self.collect_conn(), self.charts, variables, path, blocks=self.blocks, plcs=plcs)
-            save_triggers(path, self.triggers)
+            save_config(self.collect_conn(), self.charts, variables, path, blocks=self.blocks, plcs=plcs,
+                        triggers=self.triggers)
         except OSError as e:
             QMessageBox.critical(self, tr("Speichern"), tr("Die Datei konnte nicht geschrieben werden:\n{0}").format(e))
             return False
@@ -2499,7 +2516,9 @@ class ConfigWindow(QMainWindow):
             read_config_store(p)
         except ConfigFormatError as e:
             # ältere INI-Datei: Umwandlung anbieten (die INI bleibt unverändert)
-            if open(p, encoding="utf-8-sig", errors="replace").read(4096).lstrip().startswith("["):
+            with open(p, encoding="utf-8-sig", errors="replace") as f:
+                is_ini = f.read(4096).lstrip().startswith("[")
+            if is_ini:
                 return self.convert_ini(p)
             QMessageBox.critical(self, tr("Konfiguration laden"), str(e))
             return False
@@ -2650,34 +2669,53 @@ class ConfigWindow(QMainWindow):
         Dialog."""
         plcs = self.collect_plcs()
         variables = self.collect()
-        errors = []
-        # Sanduhr-Cursor, solange verbunden/gelesen wird.
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            for r, v in enumerate(variables):
-                if v.formula:
-                    self.table.item(r, C_TEST).setText(tr("berechnet"))
-            for pi, p in enumerate(plcs):
-                rows = [r for r, v in enumerate(variables)
-                        if not v.formula and min(v.plc, len(plcs) - 1) == pi]
-                if not rows:
-                    continue
+        for r, v in enumerate(variables):
+            if v.formula:
+                self.table.item(r, C_TEST).setText(tr("berechnet"))
+        jobs = []
+        for pi, p in enumerate(plcs):
+            rows = [r for r, v in enumerate(variables) if not v.formula and min(v.plc, len(plcs) - 1) == pi]
+            if rows:
+                jobs.append((p, rows, [variables[r] for r in rows]))
+                for r in rows:
+                    self.table.item(r, C_TEST).setText("…")
+        if not jobs:
+            return
+
+        def read_all():
+            """Im Hintergrund: alle Steuerungen nacheinander lesen -> [(Steuerung, Zeilen, Werte, Fehler, Ausnahme)]."""
+            out = []
+            for p, rows, vs in jobs:
                 d = get_driver(p.driver)
                 try:
                     d.check_library()
-                    values, errs = d.read_once(p, [variables[r] for r in rows])
-                except Exception as e:
-                    errors.append(f"{p.name} ({p.summary()}): {e}")
-                    for r in rows:
+                    values, errs = d.read_once(p, vs)
+                    out.append((p, rows, values, errs, None))
+                except Exception as e:                  # Verbindungsfehler je Steuerung melden, weiter mit der nächsten
+                    out.append((p, rows, [], {}, e))
+            return out
+
+        def show(results, _ms):
+            """Im GUI-Thread: Testwerte bzw. Fehler in die Tabelle, Verbindungsfehler gesammelt melden."""
+            errors = []
+            for p, rows, values, errs, exc in results:
+                if exc is not None:
+                    errors.append(f"{p.name} ({p.summary()}): {exc}")
+                for k, r in enumerate(rows):
+                    if r >= self.table.rowCount():          # Tabelle inzwischen geändert
+                        continue
+                    if exc is not None:
                         self.table.item(r, C_TEST).setText(tr("Fehler: keine Verbindung"))
-                    continue
-                for r, val in zip(rows, values):
+                        continue
                     err = errs.get(variables[r].address)
+                    val = values[k] if k < len(values) else float("nan")
                     self.table.item(r, C_TEST).setText(tr("Fehler: {0}").format(err) if err else f"{val:g}")
-        finally:
-            QApplication.restoreOverrideCursor()
-        if errors:
-            QMessageBox.critical(self, tr("Verbindung fehlgeschlagen"), "\n".join(errors))
+            if errors:
+                QMessageBox.critical(self, tr("Verbindung fehlgeschlagen"), "\n".join(errors[:20]))
+
+        from plc_branding import run_in_background
+        # Verbinden kann je Steuerung bis zum Zeitlimit dauern: im Hintergrund, das Fenster bleibt bedienbar
+        run_in_background(self, tr("Verbindung testen"), read_all, show)
 
 
 # Programmstart: eigene Taskleisten-ID (Windows), Anwendung und Fenster erzeugen, Icon setzen, Ereignisschleife starten.

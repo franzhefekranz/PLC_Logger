@@ -877,10 +877,18 @@ def test_logger_client_mode(qt_log, demo_config, tmp_path):
         wait(1200)
         dlg = ClientDialog(None, f"127.0.0.1:{port}", "chef")
         dlg.ed_pw.setText("falsch")
-        dlg.try_connect()
+        dlg.try_connect()                                    # verbindet im Hintergrund: auf das Ergebnis warten
+        for _ in range(200):
+            if dlg.isEnabled() and dlg.lbl_err.text():
+                break
+            wait(30)
         assert dlg.connection is None and dlg.lbl_err.text()
         dlg.ed_pw.setText("pw")
         dlg.try_connect()
+        for _ in range(200):
+            if dlg.connection is not None:
+                break
+            wait(30)
         assert dlg.connection is not None, dlg.lbl_err.text()
         w = plc_gui.MainWindow(demo_config, client=dlg.connection)
         w.show()
