@@ -16,6 +16,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **IO-Check auf Smartphone/Tablet:** Die Einheit aus der IO-Liste wird auf der Seite maskiert (bisher konnte ein Eintrag
+  mit `<` die Anzeige zerlegen bzw. HTML einschleusen). Die Version der Signalliste ist über alle IO-Check-Fenster
+  eindeutig – eine Seite mit der Liste eines anderen Fensters kann keinen Status mehr an ein falsches Signal senden.
 * **IO-Check-Fenster:** Kommentare, Symbole und andere Texte aus der IO-Liste mit `<` oder `&` (z. B. „Druck < 5 bar“)
   erscheinen in Tooltips, „zuletzt bewegt“ und Vertauschungshinweis vollständig. Lesen stoppen bzw. nach einer
   Filteränderung neu starten wartet höchstens 0,5 s statt bis zu 2 s je nicht erreichbarer Steuerung.

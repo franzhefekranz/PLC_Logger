@@ -432,6 +432,19 @@ def test_iocheck_analog_points_need_tolerance(tmp_path):
     assert io.IoProject.load(path).signals[0].status == "ok" and not [f for f in os.listdir(tmp_path) if "tmp" in f]
 
 
+def test_iocheck_bridge_versions_unique_and_unit_escaped():
+    """Webseite: zwei IO-Check-Fenster (Brücken) vergeben nie dieselbe Version – eine Seite mit der Liste des einen kann
+    keinen Befehl an die Liste des anderen schicken; die Einheit aus der IO-Liste wird in der Seite maskiert."""
+    import plc_iocheck as io
+    from plc_iocheck_web import IO_HTML
+    a, b = io.IoWebBridge(), io.IoWebBridge()
+    sig = io.new_signal("E0.0", "S1")
+    a.publish([sig], io.IoTracker(), "A", [])
+    b.publish([io.new_signal("E1.0", "S2")], io.IoTracker(), "B", [])
+    assert a.version != b.version and b.command(a.version, "status", 0, {"status": "ok"}, "x") == "version"
+    assert "esc(chg(c))" in IO_HTML and "' '+esc(s[6])" in IO_HTML and "+chg(c)+" not in IO_HTML
+
+
 def test_iocheck_repeat_pulse_and_manual_signals():
     """Status „wiederholen“: zählt nicht als geprüft, setzt Flanken zurück und wird wieder automatisch abgehakt;
     Impulse 0→1→0 und 1→0→1 des gewählten Signals (Signalton); Signal von Hand anlegen und Scan-Signale übernehmen."""

@@ -19,6 +19,7 @@ import queue
 import random
 import re
 import threading
+import itertools
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -1270,6 +1271,12 @@ def assign_plcs(signals, plcs):
 STATUS_KEYS = tuple(STATUS)
 
 
+# Versionen der Signalliste für die Webseite: eindeutig über alle Brücken (jedes IO-Check-Fenster hat eine eigene) und
+# Programmstarts – sonst hielte eine Seite, die noch Version 1 eines anderen Fensters kennt, die neue Liste für die alte
+# und ein „OK“ träfe das Signal mit demselben Index in der neuen Liste
+_VERSIONS = itertools.count(int(time.time()))
+
+
 class IoWebBridge:
     """Stellt den IO-Check dem Webserver (andere Threads) zur Verfügung.
 
@@ -1300,7 +1307,7 @@ class IoWebBridge:
         """Neue Signalliste veröffentlichen (Fenster-Thread): Signale, Tracker, Titel und Matrix als Indizes."""
         index = {id(s): i for i, s in enumerate(signals)}
         with self.lock:
-            self.version += 1
+            self.version = next(_VERSIONS)
             self.signals, self.tracker, self.title = list(signals), tracker, title
             self.groups = sorted({s.group for s in signals if s.group})
             self.matrix = [[sec, label, [index.get(id(c), -1) if c is not None else -1 for c in cells]]

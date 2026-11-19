@@ -184,8 +184,8 @@ function update(){
 function moved(chs){
  var box=document.getElementById('chs'),h='';chs.forEach(function(c){var i=c[2];
   h+='<div class="ch'+(SWAPS[c[0]]?' swap':'')+'" onclick="pick('+i+')"><span class="tm">-'+c[1].toFixed(1)+' s</span><span class="nm"><b>'+esc(S.sig[i][0])+'</b> '+esc(S.sig[i][1])+
-   '</span><span>'+chg(c)+'</span></div>';});box.innerHTML=h||'<div class="msg">{{J:Noch keine Wechsel.}}</div>';
- if(chs.length){var c=chs[0];document.getElementById('last').innerHTML=esc(lbl(c[2]))+': '+chg(c);
+   '</span><span>'+esc(chg(c))+'</span></div>';});box.innerHTML=h||'<div class="msg">{{J:Noch keine Wechsel.}}</div>';
+ if(chs.length){var c=chs[0];document.getElementById('last').innerHTML=esc(lbl(c[2]))+': '+esc(chg(c));
   document.getElementById('lastc').textContent=S.sig[c[2]][2];}}
 function chg(c){var i=c[2];if(bin(i))return (c[3]?1:0)+' → '+(c[4]?1:0);var u=S.sig[i][6];return fmt(scale(i,c[3]))+' → '+fmt(scale(i,c[4]))+(u?' '+u:'');}
 
@@ -204,7 +204,7 @@ function sheet(){var sh=document.getElementById('sheet');if(SEL<0||!S||!S.sig[SE
  if(!bin(SEL)){var f=fault(SEL,d[1]);h+='<div class="muted">{{J:Rohwert}} '+(d[1]==null?'–':d[1])+(f?' · <span class="fault">'+esc(f)+'</span>':'')+'</div>';
   if(isIn(SEL)){var sn=d[4]||0;h+='<div class="wb"><b>{{J:Drahtbruchprüfung}}</b><div>'+(sn&4?'<span class="okm">✓</span>':'○')+' {{J:1. Verdrahtung öffnen → Fehlerwert erkannt}}</div><div>'+
    (sn&8?'<span class="okm">✓</span>':'○')+' {{J:2. Wieder schließen → Wert gültig}}</div></div><div class="muted" style="margin-top:8px"><b>{{J:Prüfpunkte}}</b> {{J:(optional, z. B. mit Kalibrator)}}</div>';}
-  var eng=scale(SEL,d[1]),u=s[6]?' '+s[6]:'',pts=d[8]||{};
+  var eng=scale(SEL,d[1]),u=s[6]?' '+esc(s[6]):'',pts=d[8]||{};
   [0,50,100].forEach(function(p){var got=pts[p];h+='<div class="pt"><b>'+p+' %</b><span>{{J:Soll}} '+fmt(target(SEL,p))+u+'</span><span>'+
    (got==null?(inTol(SEL,p,eng)?'<i class="muted">{{J:in Toleranz …}}</i>':''):fmt(got)+u)+'</span><span>'+(got==null?'':(inTol(SEL,p,got)?'✓':'✗'))+
    '</span>'+(WR?'<button onclick="cmd(\'point\',{pct:'+p+'})">{{J:Übernehmen}}</button>':'<span></span>')+'</div>';});
