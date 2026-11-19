@@ -4029,7 +4029,7 @@
 @ Bitte die Adresse des Brokers eintragen.
 > 
 
-@ Keine Verbindung zu {0}:\n{1}
+@ Keine Antwort von {0} (Zeitüberschreitung).
 > 
 
 @ Verbindung zu {0} in Ordnung.
@@ -4038,7 +4038,7 @@
 @ Broker lehnt die Anmeldung ab: {0}
 > 
 
-@ keine Antwort
+@ Keine Verbindung zu {0}:\n{1}
 > 
 
 # ---------------- plc_netpanel.py
@@ -5715,6 +5715,9 @@
 > 
 
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
+> 
+
+@ keine Antwort
 > 
 
 # ---------------- plc_treiber/clx_browser.py

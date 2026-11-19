@@ -16,6 +16,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **MQTT:** Im Format JSON wird ein Wert `inf` (z. B. Division durch 0) als `null` gesendet – bisher blieb die ganze
+  Nachricht aus, und jede Sekunde erschien eine Fehlermeldung. Dauerhafte Fehler werden nur noch einmal gemeldet.
+  „Verbindung testen“ im MQTT-Dialog läuft im Hintergrund (Fortschrittsanzeige statt eingefrorenem Fenster) und meldet
+  eine Zeitüberschreitung als solche.
 * **Neue Konfiguration** (Startbild) über eine vorhandene Datei: übernimmt nicht mehr deren Trigger und unbekannte
   Abschnitte – die neue Konfiguration ist wirklich leer.
 * **IO-Check auf Smartphone/Tablet:** Die Einheit aus der IO-Liste wird auf der Seite maskiert (bisher konnte ein Eintrag

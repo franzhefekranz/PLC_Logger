@@ -313,6 +313,7 @@ class MqttPublisher:
         # kommt
         last_vals, last_ev, last_st = {}, {}, {}
         last_ts = None
+        last_err = ""                           # zuletzt gemeldeter Fehler: dauerhafte Fehler nur einmal melden
         while not self.stop_evt.is_set():
             if self.connected.is_set():
                 try:
@@ -327,7 +328,12 @@ class MqttPublisher:
                             self._discovery()
                     last_ts = self._publish(last_vals, last_ev, last_st, last_ts)
                 except Exception as e:          # nie abbrechen; beim nächsten Takt erneut
-                    self.emit(tr("⚠ MQTT: {0}").format(e))
+                    msg = str(e) or type(e).__name__
+                    if msg != last_err:         # nicht in jedem Takt dieselbe Zeile (Journal/Logdatei)
+                        self.emit(tr("⚠ MQTT: {0}").format(msg))
+                    last_err = msg
+                else:
+                    last_err = ""
             self.stop_evt.wait(period)
 
     def _publish(self, last_vals, last_ev, last_st, last_ts):
@@ -349,7 +355,8 @@ class MqttPublisher:
                 values = {}
                 for i, _topic, is_bool, name in self.topics:
                     text = format_value(row[i] if i < len(row) else math.nan, is_bool)
-                    values[name] = None if text == "" else (int(text) if is_bool else float(text))
+                    v = None if text == "" else (int(text) if is_bool else float(text))
+                    values[name] = v if v is None or math.isfinite(v) else None   # JSON kennt kein inf
                 if s["modus"] == "zyklisch" or values != last_vals.get("\0json"):
                     doc = {"zeit": datetime.fromtimestamp(ts).isoformat(timespec="milliseconds"),
                            "ts": round(ts, 3), "werte": values}

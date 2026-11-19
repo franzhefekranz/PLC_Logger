@@ -4029,8 +4029,8 @@
 @ Bitte die Adresse des Brokers eintragen.
 > Please enter the address of the broker.
 
-@ Keine Verbindung zu {0}:\n{1}
-> No connection to {0}:\n{1}
+@ Keine Antwort von {0} (Zeitüberschreitung).
+> No response from {0} (timeout).
 
 @ Verbindung zu {0} in Ordnung.
 > Connection to {0} is OK.
@@ -4038,8 +4038,8 @@
 @ Broker lehnt die Anmeldung ab: {0}
 > Broker refuses the login: {0}
 
-@ keine Antwort
-> no response
+@ Keine Verbindung zu {0}:\n{1}
+> No connection to {0}:\n{1}
 
 # ---------------- plc_netpanel.py
 
@@ -5716,6 +5716,9 @@
 
 @ Array-Tag „{0}“ ist leer oder ungültig (ohne Index angeben).
 > Array tag “{0}” is empty or invalid (specify without index).
+
+@ keine Antwort
+> no response
 
 # ---------------- plc_treiber/clx_browser.py
 

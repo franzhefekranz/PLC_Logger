@@ -145,28 +145,39 @@ class MqttDialog(QDialog):
         if not s["host"]:
             QMessageBox.warning(self, tr("MQTT"), tr("Bitte die Adresse des Brokers eintragen."))
             return
-        try:
+        from plc_branding import run_in_background
+        url = mq.broker_url(s)
+
+        def probe():
+            """Im Hintergrund (Namensauflösung und Verbindungsaufbau können dauern): anmelden -> Antwort oder None."""
             c = mq.make_client(s["client_id"], s["benutzer"], s["passwort"], s["tls"], s["tls_pruefen"], s["ca"])
             done, result = threading.Event(), []
 
             def on_connect(client, userdata, flags, rc, *rest):
-                """Antwort des Brokers merken; der Dialog wartet höchstens 5 s darauf."""
+                """Antwort des Brokers merken; gewartet wird höchstens 5 s darauf."""
                 result.append(rc)
                 done.set()
             c.on_connect = on_connect
             c.connect(s["host"], s["port"], keepalive=10)
             c.loop_start()
-            ok = done.wait(5)
-            c.disconnect()
-            c.loop_stop()
-        except Exception as e:
-            QMessageBox.warning(self, tr("MQTT"), tr("Keine Verbindung zu {0}:\n{1}").format(mq.broker_url(s), e))
-            return
-        if ok and result and mq.reason_ok(result[0]):
-            QMessageBox.information(self, tr("MQTT"), tr("Verbindung zu {0} in Ordnung.").format(mq.broker_url(s)))
-        else:
-            QMessageBox.warning(self, tr("MQTT"), tr("Broker lehnt die Anmeldung ab: {0}").format(
-                mq.reason_text(result[0]) if result else tr("keine Antwort")))
+            try:
+                return result[0] if done.wait(5) and result else None
+            finally:
+                c.disconnect()
+                c.loop_stop()
+
+        def show(rc, _ms):
+            """Ergebnis melden: in Ordnung, abgelehnt oder keine Antwort."""
+            if rc is None:
+                QMessageBox.warning(self, tr("MQTT"), tr("Keine Antwort von {0} (Zeitüberschreitung).").format(url))
+            elif mq.reason_ok(rc):
+                QMessageBox.information(self, tr("MQTT"), tr("Verbindung zu {0} in Ordnung.").format(url))
+            else:
+                QMessageBox.warning(self, tr("MQTT"), tr("Broker lehnt die Anmeldung ab: {0}").format(mq.reason_text(rc)))
+        run_in_background(self, tr("MQTT"), probe, show,
+                          error=lambda e: QMessageBox.warning(
+                              self, tr("MQTT"), tr("Keine Verbindung zu {0}:\n{1}").format(url, e)),
+                          text=tr("Verbinde mit {0} …").format(url))
 
     def _ok(self):
         """Felder übernehmen und den Dialog schließen."""

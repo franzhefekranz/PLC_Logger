@@ -226,6 +226,27 @@ def test_publisher_cyclic_json_only(broker):
     assert not m.MqttPublisher({"mqtt": {"aktiv": True, "host": ""}}, [], [])       # ohne Broker: aus
 
 
+def test_publisher_json_inf_is_null(broker):
+    """Format JSON: ein Wert inf (z. B. Division durch 0 in einer Formel) wird zu null – die Nachricht <Basis>/werte
+    geht trotzdem hinaus, und es erscheint keine Fehlermeldung (bisher in jedem Takt)."""
+    import plc_mqtt as m
+    from plc_common import Plc, Variable
+    msgs = []
+    pub = m.MqttPublisher({"mqtt": {"aktiv": True, "host": "127.0.0.1", "port": broker.port, "intervall_ms": 50,
+                                    "format": "json", "modus": "zyklisch", "basis": "i/n", "retain": False}},
+                          [Variable(name="A", address="1", dtype="REAL"), Variable(name="B", address="2", dtype="REAL")],
+                          [Plc(name="P")], emit=msgs.append)
+    assert pub.start()
+    try:
+        pub.update(1.0, [math.inf, 2.5])
+        assert wait_for(lambda: len(broker.messages("i/n/werte")) >= 2)
+        doc = json.loads(broker.messages("i/n/werte")[-1])
+        assert doc["werte"] == {"A": None, "B": 2.5}
+        assert not [x for x in msgs if x.startswith("⚠ MQTT:")]
+    finally:
+        pub.stop()
+
+
 def test_recorder_publishes_and_reads_back(broker, tmp_path):
     """Demo-Aufzeichnung sendet an den Broker; eine zweite Steuerung mit Treiber mqtt liest die Werte zurück."""
     from plc_common import Plc, Variable, default_connection
