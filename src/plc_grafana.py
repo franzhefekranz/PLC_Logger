@@ -58,13 +58,33 @@ def _prom_str(text):
     return '"' + str(text).replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def _table(db_type, table):
+    """Tabellenname in der Schreibweise der Datenbank – wie beim Anlegen durch den Logger: TimescaleDB und InfluxDB 3
+    in Anführungszeichen (sonst würde ein Name mit Großbuchstaben in Kleinbuchstaben umgewandelt und nicht gefunden),
+    MariaDB in Backticks."""
+    if db_type in ("timescale", "influxdb3"):
+        return f'"{table}"'
+    if db_type == "mariadb":
+        return f"`{table}`"
+    return table
+
+
+def _project_cond(db_type):
+    """Bedingung auf die Dashboard-Variable ``projekt``. ``${projekt:sqlstring}``: Grafana setzt den Wert in
+    Hochkommas und verdoppelt ein „'“ darin. QuestDB und InfluxDB 3 speichern einen leeren Projektnamen als NULL (das
+    Line Protocol lässt leere Tags weg)."""
+    col = "coalesce(projekt, '')" if db_type in ("questdb", "influxdb3") else "projekt"
+    return f"{col} = ${{projekt:sqlstring}}"
+
+
 def _query(db_type, table, var_name):
     """Abfrage (Grafana-Target ohne refId/datasource) für eine Variable."""
     if db_type in ("victoriametrics", "prometheus"):
         expr = f'{vm_metric(table)}{{projekt="$projekt",variable={_prom_str(var_name)}}}'
         return {"expr": expr, "legendFormat": var_name, "range": True, "instant": False}
     name = var_name.replace('"', "'")
-    where = f"variable = {_sql_str(var_name)} AND projekt = '$projekt'"
+    where = f"variable = {_sql_str(var_name)} AND {_project_cond(db_type)}"
+    table = _table(db_type, table)
     if db_type == "influxdb3":
         sql = (f'SELECT $__dateBin(time) AS time, avg(wert) AS "{name}" FROM {table} '
                f"WHERE {where} AND $__timeFilter(time) GROUP BY 1 ORDER BY 1")
@@ -89,29 +109,38 @@ def _annotation(db_type, table):
                  textFormat="{{meldung}}", tagKeys="prioritaet", useValueForTime=False,
                  target={"expr": f'{te}_aktiv{{projekt="$projekt"}} > 0', "refId": "Anno", "interval": "60s"})
         return a
+    cond, te = _project_cond(db_type), _table(db_type, te)
     if db_type == "influxdb3":
         sql = (f"SELECT time, concat(trigger_name, ': ', meldung) AS text, prioritaet AS tags FROM {te} "
-               "WHERE projekt = '$projekt' AND $__timeFilter(time) ORDER BY 1")
+               f"WHERE {cond} AND $__timeFilter(time) ORDER BY 1")
         a["target"] = {"query": sql, "rawQuery": True, "rawSql": sql, "format": "table", "refId": "Anno"}
         return a
     text = ("trigger_name || ': ' || meldung" if db_type == "timescale" else "concat(trigger_name, ': ', meldung)")
     sql = (f"SELECT zeit AS time, coalesce(gegangen, zeit) AS timeend, {text} AS text, prioritaet AS tags "
-           f"FROM {te} WHERE projekt = '$projekt' AND $__timeFilter(zeit) ORDER BY 1")
+           f"FROM {te} WHERE {cond} AND $__timeFilter(zeit) ORDER BY 1")
     a["target"] = {"rawSql": sql, "rawQuery": True, "format": "table", "editorMode": "code", "refId": "Anno"}
     return a
 
 
 def _project_variable(db_type, table, project):
-    """Dashboard-Variable ``projekt`` (Werte aus der Datenbank, vorbelegt mit dem Projekt der Konfiguration)."""
+    """Dashboard-Variable ``projekt`` (Werte aus der Datenbank, vorbelegt mit dem Projekt der Konfiguration).
+
+    SQL: nur Projekte mit Werten im angezeigten Zeitraum, aktualisiert bei dessen Änderung (``refresh`` 2) – ein
+    DISTINCT über die ganze Tabelle hieße bei großen MariaDB-/TimescaleDB-Tabellen ein vollständiger Durchlauf bei jedem
+    Öffnen. QuestDB (Spalte vom Typ SYMBOL) ist auch über die ganze Tabelle schnell."""
+    refresh = 1
     if db_type in ("victoriametrics", "prometheus"):
         q = f"label_values({vm_metric(table)}, projekt)"
         query = {"query": q, "refId": "projekt", "qryType": 1}
+    elif db_type == "questdb":
+        q = query = f"SELECT DISTINCT projekt FROM {table}"
     else:
-        col = "projekt"
-        q = f"SELECT DISTINCT {col} FROM {table}"
-        query = q
+        col = "coalesce(projekt, '')" if db_type == "influxdb3" else "projekt"
+        tc = "time" if db_type == "influxdb3" else "zeit"
+        q = query = f"SELECT DISTINCT {col} FROM {_table(db_type, table)} WHERE $__timeFilter({tc})"
+        refresh = 2
     return {"name": "projekt", "label": tr("Projekt"), "type": "query", "datasource": {"type": DS_PLUGINS[db_type][0],
-            "uid": DS}, "query": query, "definition": q, "refresh": 1, "sort": 1, "includeAll": False,
+            "uid": DS}, "query": query, "definition": q, "refresh": refresh, "sort": 1, "includeAll": False,
             "multi": False, "current": {"text": project, "value": project}, "options": [], "hide": 0}
 
 

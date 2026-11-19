@@ -1282,13 +1282,21 @@ def test_grafana_dashboard_layout():
     sql = plc_grafana.dashboard(dict(conn, db_typ="timescale"), charts, variables)
     q = [p for p in sql["panels"] if p["type"] == "timeseries"][2]["targets"][0]["rawSql"]
     assert "variable = 'Ven''til[0]'" in q and "$__timeFilter(zeit)" in q
+    assert 'FROM "anlage"' in q and "projekt = ${projekt:sqlstring}" in q       # Groß/klein bleibt; ' maskiert Grafana
+    pv = sql["templating"]["list"][0]
+    assert "$__timeFilter(zeit)" in pv["query"] and pv["refresh"] == 2           # kein DISTINCT über die ganze Tabelle
+    quest = plc_grafana.dashboard(dict(conn, db_typ="questdb", db_tabelle="Anlage"), charts, variables)
+    q = [p for p in quest["panels"] if p["type"] == "timeseries"][0]["targets"][0]["rawSql"]
+    assert "coalesce(projekt, '') = ${projekt:sqlstring}" in q and "FROM Anlage " in q   # leeres Projekt = NULL
+    maria = plc_grafana.dashboard(dict(conn, db_typ="mariadb", db_tabelle="Anlage"), charts, variables)
+    assert "FROM `Anlage` " in [p for p in maria["panels"] if p["type"] == "timeseries"][0]["targets"][0]["rawSql"]
     # Ereignisse als Markierungen (Annotationen), abschaltbar mit db_ereignisse = 0
     an = d["annotations"]["list"][0]
     assert an["target"]["expr"] == 'anlage_ereignisse_aktiv{projekt="$projekt"} > 0' and an["tagKeys"] == "prioritaet"
-    assert "FROM anlage_ereignisse" in sql["annotations"]["list"][0]["target"]["rawSql"]
+    assert 'FROM "anlage_ereignisse"' in sql["annotations"]["list"][0]["target"]["rawSql"]
     for typ in ("mariadb", "questdb", "influxdb3"):
         t = plc_grafana.dashboard(dict(conn, db_typ=typ), charts, variables)["annotations"]["list"][0]["target"]
-        assert "anlage_ereignisse" in t["rawSql"] and "$projekt" in t["rawSql"]
+        assert "anlage_ereignisse" in t["rawSql"] and "${projekt:sqlstring}" in t["rawSql"]
     assert plc_grafana.dashboard(dict(conn, db_ereignisse=0), charts, variables)["annotations"]["list"] == []
     with pytest.raises(ValueError):
         plc_grafana.dashboard(dict(conn, db_typ="sqlite"), charts, variables)

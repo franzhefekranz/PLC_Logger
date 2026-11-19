@@ -16,6 +16,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Grafana-Dashboard:** Tabellennamen mit Großbuchstaben funktionieren bei TimescaleDB und InfluxDB 3 (bisher „Tabelle
+  nicht gefunden“); bei QuestDB und InfluxDB 3 zeigen Aufzeichnungen ohne Projektnamen wieder Werte; ein `'` im
+  Projektnamen zerlegt die SQL-Abfragen nicht mehr. Die Projektauswahl durchsucht bei SQL-Datenbanken nur noch den
+  angezeigten Zeitraum statt bei jedem Öffnen die ganze Tabelle. Bereits importierte Dashboards bitte neu erzeugen.
 * **Formeleditor:** Fehlermeldungen und Variablennamen mit `<` oder `&` werden korrekt angezeigt. Variablennamen
   mit `{` oder `}` werden abgelehnt (im Formeleditor und beim Speichern der Konfiguration) – solche Variablen ließen
   sich in Formeln, Triggern und Meldetexten nicht ansprechen.
