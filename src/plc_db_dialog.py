@@ -51,6 +51,13 @@ def _span_text(s):
     return tr("{0:g} Tage").format(round(s / 86400, 1))
 
 
+class _Nothing:
+    """Platzhalter für „nach Ende des Auftrags nichts zu schließen“."""
+
+    def close(self):
+        """Nichts zu tun."""
+
+
 def _num(n):
     """Ganze Zahl mit Tausenderpunkten (1.234.567)."""
     return f"{int(n):,}".replace(",", ".")
@@ -235,10 +242,14 @@ class DbLoadDialog(QDialog):
             return
         self.timer.stop()
         self._job = None
+        if job.get("close") is not None:                # Dialog wurde während des Auftrags geschlossen
+            job["close"].close()
+            return
         self._set_busy(False)
         if job["err"] is not None:
             e = job["err"]
-            if isinstance(e, LoadCancelled):
+            # nach „Abbrechen“ endet eine unterbrochene Abfrage mit einem Fehler der Datenbank – kein Fehler für den Benutzer
+            if isinstance(e, LoadCancelled) or self._cancel:
                 self.lbl_status.setText(tr("Abgebrochen."))
                 return
             self.lbl_status.setText(tr("Fehler: {0}").format(e))
@@ -264,8 +275,16 @@ class DbLoadDialog(QDialog):
         if self._job is not None:
             self._cancel = True
             self.lbl_status.setText(tr("Breche ab …"))
+            self._interrupt()
             return
         self.reject()
+
+    def _interrupt(self):
+        """Laufende Abfrage in der Datenbank abbrechen (SQLite, PostgreSQL), sonst wirkt der Abbruch beim nächsten
+        Datenblock."""
+        for r in (self.reader, (self._job or {}).get("reader")):
+            if r is not None and hasattr(r, "interrupt"):
+                r.interrupt()
 
     def closeEvent(self, ev):
         """Beim Schließen einen laufenden Ladevorgang abbrechen."""
@@ -273,10 +292,18 @@ class DbLoadDialog(QDialog):
         super().closeEvent(ev)
 
     def done(self, r):
-        """Dialog beenden: Abbruch anfordern und die Verbindung schließen, wenn kein Auftrag mehr läuft."""
+        """Dialog beenden: Abbruch anfordern und die Verbindung schließen. Läuft noch ein Auftrag, meldet er sich nicht
+        mehr (kein Hinweisfenster, kein accept() am geschlossenen Dialog); die Verbindung schließt _poll, sobald der
+        Hintergrund-Thread fertig ist."""
         self._cancel = True
-        if self.reader is not None and self._job is None:
+        job = self._job
+        if job is not None:
+            self._interrupt()
+            job["close"] = self.reader or job.get("reader") or _Nothing()
+            job["done"] = lambda _res: None
+        elif self.reader is not None:
             self.reader.close()
+            self.reader = None
         super().done(r)
 
     # ------------------------------------------------------------------ Verbindung, Projekte, Variablen
@@ -315,9 +342,13 @@ class DbLoadDialog(QDialog):
         self.lbl_db.setText("<b>" + tr("Datenbank:") + "</b> " + reader.describe())
 
         def fn():
-            """Hintergrund: verbinden und Projekte lesen."""
-            reader.connect()
-            return reader.projects()
+            """Hintergrund: verbinden und Projekte lesen; bei einem Fehler die Verbindung wieder schließen."""
+            try:
+                reader.connect()
+                return reader.projects()
+            except BaseException:
+                reader.close()
+                raise
 
         def done(projects):
             """Qt-Thread: Projektauswahl füllen (Projekt der Konfiguration bzw. das einzige vorwählen) und Variablen
@@ -333,6 +364,8 @@ class DbLoadDialog(QDialog):
             self.cb_project.blockSignals(False)
             self.load_variables()
         self._run(tr("Verbinde …"), fn, done)
+        if self._job is not None:
+            self._job["reader"] = reader                # noch nicht in self.reader: für Abbrechen/Schließen
 
     def current_project(self):
         """Gewähltes Projekt oder None für „alle Projekte“."""

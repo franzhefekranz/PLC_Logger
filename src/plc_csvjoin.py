@@ -8,7 +8,8 @@ UTF-8). Beim Zusammenfügen mehrerer Dateien
 * werden die Spalten über den Variablennamen zugeordnet (Reihenfolge der ersten Datei, neue Namen hinten angehängt;
   fehlt eine Variable in einer Datei, bleibt sie dort leer),
 * werden alle Zeilen nach der Zeit sortiert (auch wenn die Dateien in beliebiger Reihenfolge gewählt wurden),
-* werden doppelte Zeitpunkte (überlappende Dateien) nur einmal übernommen,
+* werden doppelte Zeitpunkte (überlappende Dateien) nur einmal übernommen – je Variable mit dem ersten
+  vorhandenen Wert,
 * wird an Lücken zwischen den Dateien eine leere Zeile eingefügt, damit die Kurven dort unterbrochen sind
   (z. B. zwischen zwei Aufnahmen per Trigger) – auf Wunsch abschaltbar.
 """
@@ -37,8 +38,38 @@ def open_log(path):
             yield f
 
 
+CHUNK = 5000                    # Zeilen je Umwandlungsschritt (Speicher: Textfeld nur für einen Block)
+
+
+def _num(text):
+    """Feld als Zahl (Dezimalkomma erlaubt); leer oder ungültig -> NaN."""
+    text = text.strip().replace(",", ".")
+    try:
+        return float(text) if text else np.nan
+    except ValueError:
+        return np.nan
+
+
+def _convert(rows, n):
+    """Block von CSV-Zeilen -> (Zeiten, Werte[n][Zeilen]) als numpy-Felder; Zeilen ohne gültige Zeit entfallen.
+
+    Vektorisiert über numpy-Text; nur wenn der Block ungültige Felder enthält, wird zellweise umgewandelt."""
+    a = np.array([r[1:2 + n] for r in rows], dtype=str)
+    a = np.char.replace(np.char.strip(a), ",", ".")
+    a[a == ""] = "nan"
+    try:
+        v = a.astype(float)
+    except ValueError:
+        v = np.array([[_num(x) for x in r] for r in a], dtype=float).reshape(len(rows), n + 1)
+    ok = np.isfinite(v[:, 0])
+    return v[ok, 0], v[ok, 1:].T
+
+
 def read_log(path):
-    """Aufzeichnung lesen -> (Namen, Zeiten[n], Werte[Variable][n]) als numpy-Felder (leere Felder = NaN)."""
+    """Aufzeichnung lesen -> (Namen, Zeiten[n], Werte[Variable][n]) als numpy-Felder (leere Felder = NaN).
+
+    Die Zeilen werden blockweise in numpy-Felder umgewandelt (8 Byte je Wert statt rund 32 als Python-Zahl in einer
+    Liste) – auch große Tagesdateien passen so auf einem Raspberry Pi in den Speicher."""
     with open_log(path) as f:
         rd = csv.reader(f, delimiter=";")
         try:
@@ -48,22 +79,23 @@ def read_log(path):
         if len(head) < 2 or head[1].strip().lower() != "epoch":
             raise ValueError(tr("Unbekannter Aufbau (erwartet: Zeit;Epoch;Variablen …)"))
         names = head[2:]
-        t, cols = [], [[] for _ in names]
+        n = len(names)
+        ts, ys, rows = [], [], []
         for row in rd:
-            if len(row) < 2 + len(names):
-                continue
-            try:
-                ts = float(row[1])
-            except ValueError:
-                continue
-            t.append(ts)
-            for k in range(len(names)):
-                s = row[2 + k].strip().replace(",", ".")
-                try:
-                    cols[k].append(float(s) if s else np.nan)
-                except ValueError:
-                    cols[k].append(np.nan)
-    return names, np.asarray(t, dtype=float), np.asarray(cols, dtype=float).reshape(len(names), len(t))
+            if len(row) >= 2 + n:
+                rows.append(row)
+                if len(rows) >= CHUNK:
+                    t, y = _convert(rows, n)
+                    ts.append(t)
+                    ys.append(y)
+                    rows = []
+        if rows:
+            t, y = _convert(rows, n)
+            ts.append(t)
+            ys.append(y)
+    if not ts:
+        return names, np.empty(0), np.empty((n, 0))
+    return names, np.concatenate(ts), np.concatenate(ys, axis=1)
 
 
 def join_logs(parts, gaps=True):
@@ -99,9 +131,20 @@ def join_logs(parts, gaps=True):
     y = np.concatenate(ys_list, axis=1)
     order = np.argsort(t, kind="mergesort")             # stabil: bei gleicher Zeit bleibt die Dateireihenfolge
     t, y = t[order], y[:, order]
-    keep = np.ones(len(t), dtype=bool)
-    keep[1:] = np.diff(t) > 0                            # doppelte Zeitpunkte: den ersten behalten
-    return names, t[keep], y[:, keep]
+    first = np.r_[True, np.diff(t) > 0]                 # erste Zeile je Zeitpunkt
+    if first.all():
+        return names, t, y
+    # Doppelte Zeitpunkte (überlappende Dateien bzw. Dateien verschiedener Logger mit gleicher Zeit) zu einer Zeile
+    # zusammenführen: je Spalte gilt der erste gültige Wert – so gehen Variablen, die nur in einer Datei stehen, nicht
+    # verloren. Rückwärts zuweisen: bei mehrfachen Zielen gewinnt die letzte Zuweisung, also der erste Wert.
+    g = np.cumsum(first) - 1
+    out = np.full((len(names), int(g[-1]) + 1), np.nan)
+    g_rev = g[::-1]
+    for k in range(len(names)):
+        row = y[k, ::-1]
+        m = ~np.isnan(row)
+        out[k, g_rev[m]] = row[m]
+    return names, t[first], out
 
 
 def read_and_join(paths, gaps=True):

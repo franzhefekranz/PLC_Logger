@@ -1767,6 +1767,12 @@
 @ ⚠ [Aufräumen] Datenbank: {0}
 > ⚠ [Clean-up] Database: {0}
 
+@ ⚠ [Datenbank] Beim Beenden nicht geschrieben: {0} Werte
+> ⚠ [Database] Not written on shutdown: {0} values
+
+@ Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.
+> More than {0} values – please choose a shorter period or averages.
+
 @ In der Konfiguration ist keine Datenbank eingestellt.
 > No database is configured.
 
@@ -1775,9 +1781,6 @@
 
 @ Keine Variable gewählt.
 > No variable selected.
-
-@ Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.
-> More than {0} values – please choose a shorter period or averages.
 
 # ---------------- plc_db_dialog.py
 

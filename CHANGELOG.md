@@ -16,6 +16,20 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Datenbank (MariaDB, TimescaleDB):** Zeitlimit je Anfrage (120 s) und TCP-Keepalive – ein hängender Server oder
+  eine still abgerissene Verbindung hielt den Schreib-Thread bisher unbegrenzt fest (Anzeige weiter „Verbunden“, Puffer
+  lief voll).
+* **Datenbank:** Schreibdurchlauf auf 50 Stapel begrenzt, damit Ereignisse und Aufräumen auch bei großem Rückstand
+  drankommen; beim Beenden nicht mehr geschriebene Werte werden gemeldet. Pufferobergrenze auf Rechnern mit wenig
+  Hauptspeicher (Raspberry Pi) höchstens etwa 10 % des RAM.
+* **SQLite:** `synchronous=NORMAL` im WAL-Modus – kein fsync bei jedem Commit (schont die SD-Karte).
+* **Aus Datenbank laden:** Werte in kompakten Feldern gesammelt (bisher rund 120 Byte je Wert – der Speicherschutz griff
+  zu spät); „Abbrechen“ unterbricht bei SQLite und PostgreSQL auch eine laufende Abfrage; Schließen während des Ladens
+  lässt keine späten Meldungen mehr erscheinen und schließt die Verbindung; SQLite-Dateien in Ordnern mit `%` oder `#`
+  im Namen werden gefunden.
+* **CSV/ZIP zusammenfügen:** Dateien werden blockweise in numpy-Felder gelesen (etwa ein Viertel des Speichers – große
+  Tagesdateien führten auf dem Pi zum Speichermangel); bei gleichem Zeitpunkt in mehreren Dateien bleiben die Werte
+  aller Variablen erhalten (bisher nur die der ersten Datei).
 * **Konfiguration speichern:** Einstellungen, Steuerungen, Variablen, Blöcke **und Trigger** in einem Schreibvorgang
   (bisher zwei – ein Abbruch dazwischen verlor die Trigger); unbekannte Abschnitte und Einstellungen (z. B. aus einer
   neueren Version) bleiben erhalten; Schreiben mit `fsync` und eigener Temp-Datei (Stromausfall am Pi, mehrere

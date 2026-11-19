@@ -1232,3 +1232,44 @@ def test_iocheck_autosave_switch(qt_log, demo_config, tmp_path, monkeypatch):
     for win in (w, w2):
         win.dirty = False
         _close(win)
+
+
+def test_db_load_dialog(qt_log, tmp_path):
+    """Lesemodus: mit einer SQLite-Datei verbinden, Variablen auflisten, Werte laden; Schließen während eines laufenden
+    Auftrags ruft danach nichts mehr am Dialog auf und schließt die Verbindung."""
+    import plc_db
+    from plc_db_dialog import DbLoadDialog
+    conn = {"db_typ": "sqlite", "db_datei": str(tmp_path / "w.db"), "db_tabelle": "werte", "projekt": "A"}
+    w = plc_db.DbWriter(conn, ["Druck", "Temp"], interval_s=0.05)
+    w.start()
+    now = time.time()
+    for k in range(50):
+        w.put(now - 50 + k, [k, 2 * k])
+    w.stop()
+
+    def idle(dlg):
+        for _ in range(300):
+            if dlg._job is None:
+                return
+            wait(30)
+        raise AssertionError("Auftrag endet nicht")
+
+    dlg = DbLoadDialog(None, conn, ["Druck"], "A")
+    idle(dlg)                                                # verbinden, Projekte
+    idle(dlg)                                                # Variablenliste
+    assert dlg.tree.topLevelItemCount() == 2 and [s[0] for s in dlg.selected()] == ["Druck"]
+    dlg.check("all")
+    dlg.quick_range("alles")
+    dlg.start_load()
+    idle(dlg)
+    t, names, cols, label = dlg.result
+    assert len(t) == 50 and names == ["Druck", "Temp"] and cols[1][-1] == 98
+
+    dlg = DbLoadDialog(None, conn, ["Druck"], "A")           # sofort schließen, während verbunden wird
+    reader = dlg._job["reader"]
+    dlg.reject()
+    for _ in range(300):
+        if dlg._job is None:
+            break
+        wait(30)
+    assert dlg.result is None and reader.con is None

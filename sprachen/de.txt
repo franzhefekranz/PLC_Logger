@@ -1767,6 +1767,12 @@
 @ ⚠ [Aufräumen] Datenbank: {0}
 > 
 
+@ ⚠ [Datenbank] Beim Beenden nicht geschrieben: {0} Werte
+> 
+
+@ Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.
+> 
+
 @ In der Konfiguration ist keine Datenbank eingestellt.
 > 
 
@@ -1774,9 +1780,6 @@
 > 
 
 @ Keine Variable gewählt.
-> 
-
-@ Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.
 > 
 
 # ---------------- plc_db_dialog.py

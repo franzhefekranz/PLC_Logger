@@ -31,6 +31,7 @@ Treiber (nur für den gewählten Typ nötig): SQLite ist in Python enthalten; Ma
 TimescaleDB/PostgreSQL: ``psycopg`` (Version 3, ``pip install "psycopg[binary]"``); QuestDB, InfluxDB 3, VictoriaMetrics und
 Prometheus: keine Bibliothek nötig (HTTP-Schnittstelle, Standardports 9000, 8181, 8428 bzw. 9090).
 """
+import array
 import base64
 import collections
 import csv
@@ -40,6 +41,7 @@ import itertools
 import json
 import math
 import os
+import pathlib
 import re
 import sqlite3
 import struct
@@ -63,8 +65,25 @@ DEFAULT_PORTS = {"mariadb": 3306, "timescale": 5432, "questdb": 9000, "influxdb3
 HTTP_TYPES = ("questdb", "influxdb3", "victoriametrics", "prometheus")
 # Datenbanken mit Metrik <tabelle>_wert und Labels statt einer Tabelle (Aufbewahrung stellt der Server selbst ein)
 METRIC_TYPES = ("victoriametrics", "prometheus")
-MAX_BUFFER = 2_000_000          # Höchstzahl gepufferter Werte bei Ausfall der Datenbank (älteste werden verworfen)
+
+
+def _max_buffer():
+    """Höchstzahl gepufferter Werte bei Ausfall der Datenbank (älteste werden verworfen): 2 Mio., auf Rechnern mit
+    wenig Hauptspeicher (Raspberry Pi) höchstens etwa 10 % des RAM (rund 120 Byte je gepuffertem Wert)."""
+    try:
+        mem = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
+        return int(max(200_000, min(2_000_000, mem // 10 // 120)))
+    except (ValueError, OSError, AttributeError):    # Windows kennt sysconf nicht
+        return 2_000_000
+
+
+MAX_BUFFER = _max_buffer()
+DB_TIMEOUT_S = 120              # Zeitlimit je Anfrage im Schreib-Thread (MariaDB/PostgreSQL): hängender Server -> Fehler
+READ_TIMEOUT_S = 600            # dasselbe im Lesemodus (lange Abfragen sind dort normal; Abbrechen siehe interrupt)
+# TCP-Keepalive für PostgreSQL: eine still abgerissene Verbindung (Router, VPN) wird nach etwa einer Minute erkannt
+PG_KEEPALIVE = {"keepalives": 1, "keepalives_idle": 30, "keepalives_interval": 10, "keepalives_count": 3}
 BATCH = 5000                    # Werte je Einfüge-Anfrage
+MAX_BATCHES = 50                # höchstens so viele Stapel je Schreibdurchlauf (dann Ereignisse/Aufräumen)
 HEARTBEAT_S = 60.0              # "nur Änderungen": unveränderte Werte spätestens nach dieser Zeit erneut schreiben
 
 ST_OFF, ST_CONNECTING, ST_OK, ST_ERROR = "off", "connecting", "ok", "error"
@@ -275,6 +294,9 @@ class SqliteBackend(_Backend):
         self.con = sqlite3.connect(self.s["datei"], timeout=10, check_same_thread=False)
         cur = self.con.cursor()
         cur.execute("PRAGMA journal_mode=WAL")          # gleichzeitiges Lesen (z. B. Grafana) während des Schreibens
+        # Mit WAL genügt NORMAL (kein fsync je Commit, schont die SD-Karte); die Datei bleibt auch bei Stromausfall
+        # heil, es fehlen höchstens die letzten Sekunden.
+        cur.execute("PRAGMA synchronous=NORMAL")
         cur.execute(f"CREATE TABLE IF NOT EXISTS {self.t} (zeit TEXT NOT NULL, projekt TEXT, "
                     f"variable TEXT NOT NULL, wert REAL)")
         cur.execute(f"CREATE INDEX IF NOT EXISTS {self.t}_variable_zeit ON {self.t} (variable, zeit)")
@@ -359,7 +381,8 @@ class MariaDbBackend(_Backend):
         import pymysql                                  # nur bei Bedarf (pip install PyMySQL)
         s = self.s
         self.con = pymysql.connect(host=s["host"], port=s["port"], user=s["user"], password=s["passwort"],
-                                   database=s["name"], charset="utf8mb4", connect_timeout=5, autocommit=False)
+                                   database=s["name"], charset="utf8mb4", connect_timeout=5, autocommit=False,
+                                   read_timeout=DB_TIMEOUT_S, write_timeout=DB_TIMEOUT_S)
         with self.con.cursor() as cur:
             cur.execute(f"CREATE TABLE IF NOT EXISTS `{self.t}` ("
                         "zeit DATETIME(3) NOT NULL, projekt VARCHAR(100), variable VARCHAR(200) NOT NULL, "
@@ -422,7 +445,8 @@ class TimescaleBackend(_Backend):
         import psycopg                                  # nur bei Bedarf (pip install "psycopg[binary]")
         s = self.s
         self.con = psycopg.connect(host=s["host"], port=s["port"], dbname=s["name"], user=s["user"] or None,
-                                   password=s["passwort"] or None, connect_timeout=5, autocommit=False)
+                                   password=s["passwort"] or None, connect_timeout=5, autocommit=False,
+                                   options=f"-c statement_timeout={DB_TIMEOUT_S * 1000}", **PG_KEEPALIVE)
         with self.con.cursor() as cur:
             cur.execute(f'CREATE TABLE IF NOT EXISTS "{self.t}" (zeit TIMESTAMPTZ NOT NULL, projekt TEXT, '
                         'variable TEXT NOT NULL, wert DOUBLE PRECISION)')
@@ -1377,7 +1401,10 @@ class DbWriter(threading.Thread):
             except Exception as e:
                 self._set(ST_ERROR, tr("Verbindung fehlgeschlagen: {0}").format(e))
                 return False
-        while True:
+        # Höchstens MAX_BATCHES Stapel je Durchlauf: kommen Werte schneller an, als die Datenbank schreibt (oder wird
+        # nach einem Ausfall nachgetragen), kommen Ereignisse und Aufräumen trotzdem dran; beim Stoppen ohne Grenze,
+        # aber nur bis zum Zeitlimit von stop().
+        for _ in itertools.count() if self.stop_evt.is_set() else range(MAX_BATCHES):
             with self.lock:
                 batch = [self.buf.popleft() for _ in range(min(BATCH, len(self.buf)))]
             if not batch:
@@ -1399,6 +1426,7 @@ class DbWriter(threading.Thread):
                 self._set(ST_ERROR, f"Schreibfehler: {e}")
                 self.backend.close()
                 return False
+        return True
 
     def _sync_events(self):
         """Ereignisse abgleichen: geänderte bzw. neue Ereignisse des Protokolls schreiben (gegangen, quittiert, Notizen).
@@ -1465,9 +1493,14 @@ class DbWriter(threading.Thread):
             self.emit(tr("⚠ [Aufräumen] Datenbank: {0}").format(e))
 
     def stop(self, timeout=15.0):
-        """Restliche Werte schreiben und den Thread beenden."""
+        """Restliche Werte schreiben und den Thread beenden. Was bis zum Zeitlimit nicht geschrieben ist, wird
+        gemeldet (Datenbank nicht erreichbar oder zu langsam)."""
         self.stop_evt.set()
         self.join(timeout)
+        with self.lock:
+            n = len(self.buf)
+        if n or self.is_alive():
+            self.emit(tr("⚠ [Datenbank] Beim Beenden nicht geschrieben: {0} Werte").format(n))
 
 
 # ---------------------------------------------------------------------------------------
@@ -1483,6 +1516,37 @@ RASTER_STEPS = (1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 1
 
 class LoadCancelled(Exception):
     """Laden wurde abgebrochen."""
+
+
+class _LoadGuard:
+    """Beim Laden nach jedem Teilstück aufgerufen (mit der Zahl neuer Werte): Abbruch prüfen, Werte zählen
+    (Speicherschutz MAX_LOAD_VALUES) und den Fortschritt melden."""
+
+    def __init__(self, cancel, progress):
+        """``cancel()`` -> True bricht ab; ``progress(n)`` erhält die Zahl bisher gelesener Werte (beide optional)."""
+        self.cancel, self.progress, self.n = cancel, progress, 0
+
+    def __call__(self, n):
+        """n weitere Werte gelesen."""
+        if self.cancel is not None and self.cancel():
+            raise LoadCancelled()
+        self.n += n
+        if self.n > MAX_LOAD_VALUES:
+            raise MemoryError(tr("Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.")
+                              .format(_num(MAX_LOAD_VALUES)))
+        if self.progress is not None:
+            self.progress(self.n)
+
+
+def _assemble(names, parts, hold):
+    """Teilstücke [(Spalte, Zeiten, Werte)] -> (Zeiten, Namen, Spalten) auf einer gemeinsamen Zeitachse (auf ms
+    gerundet); hold: fehlende Werte mit dem letzten Wert füllen."""
+    import numpy as np
+    t = np.unique(np.round(np.concatenate([ts for _k, ts, _v in parts]), 3)) if parts else np.zeros(0)
+    cols = np.full((len(names), len(t)), np.nan)
+    for k, ts, vs in parts:
+        cols[k, np.searchsorted(t, np.round(ts, 3))] = vs
+    return t, names, (_hold(cols) if hold and len(t) else cols)
 
 
 def nice_raster(span_s, points=AUTO_POINTS):
@@ -1668,12 +1732,13 @@ class DbReader:
             if not os.path.exists(s["datei"]):
                 raise FileNotFoundError(tr("Datenbankdatei nicht gefunden: {0}").format(s["datei"]))
             # nur lesend öffnen (die Aufzeichnung darf gleichzeitig weiterschreiben)
-            uri = "file:" + s["datei"].replace("\\", "/").replace("?", "%3F").replace("#", "%23") + "?mode=ro"
+            uri = pathlib.Path(os.path.abspath(s["datei"])).as_uri() + "?mode=ro"     # maskiert auch %, ?, #
             self.con = sqlite3.connect(uri, uri=True, timeout=10, check_same_thread=False)
         elif s["typ"] == "mariadb":
             import pymysql
             self.con = pymysql.connect(host=s["host"], port=s["port"], user=s["user"], password=s["passwort"],
-                                       database=s["name"], charset="utf8mb4", connect_timeout=5)
+                                       database=s["name"], charset="utf8mb4", connect_timeout=5,
+                                       read_timeout=READ_TIMEOUT_S, write_timeout=READ_TIMEOUT_S)
             with self.con.cursor() as cur:
                 cur.execute("SET time_zone = '+00:00'")
         elif s["typ"] == "questdb":
@@ -1683,7 +1748,8 @@ class DbReader:
         else:
             import psycopg
             self.con = psycopg.connect(host=s["host"], port=s["port"], dbname=s["name"], user=s["user"] or None,
-                                       password=s["passwort"] or None, connect_timeout=5, autocommit=True)
+                                       password=s["passwort"] or None, connect_timeout=5, autocommit=True,
+                                       **PG_KEEPALIVE)
         return self
 
     def close(self):
@@ -1694,6 +1760,19 @@ class DbReader:
             except Exception:
                 pass
             self.con = None
+
+    def interrupt(self):
+        """Laufende Abfrage abbrechen (aus einem anderen Thread, z. B. „Abbrechen“ im Dialog) – SQLite und PostgreSQL
+        können das auch mitten in einer langen Abfrage (Zählen, Sortieren); sonst wirkt der Abbruch beim nächsten
+        Datenblock."""
+        con = self.con
+        try:
+            if self.s["typ"] == "sqlite" and con is not None:
+                con.interrupt()
+            elif self.s["typ"] == "timescale" and con is not None:
+                con.cancel()
+        except Exception:
+            pass
 
     def _query(self, sql, params=(), each=None, cancel=None):
         """SQL ausführen; mit ``each`` werden die Zeilen stückweise übergeben (Speicher sparen), sonst als Liste."""
@@ -1773,8 +1852,11 @@ class DbReader:
             r = 0.0
             sql = f"SELECT {ep} AS e, variable, wert FROM {self.t}{where} ORDER BY e"
         col_of = {n: k for k, n in enumerate(names)}
-        times, idx, vals = [], [], []        # Zeitachse; je Wert (Zeilenindex, Spalte, Wert)
-        state = {"last": None, "n": 0}
+        # Zeitachse; je Wert Zeilenindex, Spalte und Wert – als kompakte Felder (24 Byte je Wert statt rund 120 als
+        # Python-Tupel), damit der Speicherschutz MAX_LOAD_VALUES greift, bevor der Speicher ausgeht
+        times, idx, ks, vs = array.array("d"), array.array("q"), array.array("q"), array.array("d")
+        state = {"last": None}
+        guard = _LoadGuard(None, progress)
 
         def each(chunk):
             """Einen Block Ergebniszeilen verarbeiten: neue Zeitpunkte an die Zeitachse hängen, Werte mit (Zeile,
@@ -1793,23 +1875,16 @@ class DbReader:
                     times.append(ts)
                     state["last"] = ts
                 idx.append(len(times) - 1)
-                vals.append((k, float("nan") if val is None else float(val)))
-            state["n"] += len(chunk)
-            if state["n"] > MAX_LOAD_VALUES:
-                raise MemoryError(tr("Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.")
-                                  .format(f"{MAX_LOAD_VALUES:,}".replace(",", ".")))
-            if progress is not None:
-                progress(state["n"])
+                ks.append(k)
+                vs.append(float("nan") if val is None else float(val))
+            guard(len(chunk))
 
         self._query(sql, params, each=each, cancel=cancel)
-        t = np.asarray(times, dtype=float)
+        t = np.frombuffer(times, dtype=float).copy() if len(times) else np.zeros(0)
         cols = np.full((len(names), len(times)), np.nan)
-        if vals:
-            rows = np.asarray(idx, dtype=np.int64)
-            ks = np.fromiter((k for k, _v in vals), dtype=np.int64, count=len(vals))
-            vs = np.fromiter((v for _k, v in vals), dtype=float, count=len(vals))
+        if len(vs):
             # Alle Werte in einem Schritt in die Matrix (Variable × Zeitpunkt) schreiben; Lücken bleiben NaN.
-            cols[ks, rows] = vs
+            cols[np.frombuffer(ks, dtype=np.int64), np.frombuffer(idx, dtype=np.int64)] = np.frombuffer(vs, dtype=float)
         if hold and len(times):
             cols = _hold(cols)
         return t, names, cols
@@ -1918,20 +1993,7 @@ class VmReader:
         if not names:
             raise ValueError(tr("Keine Variable gewählt."))
         series = []                                     # (Spalte, Zeiten in s, Werte)
-        n_total = 0
-
-        def check(n):
-            """Nach jedem Teilstück: Abbruch prüfen, Werte zählen (Speicherschutz) und Fortschritt melden."""
-            nonlocal n_total
-            if cancel is not None and cancel():
-                raise LoadCancelled()
-            n_total += n
-            if n_total > MAX_LOAD_VALUES:
-                raise MemoryError(tr("Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.")
-                                  .format(f"{MAX_LOAD_VALUES:,}".replace(",", ".")))
-            if progress is not None:
-                progress(n_total)
-
+        check = _LoadGuard(cancel, progress)
         if raster_s and raster_s > 0:
             r = float(raster_s)
             ms = max(int(round(r * 1000)), 1)
@@ -1964,16 +2026,7 @@ class VmReader:
                     vs = np.asarray([float("nan") if v is None else v for v in item.get("values", [])], dtype=float)
                     series.append((k, ts, vs))
                     check(len(ts))
-        if series:
-            t = np.unique(np.round(np.concatenate([ts for _k, ts, _v in series]), 3))
-        else:
-            t = np.zeros(0)
-        cols = np.full((len(names), len(t)), np.nan)
-        for k, ts, vs in series:
-            cols[k, np.searchsorted(t, np.round(ts, 3))] = vs
-        if hold and len(t):
-            cols = _hold(cols)
-        return t, names, cols
+        return _assemble(names, series, hold)
 
 
 _DURATION_S = {"y": 365 * 86400, "w": 7 * 86400, "d": 86400, "h": 3600, "m": 60, "s": 1}
@@ -2033,21 +2086,8 @@ class PromReader(VmReader):
         if not names:
             raise ValueError(tr("Keine Variable gewählt."))
         col_of = {n: k for k, n in enumerate(names)}
-        series = {}                                     # Spalte -> [(Zeiten, Werte)]
-        n_total = 0
-
-        def check(n):
-            """Abbruch prüfen, Werte zählen (Speicherschutz) und Fortschritt melden."""
-            nonlocal n_total
-            if cancel is not None and cancel():
-                raise LoadCancelled()
-            n_total += n
-            if n_total > MAX_LOAD_VALUES:
-                raise MemoryError(tr("Mehr als {0} Werte – bitte einen kürzeren Zeitraum oder Mittelwerte wählen.")
-                                  .format(f"{MAX_LOAD_VALUES:,}".replace(",", ".")))
-            if progress is not None:
-                progress(n_total)
-
+        series = []                                     # (Spalte, Zeiten in s, Werte)
+        check = _LoadGuard(cancel, progress)
         regex = "|".join(re.escape(n).replace("\\ ", " ") for n in names)
         sel = self._sel(project)[:-1] + f",variable=~{_prom_str('^(?:' + regex + ')$')}}}"
         if raster_s and raster_s > 0:
@@ -2066,7 +2106,7 @@ class PromReader(VmReader):
                         continue
                     ts = np.fromiter((float(p[0]) - r / 2 for p in pts), dtype=float, count=len(pts))
                     vs = np.fromiter((float(p[1]) for p in pts), dtype=float, count=len(pts))
-                    series.setdefault(k, []).append((ts, vs))
+                    series.append((k, ts, vs))
                     check(len(pts))
                 start = end + r
         else:
@@ -2083,17 +2123,10 @@ class PromReader(VmReader):
                         continue
                     ts = np.fromiter((float(p[0]) for p in pts), dtype=float, count=len(pts))
                     vs = np.fromiter((float(p[1]) for p in pts), dtype=float, count=len(pts))
-                    series.setdefault(k, []).append((ts, vs))
+                    series.append((k, ts, vs))
                     check(len(pts))
                 lo = hi
-        parts = [(k, ts, vs) for k, lst in series.items() for ts, vs in lst]
-        t = np.unique(np.round(np.concatenate([ts for _k, ts, _v in parts]), 3)) if parts else np.zeros(0)
-        cols = np.full((len(names), len(t)), np.nan)
-        for k, ts, vs in parts:
-            cols[k, np.searchsorted(t, np.round(ts, 3))] = vs
-        if hold and len(t):
-            cols = _hold(cols)
-        return t, names, cols
+        return _assemble(names, series, hold)
 
 
 def create_reader(conn, sqlite_file=None):

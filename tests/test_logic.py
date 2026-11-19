@@ -539,6 +539,38 @@ def test_csv_join(tmp_path):
     assert np.isnan(np.asarray(y)).any()                       # Lücke zwischen den Dateien
 
 
+def test_csv_join_same_time_keeps_all_columns(tmp_path):
+    """Gleicher Zeitpunkt in zwei Dateien mit verschiedenen Variablen: beide Spalten bleiben erhalten; Dezimalkomma,
+    leere und ungültige Felder werden zu Zahlen bzw. NaN."""
+    import plc_csvjoin
+    (tmp_path / "a.csv").write_text("Zeit;Epoch;A;B\nx;1;1,5;\nx;2;kaputt;3\nx;;9;9\nx;3;4;5\n", encoding="utf-8")
+    (tmp_path / "b.csv").write_text("Zeit;Epoch;C;A\nx;3;7;8\nx;4;1;2\n", encoding="utf-8")
+    names, t, y = plc_csvjoin.read_log(str(tmp_path / "a.csv"))
+    assert list(t) == [1, 2, 3] and y[0][0] == 1.5 and np.isnan(y[0][1]) and np.isnan(y[1][0])
+    names, t, y, errors = plc_csvjoin.read_and_join([str(tmp_path / "a.csv"), str(tmp_path / "b.csv")], gaps=False)
+    assert names == ["A", "B", "C"] and list(t) == [1, 2, 3, 4] and not errors
+    assert (y[0][2], y[1][2], y[2][2]) == (4, 5, 7)            # t=3: A aus der ersten Datei, C aus der zweiten
+
+
+def test_db_reader_sqlite_path_with_percent(tmp_path):
+    """Lesemodus: SQLite-Datei in einem Ordner mit % und # im Namen (URI-Maskierung); Werte kommen vollständig zurück."""
+    import plc_db
+    folder = tmp_path / "100% #1"
+    path = str(folder / "w.db")
+    conn = {"db_typ": "sqlite", "db_datei": path, "db_tabelle": "werte", "projekt": "A"}
+    w = plc_db.DbWriter(conn, ["Druck", "Temp"], interval_s=0.05)
+    w.start()
+    for k in range(10):
+        w.put(1.79e9 + k, [k, 2 * k])
+    w.stop()
+    r = plc_db.create_reader(conn).connect()
+    try:
+        t, names, cols = r.load(["Druck", "Temp"], 1.79e9 - 1, 1.79e9 + 20, project="A")
+    finally:
+        r.close()
+    assert len(t) == 10 and names == ["Druck", "Temp"] and list(cols[1]) == [2.0 * k for k in range(10)]
+
+
 # ---- Webserver ----------------------------------------------------------------------------------------------------
 def test_web_login_and_iocheck_api():
     import plc_iocheck as io
