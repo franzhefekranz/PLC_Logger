@@ -1328,3 +1328,20 @@ def test_log_files_for_names_like_recorder(tmp_path, monkeypatch):
     found = plc_gui.MainWindow._log_files_for(fake, datetime(2026, 11, 18, 9).timestamp(),
                                                datetime(2026, 11, 19, 10, 30).timestamp())
     assert len(found) == 3
+
+
+def test_color_scheme_back_to_system(qapp):
+    """„Dunkel“ (ggf. über Fusion mit eigener Palette) und zurück auf „Wie das System“: wieder der ursprüngliche Stil
+    und nicht mehr dunkel."""
+    import plc_i18n
+    style, pal = qapp.style().name(), qapp.palette()
+    dark_before = plc_i18n.is_dark()
+    plc_i18n._orig_style = None
+    try:
+        plc_i18n.apply_color_scheme(qapp, "dunkel")
+        assert plc_i18n.is_dark()
+        plc_i18n.apply_color_scheme(qapp, "system")
+        assert qapp.style().name().lower() == style.lower() and plc_i18n.is_dark() == dark_before
+    finally:
+        qapp.setStyle(style)
+        qapp.setPalette(pal)

@@ -137,15 +137,17 @@ def load(code=None):
             code = load_settings().get("sprache") or DEFAULT
         except Exception:
             code = DEFAULT
-    _table, _lang = {}, code
-    if code == DEFAULT:
-        return
-    p = _find(code)
-    if p:
-        try:
-            _table = parse_file(p)[1]
-        except (OSError, UnicodeDecodeError):
-            _table = {}
+    # erst fertig einlesen, dann in einem Schritt zuweisen: ein anderer Thread, der gerade tr() aufruft, sieht nie eine
+    # halb geladene bzw. leere Tabelle
+    table = {}
+    if code != DEFAULT:
+        p = _find(code)
+        if p:
+            try:
+                table = parse_file(p)[1]
+            except (OSError, UnicodeDecodeError):
+                table = {}
+    _table, _lang = table, code
 
 
 def current():
@@ -166,6 +168,7 @@ def tr(text):
 # Qt: eigene Standardtexte (Ja/Nein/Abbrechen …) und Menü "Sprache"
 # ---------------------------------------------------------------------------------------
 _qt_translators = []
+_orig_style = None       # Stil der Oberfläche vor dem ersten Umschalten auf Fusion (für „Wie das System“)
 
 
 # Farbschema der Oberfläche (Einstellung ``farbschema``): wie das System, hell oder dunkel
@@ -192,11 +195,14 @@ def apply_color_scheme(app=None, scheme=None):
     """Farbschema anwenden (``system``/``hell``/``dunkel``; None = aus den Einstellungen). Ab Qt 6.8 über die
     Stil-Hinweise (behält das Aussehen des Systems), sonst bzw. wenn das System es ablehnt: Stil Fusion mit heller
     bzw. dunkler Palette. Wirkt sofort, auch in schon offenen Fenstern."""
+    global _orig_style
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QApplication
     app = app or QApplication.instance()
     if app is None:
         return
+    if _orig_style is None:
+        _orig_style = app.style().name()
     if scheme is None:
         from plc_common import load_settings
         scheme = str(load_settings().get("farbschema", "system") or "system")
@@ -207,6 +213,11 @@ def apply_color_scheme(app=None, scheme=None):
         if scheme == "system" or hints.colorScheme() == want:
             return
     if scheme == "system":
+        # vorher (Hell/Dunkel ohne Unterstützung durch Qt) auf Fusion mit eigener Palette umgestellt: zurück zum
+        # Stil des Systems – sonst bliebe es bis zum Neustart dunkel
+        if _orig_style and app.style().name().lower() != _orig_style.lower():
+            app.setStyle(_orig_style)
+            app.setPalette(app.style().standardPalette())
         return
     app.setStyle("Fusion")
     app.setPalette(_dark_palette() if scheme == "dunkel" else app.style().standardPalette())
@@ -316,9 +327,10 @@ def _switch(window, code, restart_cmd):
         import subprocess
         try:
             cmd = restart_cmd()
-            if cmd:
+            # erst schließen (Aufzeichnung stoppen, archivieren, Ports freigeben), dann neu starten; lehnt das Fenster
+            # das Schließen ab (läuft noch etwas, ungespeicherte Änderungen), kein zweites Programm starten
+            if cmd and window.close():
                 from plc_common import child_env
                 subprocess.Popen(cmd, env=child_env())
-                window.close()
         except OSError as e:
             QMessageBox.warning(window, tr("Sprache"), str(e))

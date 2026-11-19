@@ -16,6 +16,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Sprache wechseln mit Neustart:** Das Programm startet erst neu, nachdem das alte Fenster geschlossen ist (Aufzeichnung
+  beendet, Ports frei); wird das Schließen abgelehnt, startet kein zweites Programm mehr.
+* **Farbschema:** Zurück auf „Wie das System“ stellt den Stil des Systems sofort wieder her (bisher blieb die Oberfläche
+  nach „Dunkel“ bis zum Neustart dunkel, wenn Qt das Schema nicht selbst umschalten konnte).
 * **Im Diagramm zeigen** (Ereignisprotokoll): CSV- und Archivdateien werden auch gefunden, wenn der CSV-Name Leerzeichen,
   Umlaute, Punkte oder Klammern enthält, und auch Dateien mit Zusatz `_1` (zwei Aufzeichnungen in derselben Sekunde).
 * **PDF-Bericht** aus dem Hauptfenster: wird im Hintergrund erstellt (Fortschrittsanzeige statt eingefrorenem Fenster).
