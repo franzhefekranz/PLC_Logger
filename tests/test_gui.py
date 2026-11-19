@@ -1345,3 +1345,14 @@ def test_color_scheme_back_to_system(qapp):
     finally:
         qapp.setStyle(style)
         qapp.setPalette(pal)
+
+
+def test_iocheck_texts_escaped_in_rich_text(qapp):
+    """IO-Check: Kommentare mit < und & (z. B. „Druck < 5 bar“) erscheinen im Tooltip vollständig (maskiert)."""
+    from PySide6.QtCore import Qt
+    import plc_iocheck as io
+    from plc_iocheck_dialog import SignalModel
+    m = SignalModel()
+    m.set_signals([io.IoSignal("E0.0", symbol="<M1>", comment="Druck <a 5 bar & mehr")])
+    tip = m.data(m.index(0, 3), Qt.ItemDataRole.ToolTipRole)
+    assert "&lt;M1&gt;" in tip and "Druck &lt;a 5 bar &amp; mehr" in tip

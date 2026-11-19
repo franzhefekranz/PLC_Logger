@@ -16,6 +16,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **IO-Check-Fenster:** Kommentare, Symbole und andere Texte aus der IO-Liste mit `<` oder `&` (z. B. „Druck < 5 bar“)
+  erscheinen in Tooltips, „zuletzt bewegt“ und Vertauschungshinweis vollständig. Lesen stoppen bzw. nach einer
+  Filteränderung neu starten wartet höchstens 0,5 s statt bis zu 2 s je nicht erreichbarer Steuerung.
 * **IO-Check, Analog-Prüfpunkte:** Ein Signal wird nur noch automatisch OK, wenn alle drei Punkte 0/50/100 % in Toleranz
   liegen – bisher reichte es, dass sie eingetragen waren (auch ein von Hand übernommener Punkt außerhalb der Toleranz).
   Ein solcher Punkt wird ersetzt, sobald der Wert stabil in Toleranz liegt.

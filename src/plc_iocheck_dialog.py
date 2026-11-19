@@ -9,6 +9,7 @@ import math
 import os
 import queue
 import time
+from html import escape
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QRectF, QSize, QSortFilterProxyModel, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QBrush, QColor, QFont, QKeySequence, QPainter, QPalette, QPen
@@ -338,17 +339,18 @@ class SignalModel(QAbstractTableModel):
                 return QColor(LED_NONE) if s.error else None
             return QColor((LED_ON_IN if s.is_input else LED_ON_OUT) if s.value else LED_OFF)
         if role == Qt.ItemDataRole.ToolTipRole:
-            tip = [f"<b>{s.address}</b> {s.symbol}", s.comment, s.bmk and f"BMK: {s.bmk}",
-                   s.location and f"{tr('Ort')}: {s.location}",
+            # Texte aus der IO-Liste maskieren (Rich Text): „Druck < 5 bar“, „M1 & M2“ blieben sonst nicht ganz stehen
+            tip = [f"<b>{escape(s.address)}</b> {escape(s.symbol)}", escape(s.comment),
+                   s.bmk and f"BMK: {escape(s.bmk)}", s.location and f"{tr('Ort')}: {escape(s.location)}",
                    tr(io.KIND_TEXT.get(s.kind, s.kind))]
             if not s.binary:
-                tip.append(tr("Messbereich {0} … {1} {2} (Rohwert {3} … {4})").format(
-                    f"{s.eng_min:g}", f"{s.eng_max:g}", s.unit, f"{s.raw_min:g}", f"{s.raw_max:g}"))
+                tip.append(escape(tr("Messbereich {0} … {1} {2} (Rohwert {3} … {4})").format(
+                    f"{s.eng_min:g}", f"{s.eng_max:g}", s.unit, f"{s.raw_min:g}", f"{s.raw_max:g}")))
                 fault = io.analog_fault(s, s.value)
                 if fault:
-                    tip.append(f"<span style='color:#c62828'>⚠ {fault}</span>")
+                    tip.append(f"<span style='color:#c62828'>⚠ {escape(fault)}</span>")
             if s.error:
-                tip.append(f"<span style='color:#c62828'>⚠ {s.error}</span>")
+                tip.append(f"<span style='color:#c62828'>⚠ {escape(s.error)}</span>")
             return "<br>".join(t for t in tip if t)
         if role == Qt.ItemDataRole.TextAlignmentRole and key == "nr":
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
@@ -614,13 +616,13 @@ class MatrixWidget(QWidget):
         if sig is None:
             self.setToolTip("")
             return
-        lines = [f"<b>{sig.address}</b> {sig.symbol}", sig.comment, sig.bmk and f"BMK: {sig.bmk}",
-                 sig.location and f"{tr('Ort')}: {sig.location}",
-                 tr("Wert: {0}").format(value_text(sig)), tr("Status: {0}").format(tr(io.STATUS[sig.status]))]
+        lines = [f"<b>{escape(sig.address)}</b> {escape(sig.symbol)}", escape(sig.comment),
+                 sig.bmk and f"BMK: {escape(sig.bmk)}", sig.location and f"{tr('Ort')}: {escape(sig.location)}",
+                 escape(tr("Wert: {0}").format(value_text(sig))), tr("Status: {0}").format(tr(io.STATUS[sig.status]))]
         if sig.checked_at:
-            lines.append(f"{sig.checked_at} {sig.checker}")
+            lines.append(escape(f"{sig.checked_at} {sig.checker}"))
         if sig.remark:
-            lines.append(sig.remark)
+            lines.append(escape(sig.remark))
         self.setToolTip("<br>".join(x for x in lines if x))
 
     def mousePressEvent(self, ev):
@@ -1475,12 +1477,14 @@ class IoCheckWindow(QMainWindow):
         self.lbl_expected.setWordWrap(True)
         sv.addWidget(self.lbl_expected)
         self.lbl_swap = QLabel()
+        self.lbl_swap.setTextFormat(Qt.TextFormat.PlainText)    # Hinweis enthält Texte aus der IO-Liste
         self.lbl_swap.setWordWrap(True)
         self.lbl_swap.setStyleSheet("QLabel{background:#c62828;color:white;font-weight:bold;padding:6px;"
                                     "border-radius:4px}")
         self.lbl_swap.setVisible(False)
         sv.addWidget(self.lbl_swap)
         self.last_big = QLabel()
+        self.last_big.setTextFormat(Qt.TextFormat.RichText)     # immer Rich Text: Texte darin sind maskiert
         f = self.last_big.font()
         f.setPointSizeF(f.pointSizeF() * 1.5)
         f.setBold(True)
@@ -2432,8 +2436,11 @@ class IoCheckWindow(QMainWindow):
             self.tone.stop()
         for r in self.readers:
             r.stop()
+        # insgesamt kurz warten (sauberes Trennen); hängt ein Thread im Verbindungsaufbau, endet er von selbst – seine
+        # späten Werte gehen in die alte Warteschlange (start_reading legt eine neue an)
+        deadline = time.monotonic() + 0.5
         for r in self.readers:
-            r.join(2.0)
+            r.join(max(0.0, deadline - time.monotonic()))
         self.readers = []
         self.act_run.setText(tr("▶ Lesen starten"))
         self.chk_demo.setEnabled(True)
@@ -2513,7 +2520,7 @@ class IoCheckWindow(QMainWindow):
         plcs = self.plcs or [Plc(name="Demo", driver="s7")]
         for idx, (state, text) in sorted(self.plc_state.items()):
             name = plcs[idx].name if idx < len(plcs) else "?"
-            parts.append(f"<span style='color:{colors.get(state, '#000')}'>●</span> {name}")
+            parts.append(f"<span style='color:{colors.get(state, '#000')}'>●</span> {escape(name)}")
             if state == "fehler":
                 self.statusBar().showMessage(f"{name}: {text}", 6000)
         self.lbl_plc.setText(" &nbsp; ".join(parts))
@@ -2550,8 +2557,9 @@ class IoCheckWindow(QMainWindow):
         elif time.time() > self._swap_until:
             self.lbl_swap.setVisible(False)
         if head is not None:
-            self.last_big.setText(f"{head.sig.label}: {self._change_text(head)}"
-                                  + (f"<br><span style='font-size:9pt;font-weight:normal'>{head.sig.comment}</span>"
+            self.last_big.setText(f"{escape(head.sig.label)}: {escape(self._change_text(head))}"
+                                  + (f"<br><span style='font-size:9pt;font-weight:normal'>{escape(head.sig.comment)}"
+                                     "</span>"
                                      if head.sig.comment else ""))
         self.changes.setRowCount(len(hist))
         for r, ch in enumerate(hist):
