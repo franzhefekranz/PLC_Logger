@@ -169,6 +169,7 @@ def tr(text):
 # ---------------------------------------------------------------------------------------
 _qt_translators = []
 _orig_style = None       # Stil der Oberfläche vor dem ersten Umschalten auf Fusion (für „Wie das System“)
+_own_palette = False     # eigene Palette gesetzt (Hell/Dunkel ohne Unterstützung durch Qt)
 
 
 # Farbschema der Oberfläche (Einstellung ``farbschema``): wie das System, hell oder dunkel
@@ -195,8 +196,9 @@ def apply_color_scheme(app=None, scheme=None):
     """Farbschema anwenden (``system``/``hell``/``dunkel``; None = aus den Einstellungen). Ab Qt 6.8 über die
     Stil-Hinweise (behält das Aussehen des Systems), sonst bzw. wenn das System es ablehnt: Stil Fusion mit heller
     bzw. dunkler Palette. Wirkt sofort, auch in schon offenen Fenstern."""
-    global _orig_style
+    global _orig_style, _own_palette
     from PySide6.QtCore import Qt
+    from PySide6.QtGui import QPalette
     from PySide6.QtWidgets import QApplication
     app = app or QApplication.instance()
     if app is None:
@@ -206,6 +208,13 @@ def apply_color_scheme(app=None, scheme=None):
     if scheme is None:
         from plc_common import load_settings
         scheme = str(load_settings().get("farbschema", "system") or "system")
+    if _own_palette:
+        # vorher (Hell/Dunkel ohne Unterstützung durch Qt) auf Fusion mit eigener Palette umgestellt: zuerst zurück zu
+        # Stil und Palette des Systems – sonst bliebe es z. B. nach „Dunkel“ bis zum Neustart dunkel
+        if _orig_style and app.style().name().lower() != _orig_style.lower():
+            app.setStyle(_orig_style)
+        app.setPalette(QPalette())                          # leere Palette = wieder die des Systems
+        _own_palette = False
     hints = app.styleHints()
     want = {"hell": Qt.ColorScheme.Light, "dunkel": Qt.ColorScheme.Dark}.get(scheme, Qt.ColorScheme.Unknown)
     if hasattr(hints, "setColorScheme"):
@@ -213,14 +222,10 @@ def apply_color_scheme(app=None, scheme=None):
         if scheme == "system" or hints.colorScheme() == want:
             return
     if scheme == "system":
-        # vorher (Hell/Dunkel ohne Unterstützung durch Qt) auf Fusion mit eigener Palette umgestellt: zurück zum
-        # Stil des Systems – sonst bliebe es bis zum Neustart dunkel
-        if _orig_style and app.style().name().lower() != _orig_style.lower():
-            app.setStyle(_orig_style)
-            app.setPalette(app.style().standardPalette())
         return
     app.setStyle("Fusion")
     app.setPalette(_dark_palette() if scheme == "dunkel" else app.style().standardPalette())
+    _own_palette = True
 
 
 def fill_scheme_menu(menu):
