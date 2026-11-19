@@ -1279,3 +1279,25 @@ def test_db_load_dialog(qt_log, tmp_path):
             break
         wait(30)
     assert dlg.result is None and reader.con is None
+
+
+def test_formula_editor(qt_log):
+    """Formeleditor: gültige Formel mit Testwerten berechnen, HTML-Zeichen in Fehlern/Namen maskiert, Namen mit { }
+    oder Selbstbezug abgelehnt, Übernahme mit OK."""
+    from plc_formula_dialog import FormulaEditor
+    dlg = FormulaEditor(None, ["Druck", "Temp"], name="Mittel", formula="({Druck} + {Temp}) / 2", taken={"Druck"})
+    assert dlg.tbl.rowCount() == 2 and "<b>1</b>" in dlg.lbl_status.text()
+    dlg.tbl.item(0, 1).setText("3,5")
+    dlg.check()
+    assert "<b>2.25</b>" in dlg.lbl_status.text()
+    dlg.ed_formula.setPlainText("{a<b} + 1")
+    dlg.check()
+    assert "&lt;" in dlg.lbl_status.text() and "<b>" not in dlg.lbl_status.text().split("Unbekannte")[-1]
+    dlg.ed_formula.setPlainText("{Druck} * 2")
+    dlg.ed_name.setText("Wert{1}")
+    dlg.accept_checked()
+    assert not dlg.result_name and "{" in qt_log.last()[2]
+    dlg.ed_name.setText("Doppelt")
+    dlg.accept_checked()
+    assert dlg.result_name == "Doppelt" and dlg.result_formula == "{Druck} * 2"
+    dlg.close()

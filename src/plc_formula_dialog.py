@@ -11,6 +11,8 @@ Der Dialog bearbeitet Name und Formel einer berechneten Variable. Er bietet
 
 Ergebnis nach OK: ``result_name`` und ``result_formula``.
 """
+import html
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QFontDatabase
 from PySide6.QtWidgets import (
@@ -191,10 +193,10 @@ class FormulaEditor(QDialog):
             # Fehler: Testtabelle leeren und die Meldung in Rot anzeigen (bei leerem Feld keine Meldung).
             self.tbl.setRowCount(0)
             msg = self.ed_formula.toPlainText().strip()
-            self.lbl_status.setText("<span style='color:#c0392b'>✗ {0}</span>".format(err) if msg else "")
+            # maskieren: Fehlertexte enthalten eingetippten Text (ein „<“ zerlegte sonst die Rich-Text-Anzeige)
+            self.lbl_status.setText("<span style='color:#c0392b'>✗ {0}</span>".format(html.escape(err)) if msg else "")
             return None
-        self._fill_table(f.refs)
-        self._read_test_values()
+        self._fill_table(f.refs)                # liest dabei die eingetragenen Testwerte ein
         # Testwerte als Wörterbuch {Variablenname: Wert}; fehlende Eingaben = NaN.
         vals = {n: self._test.get(n, float("nan")) for n in f.refs}
         f.evaluate(0.0, vals)               # zwei Auswertungen im Abstand von 1 s, damit
@@ -206,7 +208,7 @@ class FormulaEditor(QDialog):
             if res != res else "<b>{0:g}</b>".format(res))
         color = "#27ae60"
         if unknown:
-            txt += tr("<br>⚠ Unbekannte Variablen: {0}").format(', '.join(unknown))
+            txt += tr("<br>⚠ Unbekannte Variablen: {0}").format(html.escape(", ".join(unknown)))
             color = "#d68910"
         self.lbl_status.setText("<span style='color:{0}'>{1}</span>".format(color, txt))
         return f
@@ -215,9 +217,10 @@ class FormulaEditor(QDialog):
     def accept_checked(self):
         """Name und Formel prüfen (nicht leer, eindeutig, Formel gültig, kein Bezug auf sich selbst) und übernehmen."""
         name = self.ed_name.text().strip()
-        # Name: nicht leer; kein ';' (Trennzeichen der CSV-Datei).
-        if not name or ";" in name:
-            QMessageBox.warning(self, tr("Name"), tr("Bitte einen Namen ohne ';' eingeben."))
+        # Name: nicht leer; kein ';' (Trennzeichen der CSV-Datei), keine geschweiften Klammern (Formeln, Trigger und
+        # Meldetexte sprechen Variablen als {Name} an – mit Klammern im Namen ginge das nicht).
+        if not name or any(c in name for c in ";{}"):
+            QMessageBox.warning(self, tr("Name"), tr("Bitte einen Namen ohne ; { } eingeben."))
             return
         # Name darf nicht mit einer anderen Variablen (oder einem Block-Element) kollidieren.
         if name in self.taken:

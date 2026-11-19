@@ -1424,8 +1424,8 @@
 @ Namen prüfen
 > Check names
 
-@ Variablennamen müssen eindeutig, nicht leer und ohne ';' sein.
-> Variable names must be unique, not empty and without ';'.
+@ Variablennamen müssen eindeutig, nicht leer und ohne ; { } sein.
+> Variable names must be unique, not empty and must not contain ; { }.
 
 @ Block {0}: {1}
 > Block {0}: {1}
@@ -2373,8 +2373,8 @@
 @ <br>⚠ Unbekannte Variablen: {0}
 > <br>⚠ Unknown variables: {0}
 
-@ Bitte einen Namen ohne ';' eingeben.
-> Please enter a name without ';'.
+@ Bitte einen Namen ohne ; { } eingeben.
+> Please enter a name without ; { }.
 
 @ Der Name „{0}“ ist bereits vergeben.
 > The name “{0}” is already taken.

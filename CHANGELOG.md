@@ -16,6 +16,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Formeleditor:** Fehlermeldungen und Variablennamen mit `<` oder `&` werden korrekt angezeigt. Variablennamen
+  mit `{` oder `}` werden abgelehnt (im Formeleditor und beim Speichern der Konfiguration) – solche Variablen ließen
+  sich in Formeln, Triggern und Meldetexten nicht ansprechen.
 * **Datei- und Ordnerdialoge:** Ein vorgeschlagener oder gemerkter Ordner auf einem nicht erreichbaren Netzlaufwerk
   lässt den Dialog nicht mehr bis zum Zeitlimit warten; beim Kürzen der gemerkten Ordner bleiben die zuletzt benutzten.
 * **Formeln:** Sehr lange bzw. tief verschachtelte Formeln (z. B. Summe aus Hunderten Gliedern) ergeben eine Meldung statt

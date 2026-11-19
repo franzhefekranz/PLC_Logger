@@ -2364,9 +2364,10 @@ class ConfigWindow(QMainWindow):
         variables = self.collect()
         # Namen müssen eindeutig sein; Block-Elemente zählen mit.
         names = [v.name for v in variables] + self.block_names()
-        if any(not n or ";" in n for n in names) or len(set(names)) != len(names):
+        # ohne { }: Formeln, Trigger und Meldetexte sprechen Variablen als {Name} an
+        if any(not n or any(c in n for c in ";{}") for n in names) or len(set(names)) != len(names):
             QMessageBox.warning(self, tr("Namen prüfen"),
-                                tr("Variablennamen müssen eindeutig, nicht leer und ohne ';' sein."))
+                                tr("Variablennamen müssen eindeutig, nicht leer und ohne ; { } sein."))
             return False
         # Steuerungen, Adressen und Blöcke formal prüfen (ob es sie gibt, zeigt erst „Verbindung testen“).
         bad = []
