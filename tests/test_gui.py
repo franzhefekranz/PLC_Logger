@@ -372,7 +372,11 @@ def test_netpanel_logger_start(qapp, demo_config, tmp_path, monkeypatch):
     w.list_cfg.setCurrentRow(next(i for i, n in enumerate(names) if "linie2" in n))
     w.start_logger()
     conf = (tmp_path / "dropin" / "konfig.conf").read_text()
-    assert f'ExecStart=/usr/bin/plc-datenlogger --headless "{folder / "linie2.json"}"' in conf, conf
+    expect = str(folder / "linie2.json").replace("\\", "\\\\")             # Windows-Testlauf: \ maskiert
+    assert f'ExecStart=/usr/bin/plc-datenlogger --headless "{expect}"' in conf, conf
+    # systemd: % (Platzhalter), $ (Variablen) und \ maskieren
+    assert plc_netpanel._systemd_quote(["/a/Kessel 100% $x\\y.json"]) == '"/a/Kessel 100%% $$x\\\\y.json"'
+    assert plc_netpanel._systemd_quote(["/a/b.json"]) == "/a/b.json"
     assert ["systemctl", "restart", "plc-datenlogger"] in fake.calls and ["systemctl", "enable", "plc-datenlogger"] \
         in fake.calls
     assert plc_headless.stop_requested(999999, run_dir)                       # laufender Logger wurde beendet

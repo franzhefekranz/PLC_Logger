@@ -441,8 +441,12 @@ def config_files(extra_dirs=()):
 
 
 def _systemd_quote(args):
-    """Befehlszeile für ExecStart (Leerzeichen in Anführungszeichen)."""
-    return " ".join('"' + a.replace('"', '\\"') + '"' if (" " in a or '"' in a) else a for a in args)
+    """Befehlszeile für ExecStart: ``\\`` (Escape), ``%`` (Platzhalter wie %h) und ``$`` (Umgebungsvariablen) maskieren,
+    Leerzeichen und Anführungszeichen in Anführungszeichen – sonst verfälscht systemd z. B. „Kessel 100%.json“."""
+    def one(a):
+        a = a.replace("\\", "\\\\").replace("%", "%%").replace("$", "$$")
+        return '"' + a.replace('"', '\\"') + '"' if (" " in a or '"' in a) else a
+    return " ".join(one(a) for a in args)
 
 
 class LoggerControl:
@@ -583,7 +587,7 @@ class NetPanel(QWidget):
         self.edit_dev = None
         self.wifis = []
         self.chosen_wifi = None
-        self._job = None
+        self._jobs = []                 # laufende Hintergrundaufträge [(Thread, Zustand, Abschluss)]
         self.setWindowTitle(tr("PLC Datenlogger – Netzwerk"))
         self.setStyleSheet(STYLE)
         self.stack = QStackedWidget()
@@ -1486,7 +1490,7 @@ class NetPanel(QWidget):
     def auto_sync(self):
         """Automatisch: Uhr der Steuerung übernehmen, wenn keine Internetzeit synchronisiert ist und die Abweichung
         größer als SYNC_LIMIT_S ist (Meldung in der Statuszeile der Übersicht)."""
-        if not self.settings.get("uhr_auto") or not self.current_plc() or self._job is not None:
+        if not self.settings.get("uhr_auto") or not self.current_plc() or self._jobs:
             return
         info = self.netz.time_info()
         if not info.available or info.synced:
@@ -1541,22 +1545,19 @@ class NetPanel(QWidget):
             except Exception as e:
                 state["err"] = str(e) or type(e).__name__
         th = threading.Thread(target=work, daemon=True)
-        self._job = (th, state, done)
+        # mehrere Aufträge gleichzeitig möglich (z. B. WLAN-Suche und „WLAN aus“): jeder bekommt seinen Abschluss
+        self._jobs.append((th, state, done))
         th.start()
         self.poll.start()
 
     def _poll_job(self):
         """Alle 200 ms (GUI-Thread): ist die Hintergrundaufgabe fertig, deren Abschluss mit dem Fehlertext ("" = ok)
         aufrufen."""
-        if self._job is None:
+        for job in [j for j in self._jobs if not j[0].is_alive()]:
+            self._jobs.remove(job)
+            job[2](job[1].get("err", ""))
+        if not self._jobs:
             self.poll.stop()
-            return
-        th, state, done = self._job
-        if th.is_alive():
-            return
-        self._job = None
-        self.poll.stop()
-        done(state.get("err", ""))
 
 
 def _sudo_xauthority(environ=None):

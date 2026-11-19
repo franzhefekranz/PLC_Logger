@@ -16,6 +16,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Netzwerk-Panel:** Konfigurationen mit `%`, `$` oder `\` im Pfad starten auch als Dienst (systemd las sie bisher als
+  Platzhalter bzw. Variablen). Mehrere gleichzeitige Vorgänge (z. B. WLAN-Suche und „WLAN aus“, Logger starten und
+  stoppen) melden jeweils ihr Ergebnis – bisher ging das des ersten verloren.
 * **MQTT:** Im Format JSON wird ein Wert `inf` (z. B. Division durch 0) als `null` gesendet – bisher blieb die ganze
   Nachricht aus, und jede Sekunde erschien eine Fehlermeldung. Dauerhafte Fehler werden nur noch einmal gemeldet.
   „Verbindung testen“ im MQTT-Dialog läuft im Hintergrund (Fortschrittsanzeige statt eingefrorenem Fenster) und meldet
