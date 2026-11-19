@@ -2698,6 +2698,9 @@
 @ Notiz gespeichert.
 > Note saved.
 
+@ Werte werden aus der Datenbank geladen …
+> Loading values from the database …
+
 @ Datenbank nicht lesbar ({0}) – suche CSV-Dateien
 > Database not readable ({0}) – searching CSV files
 
@@ -2779,8 +2782,14 @@
 @ Die CSV-Datei konnte nicht angelegt werden:\n{0}
 > The CSV file could not be created:\n{0}
 
+@ Die Aufzeichnung konnte nicht gestartet werden:\n{0}
+> The recording could not be started:\n{0}
+
 @ ■ Stop
 > ■ Stop
+
+@ Aufzeichnung wird beendet …
+> Stopping recording …
 
 @ ▶ Verbinden
 > ▶ Connect
@@ -2811,6 +2820,9 @@
 
 @ CSV-Dateien zum Aneinanderhängen wählen
 > Choose CSV files to join
+
+@ Aufzeichnung wird geladen …
+> Loading recording …
 
 @ Fehler beim Laden
 > Error while loading
@@ -2868,6 +2880,9 @@
 
 @ Alle Daten ({0} bis {1})
 > All data ({0} to {1})
+
+@ Werte werden exportiert …
+> Exporting values …
 
 @ Exportiert: {0} ({1} Zeilen, {2} Variablen)
 > Exported: {0} ({1} rows, {2} variables)
@@ -4851,9 +4866,6 @@
 
 @ {0} Trigger aktiv → Ereignisprotokoll {1}
 > {0} triggers active → event log {1}
-
-@ ⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden
-> ⚠ Database: {0} values could no longer be written
 
 @ Gestoppt – {0} Trigger-Aufnahmen
 > Stopped – {0} trigger captures

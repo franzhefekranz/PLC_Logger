@@ -2698,6 +2698,9 @@
 @ Notiz gespeichert.
 > 
 
+@ Werte werden aus der Datenbank geladen …
+> 
+
 @ Datenbank nicht lesbar ({0}) – suche CSV-Dateien
 > 
 
@@ -2779,7 +2782,13 @@
 @ Die CSV-Datei konnte nicht angelegt werden:\n{0}
 > 
 
+@ Die Aufzeichnung konnte nicht gestartet werden:\n{0}
+> 
+
 @ ■ Stop
+> 
+
+@ Aufzeichnung wird beendet …
 > 
 
 @ ▶ Verbinden
@@ -2810,6 +2819,9 @@
 > 
 
 @ CSV-Dateien zum Aneinanderhängen wählen
+> 
+
+@ Aufzeichnung wird geladen …
 > 
 
 @ Fehler beim Laden
@@ -2867,6 +2879,9 @@
 > 
 
 @ Alle Daten ({0} bis {1})
+> 
+
+@ Werte werden exportiert …
 > 
 
 @ Exportiert: {0} ({1} Zeilen, {2} Variablen)
@@ -4850,9 +4865,6 @@
 > 
 
 @ {0} Trigger aktiv → Ereignisprotokoll {1}
-> 
-
-@ ⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden
 > 
 
 @ Gestoppt – {0} Trigger-Aufnahmen

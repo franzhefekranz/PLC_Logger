@@ -110,6 +110,31 @@ def test_formula_deep_nesting_and_running_avg():
     assert g.evaluate(0, {"a": 1, "b": 3}) == 5.0 and np.isnan(g.evaluate(0, {"a": 2}))
 
 
+def test_recorder_start_failure_cleans_up(tmp_path, monkeypatch):
+    """Abbruch mitten in Recorder.start (hier: Benachrichtigungen): CSV-Datei geschlossen, Datenbank-Thread beendet,
+    Recorder nicht „running“ – ein erneuter Start ist möglich."""
+    import plc_notify
+    from plc_common import Plc, default_connection
+    from plc_recorder import Recorder, demo_config
+    charts, variables = demo_config()
+    conn = default_connection()
+    conn.update(csv_ordner=str(tmp_path), db_typ="sqlite", db_datei=str(tmp_path / "w.db"))
+    rec = Recorder(conn, [Plc(name="SPS")], charts, variables, demo=True)
+
+    def broken(*a, **k):
+        raise RuntimeError("kaputt")
+    monkeypatch.setattr(plc_notify, "Notifier", broken)
+    with pytest.raises(RuntimeError):
+        rec.start()
+    assert not rec.running and rec.csv_fh is None and (rec.db is None or not rec.db.is_alive())
+    monkeypatch.undo()
+    rec.start()
+    try:
+        assert rec.running and rec.csv_fh is not None
+    finally:
+        rec.stop()
+
+
 def test_iocheck_column_aliases():
     """Eigene Spaltenüberschriften ersetzen die Vorgabe; ein leeres Feld wird nicht eingelesen."""
     import plc_iocheck as io

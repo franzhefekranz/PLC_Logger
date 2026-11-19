@@ -41,17 +41,18 @@ import math
 import os
 import re
 import sys
+import threading
 from datetime import datetime
 
 # numpy: schnelles Rechnen mit den Messreihen (Ausschnitte, Treppenlinien, Abtastung der BOOL-Verläufe).
 import numpy as np
 # Qt-Klassen: Kerntypen (Qt, Signale, Timer), Zeichnen (QPainter ...) und Widgets/Fenster.
-from PySide6.QtCore import QMimeData, QPoint, QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QEventLoop, QMimeData, QPoint, QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (QAction, QActionGroup, QBrush, QColor, QDrag, QGuiApplication, QImage,
                            QPainter, QPen)
 from PySide6.QtWidgets import (
     QApplication, QGraphicsItem, QDockWidget, QFrame, QGridLayout, QHBoxLayout, QHeaderView,
-    QLabel, QMainWindow, QMessageBox, QScrollArea, QScrollBar, QSizePolicy,
+    QLabel, QMainWindow, QMessageBox, QProgressDialog, QScrollArea, QScrollBar, QSizePolicy,
     QSpinBox, QTableWidget, QMenu, QTableWidgetItem, QToolBar, QToolButton,
     QVBoxLayout, QWidget,
 )
@@ -65,7 +66,7 @@ from pyqtgraph.graphicsItems.LegendItem import ItemSample
 
 # Eigene Module: Icon/Logo, Datenmodell, Aufzeichnungskern, Webserver, SVG-Export, Hilfsfunktionen.
 from plc_branding import app_icon, logos_pixmap, set_windows_app_id
-from plc_common import (BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE, Variable, load_config,
+from plc_common import (BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE, Chart, Variable, load_config,
                        load_plcs, logo_file, remember_config_path,
                         load_settings, program_command, save_settings)
 from plc_events import EventLog, event_log_path
@@ -1161,6 +1162,12 @@ class MainWindow(QMainWindow):
         # _block/_rblock: Sperren gegen Rückkopplung (Programm ändert Zeitbereich bzw. Lineale und löst dabei selbst Ereignisse aus).
         self._block = False
         self._rblock = False
+        self._busy = False              # _wait läuft (Stoppen, Laden, Export): Start/Stop und Schließen gesperrt
+        # Werte an den Linealen gebündelt berechnen (beim Ziehen höchstens alle 40 ms, Kennwerte über viele Punkte)
+        self._ruler_timer = QTimer(self)
+        self._ruler_timer.setSingleShot(True)
+        self._ruler_timer.setInterval(40)
+        self._ruler_timer.timeout.connect(self.update_offline_values)
         # Offline: Zeitgrenzen der Momentaufnahme, aktueller Ausschnitt (view_x) und Lineal-Zeitpunkte.
         self.snap_t0 = 0.0
         self.snap_t1 = 0.0
@@ -2039,22 +2046,23 @@ class MainWindow(QMainWindow):
         names = [v.name for v in cfg_vars]
         a, b = t0 - 600.0, t1 + 600.0
         project = conn.get("projekt") or None
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
+
+        def read():
+            """Im Hintergrund: verbinden, zählen, laden."""
             reader = create_reader(conn).connect()
             try:
                 n = reader.count(names, a, b, project)
                 raster = 0 if n <= 2_000_000 else nice_raster(b - a)     # sehr viele Werte: Mittelwerte
                 t, nm, cols = reader.load(names, a, b, project, raster_s=raster,
                                           hold=bool(int(conn.get("db_nur_aenderungen", 0) or 0)))
-                desc = reader.describe()
+                return t, nm, cols, reader.describe()
             finally:
                 reader.close()
+        try:
+            t, nm, cols, desc = self._wait(tr("Werte werden aus der Datenbank geladen …"), read)
         except Exception as e:
-            QApplication.restoreOverrideCursor()
             self.statusBar().showMessage(tr("Datenbank nicht lesbar ({0}) – suche CSV-Dateien").format(e), 10000)
             return False
-        QApplication.restoreOverrideCursor()
         if not len(t):
             return False
         if self.rec is not None and self.rec.running:
@@ -2338,6 +2346,42 @@ class MainWindow(QMainWindow):
             self.table.blockSignals(False)
 
     # CSV-Ordner als absoluter Pfad (relativ = ab dem Basisordner des Programms).
+    def _wait(self, text, fn):
+        """``fn()`` in einem eigenen Thread ausführen und bis dahin eine Fortschrittsanzeige zeigen (nach 0,3 s; ohne
+        Abbrechen) – das Fenster zeichnet weiter, statt „Keine Rückmeldung“ zu zeigen. Für den Aufrufer synchron:
+        Rückgabe bzw. Ausnahme wie bei ``fn``. Solange es läuft, sind Start/Stop und Schließen gesperrt (``_busy``)."""
+        box, loop = {}, QEventLoop()
+
+        def run():
+            """Im Hintergrund: ausführen, Ergebnis bzw. Ausnahme ablegen."""
+            try:
+                box["res"] = fn()
+            except BaseException as e:
+                box["err"] = e
+        th = threading.Thread(target=run, name="warten", daemon=True)
+        prog = QProgressDialog(text, None, 0, 0, self)
+        prog.setWindowTitle(QApplication.applicationDisplayName() or self.windowTitle())
+        prog.setWindowModality(Qt.WindowModality.WindowModal)
+        prog.setMinimumDuration(300)
+        timer = QTimer(prog)
+        timer.setInterval(50)
+        timer.timeout.connect(lambda: th.is_alive() or loop.quit())
+        was_busy, self._busy = self._busy, True
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            th.start()
+            timer.start()
+            loop.exec()
+        finally:
+            timer.stop()
+            QApplication.restoreOverrideCursor()
+            self._busy = was_busy
+            prog.reset()
+            prog.deleteLater()
+        if "err" in box:
+            raise box["err"]
+        return box.get("res")
+
     def csv_dir(self):
         """CSV-Ordner als absoluter Pfad (relativ zum Datenordner)."""
         d = self.conn["csv_ordner"]
@@ -2394,8 +2438,12 @@ class MainWindow(QMainWindow):
         self.update_event_button()
         try:
             rec.start()
-        except OSError as e:                         # CSV-Ordner nicht beschreibbar o. Ä.
-            QMessageBox.critical(self, tr("CSV-Datei"), tr("Die CSV-Datei konnte nicht angelegt werden:\n{0}").format(e))
+        except Exception as e:                       # CSV-Ordner nicht beschreibbar, OPC-UA-Server o. Ä.
+            if isinstance(e, OSError):
+                QMessageBox.critical(self, tr("CSV-Datei"), tr("Die CSV-Datei konnte nicht angelegt werden:\n{0}").format(e))
+            else:
+                QMessageBox.critical(self, tr("Aufzeichnung"),
+                                     tr("Die Aufzeichnung konnte nicht gestartet werden:\n{0}").format(e))
             self.rec, self.source = None, "none"
             self._uncheck_run()
             return
@@ -2409,11 +2457,11 @@ class MainWindow(QMainWindow):
     def stop(self):
         """Aufzeichnung beenden (wartet auf die Lese-Threads, Sanduhr)."""
         if self.rec is not None and self.rec.running:
-            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            self.act_run.setEnabled(False)            # kein erneuter Start, solange gestoppt wird
             try:
-                self.rec.stop()
+                self._wait(tr("Aufzeichnung wird beendet …"), self.rec.stop)
             finally:
-                QApplication.restoreOverrideCursor()
+                self.act_run.setEnabled(True)
             self.poll_recorder()
         self.act_run.setText(tr("▶ Verbinden") if self.client is not None else tr("▶ Start"))
         self.act_demo.setEnabled(self.client is None)
@@ -2773,7 +2821,8 @@ class MainWindow(QMainWindow):
         if self._rblock:
             return
         self.set_rulers(k, pos)
-        self.update_offline_values()
+        if not self._ruler_timer.isActive():   # Werte gebündelt: beim Ziehen höchstens alle 40 ms neu berechnen
+            self._ruler_timer.start()
 
     def idx_at(self, ts):
         """Index des zeitlich nächsten Messwerts."""
@@ -2879,11 +2928,7 @@ class MainWindow(QMainWindow):
         # Läuft gerade eine Aufzeichnung, wird sie beendet (Laden ersetzt die Daten im Speicher).
         if self.rec is not None and self.rec.running:
             self.act_run.setChecked(False)  # stoppt das Logging
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            names, t, cols, errors = read_and_join(paths)
-        finally:
-            QApplication.restoreOverrideCursor()
+        names, t, cols, errors = self._wait(tr("Aufzeichnung wird geladen …"), lambda: read_and_join(paths))
         if errors:
             QMessageBox.warning(self, tr("Fehler beim Laden"), "\n".join(f"{os.path.basename(p)}: {e}"
                                                                          for p, e in errors[:15]))
@@ -2917,7 +2962,8 @@ class MainWindow(QMainWindow):
                     except Exception:
                         pass
                     try:
-                        write_values(out, t, names, [ref.get(n, "REAL") for n in names], cols)
+                        self._wait(tr("Speichern …"),
+                                   lambda: write_values(out, t, names, [ref.get(n, "REAL") for n in names], cols))
                         msg += " → " + tr("gespeichert: {0}").format(out)
                     except OSError as e:
                         QMessageBox.warning(self, tr("Speichern"), tr("Die Datei konnte nicht geschrieben werden:\n{0}").format(e))
@@ -3062,14 +3108,12 @@ class MainWindow(QMainWindow):
         dtypes = [self.vars[k].dtype for k in idx]
         if res["interval"] > 0:
             tt, yy = downsample(tt, yy, res["interval"], res["method"], dtypes)
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            write_values(path, tt, [self.vars[k].name for k in idx], dtypes, yy)
+            self._wait(tr("Werte werden exportiert …"),
+                       lambda: write_values(path, tt, [self.vars[k].name for k in idx], dtypes, yy))
         except Exception as e:
-            QApplication.restoreOverrideCursor()
             QMessageBox.warning(self, tr("Werte exportieren"), tr("Die Datei konnte nicht geschrieben werden:\n{0}").format(e))
             return
-        QApplication.restoreOverrideCursor()
         self.statusBar().showMessage(tr("Exportiert: {0} ({1} Zeilen, {2} Variablen)").format(path, len(tt), len(idx)), 10000)
 
     def _show_loaded(self, names, t, cols, source, message):
@@ -3080,7 +3124,10 @@ class MainWindow(QMainWindow):
         if self.client is not None and self.rec is not None and hasattr(self.rec, "konfig"):
             charts, cfg_vars = self.rec.charts, self.rec.vars           # Client: Konfiguration des Servers
         else:
-            _conn, charts, cfg_vars = load_config(self.config_path, alle=True)
+            try:
+                _conn, charts, cfg_vars = load_config(self.config_path, alle=True)
+            except Exception:                    # Konfiguration fehlt/beschädigt: geladene Daten trotzdem zeigen
+                charts, cfg_vars = [Chart()], []
         ref = {v.name: dataclasses.replace(v, record=True) for v in cfg_vars}
         self.charts = charts
         self.vars = [ref.get(n) or Variable(name=n, color=PALETTE[k % len(PALETTE)])
@@ -3187,6 +3234,9 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         """Beim Schließen: Webserver beenden, Aufzeichnung stoppen und die aktuelle CSV-Datei archivieren
         (Einstellung 'archiv_beenden'; das Programm wartet, bis das Archiv geschrieben ist)."""
+        if self._busy:                           # Stoppen/Laden/Export läuft noch (Fortschrittsanzeige)
+            event.ignore()
+            return
         self.statusBar().showMessage(tr("Beende … (Aufzeichnung stoppen, CSV archivieren)"))
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()

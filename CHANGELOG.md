@@ -16,6 +16,14 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Hauptfenster:** Stoppen der Aufzeichnung, Laden von CSV/ZIP und aus der Datenbank sowie Export und Speichern laufen
+  im Hintergrund mit Fortschrittsanzeige – das Fenster friert nicht mehr ein („Keine Rückmeldung“). Lineale ziehen
+  ruckelt bei vielen Messpunkten nicht mehr (Kennwerte gebündelt berechnet). Geladene Daten werden auch ohne lesbare
+  Konfigurationsdatei angezeigt.
+* **Aufzeichnung starten:** Scheitert der Start mittendrin (z. B. OPC-UA-Server, Benachrichtigungen), werden bereits
+  gestartete Teile (Datenbank-Thread, CSV-Datei) wieder beendet und der Fehler gemeldet; bisher blieben sie offen und
+  das Fenster zeigte „Stop“.
+* **Datenbank:** Beim Stoppen nicht geschriebene Werte werden nur noch einmal gemeldet.
 * **Grafana-Dashboard:** Tabellennamen mit Großbuchstaben funktionieren bei TimescaleDB und InfluxDB 3 (bisher „Tabelle
   nicht gefunden“); bei QuestDB und InfluxDB 3 zeigen Aufzeichnungen ohne Projektnamen wieder Werte; ein `'` im
   Projektnamen zerlegt die SQL-Abfragen nicht mehr. Die Projektauswahl durchsucht bei SQL-Datenbanken nur noch den

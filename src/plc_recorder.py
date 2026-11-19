@@ -582,6 +582,20 @@ class Recorder:
         """
         if self.running:
             return
+        try:
+            self._start()
+        except BaseException:
+            # Abbruch mittendrin (z. B. OPC-UA-Server, MQTT, Benachrichtigungen): bereits Angelaufenes (Datenbank-Thread,
+            # CSV-Datei, Aufräumen) wieder beenden – stop() kehrt sonst bei „nicht running“ sofort zurück
+            self.running = True
+            try:
+                self.stop()
+            except Exception:
+                pass
+            raise
+
+    def _start(self):
+        """Rumpf von start()."""
         self.stop_evt.clear()
         self.gate = self._make_gate() if self.capture_mode else None
         if self.csv_on and self.gate is None:
@@ -674,10 +688,8 @@ class Recorder:
         if self.gate is not None and self.gate.active:   # laufende Trigger-Aufnahme abschließen
             self._capture_event("stop", time.time())
             self.gate.active = False
-        if self.db:                              # Datenbank: restliche Werte schreiben, Thread beenden
-            self.db.stop()
-            if self.db.buf:
-                self.emit(tr("⚠ Datenbank: {0} Werte konnten nicht mehr geschrieben werden").format(len(self.db.buf)))
+        if self.db:                              # Datenbank: restliche Werte schreiben, Thread beenden (Restwerte
+            self.db.stop()                       # meldet DbWriter.stop)
         if self.notifier is not None:            # ausstehende Benachrichtigungen noch senden
             self.notifier.stop()
             self.notifier = None
