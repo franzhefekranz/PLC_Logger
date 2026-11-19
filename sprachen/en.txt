@@ -2680,6 +2680,9 @@
 @ PDF-Datei (*.pdf)
 > PDF file (*.pdf)
 
+@ Bericht wird erstellt …
+> Creating report …
+
 @ Der Bericht konnte nicht erstellt werden:\n{0}
 > The report could not be created:\n{0}
 

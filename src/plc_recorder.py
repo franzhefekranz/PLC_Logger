@@ -64,6 +64,12 @@ ST_OFF, ST_CONNECTING, ST_OK, ST_ERROR = "off", "connecting", "ok", "error"
 # ---------------------------------------------------------------------------------------
 # Archivierung
 # ---------------------------------------------------------------------------------------
+def csv_base(conn, demo=False):
+    """Dateiname-Stamm der Aufzeichnungen ``<Stamm>_JJJJMMTT_hhmmss.csv`` (und des Archivordners): der CSV-Name, nur die
+    unter Windows verbotenen Zeichen ersetzt; Demo: „demo“. Auch für die Suche nach alten Aufzeichnungen (Hauptfenster)."""
+    return "demo" if demo else re.sub(r'[\\/:*?"<>|]+', "_", conn.get("csv_name") or "log")
+
+
 def zip_and_remove(path, target_dir, notify):
     """CSV-Datei packen (ZIP), prüfen, in target_dir ablegen und das Original löschen.
 
@@ -471,7 +477,7 @@ class Recorder:
         # Ersatz für den Leser (Tests): Funktion (plc, variables) -> Reader; None = Treiber der Steuerung.
         self.reader_factory = None
         # CSV-Datei und Archivierung.
-        self.csv_base = "demo" if demo else (re.sub(r'[\\/:*?"<>|]+', "_", conn.get("csv_name") or "log"))
+        self.csv_base = csv_base(conn, demo)
         self.csv_fh = self.csv_w = None
         self.csv_path, self.csv_rows, self.csv_first = "", 0, None
         self._csv_pending = False                # aktuelle CSV-Datei ist noch nicht archiviert/entfernt

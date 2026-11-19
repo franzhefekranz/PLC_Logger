@@ -71,7 +71,7 @@ from plc_common import (BASE_DIR, LAYOUTS, PAGE_LAYOUTS, PALETTE, Chart, Variabl
                         load_settings, program_command, save_settings)
 from plc_events import EventLog, event_log_path
 from plc_export import stats
-from plc_recorder import Recorder, demo_config
+from plc_recorder import Recorder, csv_base, demo_config
 from plc_splash import LogoLabel
 from plc_svg import build_svg
 from plc_util import fmt_time, fmt_value, to_step
@@ -1856,20 +1856,22 @@ class MainWindow(QMainWindow):
         t, y = self._pid_source()
         t = np.asarray(t, dtype=float)
         i0, i1 = int(np.searchsorted(t, a, side="left")), int(np.searchsorted(t, b, side="right"))
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            keep = [i for i, v in enumerate(self.vars) if v.record]       # nur aufgezeichnete Variablen
-            acc = ReportAccumulator([self.vars[i].name for i in keep], [self.vars[i].dtype for i in keep], a, b,
+        from plc_common import logo_paths
+        keep = [i for i, v in enumerate(self.vars) if v.record]           # nur aufgezeichnete Variablen
+        charts, variables, project, logos = self.charts, list(self.vars), self.conn.get("projekt", ""), logo_paths(self.conn)
+
+        def build():
+            """Im Hintergrund (plc_report kommt ohne Qt aus): Kennwerte sammeln, PDF schreiben."""
+            acc = ReportAccumulator([variables[i].name for i in keep], [variables[i].dtype for i in keep], a, b,
                                     label=f"{fmt_time(a)[:16]} – {fmt_time(b)[:16]}")
             acc.add_many(t[i0:i1], np.asarray(y, dtype=float)[keep, i0:i1])
-            from plc_common import logo_paths
-            write_report(path, acc, self.charts, self.vars, self.conn.get("projekt", ""),
-                         events_in(self.event_log(), a, b), logos=logo_paths(self.conn))
+            write_report(path, acc, charts, variables, project, evs, logos=logos)
+        try:
+            evs = events_in(self.event_log(), a, b)
+            self._wait(tr("Bericht wird erstellt …"), build)
         except Exception as e:
-            QApplication.restoreOverrideCursor()
             QMessageBox.warning(self, tr("PDF-Bericht"), tr("Der Bericht konnte nicht erstellt werden:\n{0}").format(e))
             return
-        QApplication.restoreOverrideCursor()
         self.statusBar().showMessage(tr("Bericht erstellt: {0}").format(path), 10000)
         open_url(QUrl.fromLocalFile(path))
 
@@ -2011,16 +2013,18 @@ class MainWindow(QMainWindow):
     def _log_files_for(self, t0, t1):
         """CSV-/ZIP-Aufzeichnungen (CSV-Ordner und Archiv), die den Zeitraum t0..t1 enthalten können."""
         import glob
-        stems = {re.sub(r"[^\w\-]+", "_", self.conn.get("csv_name") or "log").strip("_") or "log", "demo"}
+        stems = {csv_base(self.conn), "demo"}                # wie der Recorder die Dateien benennt
         archive = self.conn.get("archiv_ordner") or "archiv"
         if not os.path.isabs(archive):
             archive = os.path.join(BASE_DIR, archive)
         found = []
         for stem in stems:
-            pats = [os.path.join(self.csv_dir(), f"{stem}_*.csv"), os.path.join(archive, stem, "**", f"{stem}_*.zip")]
+            # Muster maskieren: „[“ o. Ä. im Ordner- oder CSV-Namen ist für glob sonst ein Platzhalter
+            pats = [os.path.join(glob.escape(self.csv_dir()), glob.escape(stem) + "_*.csv"),
+                    os.path.join(glob.escape(archive), glob.escape(stem), "**", glob.escape(stem) + "_*.zip")]
             for pat in pats:
                 for path in glob.glob(pat, recursive=True):
-                    m = re.search(r"_(\d{8}_\d{6})\.(csv|zip)$", path)
+                    m = re.search(r"_(\d{8}_\d{6})(?:_\d+)?\.(csv|zip)$", path)     # _1: gleiche Sekunde
                     if m:
                         found.append((datetime.strptime(m.group(1), "%Y%m%d_%H%M%S").timestamp(), path))
         found.sort()

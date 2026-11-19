@@ -1303,3 +1303,28 @@ def test_formula_editor(qt_log):
     dlg.timer.stop()                       # Prüf-Timer (nach Texteingabe gestartet) nicht über das Testende laufen lassen
     dlg.deleteLater()                      # ohne Elternfenster: jetzt löschen, nicht erst beim Beenden des Interpreters
     wait(50)
+
+
+def test_log_files_for_names_like_recorder(tmp_path, monkeypatch):
+    """„Im Diagramm zeigen“ sucht CSV-/ZIP-Dateien unter dem Namen, den der Recorder vergibt (Leerzeichen, Klammern,
+    Zusatz _1 bei gleicher Sekunde) – im CSV-Ordner und im Archiv."""
+    import types
+    from datetime import datetime
+    import plc_gui
+    from plc_recorder import csv_base
+    conn = {"csv_name": "Anlage 1 [Halle]", "archiv_ordner": str(tmp_path / "archiv")}
+    base = csv_base(conn)
+    csv_dir = tmp_path / "csv [x]"
+    csv_dir.mkdir()
+    (csv_dir / f"{base}_20261119_100000.csv").write_text("x")
+    (csv_dir / f"{base}_20261119_100000_1.csv").write_text("x")
+    arch = tmp_path / "archiv" / base / "2026" / "11" / "18"
+    arch.mkdir(parents=True)
+    (arch / f"{base}_20261118_080000.zip").write_bytes(b"")
+    fake = types.SimpleNamespace(conn=conn, csv_dir=lambda: str(csv_dir))
+    t = datetime(2026, 11, 19, 10, 30).timestamp()
+    found = plc_gui.MainWindow._log_files_for(fake, t, t + 60)
+    assert [os.path.basename(p) for p in found] == [f"{base}_20261119_100000_1.csv"]
+    found = plc_gui.MainWindow._log_files_for(fake, datetime(2026, 11, 18, 9).timestamp(),
+                                               datetime(2026, 11, 19, 10, 30).timestamp())
+    assert len(found) == 3

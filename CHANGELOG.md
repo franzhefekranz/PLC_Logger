@@ -16,6 +16,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Im Diagramm zeigen** (Ereignisprotokoll): CSV- und Archivdateien werden auch gefunden, wenn der CSV-Name Leerzeichen,
+  Umlaute, Punkte oder Klammern enthält, und auch Dateien mit Zusatz `_1` (zwei Aufzeichnungen in derselben Sekunde).
+* **PDF-Bericht** aus dem Hauptfenster: wird im Hintergrund erstellt (Fortschrittsanzeige statt eingefrorenem Fenster).
 * **Hauptfenster:** Stoppen der Aufzeichnung, Laden von CSV/ZIP und aus der Datenbank sowie Export und Speichern laufen
   im Hintergrund mit Fortschrittsanzeige – das Fenster friert nicht mehr ein („Keine Rückmeldung“). Lineale ziehen
   ruckelt bei vielen Messpunkten nicht mehr (Kennwerte gebündelt berechnet). Geladene Daten werden auch ohne lesbare

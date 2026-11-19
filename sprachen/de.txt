@@ -2680,6 +2680,9 @@
 @ PDF-Datei (*.pdf)
 > 
 
+@ Bericht wird erstellt …
+> 
+
 @ Der Bericht konnte nicht erstellt werden:\n{0}
 > 
 
