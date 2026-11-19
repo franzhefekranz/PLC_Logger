@@ -1071,6 +1071,12 @@ def test_file_dialogs_remember_folder(qt_log, tmp_path, monkeypatch):
     qt_log.file = str(own)
     assert fd.directory(None, "Ordner", plc_common.BASE_DIR) == str(own)
     assert fd.start_path("Ordner", "") == str(own)
+    fd.remember("Netz", "//server/freigabe/x.csv")       # gemerkt nach dem Dialog (ohne den Server zu prüfen)
+    exists = os.path.exists
+    monkeypatch.setattr(os.path, "isdir", lambda p: (_ for _ in ()).throw(AssertionError(f"isdir({p})"))
+                        if str(p).startswith(("\\\\", "//")) else exists(p))
+    assert fd.start_path("Export", "//server/freigabe/x.csv") == "//server/freigabe/x.csv"   # Netzpfad: nicht prüfen
+    assert fd.start_path("Netz", "") == os.path.dirname(os.path.abspath("//server/freigabe/x.csv"))
 
 
 def test_iocheck_edit_texts_and_update_list(qt_log, demo_config, tmp_path, monkeypatch):

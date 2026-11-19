@@ -2323,6 +2323,9 @@
 @ Die Formel ist zu komplex
 > 
 
+@ Die Formel ist zu komplex (zu tief verschachtelt)
+> 
+
 # ---------------- plc_formula_dialog.py
 
 @ <b>Variablen</b> in geschweiften Klammern: <code>{Name}</code> (Doppelklick in der Liste fügt ein). Operatoren: <code>+ - * / // % **</code>, Vergleiche <code>&lt; &gt; == !=</code>, <code>and or not</code>, Bedingung: <code>a if {x} &gt; 5 else b</code>. Konstanten: 

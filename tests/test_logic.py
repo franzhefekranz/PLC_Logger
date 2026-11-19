@@ -92,6 +92,24 @@ def test_export_inf_firstlast_cp1252_and_formula_type(tmp_path):
     assert [v.dtype for v in vs] == ["INT", "REAL"]
 
 
+def test_formula_deep_nesting_and_running_avg():
+    """Tief verschachtelte Formel -> FormulaError (kein RecursionError); avg mit laufender Summe = Mittel des Fensters,
+    auch nach vielen Werten; fehlende Variable -> NaN."""
+    import random
+    import statistics
+    from plc_formula import Formula, FormulaError
+    with pytest.raises(FormulaError):
+        Formula("+".join(["1"] * 499))
+    with pytest.raises(FormulaError):
+        Formula("-" * 998 + "1")
+    f = Formula("avg({a}, 7)")
+    xs = [random.uniform(-1e3, 1e3) for _ in range(500)]
+    out = [f.evaluate(i * 0.01, {"a": x}) for i, x in enumerate(xs)]
+    assert abs(out[2] - statistics.mean(xs[:3])) < 1e-9 and abs(out[-1] - statistics.mean(xs[-7:])) < 1e-9
+    g = Formula("{a} * 2 + {b}")
+    assert g.evaluate(0, {"a": 1, "b": 3}) == 5.0 and np.isnan(g.evaluate(0, {"a": 2}))
+
+
 def test_iocheck_column_aliases():
     """Eigene Spaltenüberschriften ersetzen die Vorgabe; ein leeres Feld wird nicht eingelesen."""
     import plc_iocheck as io

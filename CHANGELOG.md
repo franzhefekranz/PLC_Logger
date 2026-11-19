@@ -16,6 +16,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Datei- und Ordnerdialoge:** Ein vorgeschlagener oder gemerkter Ordner auf einem nicht erreichbaren Netzlaufwerk
+  lässt den Dialog nicht mehr bis zum Zeitlimit warten; beim Kürzen der gemerkten Ordner bleiben die zuletzt benutzten.
+* **Formeln:** Sehr lange bzw. tief verschachtelte Formeln (z. B. Summe aus Hunderten Gliedern) ergeben eine Meldung statt
+  eines Absturzes im Formeleditor bzw. beim Start der Aufzeichnung. `avg(x, n)` rechnet mit laufender Summe – große
+  Fenster kosten keine Rechenzeit mehr je Takt.
 * **Berechnete Variablen** werden immer als REAL gespeichert. Bisher konnten sie den Typ einer Steuerungsvariable
   tragen (z. B. INT nach dem Import der Variablenliste bei LOGO/PCCC) – die Aufzeichnungs-CSV und der Export schnitten
   dann die Nachkommastellen ab, beim Downsampling zählte eine Formel mit Typ BOOL als Schaltsignal.

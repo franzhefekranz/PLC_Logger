@@ -218,12 +218,16 @@ class Formula:
             raise FormulaError(f"Syntaxfehler: {e.msg}")
         except (RecursionError, MemoryError, ValueError):
             raise FormulaError(tr("Die Formel ist zu komplex"))
-        # Whitelist-Prüfung und Umbau (Zustandsindizes, sichere Potenz).
-        tree = _Checker().visit(tree)
-        # Die Transformation erzeugt neue Knoten ohne Positionsangaben; sie werden für compile() ergänzt.
-        ast.fix_missing_locations(tree)
-        # In Bytecode übersetzen (einmal); evaluate() führt ihn danach in jedem Messzyklus schnell aus.
-        self.code = compile(tree, "<formel>", "eval")
+        try:
+            # Whitelist-Prüfung und Umbau (Zustandsindizes, sichere Potenz).
+            tree = _Checker().visit(tree)
+            # Die Transformation erzeugt neue Knoten ohne Positionsangaben; sie werden für compile() ergänzt.
+            ast.fix_missing_locations(tree)
+            # In Bytecode übersetzen (einmal); evaluate() führt ihn danach in jedem Messzyklus schnell aus.
+            self.code = compile(tree, "<formel>", "eval")
+        except RecursionError:
+            # z. B. eine Summe aus Hunderten Gliedern: der Baum ist tiefer, als die (rekursive) Prüfung erlaubt
+            raise FormulaError(tr("Die Formel ist zu komplex (zu tief verschachtelt)")) from None
         # Zustand der Funktionen ddt/integ/avg: {Index: Werte}; wird bei reset() gelöscht.
         self._state = {}
         # Zeitstempel der aktuellen Auswertung (für ddt/integ nötig).
@@ -232,6 +236,8 @@ class Formula:
         self._env = dict(_IMPL)
         self._env.update(CONSTANTS)
         self._env.update(ddt=self._ddt, integ=self._integ, avg=self._avg)
+        # Namen der Platzhalter in der Reihenfolge von refs (evaluate setzt die Werte direkt in _env)
+        self._slots = [(f"_v{i}", n) for i, n in enumerate(self.refs)]
 
     # Zustandsbehaftete Funktionen. Der letzte Parameter k ist der vom _Checker eingefügte Zustandsindex.
     # --- Zustandsbehaftete Funktionen
@@ -266,17 +272,27 @@ class Formula:
         return acc
 
     def _avg(self, x, n, k):
-        """Gleitender Mittelwert der letzten n gültigen Messwerte (NaN wird nicht mitgezählt)."""
+        """Gleitender Mittelwert der letzten n gültigen Messwerte (NaN wird nicht mitgezählt).
+
+        Mit laufender Summe (ein Takt kostet nicht n Additionen, auch bei großen Fenstern); nach je n neuen Werten wird
+        die Summe neu gebildet, damit sich keine Rundungsfehler aufsummieren."""
         # Fenstergröße mindestens 1; als ganze Zahl (die Formel liefert evtl. eine Kommazahl).
         n = max(1, int(n))
-        dq = self._state.get(k)
+        st = self._state.get(k)                 # [Fenster, laufende Summe, Werte seit der letzten Neuberechnung]
         # Fenster neu anlegen, wenn es noch nicht existiert oder sich n geändert hat.
-        if dq is None or dq.maxlen != n:
-            dq = deque(maxlen=n)
-            self._state[k] = dq
+        if st is None or st[0].maxlen != n:
+            st = [deque(maxlen=n), 0.0, 0]
+            self._state[k] = st
+        dq = st[0]
         if x == x:
+            if len(dq) == n:
+                st[1] -= dq[0]                  # fällt beim Anhängen heraus
             dq.append(x)
-        return sum(dq) / len(dq) if dq else NAN
+            st[1] += x
+            st[2] += 1
+            if st[2] >= n or not math.isfinite(st[1]):
+                st[1], st[2] = math.fsum(dq), 0
+        return st[1] / len(dq) if dq else NAN
 
     # Zustand löschen (bei jedem neuen Start der Aufzeichnung).
     def reset(self):
@@ -287,11 +303,12 @@ class Formula:
         """Wert zum Zeitpunkt ts berechnen; fehlende/ungültige Werte ergeben NaN."""
         # Zeit für ddt/integ merken.
         self._ts = ts
-        # Kopie der Umgebung: erlaubte Funktionen + die aktuellen Werte der referenzierten Variablen.
-        env = dict(self._env)
-        for i, n in enumerate(self.refs):
+        # Umgebung: erlaubte Funktionen + die aktuellen Werte der referenzierten Variablen. Keine Kopie nötig: eval
+        # kann nichts zuweisen, und eine Formel wird immer nur von einem Thread ausgewertet.
+        env = self._env
+        for slot, n in self._slots:
             # Fehlt ein Wert, wird NaN eingesetzt (das Ergebnis wird dann i. d. R. NaN).
-            env[f"_v{i}"] = values.get(n, NAN)
+            env[slot] = values.get(n, NAN)
         try:
             # Auswertung ohne Zugriff auf Python-Builtins (__builtins__ = {}): es gibt nur die Funktionen aus env.
             return float(eval(self.code, {"__builtins__": {}}, env))

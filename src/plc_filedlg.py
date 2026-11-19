@@ -22,6 +22,12 @@ def _norm(path):
     return os.path.normcase(os.path.normpath(os.path.abspath(path)))
 
 
+def _network(path):
+    """Netzpfad (\\\\Server\\…, //Server/…)? Solche Pfade werden nicht geprüft: ein nicht erreichbarer Server ließe
+    ``os.path.isdir`` unter Windows bis zum Zeitlimit (20–60 s) warten, bevor der Dialog erscheint."""
+    return str(path).startswith(("\\\\", "//"))
+
+
 def _program_dirs():
     """Ordner, die nicht als bewusst gewählter Speicherort gelten: Daten-, Programm- und Arbeitsordner."""
     from plc_common import BASE_DIR
@@ -52,31 +58,34 @@ def _remembered():
 def start_path(key, start=""):
     """Vorgeschlagenen Pfad ``start`` ggf. in den gemerkten Ordner verlegen (Dateiname bleibt)."""
     start = start or ""
+    if _network(start):
+        return start                          # bewusst gewählter Ort (nie ein Programmordner), nicht prüfen
     folder, name = (start, "") if start and os.path.isdir(start) else os.path.split(start)
     if folder and not _is_default(folder):
         return start                          # bewusst vorgegebener Ordner
     known = _remembered()
     for k in (key, _ANY):
         d = known.get(k)
-        if d and os.path.isdir(d):
+        if d and (_network(d) or os.path.isdir(d)):
             return os.path.join(d, name) if name else d
     return start
 
 
-def remember(key, path):
-    """Ordner von ``path`` (Datei oder Ordner) für diesen Dialog und allgemein merken."""
+def remember(key, path, is_dir=False):
+    """Ordner von ``path`` (Datei bzw. mit ``is_dir`` der Ordner selbst) für diesen Dialog und allgemein merken."""
     if not path:
         return
-    folder = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+    folder = os.path.abspath(path) if is_dir else os.path.dirname(os.path.abspath(path))
     if not folder:
         return
     try:
         from plc_common import save_settings
         known = _remembered()
+        known.pop(key, None)                  # ans Ende stellen: beim Kürzen bleiben die zuletzt benutzten
+        known.pop(_ANY, None)
         known[key] = known[_ANY] = folder
         if len(known) > 60:                   # nicht endlos wachsen lassen
-            known = {k: v for k, v in list(known.items())[-60:]}
-            known[_ANY] = folder
+            known = dict(list(known.items())[-60:])
         save_settings(**{SETTING: known})
     except Exception:
         pass
@@ -106,8 +115,8 @@ def open_names(parent, caption="", start="", flt="", *args, **kw):
 
 def directory(parent, caption="", start="", *args, **kw):
     """Wie ``QFileDialog.getExistingDirectory``; Rückgabe: Ordner oder ""."""
-    if not start or _is_default(start):
+    if not start or (not _network(start) and _is_default(start)):
         start = start_path(caption, "") or start
     path = QFileDialog.getExistingDirectory(parent, caption, start, *args, **kw)
-    remember(caption, path)
+    remember(caption, path, is_dir=True)
     return path
