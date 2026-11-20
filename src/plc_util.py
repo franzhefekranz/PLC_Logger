@@ -10,7 +10,7 @@ SVG-Export (plc_svg.py) gemeinsam verwendet. Es braucht nur numpy – weder Qt n
 * Achsenteilung: nice_ticks (runde Teilstriche für Y-Achsen), time_ticks (Teilstriche der Zeitachse)
 """
 import math
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 
@@ -92,27 +92,50 @@ def nice_ticks(lo, hi, target=6):
     return out
 
 
-# Mögliche Schrittweiten der Zeitachse in Sekunden (1 s ... 1 Tag).
-_TIME_STEPS = (1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 21600, 43200, 86400)
+# Mögliche Schrittweiten der Zeitachse in Sekunden (1 s ... 7 Tage).
+_TIME_STEPS = (1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 14400, 21600, 43200,
+               86400, 2 * 86400, 7 * 86400)
 
 
 def time_ticks(t0, t1, target=7):
     """Teilstriche der Zeitachse (Unix-Zeit) zwischen t0 und t1 -> Liste (Zeit, Beschriftung).
 
-    Die Schrittweite wird so gewählt, dass etwa ``target`` Striche entstehen; Beschriftung mit Sekunden, wenn der
-    Schritt unter einer Minute liegt, sonst nur Stunde:Minute. Teilstriche liegen auf runden Uhrzeiten (lokale Zeit)."""
+    Die Schrittweite wird so gewählt, dass etwa ``target`` Striche entstehen; die Striche liegen auf runden Uhrzeiten
+    der Ortszeit. Ab einer Stunde Schrittweite wird in Ortszeit (Wanduhr) weitergezählt, damit sie über eine
+    Zeitumstellung hinweg auf vollen Stunden bzw. 0:00 bleiben. Beschriftung: Sekunden bei Schritten unter einer
+    Minute, Datum (TT.MM.) bei Tagesschritten, über mehrere Tage um Mitternacht Datum und Uhrzeit, sonst hh:mm."""
     span = t1 - t0
     if span <= 0:
         return []
     step = next((s for s in _TIME_STEPS if span / s <= target), _TIME_STEPS[-1])
-    # Ausrichtung auf lokale Zeit: den Offset der Zeitzone berücksichtigen.
-    off = datetime.fromtimestamp(t0).astimezone().utcoffset().total_seconds()
-    first = math.ceil((t0 + off) / step) * step - off
-    out, t = [], first
-    while t <= t1 and len(out) < 200:
+    times = []
+    if step >= 3600:
+        d = datetime.fromtimestamp(t0).replace(minute=0, second=0, microsecond=0)
+        if step >= 86400:
+            d = d.replace(hour=0)
+        while d.timestamp() < t0 or (step < 86400 and (d.hour * 3600) % step):
+            d += timedelta(hours=1) if step < 86400 else timedelta(days=1)
+        while d.timestamp() <= t1 and len(times) < 200:
+            times.append(d.timestamp())
+            d += timedelta(seconds=step)          # naive Ortszeit: Rechnen auf der Wanduhr
+    else:
+        off = datetime.fromtimestamp(t0).astimezone().utcoffset().total_seconds()
+        t = math.ceil((t0 + off) / step) * step - off
+        while t <= t1 and len(times) < 200:
+            times.append(t)
+            t += step
+    out = []
+    for t in times:
         d = datetime.fromtimestamp(t)
-        out.append((t, d.strftime("%H:%M:%S") if step < 60 else d.strftime("%H:%M")))
-        t += step
+        if step < 60:
+            lab = d.strftime("%H:%M:%S")
+        elif step >= 86400:
+            lab = d.strftime("%d.%m.")
+        elif span > 86400 and (d.hour, d.minute) == (0, 0):
+            lab = d.strftime("%d.%m. %H:%M")
+        else:
+            lab = d.strftime("%H:%M")
+        out.append((t, lab))
     return out
 
 

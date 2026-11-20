@@ -29,7 +29,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from plc_i18n import N_, tr
-from plc_util import fmt_value, nice_ticks
+from plc_util import fmt_value, nice_ticks, time_ticks
 
 PERIODS = {"schicht": N_("Schicht"), "tag": N_("Tag"), "woche": N_("Woche"), "monat": N_("Monat")}
 
@@ -618,40 +618,8 @@ MARGIN = 40
 
 
 def _time_ticks(t0, t1, target=8):
-    """Teilstriche der Zeitachse auch über mehrere Tage -> [(Zeit, Beschriftung)]."""
-    span = t1 - t0
-    steps = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 2 * 86400, 7 * 86400]
-    step = next((s for s in steps if span / s <= target), steps[-1])
-    if step >= 3600:
-        # Ab einer Stunde in Ortszeit (Wanduhr) weiterzählen: die Striche bleiben über eine Zeitumstellung hinweg auf
-        # vollen Stunden bzw. 0:00 (mit festem UTC-Versatz lägen sie danach eine Stunde daneben).
-        d = datetime.fromtimestamp(t0).replace(minute=0, second=0, microsecond=0)
-        if step >= 86400:
-            d = d.replace(hour=0)
-        while d.timestamp() < t0 or (step < 86400 and (d.hour * 3600) % step):
-            d += timedelta(hours=1) if step < 86400 else timedelta(days=1)
-        times = []
-        while d.timestamp() <= t1 and len(times) < 60:
-            times.append(d.timestamp())
-            d += timedelta(seconds=step)
-    else:
-        off = datetime.fromtimestamp(t0).astimezone().utcoffset().total_seconds()
-        t = math.ceil((t0 + off) / step) * step - off
-        times = []
-        while t <= t1 and len(times) < 60:
-            times.append(t)
-            t += step
-    out = []
-    for t in times:
-        d = datetime.fromtimestamp(t)
-        if step >= 86400:
-            lab = d.strftime("%d.%m.")
-        elif span > 86400:
-            lab = d.strftime("%d.%m. %H:%M") if (d.hour, d.minute) == (0, 0) else d.strftime("%H:%M")
-        else:
-            lab = d.strftime("%H:%M")
-        out.append((t, lab))
-    return out
+    """Teilstriche der Zeitachse auch über mehrere Tage -> [(Zeit, Beschriftung)] (siehe plc_util.time_ticks)."""
+    return time_ticks(t0, t1, target)
 
 
 def _fmt(v, dtype="REAL"):

@@ -686,6 +686,27 @@ def test_report_time_ticks_across_dst():
         time.tzset()
 
 
+def test_time_ticks_labels_and_svg_segments():
+    """Zeitachse: über mehrere Tage mit Datum beschriftet (nicht jeder Strich „00:00“), kurze Bereiche mit Sekunden;
+    SVG-Export zerlegt Kurven an NaN-Stellen."""
+    from datetime import datetime
+
+    from plc_svg import _segments
+    from plc_util import time_ticks
+    t0 = datetime(2026, 11, 2).timestamp()
+    week = [lab for _t, lab in time_ticks(t0, t0 + 7 * 86400)]
+    assert week[0] == "02.11." and len(set(week)) == len(week)
+    month = time_ticks(t0, t0 + 30 * 86400)
+    assert 3 <= len(month) <= 8 and all(lab.endswith(".") for _t, lab in month)
+    two_days = [lab for _t, lab in time_ticks(t0 + 3600, t0 + 2 * 86400)]
+    assert "03.11. 00:00" in two_days
+    assert time_ticks(t0, t0 + 20)[0][1] == "00:00:00"
+    x = np.arange(8.0)
+    y = np.array([1, 2, np.nan, 3, np.nan, np.nan, 4, 5.0])
+    assert [list(a) for a, _b in _segments(x, y)] == [[0, 1], [3], [6, 7]]
+    assert len(_segments(x, np.ones(8))) == 1 and _segments(x, np.full(8, np.nan)) == []
+
+
 def test_pdf_text_substitutes_missing_characters():
     """Zeichen außerhalb von Windows-1252 werden ersetzt statt zu „?“; Breite passt zur Ersetzung."""
     import plc_report

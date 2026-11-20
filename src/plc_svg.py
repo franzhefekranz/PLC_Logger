@@ -46,16 +46,9 @@ def _segments(px, py):
     ok = np.isfinite(py) & np.isfinite(px)
     if ok.all():
         return [(px, py)]
-    out, start = [], None
-    for i, flag in enumerate(ok):
-        if flag and start is None:
-            start = i
-        elif not flag and start is not None:
-            out.append((px[start:i], py[start:i]))
-            start = None
-    if start is not None:
-        out.append((px[start:], py[start:]))
-    return out
+    # Kanten der Gültigkeitsmaske: Anfang (0 -> 1) und Ende (1 -> 0) jedes Stücks
+    edges = np.flatnonzero(np.diff(np.concatenate(([0], ok.astype(np.int8), [0]))))
+    return [(px[a:b], py[a:b]) for a, b in zip(edges[::2], edges[1::2])]
 
 
 def build_svg(width, height, title, x_range, axes, series, rulers=(), legend=(), light=False):
