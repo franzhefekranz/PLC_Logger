@@ -450,3 +450,28 @@ def test_tia_reader_skips_bad_tags_and_refreshes_catalog():
     r._resolve = lambda: None
     r.connect()
     assert r.catalog_refreshed is False and r.bad == set()
+
+
+def test_clx_reader_retries_failed_tags():
+    """clx: ein Tag, der beim Verbinden fehlt (z. B. Programm-Download), wird später neu angelegt und wieder gelesen;
+    die übrigen Tags laufen weiter. Alle Tags gestört -> ConnectionError."""
+    from plc_common import Variable, get_driver
+    from plc_treiber.clx_io import FakeLib, TagReader
+    plc = Plc(name="L1", driver="clx", params=get_driver("clx").normalize_params({"ip": "10.0.0.5"}))
+    lib = FakeLib(missing={"B"})
+    r = TagReader(plc, [Variable("A", "A", "REAL"), Variable("B", "B", "REAL")], lib=lib)
+    assert r.connect() == 1 and "B" in r.errors
+    out = r.read()
+    assert not np.isnan(out[0]) and np.isnan(out[1])
+    lib.missing.clear()                                  # Tag gibt es wieder
+    r.read()                                             # Wartezeit läuft noch: kein neuer Versuch
+    assert r.entries[1].handle is None
+    r._retry_at = 0.0
+    r.read()                                             # neu angelegt und bestätigt
+    out = r.read()
+    assert not np.isnan(out[1]) and "B" not in r.errors
+    lib.offline = True
+    with pytest.raises(ConnectionError):
+        r.read()
+    r.close()
+    assert not lib.tags

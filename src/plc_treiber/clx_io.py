@@ -57,6 +57,7 @@ PLCTAG_ERR_TIMEOUT = -32
 # Fehler, bei denen die Verbindung als gestört gilt (statt nur ein einzelner Tag fehlerhaft).
 # ABORT -1, BAD_CONNECTION -3, BAD_GATEWAY -6, CLOSE -10, OPEN -26, READ -28, TIMEOUT -32, WINSOCK -36, WRITE -37.
 CONNECTION_ERRORS = {-1, -3, -6, -10, -26, -28, -32, -36, -37}
+RETRY_S = 30.0          # beim Verbinden gescheiterte Tags so oft neu anlegen (CPU im Hochlauf, Programm-Download …)
 
 # Getter-Funktion von libplctag je Datentyp (Wert an Byte-Offset lesen).
 GETTERS = {
@@ -228,12 +229,13 @@ def tag_attrs(plc: Plc, name: str, elem_count: int = 1) -> str:
 # ---------------------------------------------------------------------------------------
 class _Entry:
     """Ein libplctag-Tag des Leseplans: eine Einzelvariable oder ein ganzer Block."""
-    __slots__ = ("name", "handle", "dtype", "count", "items", "bit", "esize", "error")
+    __slots__ = ("name", "handle", "dtype", "count", "items", "bit", "esize", "error", "retry_h")
 
     def __init__(self, name, dtype, count, items, bit):
         """Eintrag für den Tag ``name`` (bei Blöcken der Name des ersten Elements und ``count`` Elemente)."""
         self.name, self.dtype, self.count, self.items, self.bit = name, dtype, count, items, bit
         self.handle, self.esize, self.error = None, TYPES[dtype][0], ""
+        self.retry_h = None             # neu angelegter Tag, solange die Steuerung ihn noch nicht bestätigt hat
 
 
 class TagReader(RingSupport):
@@ -275,6 +277,7 @@ class TagReader(RingSupport):
             e.name = f"{base}[{start}]"
             e.count = max(v.block_idx for _, v in e.items) + 1
         self.errors = {}          # Tag-Name -> Fehlertext (einzelne Tags)
+        self._retry_at = 0.0      # nächster Versuch, gescheiterte Tags neu anzulegen (time.monotonic)
 
     @property
     def timeout_ms(self):
@@ -311,6 +314,7 @@ class TagReader(RingSupport):
             else:
                 e.esize = lib.elem_size(e.handle, TYPES[e.dtype][0])
                 ok += 1
+        self._retry_at = time.monotonic() + RETRY_S
         ok_rings = self._finish_ring_tags()
         if (self.entries or self.rings) and ok == 0 and ok_rings == 0:
             first = next(iter(self.errors.values()), tr("keine Antwort"))
@@ -425,9 +429,36 @@ class TagReader(RingSupport):
                 break
             time.sleep(0.001)
 
+    def _retry_failed(self):
+        """Beim Verbinden gescheiterte Tags alle ``RETRY_S`` Sekunden neu anlegen (asynchron, hält den Zyklus nicht auf);
+        sobald die Steuerung einen bestätigt, wird er wieder mitgelesen. Ein dauerhaft falscher Name kostet so eine
+        Anfrage je RETRY_S."""
+        lib, now = self.lib, time.monotonic()
+        due = now >= self._retry_at
+        if due:
+            self._retry_at = now + RETRY_S
+        for e in self.entries:
+            if e.handle is not None:
+                continue
+            if e.retry_h is None and due:
+                h = lib.create(tag_attrs(self.plc, e.name, e.count), 0)
+                if h >= 0:
+                    e.retry_h = h
+            if e.retry_h is not None:
+                st = lib.status(e.retry_h)
+                if st == PLCTAG_STATUS_OK:          # Steuerung kennt den Tag (wieder)
+                    e.handle, e.retry_h = e.retry_h, None
+                    e.esize = lib.elem_size(e.handle, TYPES[e.dtype][0])
+                elif st != PLCTAG_STATUS_PENDING:   # weiterhin Fehler: freigeben, später erneut
+                    lib.destroy(e.retry_h)
+                    e.retry_h, e.error = None, self._text(st)
+                    self.errors[e.name] = e.error
+
     def read(self):
         """Ein Messzyklus: alle Tags zugleich lesen -> Liste der Werte (NaN = nicht lesbar)."""
         lib = self.lib
+        if any(e.handle is None for e in self.entries):
+            self._retry_failed()
         out = [math.nan] * len(self.vars)
         active = [e for e in self.entries if e.handle is not None]
         for e in active:
@@ -460,12 +491,14 @@ class TagReader(RingSupport):
         if self.lib is None:
             return
         for e in self.entries:
-            if e.handle is not None:
-                try:
-                    self.lib.destroy(e.handle)
-                except Exception:
-                    pass
-                e.handle = None
+            for attr in ("handle", "retry_h"):
+                h = getattr(e, attr)
+                if h is not None:
+                    try:
+                        self.lib.destroy(h)
+                    except Exception:
+                        pass
+                    setattr(e, attr, None)
         for ring in self.rings:
             for attr in ("h_cnt", "h_data"):
                 h = getattr(ring, attr, None)
@@ -475,18 +508,6 @@ class TagReader(RingSupport):
                     except Exception:
                         pass
                     setattr(ring, attr, None)
-
-
-def read_once(plc: Plc, variables, lib=None):
-    """Variablen einmal lesen (Verbindungstest im Konfigurationsprogramm).
-
-    Rückgabe: (Werte, Fehler je Tag-Name). Löst ConnectionError aus, wenn die Steuerung nicht erreichbar ist."""
-    r = TagReader(plc, variables, lib)
-    try:
-        r.connect()
-        return r.read(), dict(r.errors)
-    finally:
-        r.close()
 
 
 # ---------------------------------------------------------------------------------------
