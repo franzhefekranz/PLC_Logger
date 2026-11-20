@@ -1812,6 +1812,41 @@ def test_recorder_survives_write_and_processing_errors(tmp_path):
         assert len(f.read().splitlines()) > 2
 
 
+def test_param_convert_and_read_once_close_error():
+    """Param.convert: unendlich/NaN -> Vorgabe, Grenzen, Auswahl auch als Text; read_once: Fehler in close() verdeckt
+    weder das Ergebnis noch den eigentlichen Fehler."""
+    from plc_treiber.base import Driver, Param, Reader
+    p = Param("t", "Zeitlimit", "int", 2000, minimum=100, maximum=60000)
+    assert p.convert("inf") == 2000 and p.convert("1e999") == 2000 and p.convert("nan") == 2000
+    assert p.convert("50") == 100 and p.convert(70000) == 60000 and p.convert("2500.7") == 2500
+    f = Param("f", "Zeit", "float", 4.0, minimum=0.5, maximum=120)
+    assert f.convert(float("nan")) == 4.0 and f.convert("0.1") == 0.5 and f.convert("abc") == 4.0
+    c = Param("m", "Modus", "choice", "0", choices=[("0", "aus"), ("1", "ein")])
+    assert c.convert(1) == "1" and c.convert("1") == "1" and c.convert(7) == "0"
+
+    class R(Reader):
+        fail = False
+
+        def connect(self):
+            return 1
+
+        def read(self):
+            if R.fail:
+                raise ConnectionError("Zugriff verweigert")
+            return [1.0]
+
+        def close(self):
+            raise OSError("Socket schon zu")
+
+    class D(Driver):
+        def create_reader(self, plc, variables):
+            return R(self, plc, variables)
+    assert D().read_once(None, []) == ([1.0], {})
+    R.fail = True
+    with pytest.raises(ConnectionError, match="Zugriff verweigert"):
+        D().read_once(None, [])
+
+
 def test_sampler_survives_failing_close(tmp_path):
     """Wirft der Treiber beim Schließen nach einem Lesefehler, verbindet der Lese-Thread trotzdem neu."""
     import time

@@ -23,6 +23,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber:** „Verbindung testen“ und der Ringpuffer-Test im Blockeditor zeigten bei einem Fehler beim Schließen der
+  Verbindung diesen statt des eigentlichen Ergebnisses bzw. Fehlers. Ein Verbindungsparameter mit „inf“ oder NaN ließ
+  das Laden der Konfiguration abbrechen bzw. umging die Grenzen (z. B. Zeitlimit); jetzt gilt die Vorgabe. Auswahlwerte
+  werden auch erkannt, wenn sie als Zahl statt als Text gespeichert sind.
 * **SVG-Screenshots:** Über mehrere Tage war jeder Teilstrich der Zeitachse mit „00:00“ beschriftet – jetzt mit dem
   Datum (bei Tagesschritten „TT.MM.“). Nach einer Zeitumstellung liegen die Striche wieder auf vollen Stunden. Zeitachse
   von PDF-Bericht und SVG-Export nutzen dieselbe Teilung.

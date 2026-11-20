@@ -54,6 +54,7 @@ from plc_common import BASE_DIR, PALETTE, Axis, Chart, Variable, get_driver
 from plc_events import EventLog, Trigger, TriggerEngine, event_log_path, load_triggers
 from plc_formula import Formula, FormulaError
 from plc_util import fmt_csv
+from plc_treiber.base import close_quietly
 from plc_db import DbWriter, describe as db_describe, db_settings
 from plc_i18n import N_, tr
 
@@ -110,12 +111,6 @@ def _data_path(p):
     return p if os.path.isabs(p) else os.path.join(BASE_DIR, p)
 
 
-def _close(reader):
-    """Leser schließen; Fehler dabei (z. B. Socket schon weg) beenden den Lese-Thread nicht."""
-    try:
-        reader.close()
-    except Exception:
-        pass
 
 
 # ---------------------------------------------------------------------------------------
@@ -394,7 +389,7 @@ class PlcSampler(threading.Thread):
                     records = reader.read_rings()           # [(Positionen, Zeitstempel, Werte)] aus den Ringpuffern
             except Exception as e:
                 connected = False
-                _close(reader)
+                close_quietly(reader)
                 r.set_status(self.idx, ST_ERROR, tr("Lesefehler: {0} – neuer Verbindungsversuch").format(e))
                 self._sleep(1.0)
                 continue
@@ -421,7 +416,7 @@ class PlcSampler(threading.Thread):
                 self._sleep(delay)
             else:
                 nxt = time.perf_counter()
-        _close(reader)
+        close_quietly(reader)
         r.set_status(self.idx, ST_OFF, tr("Getrennt"))
 
 

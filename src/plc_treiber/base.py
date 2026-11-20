@@ -32,6 +32,7 @@ Eigener Treiber (Kurzfassung, ausführlich in der Bedienungsanleitung, Kapitel �
 Die Datei kommt in den Ordner ``treiber`` im Datenordner des Programms (oder in das Paket ``plc_treiber``); sie wird
 beim Start automatisch geladen und erscheint in der Auswahl „Treiber“ der Steuerungen.
 """
+import math
 from dataclasses import dataclass, field
 
 from plc_i18n import tr
@@ -68,19 +69,24 @@ class Param:
     suffix: str = ""
 
     def convert(self, value):
-        """Wert aus der INI-Datei (Text) in den passenden Typ umwandeln; ungültig -> Vorgabe."""
+        """Wert aus der Konfiguration (Text oder Zahl) in den passenden Typ umwandeln; ungültig (auch NaN, unendlich)
+        -> Vorgabe. Zahlen werden auf minimum … maximum begrenzt; Auswahlwerte auch als Text erkannt („1“ = 1)."""
         try:
-            if self.kind == "int":
-                return int(min(max(int(float(value)), self.minimum), self.maximum))
-            if self.kind == "float":
-                return float(min(max(float(value), self.minimum), self.maximum))
+            if self.kind in ("int", "float"):
+                x = float(value)
+                if not math.isfinite(x):
+                    return self.default
+                x = min(max(x, self.minimum), self.maximum)
+                return int(x) if self.kind == "int" else float(x)
             if self.kind == "bool":
                 return str(value).strip().lower() in ("1", "true", "ja", "yes", "on")
             if self.kind == "choice":
-                keys = [c[0] for c in self.choices]
-                return value if value in keys else self.default
+                for k, _label in self.choices:
+                    if value == k or str(value) == str(k):
+                        return k
+                return self.default
             return "" if value is None else str(value)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
             return self.default
 
     def to_text(self, value):
@@ -117,6 +123,15 @@ class Reader:
 
     def close(self):
         """Verbindung schließen (darf mehrfach und ohne Verbindung aufgerufen werden)."""
+        pass
+
+
+def close_quietly(reader):
+    """Leser schließen; ein Fehler dabei (z. B. Socket schon weg) verdeckt nie das eigentliche Ergebnis bzw. den
+    eigentlichen Fehler und beendet keinen Lese-Thread."""
+    try:
+        reader.close()
+    except Exception:
         pass
 
 
@@ -218,7 +233,7 @@ class Driver:
             values = r.read()
             return values, dict(r.errors)
         finally:
-            r.close()
+            close_quietly(r)
 
     # Uhrzeit der Steuerung lesen (Netzwerk-Panel: Uhr des Rechners nach der Steuerung stellen). Treiber, die das
     # können, setzen clock_support = True und liefern einen datetime: zeitzonenbehaftet, wenn die Steuerung die Zeitzone
@@ -244,7 +259,7 @@ class Driver:
                     pass
             return rows, dict(r.errors), counters
         finally:
-            r.close()
+            close_quietly(r)
 
     # ------------------------------------------------------------------ Auswahldialog (optional, mit Qt)
     def browse(self, parent, ctx):
