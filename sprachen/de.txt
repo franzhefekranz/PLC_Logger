@@ -6450,6 +6450,9 @@
 @ Subscription beendet: {0}
 > 
 
+@ Keine Antwort vom Server – „Knoten je Anfrage“ verkleinern (Server liefert höchstens {0})
+> 
+
 @ Array – bitte als Block lesen
 > 
 

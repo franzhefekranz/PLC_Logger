@@ -6450,6 +6450,9 @@
 @ Subscription beendet: {0}
 > Subscription ended: {0}
 
+@ Keine Antwort vom Server – „Knoten je Anfrage“ verkleinern (Server liefert höchstens {0})
+> No answer from the server – reduce “Nodes per request” (the server returns at most {0})
+
 @ Array – bitte als Block lesen
 > Array – please read it as a block
 

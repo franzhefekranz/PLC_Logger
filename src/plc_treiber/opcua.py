@@ -85,6 +85,10 @@ def client_certificate(params):
             asyncio.run(setup_self_signed_certificate(
                 Path(key), Path(cert), APP_URI, host, [ExtendedKeyUsageOID.CLIENT_AUTH],
                 {"countryName": "DE", "organizationName": "PLC Datenlogger", "commonName": f"PLC Datenlogger@{host}"}))
+            try:
+                os.chmod(key, 0o600)               # privater Schlüssel nur für den Benutzer des Loggers
+            except OSError:
+                pass
     return cert, key
 
 
@@ -336,6 +340,11 @@ class OpcUaReader(Reader):
                 val = dv.Value.Value if dv.Value is not None else None
                 self._first[i + k] = (val, dv.StatusCode)
                 self._apply(r, val, dv.StatusCode, out)
+            if len(results) < len(reqs):            # Server kürzt die Antwort statt einen Fehler zu melden
+                hint = tr("Keine Antwort vom Server – „Knoten je Anfrage“ verkleinern (Server liefert höchstens {0})")
+                for r in reqs[len(results):]:
+                    for _p, _i, addr in r.items:
+                        self.errors[addr] = hint.format(len(results))
         return out
 
     def _apply(self, r, val, status, out):

@@ -2585,3 +2585,31 @@ def test_ads_symbol_version_and_size_check():
         r.read()
     r.connect()
     assert r.read()[0] == 1.5 and r.sym_version == 4
+
+
+def test_opcua_truncated_read_reports_missing_nodes(tmp_path, monkeypatch):
+    """OPC UA: kürzt der Server die Antwort (weniger Ergebnisse als Knoten), werden die fehlenden Knoten gemeldet;
+    das selbst erzeugte Client-Zertifikat hat einen nur für den Besitzer lesbaren Schlüssel."""
+    from types import SimpleNamespace
+
+    from plc_common import Plc, Variable, get_driver
+    from plc_treiber import opcua
+    good = SimpleNamespace(is_good=lambda: True)
+    plc = Plc(name="UA", driver="opcua", params=get_driver("opcua").normalize_params({}))
+    r = opcua.OpcUaReader(get_driver("opcua"), plc, [Variable(f"v{k}", f"ns=2;i={k}", "REAL") for k in range(3)])
+    r.client = object()
+    for k in range(3):
+        q = opcua._Request()
+        q.nodeid, q.index_range, q.items, q.lo, q.n = k, None, [(k, None, f"ns=2;i={k}")], 0, 1
+        r.requests.append(q)
+    r._read_chunk = lambda reqs: [SimpleNamespace(Value=SimpleNamespace(Value=float(q.nodeid)), StatusCode=good)
+                                  for q in reqs[:2]]
+    out = r._read_all()
+    assert out[:2] == [0.0, 1.0] and np.isnan(out[2]) and "höchstens 2" in r.errors["ns=2;i=2"]
+    if os.name == "posix":
+        pytest.importorskip("asyncua")
+        pytest.importorskip("cryptography")
+        import plc_common
+        monkeypatch.setattr(plc_common, "BASE_DIR", str(tmp_path))
+        _cert, key = opcua.client_certificate({})
+        assert os.stat(key).st_mode & 0o077 == 0

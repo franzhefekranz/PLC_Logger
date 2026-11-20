@@ -23,6 +23,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber opcua:** Der private Schlüssel des selbst erzeugten Client-Zertifikats ist nur noch für den Benutzer des
+  Loggers lesbar (0600). Kürzt ein Server die Antwort einer Leseanfrage, statt einen Fehler zu melden, werden die
+  fehlenden Knoten mit dem Hinweis gemeldet, „Knoten je Anfrage“ zu verkleinern (bisher still NaN).
 * **Treiber ads:** Nach einem Download oder Online-Change, der die Speicheraufteilung änderte, las der Logger über
   die beim Verbinden ermittelten Offsets unbemerkt andere Variablen. Jetzt wird die Symbolversion in jeder
   Summenanfrage mitgelesen; ändert sie sich, verbindet der Treiber neu und löst die Symbole neu auf. Ein Typ, dessen
