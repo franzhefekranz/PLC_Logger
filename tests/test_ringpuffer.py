@@ -404,3 +404,49 @@ def test_s7_reader_groups_singles():
     with pytest.raises(ValueError):
         parse("DB10.DBX0.8")
     assert DRIVER.check_address("M5.9", "BOOL") and not DRIVER.check_address("M5.7", "BOOL")
+
+
+def test_tia_reader_skips_bad_tags_and_refreshes_catalog():
+    """tia: lehnt die Steuerung eine Sammelanfrage wegen einer Variable ab, wird diese nach dem einmaligen
+    Einzelnachlesen aus den Sammelanfragen herausgenommen und nur gelegentlich probiert; nach einer Neuverbindung darf
+    die Variablenliste wieder neu gelesen werden."""
+    from plc_common import Variable, get_driver
+    import plc_treiber.tia_io as tio
+
+    class Tag:
+        def __init__(self, k):
+            self.access_area, self.lids = 1, (k,)
+
+        def decode_value(self, raw):
+            return raw
+    state = {"bad": {2}, "requests": 0}
+
+    class Client:
+        def connect(self, ip, **kw):
+            pass
+
+        def read_symbolic_multi(self, req):
+            state["requests"] += 1
+            ks = [lids[0] for _a, lids, _x in req]
+            if any(k in state["bad"] for k in ks):
+                raise RuntimeError("Anfrage abgelehnt")
+            return [float(k) for k in ks]
+
+        def disconnect(self):
+            pass
+    plc = Plc(name="S7-1500", driver="tia", params=get_driver("tia").normalize_params({"ip": "10.0.0.1"}))
+    vs = [Variable(f"v{k}", f"DB.v{k}", "REAL") for k in range(5)]
+    r = tio.TagReader(plc, vs, client_factory=Client)
+    r.client, r.tags = Client(), [Tag(k) for k in range(5)]
+    out = r.read()
+    assert out[:2] == [0.0, 1.0] and np.isnan(out[2]) and r.bad == {2} and "DB.v2" in r.errors
+    state["requests"] = 0
+    out = r.read()
+    assert state["requests"] == 1 and out[4] == 4.0          # nur noch die Sammelanfrage
+    state["bad"].clear()
+    r._retry_bad = 0.0                                       # Wartezeit vorbei: wieder lesbar
+    assert r.read()[2] == 2.0 and not r.bad and "DB.v2" not in r.errors
+    r.catalog_refreshed = True
+    r._resolve = lambda: None
+    r.connect()
+    assert r.catalog_refreshed is False and r.bad == set()

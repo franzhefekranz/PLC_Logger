@@ -16,7 +16,9 @@ Ablauf je Steuerung (Klasse ``TagReader``, ein Objekt je Lese-Thread)
    ``Plc.tags_je_anfrage`` Variablen) und nach dem von der Steuerung gemeldeten Datentyp dekodieren.
 
 Fehler einzelner Variablen (z. B. nach einer Programmänderung gelöschte Variable) stehen in ``errors`` und stören die
-übrigen nicht. Ist die Verbindung gestört, löst ``read()`` ConnectionError aus; der Lese-Thread verbindet neu.
+übrigen nicht: lehnt die Steuerung eine Sammelanfrage ab, wird einmal einzeln nachgelesen; nicht lesbare Variablen
+bleiben danach aus den Sammelanfragen heraus und werden nur alle ``RETRY_BAD_S`` Sekunden einzeln probiert. Nach jeder
+Neuverbindung darf die Variablenliste wieder einmal neu gelesen werden, falls Namen fehlen (z. B. Programm geändert). Ist die Verbindung gestört, löst ``read()`` ConnectionError aus; der Lese-Thread verbindet neu.
 
 Blöcke (Ausschnitte eines Arrays) brauchen keine Sonderbehandlung: Ihre Elemente sind gewöhnliche Variablen, die mit
 den übrigen in derselben Anfrage gelesen werden.
@@ -36,11 +38,13 @@ import datetime
 import math
 import struct
 import threading
+import time
 
 from plc_treiber.tia_common import Plc
 from plc_treiber.ringbuffer import HEADER_BYTES, RingSupport
 from plc_i18n import tr
 
+RETRY_BAD_S = 30.0                               # nicht lesbare Variablen so oft einzeln neu probieren
 RING_CHUNK = 4000                                # höchstens so viele Bytes je db_read beim Abholen eines Ringpuffers
 ABSOLUTE_RING = re.compile(r"^\s*DB\d+\.DB[XBWD]", re.IGNORECASE)   # absolute Adresse (sonst symbolischer Name)
 
@@ -151,7 +155,9 @@ class TagReader(RingSupport):
         self.client = None
         self.tags = [None] * len(self.vars)      # aufgelöste Kennungen (SymbolicTag) je Variable
         self.errors = {}                         # Variablenname (Tag) -> Fehlertext
-        self.catalog_refreshed = False           # Variablenliste in dieser Sitzung schon neu gelesen?
+        self.catalog_refreshed = False           # Variablenliste seit dem Verbinden schon neu gelesen?
+        self.bad = set()                         # Indizes nicht lesbarer Variablen (außerhalb der Sammelanfragen)
+        self._retry_bad = 0.0                    # nächster Einzelversuch für ``bad`` (time.monotonic)
         self.ring_pos = self._setup_rings(self.vars)  # Elemente von Ringpuffern (werden nicht symbolisch gelesen)
         from plc_treiber.s7 import parse_ring
         from plc_treiber.tia_common import check_tag_name
@@ -186,7 +192,9 @@ class TagReader(RingSupport):
         except Exception as e:
             raise ConnectionError(f"{self.plc.ip}: {e}") from None
         self.client = client
-        self.errors = {}
+        self.errors, self.bad = {}, set()
+        # nach einer Neuverbindung (z. B. Programm geladen) die Variablenliste wieder einmal neu lesen dürfen
+        self.catalog_refreshed = False
         if len(self.ring_pos) < len(self.vars) or any(getattr(r, "symbolic", False) for r in self.rings):
             self._resolve()
         n_ok = sum(1 for t in self.tags if t is not None)
@@ -312,7 +320,7 @@ class TagReader(RingSupport):
     def read(self):
         """Ein Messzyklus -> Liste der Werte (NaN = nicht lesbar)."""
         out = [math.nan] * len(self.vars)
-        idx = [i for i, t in enumerate(self.tags) if t is not None]
+        idx = [i for i, t in enumerate(self.tags) if t is not None and i not in self.bad]
         size = max(1, int(self.plc.tags_je_anfrage))
         for k in range(0, len(idx), size):
             part = idx[k:k + size]
@@ -321,26 +329,41 @@ class TagReader(RingSupport):
             except Exception as e:
                 if _is_connection_error(e):
                     raise ConnectionError(str(e)) from None
-                # Die Steuerung hat nicht alle Variablen beantwortet: einzeln lesen, um die fehlerhafte zu finden.
-                raws = []
-                for i in part:
-                    try:
-                        raws.append(self._read_items([i])[0])
-                    except Exception as e2:
-                        if _is_connection_error(e2):
-                            raise ConnectionError(str(e2)) from None
-                        raws.append(None)
-            for i, raw in zip(part, raws):
-                name = self.vars[i].tag
-                if raw is None:
-                    self.errors[name] = tr("Lesefehler (Variable nicht lesbar oder geändert)")
-                    continue
-                self.errors.pop(name, None)
-                try:
-                    out[i] = to_number(self.tags[i].decode_value(raw))
-                except Exception:
-                    out[i] = math.nan
+                # Die Steuerung hat nicht alle Variablen beantwortet: einzeln lesen, um die fehlerhafte zu finden;
+                # sie bleibt danach aus den Sammelanfragen heraus (siehe ``bad``).
+                raws = [self._read_single(i) for i in part]
+                self.bad.update(i for i, raw in zip(part, raws) if raw is None)
+                self._retry_bad = time.monotonic() + RETRY_BAD_S
+            self._store(part, raws, out)
+        if self.bad and time.monotonic() >= self._retry_bad:   # gesperrte Variablen gelegentlich einzeln probieren
+            self._retry_bad = time.monotonic() + RETRY_BAD_S
+            part = sorted(self.bad)
+            raws = [self._read_single(i) for i in part]
+            self.bad.difference_update(i for i, raw in zip(part, raws) if raw is not None)
+            self._store(part, raws, out)
         return out
+
+    def _read_single(self, i):
+        """Eine Variable einzeln lesen -> Rohwert oder None (Fehler); Verbindung weg -> ConnectionError."""
+        try:
+            return self._read_items([i])[0]
+        except Exception as e:
+            if _is_connection_error(e):
+                raise ConnectionError(str(e)) from None
+            return None
+
+    def _store(self, part, raws, out):
+        """Rohwerte der Variablen ``part`` dekodieren und in ``out`` eintragen; None -> Fehler in ``errors``."""
+        for i, raw in zip(part, raws):
+            name = self.vars[i].tag
+            if raw is None:
+                self.errors[name] = tr("Lesefehler (Variable nicht lesbar oder geändert)")
+                continue
+            self.errors.pop(name, None)
+            try:
+                out[i] = to_number(self.tags[i].decode_value(raw))
+            except Exception:
+                out[i] = math.nan
 
     # ------------------------------------------------------------------ Ringpuffer (siehe ringbuffer.py)
     def _ring_is_connection_error(self, exc):
@@ -406,18 +429,6 @@ class TagReader(RingSupport):
             except Exception:
                 pass
             self.client = None
-
-
-def read_once(plc: Plc, variables, client_factory=None):
-    """Variablen einmal lesen (Verbindungstest im Konfigurationsprogramm).
-
-    Rückgabe: (Werte, Fehler je Variablenname). ConnectionError, wenn die Steuerung nicht erreichbar ist."""
-    r = TagReader(plc, variables, client_factory)
-    try:
-        r.connect()
-        return r.read(), dict(r.errors)
-    finally:
-        r.close()
 
 
 def check_library():

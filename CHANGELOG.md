@@ -23,6 +23,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber tia:** War eine Variable nicht mehr lesbar (z. B. nach einer Programmänderung), wurden in jedem Zyklus
+  alle Variablen ihrer Anfrage einzeln nachgelesen – bei 50 Variablen je Anfrage 51 statt 1 Anfrage. Jetzt bleibt die
+  fehlerhafte Variable aus den Sammelanfragen heraus und wird alle 30 s einzeln probiert. In der Steuerung neu
+  angelegte Variablen werden nach einer Neuverbindung gefunden (bisher erst nach einem Neustart des Loggers).
 * **Treiber s7:** Einzelvariablen (außerhalb von Blöcken) kosteten je eine Anfrage – 60 Variablen in einem DB
   brauchten 60 Rundreisen je Zyklus. Benachbarte Variablen desselben DBs bzw. Bereichs (Lücke bis 16 Bytes) werden jetzt
   mit einer Anfrage gelesen; schlägt eine solche Gruppe fehl, wird einzeln weitergelesen. Bitnummern 8 und 9
