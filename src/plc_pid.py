@@ -28,6 +28,7 @@ Handbetrieb oder Sollwertsprung im Automatikbetrieb), der Prozess sollte vorher 
 großen Störungen auftreten.
 """
 import math
+import re
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -369,7 +370,10 @@ def horizon(m: Model):
     return max(6 * (m.T + th), 20 * th)
 
 
-def simulate_loop(m: Model, tn: Tuning, duration=None, step=1.0, n=1500):
+SIM_STEPS = 1500           # Schritte der Simulation (assess erkennt einen Abbruch an weniger Schritten)
+
+
+def simulate_loop(m: Model, tn: Tuning, duration=None, step=1.0, n=SIM_STEPS):
     """Sollwertsprung (Höhe ``step``) mit Modell und Regler simulieren.
 
     Rückgabe: (t, Sollwert, Istwert, Stellwert) als Abweichung vom Arbeitspunkt. Der D-Anteil wirkt auf den Istwert
@@ -418,7 +422,7 @@ def assess(m: Model, tn: Tuning):
     """Überschwingen (%) und Ausregelzeit (2 %) aus der Simulation in tn eintragen."""
     t, sp, y, _u = simulate_loop(m, tn)
     t_step = 0.02 * t[-1] if len(t) else 0.0
-    if len(t) < 1501 or not np.all(np.isfinite(y)):           # Simulation abgebrochen: instabil
+    if len(t) < SIM_STEPS + 1 or not np.all(np.isfinite(y)):           # Simulation abgebrochen: instabil
         tn.overshoot, tn.settling = float("inf"), float("inf")
         tn.note = (tn.note + "; " if tn.note else "") + N_("instabil")
         return tn
@@ -440,16 +444,25 @@ def optimize(t, u, y, ctype="PID", behaviour="normal"):
     return m, tunings
 
 
+# Rollen aus Variablennamen erraten: (ganze Wörter, Wortanfänge) – verglichen wird je Wort des Namens, nicht als
+# Teiltext (sonst wäre „Spannung“ ein Sollwert (sp), „Distanz“ ein Istwert (ist), „Routing“ ein Stellwert (out))
+ROLE_WORDS = {"sw": ({"sp", "sv", "setpoint", "w", "ref", "sw"}, ("soll",)),
+              "iw": ({"pv", "x", "messwert", "actual", "iw"}, ("ist",)),
+              "stw": ({"cv", "out", "mv", "y", "ausgang", "output", "lmn", "stw"}, ("stell",))}
+
+
+def _words(name):
+    """Wörter eines Variablennamens in Kleinbuchstaben: getrennt an Sonderzeichen, Ziffern und BinnenMajuskeln
+    (``TIC101.SP`` -> tic, sp; ``TempIst`` -> temp, ist)."""
+    return re.findall(r"[a-zäöüß]+", re.sub(r"([a-zäöüß])([A-ZÄÖÜ])", r"\1 \2", name).lower())
+
+
 def guess_roles(names):
     """Sollwert, Istwert, Stellwert anhand üblicher Namen erraten -> (sw, iw, stw), leer wenn unbekannt."""
-    keys = {"sw": ("soll", "sp", "setpoint", "sollwert", "w_", "ref"),
-            "iw": ("ist", "pv", "istwert", "x_", "messwert", "actual"),
-            "stw": ("stell", "cv", "out", "mv", "y_", "stellwert", "ausgang", "output", "lmn")}
     found = {}
-    for role, words in keys.items():
+    for role, (exact, prefixes) in ROLE_WORDS.items():
         for n in names:
-            low = n.lower()
-            if n not in found.values() and any(w in low for w in words):
+            if n not in found.values() and any(w in exact or w.startswith(prefixes) for w in _words(n)):
                 found[role] = n
                 break
     return found.get("sw", ""), found.get("iw", ""), found.get("stw", "")

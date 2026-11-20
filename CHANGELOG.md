@@ -16,6 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **PID-Optimierung:** Der Vorschlag für Soll-, Ist- und Stellwert vergleicht ganze Wörter des Variablennamens – bisher
+  wurden z. B. „Spannung“ als Sollwert und „Distanz“ als Istwert vorgeschlagen.
 * **OPC-UA-Server:** Der private Schlüssel des selbstsignierten Zertifikats ist nur noch für den Benutzer des Loggers
   lesbar (0600). Dialog und Protokoll weisen darauf hin, wenn sich Web-Benutzer nur über Endpunkte ohne Sicherheit
   anmelden können – die Passwörter gingen dann im Klartext über das Netz.

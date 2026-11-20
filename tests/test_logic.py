@@ -135,6 +135,15 @@ def test_recorder_start_failure_cleans_up(tmp_path, monkeypatch):
         rec.stop()
 
 
+def test_pid_guess_roles_by_words():
+    """PID: Rollen werden über ganze Wörter erkannt – „Spannung“, „Distanz“, „Routing“ sind keine Soll-/Ist-/Stellwerte."""
+    from plc_pid import guess_roles
+    assert guess_roles(["Spannung", "Distanz", "Temperatur_Ist", "Ventil_Stellung", "Routing"]) == \
+        ("", "Temperatur_Ist", "Ventil_Stellung")
+    assert guess_roles(["TIC101.SP", "TIC101.PV", "TIC101.OUT"]) == ("TIC101.SP", "TIC101.PV", "TIC101.OUT")
+    assert guess_roles(["TempSoll", "TempIst", "Stellgrad"]) == ("TempSoll", "TempIst", "Stellgrad")
+
+
 def test_iocheck_column_aliases():
     """Eigene Spaltenüberschriften ersetzen die Vorgabe; ein leeres Feld wird nicht eingelesen."""
     import plc_iocheck as io
