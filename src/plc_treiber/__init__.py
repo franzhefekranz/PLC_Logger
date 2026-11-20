@@ -22,7 +22,8 @@ Eingebaut sind
 Weitere Treiber werden beim Start automatisch geladen aus
   * dem Ordner ``treiber`` im Datenordner des Programms (eigene Treiber, bleiben bei Updates erhalten),
   * den Ordnern in der Umgebungsvariablen ``PLC_TREIBER`` (mehrere mit ; bzw. : getrennt),
-  * weiteren Modulen dieses Pakets (Dateiname ohne führenden Unterstrich).
+  * weiteren Modulen dieses Pakets (Dateiname ohne Unterstrich – Namen mit „_“ sind Hilfsmodule wie ``s7_browser``;
+    eigene Treiber gehören in den Ordner ``treiber``).
 Ein Treibermodul definiert ``DRIVER = MeinTreiber()`` (Unterklasse von plc_treiber.base.Driver); Vorlage:
 ``plc_treiber/_vorlage.py``.
 """
@@ -31,6 +32,7 @@ import importlib.util
 import os
 import pkgutil
 import sys
+import threading
 
 from plc_treiber.base import Driver, Reader
 from plc_i18n import tr
@@ -39,6 +41,7 @@ BUILTIN = ("s7", "tia", "logo", "clx", "pccc", "modbus", "modbus_rtu", "opcua", 
            "toyopuc", "s5as511", "mqtt")
 _drivers = None          # {id: Driver}
 _errors = []             # Ladefehler (Modul, Text) – werden im Konfigurationsprogramm angezeigt
+_lock = threading.RLock()  # Laden nur einmal gleichzeitig; andere Threads sehen nie ein halb gefülltes Verzeichnis
 
 
 class UnknownDriver(Driver):
@@ -55,9 +58,9 @@ class UnknownDriver(Driver):
         raise RuntimeError(tr("Treiber „{0}“ ist nicht installiert").format(self.id))
 
 
-def _register(mod, origin):
-    """Treiber eines Moduls eintragen: ``DRIVER`` (Objekt) oder eine Klasse ``Driver``; doppelte Kürzel und falsche
-    Typen landen in der Fehlerliste.
+def _register(mod, origin, found, errors):
+    """Treiber eines Moduls in ``found`` eintragen: ``DRIVER`` (Objekt) oder eine Klasse ``Driver``; doppelte Kürzel
+    und falsche Typen landen in ``errors``.
     """
     drv = getattr(mod, "DRIVER", None)
     if drv is None:
@@ -67,12 +70,12 @@ def _register(mod, origin):
     if drv is None:
         return
     if not isinstance(drv, Driver):
-        _errors.append((origin, tr("DRIVER ist keine Unterklasse von plc_treiber.base.Driver")))
+        errors.append((origin, tr("DRIVER ist keine Unterklasse von plc_treiber.base.Driver")))
         return
-    if drv.id in _drivers:
-        _errors.append((origin, tr("Treiber-Kürzel „{0}“ ist bereits vergeben").format(drv.id)))
+    if drv.id in found:
+        errors.append((origin, tr("Treiber-Kürzel „{0}“ ist bereits vergeben").format(drv.id)))
         return
-    _drivers[drv.id] = drv
+    found[drv.id] = drv
 
 
 def _plugin_dirs():
@@ -89,46 +92,55 @@ def _plugin_dirs():
 
 
 def load_all(reload=False):
-    """Alle Treiber laden (einmalig; reload=True lädt neu)."""
+    """Alle Treiber laden (einmalig; reload=True lädt neu). Thread-sicher: geladen wird in eine eigene Tabelle, die erst
+    am Ende gilt."""
     global _drivers
-    if _drivers is not None and not reload:
-        return _drivers
-    _drivers, _errors[:] = {}, []
-    for name in BUILTIN:
+    with _lock:
+        if _drivers is not None and not reload:
+            return _drivers
+        found, errors = {}, []
+        for name in BUILTIN:
+            try:
+                _register(importlib.import_module(f"plc_treiber.{name}"), name, found, errors)
+            except Exception as e:                  # Treiber fehlerhaft: übrige weiter laden
+                errors.append((name, str(e)))
+        # weitere Module im Paket (z. B. nachträglich hineinkopierte Treiber)
         try:
-            _register(importlib.import_module(f"plc_treiber.{name}"), name)
-        except Exception as e:                      # Treiber fehlerhaft: übrige weiter laden
-            _errors.append((name, str(e)))
-    # weitere Module im Paket (z. B. nachträglich hineinkopierte Treiber)
-    try:
-        here = os.path.dirname(os.path.abspath(__file__))
-        for m in pkgutil.iter_modules([here]):
-            if m.name in BUILTIN or m.name.startswith("_") or m.name in ("base", "ui") or "_" in m.name:
+            here = os.path.dirname(os.path.abspath(__file__))
+            for m in pkgutil.iter_modules([here]):
+                if m.name in BUILTIN or "_" in m.name or m.name in ("base", "ui"):
+                    continue
+                try:
+                    _register(importlib.import_module(f"plc_treiber.{m.name}"), m.name, found, errors)
+                except Exception as e:
+                    errors.append((m.name, str(e)))
+        except Exception:
+            pass
+        # eigene Treiber aus Ordnern (Datei-Plugins)
+        for d in _plugin_dirs():
+            if not os.path.isdir(d):
                 continue
-            try:
-                _register(importlib.import_module(f"plc_treiber.{m.name}"), m.name)
-            except Exception as e:
-                _errors.append((m.name, str(e)))
-    except Exception:
-        pass
-    # eigene Treiber aus Ordnern (Datei-Plugins)
-    for d in _plugin_dirs():
-        if not os.path.isdir(d):
-            continue
-        if d not in sys.path:
-            sys.path.insert(0, d)                   # Hilfsmodule eines Treibers neben ihm findbar
-        for fn in sorted(os.listdir(d)):
-            if not fn.endswith(".py") or fn.startswith("_"):
-                continue
-            path = os.path.join(d, fn)
-            try:
-                spec = importlib.util.spec_from_file_location(f"plc_treiber_ext_{fn[:-3]}", path)
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                _register(mod, path)
-            except Exception as e:
-                _errors.append((path, f"{type(e).__name__}: {e}"))
-    return _drivers
+            if d not in sys.path:
+                sys.path.append(d)                  # Hilfsmodule eines Treibers findbar, ohne Programm- oder
+            for fn in sorted(os.listdir(d)):        # Systemmodule (socket, csv …) zu verdecken
+                if not fn.endswith(".py") or fn.startswith("_"):
+                    continue
+                path = os.path.join(d, fn)
+                name = f"plc_treiber_ext_{fn[:-3]}"
+                try:
+                    spec = importlib.util.spec_from_file_location(name, path)
+                    mod = importlib.util.module_from_spec(spec)
+                    sys.modules[name] = mod         # dataclasses, pickle, typing suchen das Modul dort
+                    try:
+                        spec.loader.exec_module(mod)
+                    except BaseException:
+                        sys.modules.pop(name, None)
+                        raise
+                    _register(mod, path, found, errors)
+                except (Exception, SystemExit) as e:   # auch sys.exit() im Treiber beendet nicht das Programm
+                    errors.append((path, f"{type(e).__name__}: {e}"))
+        _drivers, _errors[:] = found, errors
+        return _drivers
 
 
 def drivers():
@@ -144,8 +156,9 @@ def get_driver(ident) -> Driver:
 
 def load_errors():
     """[(Modul/Datei, Fehlertext)] der Treiber, die nicht geladen werden konnten."""
-    load_all()
-    return list(_errors)
+    with _lock:
+        load_all()
+        return list(_errors)
 
 
 __all__ = ["Driver", "Reader", "drivers", "get_driver", "load_errors", "load_all"]

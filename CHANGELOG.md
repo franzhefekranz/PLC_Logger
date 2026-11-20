@@ -23,6 +23,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Eigene Treiber:** Ein Treiber mit `@dataclass` (und `from __future__ import annotations`) ließ sich nicht laden.
+  Der Treiberordner stand vor den Systemmodulen im Suchpfad – eine Hilfsdatei wie `socket.py` oder `csv.py` ersetzte
+  das gleichnamige Modul im ganzen Programm. `sys.exit()` in einem Treiber beendete das Programm. Gleichzeitiges Laden
+  (z. B. Webserver und Lese-Thread) konnte kurz „Treiber nicht installiert“ melden.
 * **Treiber:** „Verbindung testen“ und der Ringpuffer-Test im Blockeditor zeigten bei einem Fehler beim Schließen der
   Verbindung diesen statt des eigentlichen Ergebnisses bzw. Fehlers. Ein Verbindungsparameter mit „inf“ oder NaN ließ
   das Laden der Konfiguration abbrechen bzw. umging die Grenzen (z. B. Zeitlimit); jetzt gilt die Vorgabe. Auswahlwerte

@@ -1847,6 +1847,50 @@ def test_param_convert_and_read_once_close_error():
         D().read_once(None, [])
 
 
+def test_plugin_drivers_load(tmp_path, monkeypatch):
+    """Eigene Treiber aus PLC_TREIBER: Dataclass mit ``from __future__ import annotations`` lädt, ein Treiber mit
+    sys.exit() beendet das Programm nicht, der Ordner verdeckt keine Systemmodule; Laden aus mehreren Threads sieht
+    immer alle Treiber."""
+    import sys
+    import threading
+
+    import plc_treiber
+    (tmp_path / "mein.py").write_text(
+        "from __future__ import annotations\n"
+        "from dataclasses import dataclass\n"
+        "from plc_treiber.base import Driver\n"
+        "@dataclass\n"
+        "class Opt:\n"
+        "    a: int = 1\n"
+        "class Mein(Driver):\n"
+        "    id = 'mein_test'\n"
+        "DRIVER = Mein()\n", encoding="utf-8")
+    (tmp_path / "ende.py").write_text("import sys\nsys.exit(3)\n", encoding="utf-8")
+    monkeypatch.setenv("PLC_TREIBER", str(tmp_path))
+    try:
+        found = plc_treiber.load_all(reload=True)
+        assert "mein_test" in found and "s7" in found
+        errs = dict(plc_treiber.load_errors())
+        assert str(tmp_path / "ende.py") in errs and "mein.py" not in " ".join(errs)
+        assert sys.path[-1] == str(tmp_path)              # hinten angehängt: verdeckt keine Systemmodule
+        seen = []
+
+        def look():
+            seen.append(plc_treiber.get_driver("s7").id)
+        ts = [threading.Thread(target=look) for _ in range(8)]
+        plc_treiber.load_all(reload=True)
+        for t in ts:
+            t.start()
+        plc_treiber.load_all(reload=True)
+        for t in ts:
+            t.join()
+        assert seen == ["s7"] * 8
+    finally:
+        monkeypatch.delenv("PLC_TREIBER")
+        plc_treiber.load_all(reload=True)
+        sys.path.remove(str(tmp_path))
+
+
 def test_sampler_survives_failing_close(tmp_path):
     """Wirft der Treiber beim Schließen nach einem Lesefehler, verbindet der Lese-Thread trotzdem neu."""
     import time
