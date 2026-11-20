@@ -100,7 +100,16 @@ def server_certificate(s):
         asyncio.run(setup_self_signed_certificate(
             Path(key), Path(cert), APP_URI, host, [ExtendedKeyUsageOID.SERVER_AUTH],
             {"countryName": "DE", "organizationName": "PLC Datenlogger", "commonName": f"PLC Datenlogger@{host}"}))
+    try:
+        os.chmod(key, 0o600)                       # privater Schlüssel: nur für den Benutzer des Loggers
+    except OSError:
+        pass
     return cert, key
+
+
+def plaintext_login(s, has_users):
+    """Anmeldung mit Passwort nur über Endpunkte ohne Sicherheit? (Passwörter gingen im Klartext über das Netz)"""
+    return bool(has_users) and s.get("benutzer") == "web" and all(p == "none" for p in s.get("sicherheit") or ["none"])
 
 
 class _Users:
@@ -243,6 +252,8 @@ class OpcUaServer:
         if not tokens:
             raise ValueError(tr("weder anonymer Zugriff noch Benutzer eingerichtet"))
         server.set_identity_tokens(tokens)
+        if plaintext_login(s, users):
+            self.emit(tr("⚠ OPC-UA-Server: Anmeldung ohne Verschlüsselung – Passwörter gehen im Klartext über das Netz"))
         idx = await server.register_namespace(NS_URI)
 
         # Adressraum. Browse-Namen immer als QualifiedName: ein Text mit Doppelpunkt („Program:Main.x“ bei

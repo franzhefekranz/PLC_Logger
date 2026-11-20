@@ -4619,6 +4619,9 @@
 @ Anmeldung mit den Benutzern des Webservers ({0} eingerichtet)
 > Login with the web server users ({0} set up)
 
+@ ⚠ Ohne Verschlüsselung gehen die Passwörter der Web-Benutzer im Klartext über das Netz – zusätzlich „Signieren und verschlüsseln“ wählen.
+> ⚠ Without encryption the passwords of the web users travel over the network in plain text – also select “Sign and encrypt”.
+
 @ Nur lesend. Firewall: eingehende Verbindungen auf dem Port erlauben. Das selbstsignierte Zertifikat liegt im Ordner opcua des Datenordners; Clients müssen ihm ggf. vertrauen.
 > Read-only. Firewall: allow incoming connections on the port. The self-signed certificate is in the opcua folder of the data folder; clients may have to trust it.
 
@@ -4647,6 +4650,9 @@
 
 @ weder anonymer Zugriff noch Benutzer eingerichtet
 > neither anonymous access nor users set up
+
+@ ⚠ OPC-UA-Server: Anmeldung ohne Verschlüsselung – Passwörter gehen im Klartext über das Netz
+> ⚠ OPC UA server: login without encryption – passwords travel over the network in plain text
 
 @ Berechnet
 > Calculated

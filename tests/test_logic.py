@@ -1093,6 +1093,15 @@ def _free_port():
     return port
 
 
+def test_opcua_plaintext_login_rule():
+    """Hinweis „Passwörter im Klartext“: nur mit Web-Benutzern und ausschließlich Endpunkten ohne Sicherheit."""
+    import plc_opcua_server as us
+    assert us.plaintext_login({"benutzer": "web", "sicherheit": ["none"]}, {"a": "h"})
+    assert not us.plaintext_login({"benutzer": "web", "sicherheit": ["none", "Basic256Sha256,SignAndEncrypt"]}, {"a": 1})
+    assert not us.plaintext_login({"benutzer": "", "sicherheit": ["none"]}, {"a": "h"})
+    assert not us.plaintext_login({"benutzer": "web", "sicherheit": ["none"]}, {})
+
+
 def test_opcua_server_with_recorder(tmp_path):
     """OPC-UA-Server mit Demo-Aufzeichnung: Anmeldung erforderlich, Werte (auch berechnete) mit passenden Typen,
     Ordnerstruktur, Status; beim Stopp wird der Server beendet.

@@ -427,6 +427,9 @@ def test_config_window(qt_log, demo_config):
     from plc_opcua_dialog import OpcUaServerDialog
     od = OpcUaServerDialog(w, {"aktiv": True, "port": 4841}, 2)
     assert od.collect()["port"] == 4841 and od.collect()["sicherheit"] == ["none"]
+    assert not od.lbl_warn.isHidden()                         # Web-Benutzer, nur „Keine“: Klartext-Hinweis
+    od.chk_sec["Basic256Sha256,SignAndEncrypt"].setChecked(True)
+    assert od.lbl_warn.isHidden()
     from plc_notify_dialog import NotifyDialog
     nd = NotifyDialog(w, {"aktiv": True, "email": {"aktiv": True}}, "Testanlage")
     assert nd.collect()["email"]["aktiv"] and nd.collect()["aktiv"]

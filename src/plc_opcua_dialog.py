@@ -75,7 +75,15 @@ class OpcUaServerDialog(QDialog):
         self.chk_web.setChecked(s["benutzer"] == "web")
         v2.addWidget(self.chk_anon)
         v2.addWidget(self.chk_web)
+        self.lbl_warn = QLabel(tr("⚠ Ohne Verschlüsselung gehen die Passwörter der Web-Benutzer im Klartext über das "
+                                  "Netz – zusätzlich „Signieren und verschlüsseln“ wählen."))
+        self.lbl_warn.setWordWrap(True)
+        self.lbl_warn.setStyleSheet("color:#b26a00")
+        v2.addWidget(self.lbl_warn)
         lay.addWidget(g_user)
+        self.n_users = n_users
+        for c in list(self.chk_sec.values()) + [self.chk_web]:
+            c.toggled.connect(self._check_secure)
         hint = QLabel(tr("Nur lesend. Firewall: eingehende Verbindungen auf dem Port erlauben. Das selbstsignierte "
                          "Zertifikat liegt im Ordner opcua des Datenordners; Clients müssen ihm ggf. vertrauen."))
         hint.setWordWrap(True)
@@ -86,6 +94,13 @@ class OpcUaServerDialog(QDialog):
         bb.rejected.connect(self.reject)
         lay.addWidget(bb)
         self._update_url()
+        self._check_secure()
+
+    def _check_secure(self, *_):
+        """Hinweis zeigen, solange Web-Benutzer sich nur über Endpunkte ohne Sicherheit anmelden könnten."""
+        sec = [k for k, c in self.chk_sec.items() if c.isChecked()] or ["none"]
+        self.lbl_warn.setVisible(us.plaintext_login({"benutzer": "web" if self.chk_web.isChecked() else "",
+                                                     "sicherheit": sec}, self.n_users))
 
     def _update_url(self):
         """Angezeigten Endpunkt nach Änderung von Adresse oder Port neu berechnen."""

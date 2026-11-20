@@ -4619,6 +4619,9 @@
 @ Anmeldung mit den Benutzern des Webservers ({0} eingerichtet)
 > 
 
+@ ⚠ Ohne Verschlüsselung gehen die Passwörter der Web-Benutzer im Klartext über das Netz – zusätzlich „Signieren und verschlüsseln“ wählen.
+> 
+
 @ Nur lesend. Firewall: eingehende Verbindungen auf dem Port erlauben. Das selbstsignierte Zertifikat liegt im Ordner opcua des Datenordners; Clients müssen ihm ggf. vertrauen.
 > 
 
@@ -4646,6 +4649,9 @@
 > 
 
 @ weder anonymer Zugriff noch Benutzer eingerichtet
+> 
+
+@ ⚠ OPC-UA-Server: Anmeldung ohne Verschlüsselung – Passwörter gehen im Klartext über das Netz
 > 
 
 @ Berechnet

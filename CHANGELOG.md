@@ -16,6 +16,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **OPC-UA-Server:** Der private Schlüssel des selbstsignierten Zertifikats ist nur noch für den Benutzer des Loggers
+  lesbar (0600). Dialog und Protokoll weisen darauf hin, wenn sich Web-Benutzer nur über Endpunkte ohne Sicherheit
+  anmelden können – die Passwörter gingen dann im Klartext über das Netz.
 * **Benachrichtigungen:** Ein fehlgeschlagener Kanal (Netz kurz weg, Mailserver nicht erreichbar) wird nach 30 s, 2 min
   und 10 min erneut versucht, statt die Meldung zu verlieren; die übrigen Kanäle warten nicht darauf. Slack: `<`, `>` und
   `&` im Meldetext werden maskiert (bisher z. B. `<!channel>` als Erwähnung aller). „Testnachricht senden“ läuft im
