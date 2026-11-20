@@ -5576,6 +5576,12 @@
 @ Typ {0} wird nicht unterstützt
 > Type {0} is not supported
 
+@ Typ passt nicht: in der Steuerung {0} ({1} Bytes), eingestellt {2}
+> Type mismatch: in the controller {0} ({1} bytes), configured {2}
+
+@ Programm in der Steuerung neu geladen – Symbole werden neu aufgelöst
+> Program reloaded in the controller – resolving symbols again
+
 @ Antwort zu kurz
 > Response too short
 

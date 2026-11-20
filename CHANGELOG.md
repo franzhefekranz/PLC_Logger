@@ -23,6 +23,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber ads:** Nach einem Download oder Online-Change, der die Speicheraufteilung änderte, las der Logger über
+  die beim Verbinden ermittelten Offsets unbemerkt andere Variablen. Jetzt wird die Symbolversion in jeder
+  Summenanfrage mitgelesen; ändert sie sich, verbindet der Treiber neu und löst die Symbole neu auf. Ein Typ, dessen
+  Größe nicht zum Symbol passt (z. B. `REAL` für eine `LREAL`-Variable), wird gemeldet statt teilweise gelesen.
 * **Treiber clx:** Ein Tag, der beim Verbinden nicht antwortete (CPU im Hochlauf, Programm-Download), blieb bis zum
   nächsten Verbindungsabbruch ungelesen, solange die übrigen Tags liefen. Er wird jetzt alle 30 s im Hintergrund neu
   angelegt und danach wieder mitgelesen.

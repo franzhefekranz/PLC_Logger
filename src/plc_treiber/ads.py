@@ -5,7 +5,9 @@
 Variablen symbolisch (``MAIN.fTemperatur``, ``GVL.aWerte[3]``, TwinCAT 2: ``.gWert``) oder über Indexgruppe und
 -offset (``0x4020:16``) bzw. in Merker-/E/A-Schreibweise (``%MW10``, ``%MD4``, ``%MX2.3``, ``%IW0``, ``%QX0.1``).
 Symbolnamen werden beim Verbinden einmal in Indexgruppe/-offset aufgelöst; gelesen wird mit Summenanfragen
-(viele Variablen in einer Anfrage). Blöcke: Array-Name + erster Index + Anzahl – der Ausschnitt wird am Stück gelesen.
+(viele Variablen in einer Anfrage). Nach einem Download oder Online-Change kann TwinCAT die Offsets verschieben – die
+alten zeigten dann ohne Fehlermeldung auf andere Variablen. Deshalb liest jede Summenanfrage die Symbolversion
+(Indexgruppe 0xF008) mit; ändert sie sich, verbindet der Treiber neu und löst die Symbole neu auf. Blöcke: Array-Name + erster Index + Anzahl – der Ausschnitt wird am Stück gelesen.
 Der Auswahldialog liest die Symboltabelle der Steuerung.
 
 Voraussetzung: In der Steuerung (TwinCAT-Router) eine Route zu diesem Rechner anlegen – AMS-Net-ID dieses Rechners
@@ -33,6 +35,7 @@ SYMBOL_UPLOAD_TIMEOUT_S = 30.0       # große Symboltabellen (mehrere MB) brauch
 CMD_READ, CMD_READWRITE, CMD_READSTATE = 2, 9, 4
 IG_SYM_INFOBYNAMEEX, IG_SUMUP_READ = 0xF009, 0xF080
 IG_SYM_UPLOAD, IG_SYM_UPLOADINFO2 = 0xF00B, 0xF00F
+IG_SYM_VERSION = 0xF008              # Symbolversion (1 Byte), steigt bei jeder Änderung der Symboltabelle
 # Datentyp -> (Bytes, struct-Format little-endian)
 ADS_TYPES = {"BOOL": (1, "<B"), "BYTE": (1, "<B"), "USINT": (1, "<B"), "SINT": (1, "<b"), "WORD": (2, "<H"),
              "UINT": (2, "<H"), "INT": (2, "<h"), "DWORD": (4, "<I"), "UDINT": (4, "<I"), "DINT": (4, "<i"),
@@ -300,16 +303,19 @@ class _Req:
 
 class AdsReader(Reader):
     """Löst Symbole beim Verbinden auf und liest alles mit Summenanfragen (je höchstens ``max_unter`` Teile)."""
+    client_class = AdsClient            # Tests setzen hier einen Ersatz ein
 
     def __init__(self, driver, plc, variables):
         """Leser anlegen; der Leseplan entsteht erst beim Verbinden (Symbole werden dann aufgelöst)."""
         super().__init__(driver, plc, variables)
         self.client = None
         self.requests = []
+        self.sym_version = None          # Symbolversion beim Auflösen (None = keine Symbole bzw. nicht lesbar)
+        self.uses_symbols = False
 
     def _plan(self):
         """Leseplan: je Variable eine Teilanfrage; Block-Elemente eines Arrays zusammen als ein Bereich."""
-        self.requests = []
+        self.requests, self.uses_symbols = [], False
         blocks = {}
         for pos, v in enumerate(self.vars):
             if v.dtype not in ADS_TYPES:
@@ -327,12 +333,14 @@ class AdsReader(Reader):
                 continue
             try:
                 if kind[0] == "sym":
-                    g, o, sz, _t = self.client.symbol_info(kind[1])
-                    if sz and sz < size:
-                        raise AdsError(0x705)
+                    self.uses_symbols = True
+                    g, o, sz, tname = self.client.symbol_info(kind[1])
+                    if sz and sz != size:        # sonst würde nur ein Teil gelesen (z. B. LREAL als REAL)
+                        raise ValueError(tr("Typ passt nicht: in der Steuerung {0} ({1} Bytes), eingestellt {2}")
+                                         .format(tname, sz, v.dtype))
                 else:
                     g, o = kind[1], kind[2]
-            except AdsError as e:
+            except (AdsError, ValueError) as e:
                 self.errors[v.address] = str(e)
                 continue
             r = _Req()
@@ -342,6 +350,7 @@ class AdsReader(Reader):
             lo = min(i for _p, i, _v in items)
             hi = max(i for _p, i, _v in items)
             size = ADS_TYPES[items[0][2].dtype][0]
+            self.uses_symbols = True
             try:
                 g, o, _sz, _t = self.client.symbol_info(f"{base}[{lo}]")
             except AdsError as e:
@@ -358,7 +367,7 @@ class AdsReader(Reader):
         """Verbinden, Zustand der Laufzeit abfragen, Symbole auflösen (``_plan``) und einmal lesen."""
         self.close()
         self.errors = {}
-        self.client = AdsClient(self.plc.params)
+        self.client = self.client_class(self.plc.params)
         p = self.plc.params
         try:
             self.client.connect()
@@ -366,31 +375,46 @@ class AdsReader(Reader):
         except (OSError, AdsError) as e:
             self.close()
             raise ConnectionError(f"{p.get('ip', '')} (AMS {p.get('ams_netid', '')}:{p.get('ams_port', 851)}): {e}") from None
+        version = self._symbol_version()         # vor dem Auflösen lesen: eine Änderung danach fällt auf
         self._plan()
+        self.sym_version = version if self.uses_symbols else None
         self.read()
         return max(0, len(self.vars) - len(self.errors))
 
+    def _symbol_version(self):
+        """Symbolversion der Steuerung (0 … 255) oder None, wenn sie nicht lesbar ist."""
+        try:
+            d = self.client.read(IG_SYM_VERSION, 0, 1)
+            return d[0] if d else None
+        except AdsError:
+            return None
+
     def read(self):
         """Ein Messzyklus: Teilanfragen in Summenanfragen zu höchstens ``max_unter`` Teilen senden und dekodieren
-        (Little Endian).
-
-        Symbol- oder Versionsfehler bedeuten meist, dass die SPS neu geladen wurde: dann neu verbinden, damit die
-        Symbole neu aufgelöst werden.
+        (Little Endian). Die erste Summenanfrage liest die Symbolversion mit; hat sie sich geändert (Download,
+        Online-Change), folgt ConnectionError – beim Neuverbinden werden die Symbole neu aufgelöst.
         """
         if self.client is None:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
         chunk = max(1, min(500, int(self.plc.params.get("max_unter", 500))))
+        if self.sym_version is not None and chunk > 1:
+            chunk -= 1                              # Platz für die Symbolversion (Höchstzahl der Teile einhalten)
         for i in range(0, len(self.requests), chunk):
             reqs = self.requests[i:i + chunk]
+            check = i == 0 and self.sym_version is not None
+            items = ([(IG_SYM_VERSION, 0, 1)] if check else []) + [(r.group, r.offset, r.length) for r in reqs]
             try:
-                results = self.client.sum_read([(r.group, r.offset, r.length) for r in reqs])
+                results = self.client.sum_read(items)
             except AdsError as e:
-                if e.code in (0x711, 0x710):          # SPS neu geladen: Symbole neu auflösen
-                    raise ConnectionError(str(e)) from None
+                # Fehler der ganzen Summenanfrage (z. B. SPS neu geladen): neu verbinden, Symbole neu auflösen
                 raise ConnectionError(str(e)) from None
             except (OSError, struct.error) as e:
                 raise ConnectionError(str(e) or type(e).__name__) from None
+            if check:
+                code, data = results.pop(0)
+                if not code and data and data[0] != self.sym_version:
+                    raise ConnectionError(tr("Programm in der Steuerung neu geladen – Symbole werden neu aufgelöst"))
             for r, (code, data) in zip(reqs, results):
                 for pos, off, v in r.items:
                     if code:

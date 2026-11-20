@@ -5576,6 +5576,12 @@
 @ Typ {0} wird nicht unterstützt
 > 
 
+@ Typ passt nicht: in der Steuerung {0} ({1} Bytes), eingestellt {2}
+> 
+
+@ Programm in der Steuerung neu geladen – Symbole werden neu aufgelöst
+> 
+
 @ Antwort zu kurz
 > 
 

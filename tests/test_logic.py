@@ -2532,3 +2532,56 @@ def test_ads_local_router_registration():
     assert not cl2.local_router and cl2.source == bytes([192, 168, 0, 5, 1, 1])
     cl2.close()
     srv2.close()
+
+
+def test_ads_symbol_version_and_size_check():
+    """ADS: geänderte Symbolversion (Download/Online-Change) -> ConnectionError, beim Neuverbinden neu aufgelöst;
+    Typ mit anderer Größe als in der Steuerung wird gemeldet statt teilweise gelesen."""
+    import struct
+
+    from plc_common import Plc, Variable, get_driver
+    from plc_treiber import ads
+    state = {"version": 3, "offset": 100, "resolved": 0}
+
+    class Client:
+        def __init__(self, params):
+            pass
+
+        def connect(self):
+            pass
+
+        def close(self):
+            pass
+
+        def read_state(self):
+            return (5, 0)
+
+        def read(self, group, offset, length):
+            assert group == ads.IG_SYM_VERSION
+            return bytes([state["version"]])
+
+        def symbol_info(self, name):
+            state["resolved"] += 1
+            if name == "MAIN.fWert":
+                return 0x4040, state["offset"], 4, "REAL"
+            return 0x4040, 200, 8, "LREAL"                  # MAIN.fDoppelt
+
+        def sum_read(self, items):
+            out = []
+            for g, o, n in items:
+                if g == ads.IG_SYM_VERSION:
+                    out.append((0, bytes([state["version"]])))
+                else:
+                    out.append((0, struct.pack("<f", 1.5 if o == state["offset"] else -9.0)))
+            return out
+    plc = Plc(name="TC", driver="ads", params=get_driver("ads").normalize_params({"ip": "10.0.0.9"}))
+    r = ads.AdsReader(get_driver("ads"), plc, [Variable("w", "MAIN.fWert", "REAL"),
+                                                Variable("d", "MAIN.fDoppelt", "REAL")])
+    r.client_class = Client
+    assert r.connect() == 1 and "LREAL" in r.errors["MAIN.fDoppelt"]
+    assert r.read()[0] == 1.5
+    state["version"], state["offset"] = 4, 120                # Download: Offset verschoben
+    with pytest.raises(ConnectionError, match="neu geladen"):
+        r.read()
+    r.connect()
+    assert r.read()[0] == 1.5 and r.sym_version == 4
