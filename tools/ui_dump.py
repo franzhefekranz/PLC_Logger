@@ -20,8 +20,9 @@ _seen = set()
 
 
 def _clean(text):
-    """Menütext ohne Kurztaste-Markierung (&) und ohne Leerraum am Rand."""
-    return (text or "").replace("&&", "\0").replace("&", "").replace("\0", "&").strip()
+    """Menütext ohne Kurztaste-Markierung (&), ohne angehängtes Tastenkürzel („\tF1“) und ohne Leerraum am Rand."""
+    text = (text or "").split("\t")[0]
+    return text.replace("&&", "\0").replace("&", "").replace("\0", "&").strip()
 
 
 def _action(a):
@@ -85,12 +86,16 @@ def _tip(w):
 def _controls(win):
     """Bedienelemente in Fensterreihenfolge mit Reiter-Pfad."""
     from PySide6.QtWidgets import (QAbstractButton, QAbstractItemView, QFormLayout, QGroupBox, QLabel, QMenu,
-                                   QTabBar, QToolButton)
+                                   QTabBar, QToolBar, QToolButton)
     out, done = [], set()
     for w in win.findChildren(object):
         if not hasattr(w, "isWidgetType") and not isinstance(w, QFormLayout):
             continue
         try:
+            # nur Elemente dieses Fensters (keine Kind-Dialoge, die das Fenster als Elternteil haben)
+            owner = w.parentWidget() if isinstance(w, QFormLayout) else w
+            if owner is None or owner.window() is not win:
+                continue
             if isinstance(w, QFormLayout):
                 for r in range(w.rowCount()):
                     li = w.itemAt(r, QFormLayout.ItemRole.LabelRole)
@@ -110,6 +115,8 @@ def _controls(win):
             elif isinstance(w, QAbstractButton) and not isinstance(w, QToolButton) and _clean(w.text()):
                 out.append({"kind": "kaestchen" if w.isCheckable() and type(w).__name__ in ("QCheckBox", "QRadioButton")
                             else "knopf", "text": _clean(w.text()), "tip": _tip(w), "tabs": _tab_path(w, win)})
+            elif isinstance(w, QToolButton) and isinstance(w.parentWidget(), QToolBar):
+                continue                            # steht schon unter den Werkzeugleisten
             elif isinstance(w, QToolButton) and (_clean(w.text()) or w.toolTip()):
                 out.append({"kind": "knopf", "text": _clean(w.text()), "tip": _tip(w), "tabs": _tab_path(w, win)})
             elif isinstance(w, QAbstractItemView) and w.model() is not None and hasattr(w, "horizontalHeader"):
@@ -140,14 +147,14 @@ def record(win, shot=""):
         d["menus"] = [{"text": _clean(a.text()), "sub": _menu(a.menu())} for a in win.menuBar().actions()
                       if a.menu() is not None]
     bars = []
-    for tb in win.findChildren(QToolBar):
+    for tb in [b for b in win.findChildren(QToolBar) if b.window() is win]:
         acts = [_action(a) for a in tb.actions() if not a.isSeparator() and _clean(a.text())]
         if acts:
             bars.append({"text": _clean(tb.windowTitle()), "sub": acts})
     if bars:
         d["toolbars"] = bars
     tabs = []
-    for t in win.findChildren(QTabWidget):
+    for t in [t for t in win.findChildren(QTabWidget) if t.window() is win]:
         tabs.append({"tabs": _tab_path(t, win), "pages": [_clean(t.tabText(i)) for i in range(t.count())]})
     if tabs:
         d["tabwidgets"] = tabs
