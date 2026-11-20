@@ -11,7 +11,9 @@ Adressen in Siemens-Schreibweise (deutsch oder englisch), der Datentyp kommt aus
     A1.0  AB1  AW2   /  Q1.0  QB1  QW2                   Ausgänge
 
 S7-1200/1500: PUT/GET muss in der CPU erlaubt sein, gelesen werden nur nicht optimierte Datenbausteine. Für
-optimierte Bausteine den Treiber „tia“ verwenden. Blöcke (Startadresse + Anzahl) werden mit EINER Anfrage gelesen.
+optimierte Bausteine den Treiber „tia“ verwenden. Blöcke (Startadresse + Anzahl) werden mit EINER Anfrage gelesen;
+Einzelvariablen desselben Bereichs bzw. DBs, die höchstens ``GAP_BYTES`` auseinanderliegen, ebenfalls (Gruppe). Schlägt
+eine Gruppe fehl, obwohl die Verbindung steht (z. B. Lücke über das DB-Ende hinaus), wird sie in Einzelanfragen zerlegt.
 Ringpuffer (zyklussynchrone Aufzeichnung, siehe ringbuffer.py): Adresse des Zählers im nicht optimierten DB, z. B.
 ``DB100.DBX0.0``; die Datensätze folgen ab Byte +4.
 Der Auswahldialog übernimmt Variablen aus importierten DB-Quellen (TIA Portal/STEP 7), da die SPS über
@@ -35,9 +37,10 @@ S7_TYPES = {
 
 # Schreibweisen: DB10.DBD4 / DB10.DBX0.1 (Siemens), DB10.4 bzw. DB10.0.1 (kurz), M5.0 / MW10 / EW64 / IW64 / AB3 / QB3
 # (deutsch und englisch). Die Größe (B/W/D/L) ergibt sich beim Lesen aus dem Typ, nicht aus dem Buchstaben
-_RE_DB = re.compile(r"^DB(\d+)\.DB([XBWDL]?)(\d+)(?:\.(\d))?$", re.I)
-_RE_DB_SHORT = re.compile(r"^DB(\d+)\.(\d+)(?:\.(\d))?$", re.I)
-_RE_AREA = re.compile(r"^([MEAIQ])([XBWDL]?)(\d+)(?:\.(\d))?$", re.I)
+# Bitnummer nur 0 … 7 (DB10.DBX0.8 wäre sonst stillschweigend immer 0)
+_RE_DB = re.compile(r"^DB(\d+)\.DB([XBWDL]?)(\d+)(?:\.([0-7]))?$", re.I)
+_RE_DB_SHORT = re.compile(r"^DB(\d+)\.(\d+)(?:\.([0-7]))?$", re.I)
+_RE_AREA = re.compile(r"^([MEAIQ])([XBWDL]?)(\d+)(?:\.([0-7]))?$", re.I)
 # Bereichsbuchstabe -> snap7-Bereich: Merker, Prozessabbild Eingänge (E/I), Ausgänge (A/Q), Datenbaustein
 _AREA_KEY = {"M": "MK", "E": "PE", "I": "PE", "A": "PA", "Q": "PA", "DB": "DB"}
 
@@ -111,9 +114,35 @@ def list_plc_dbs(client) -> dict:
     return result
 
 
+# Einzelvariablen zusammenfassen: höchstens so viele ungenutzte Bytes zwischen zwei Variablen, Gruppe höchstens so groß
+GAP_BYTES, MAX_GROUP_BYTES = 16, 512
+
+
 class _Item:
     """Eine zu lesende Variable mit zerlegter Adresse: Position in der Ergebnisliste, Bereich, DB, Byte, Bit, Typ."""
     __slots__ = ("pos", "area", "db", "byte", "bit", "dtype", "address")
+
+
+def _size(it):
+    """Belegte Bytes einer Variable (BOOL: das Byte mit dem Bit)."""
+    return S7_TYPES[it.dtype][0]
+
+
+def _group(singles):
+    """Einzelvariablen zu Leseanfragen zusammenfassen -> Einträge des Leseplans: ("single", it) oder
+    ("group", Bereich, DB, Start, Bytes, [items]) für benachbarte Variablen desselben Bereichs bzw. DBs."""
+    groups = []
+    for it in sorted(singles, key=lambda i: (i.area, i.db, i.byte)):
+        g = groups[-1] if groups else None
+        end = it.byte + _size(it)
+        if (g and (g[0], g[1]) == (it.area, it.db) and it.byte <= g[3] + GAP_BYTES
+                and max(g[3], end) - g[2] <= MAX_GROUP_BYTES):
+            g[3] = max(g[3], end)
+            g[4].append(it)
+        else:
+            groups.append([it.area, it.db, it.byte, end, [it]])
+    return [("single", g[4][0]) if len(g[4]) == 1 else ("group", g[0], g[1], g[2], g[3] - g[2], g[4])
+            for g in groups]
 
 
 class S7Reader(Reader, RingSupport):
@@ -125,7 +154,7 @@ class S7Reader(Reader, RingSupport):
         """
         super().__init__(driver, plc, variables)
         self.client = None
-        self.plan = []           # [("block", area, db, start, nbytes, [items]) | ("single", item)]
+        self.plan = []           # [("block"|"group", area, db, start, nbytes, [items]) | ("single", item)]
         self.bad = {}            # pos -> Fehlertext (ungültige Adresse)
         ring_pos = self._setup_rings(self.vars)
         for ring in self.rings:
@@ -133,7 +162,7 @@ class S7Reader(Reader, RingSupport):
                 ring.db, ring.byte = parse_ring(ring.address)
             except ValueError as e:
                 ring.error = str(e)
-        blocks = {}
+        blocks, singles = {}, []
         for pos, v in enumerate(self.vars):
             if pos in ring_pos:
                 continue
@@ -150,11 +179,12 @@ class S7Reader(Reader, RingSupport):
             if v.block:
                 blocks.setdefault((v.block, it.area, it.db), []).append(it)
             else:
-                self.plan.append(("single", it))
+                singles.append(it)
+        self.plan = _group(singles)
         # Ein Block = eine Anfrage über den ganzen Bytebereich vom ersten bis hinter das letzte Element
         for (_name, area, db), items in blocks.items():
             start = min(i.byte for i in items)
-            end = max(i.byte + (1 if i.dtype == "BOOL" else S7_TYPES[i.dtype][0]) for i in items)
+            end = max(i.byte + _size(i) for i in items)
             self.plan.append(("block", area, db, start, end - start, items))
 
     def connect(self):
@@ -203,29 +233,41 @@ class S7Reader(Reader, RingSupport):
         """
         out = [NAN] * len(self.vars)
         c = self.client
-        for entry in self.plan:
-            if entry[0] == "block":
-                _k, area, db, start, nbytes, items = entry
+        split = []
+        for k, entry in enumerate(self.plan):
+            if entry[0] in ("block", "group"):
+                kind, area, db, start, nbytes, items = entry
                 label = items[0].address
                 try:
                     raw = bytes(c.read_area(self.areas[area], db, start, nbytes))
                 except Exception as e:
-                    self._failed(e, label)
+                    if kind == "group":
+                        self._failed(e, label)          # Verbindung weg -> Ausnahme; sonst einzeln lesen:
+                        self.errors.pop(label, None)
+                        split.append(k)
+                        for it in items:
+                            out[it.pos] = self._read_single(c, it)
+                    else:
+                        self._failed(e, label)
                     continue
                 self.errors.pop(label, None)
                 for it in items:
                     out[it.pos] = self._decode(raw, it, start)
             else:
-                it = entry[1]
-                size = S7_TYPES[it.dtype][0]
-                try:
-                    raw = bytes(c.read_area(self.areas[it.area], it.db, it.byte, size))
-                except Exception as e:
-                    self._failed(e, it.address)
-                    continue
-                self.errors.pop(it.address, None)
-                out[it.pos] = self._decode(raw, it, it.byte)
+                out[entry[1].pos] = self._read_single(c, entry[1])
+        for k in reversed(split):                       # zerlegte Gruppen künftig als Einzelanfragen
+            self.plan[k:k + 1] = [("single", it) for it in self.plan[k][5]]
         return out
+
+    def _read_single(self, c, it):
+        """Eine Variable mit eigener Anfrage lesen -> Wert oder NaN (Fehler in ``errors``)."""
+        try:
+            raw = bytes(c.read_area(self.areas[it.area], it.db, it.byte, _size(it)))
+        except Exception as e:
+            self._failed(e, it.address)
+            return NAN
+        self.errors.pop(it.address, None)
+        return self._decode(raw, it, it.byte)
 
     # ------------------------------------------------------------------ Ringpuffer (siehe ringbuffer.py)
     def _ring_is_connection_error(self, exc):

@@ -361,3 +361,46 @@ def test_tia_reader_symbolic_ring():
     r3 = TagReader(plc, wrong.variables(), client_factory=Client, catalog_items=items)
     r3.connect()
     assert "Anderer_DB.Zaehler" in r3.errors[r3.rings[0].label]
+
+
+def test_s7_reader_groups_singles():
+    """Einzelvariablen desselben DBs mit kleinen Lücken: eine Anfrage; schlägt die Gruppe fehl (Verbindung steht),
+    wird sie in Einzelanfragen zerlegt; Bitnummer 8 ist ungültig."""
+    import struct
+
+    from plc_common import Variable
+    from plc_treiber.s7 import DRIVER, S7Reader, parse
+    mem = bytearray(64)
+    struct.pack_into(">f", mem, 0, 1.5)
+    struct.pack_into(">f", mem, 4, 2.5)
+    struct.pack_into(">h", mem, 20, -7)
+    mem[30] = 0b100
+
+    class Client:
+        def __init__(self):
+            self.calls, self.limit = [], None
+
+        def read_area(self, area, db, start, size):
+            self.calls.append((area, db, start, size))
+            if self.limit and size > self.limit:
+                raise RuntimeError("Adresse außerhalb des Bereichs")
+            return bytearray(mem[start:start + size])
+
+        def get_connected(self):
+            return True
+    variables = [Variable("a", "DB10.DBD0", "REAL"), Variable("b", "DB10.DBD4", "REAL"),
+                 Variable("c", "DB10.DBW20", "INT"), Variable("d", "DB10.DBX30.2", "BOOL"),
+                 Variable("e", "DB11.DBD0", "REAL")]
+    r = S7Reader(DRIVER, Plc(name="SPS", driver="s7"), variables)
+    r.client, r.areas = Client(), {"DB": 0x84, "MK": 0x83, "PE": 0x81, "PA": 0x82}
+    assert r.read() == [1.5, 2.5, -7.0, 1.0, 1.5]
+    assert sorted(r.client.calls) == [(0x84, 10, 0, 31), (0x84, 11, 0, 4)]
+    r.client.calls.clear()
+    r.client.limit = 8                                   # Gruppe zu groß für die „SPS“: einzeln weiter
+    assert r.read() == [1.5, 2.5, -7.0, 1.0, 1.5] and not r.errors
+    r.client.calls.clear()
+    r.read()
+    assert all(size <= 4 for _a, _d, _s, size in r.client.calls) and len(r.client.calls) == 5
+    with pytest.raises(ValueError):
+        parse("DB10.DBX0.8")
+    assert DRIVER.check_address("M5.9", "BOOL") and not DRIVER.check_address("M5.7", "BOOL")

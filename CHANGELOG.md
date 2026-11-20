@@ -23,6 +23,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber s7:** Einzelvariablen (außerhalb von Blöcken) kosteten je eine Anfrage – 60 Variablen in einem DB
+  brauchten 60 Rundreisen je Zyklus. Benachbarte Variablen desselben DBs bzw. Bereichs (Lücke bis 16 Bytes) werden jetzt
+  mit einer Anfrage gelesen; schlägt eine solche Gruppe fehl, wird einzeln weitergelesen. Bitnummern 8 und 9
+  (z. B. `DB10.DBX0.8`) werden als ungültig gemeldet statt stillschweigend 0 zu liefern.
 * **Eigene Treiber:** Ein Treiber mit `@dataclass` (und `from __future__ import annotations`) ließ sich nicht laden.
   Der Treiberordner stand vor den Systemmodulen im Suchpfad – eine Hilfsdatei wie `socket.py` oder `csv.py` ersetzte
   das gleichnamige Modul im ganzen Programm. `sys.exit()` in einem Treiber beendete das Programm. Gleichzeitiges Laden
