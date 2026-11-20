@@ -23,6 +23,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **SVG-Screenshots:** Über mehrere Tage war jeder Teilstrich der Zeitachse mit „00:00“ beschriftet – jetzt mit dem
+  Datum (bei Tagesschritten „TT.MM.“). Nach einer Zeitumstellung liegen die Striche wieder auf vollen Stunden. Zeitachse
+  von PDF-Bericht und SVG-Export nutzen dieselbe Teilung.
 * **Startbild:** Mit einer zuletzt benutzten Konfiguration auf einem nicht erreichbaren Server (`\\Server\…`) erschien
   das Startbild erst nach dem Zeitlimit des Netzwerks je Eintrag – die Änderungszeit wird bei Netzpfaden nicht mehr
   gelesen („Netzlaufwerk“). „Starte …“ und „Lade …“ werden übersetzt.
