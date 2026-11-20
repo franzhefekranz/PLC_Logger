@@ -1,13 +1,15 @@
 # Aufbau aller Fenster und Dialoge mitschreiben (Menüs, Tastenkürzel, Reiter, Knöpfe, Felder, Tooltips) – Grundlage
-# des Kapitels „Referenz“ der Bedienungsanleitung. Start von Hand; Ergebnis als Artifact „ui-referenz“
-# (referenz_de.json, referenz_en.json). Läuft wie die Screenshots unter Windows, ohne Webseiten, GIF und Grafana.
+# des Kapitels „Referenz“ der Bedienungsanleitung. Start von Hand; Ergebnis (referenz_de.json, referenz_en.json) als
+# Artifact „ui-referenz“ und im Zweig „ui-referenz“ (Ordner referenz/). Übernehmen:
+#   git fetch origin +ui-referenz:refs/remotes/origin/ui-referenz && git checkout origin/ui-referenz -- referenz
+# Läuft wie die Screenshots unter Windows, ohne Webseiten, GIF und Grafana.
 name: UI-Referenz
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   referenz:
@@ -34,3 +36,12 @@ jobs:
         with:
           name: ui-referenz
           path: referenz
+      - name: In den Zweig "ui-referenz" übernehmen
+        shell: bash
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout -B ui-referenz
+          git add -f referenz
+          git commit -m "Aufbau der Fenster (automatisch erzeugt)" || echo "keine Änderung"
+          git push -f origin ui-referenz
