@@ -60,15 +60,15 @@ def _tab_path(w, top):
     """Reiter-Pfad eines Widgets im Fenster ``top`` (äußerer Reiter zuerst), z. B. ["Verbindung", "Datenbank"]."""
     from PySide6.QtWidgets import QTabWidget
     path = []
-    child, p = w, w.parentWidget()
+    p = w.parentWidget()
     while p is not None and p is not top:
         if isinstance(p, QTabWidget):
             for i in range(p.count()):
                 page = p.widget(i)
-                if page is child or page.isAncestorOf(child):
+                if page is w or page.isAncestorOf(w):
                     path.insert(0, _clean(p.tabText(i)))
                     break
-        child, p = p, p.parentWidget()
+        p = p.parentWidget()
     return path
 
 
@@ -93,6 +93,8 @@ def _controls(win):
             continue
         try:
             # nur Elemente dieses Fensters (keine Kind-Dialoge, die das Fenster als Elternteil haben)
+            if not isinstance(w, QFormLayout) and not w.isWidgetType():
+                continue
             owner = w.parentWidget() if isinstance(w, QFormLayout) else w
             if owner is None or owner.window() is not win:
                 continue
@@ -132,7 +134,16 @@ def _controls(win):
 
 
 def record(win, shot=""):
-    """Aufbau des Fensters ``win`` (jedes Fenster nur einmal) mitschreiben; ``shot`` = Bild, bei dem es gezeigt wurde."""
+    """Aufbau des Fensters ``win`` (jedes Fenster nur einmal) mitschreiben; ``shot`` = Bild, bei dem es gezeigt wurde.
+    Fehler beim Mitschreiben stören die Bilder nicht (Meldung auf der Konsole)."""
+    try:
+        _record(win, shot)
+    except Exception as e:                           # nie die Bildfunktion abbrechen
+        print(f"Referenz: Fehler bei {type(win).__name__}: {e!r}", flush=True)
+
+
+def _record(win, shot):
+    """Rumpf von record."""
     from PySide6.QtWidgets import QMainWindow, QTabWidget, QToolBar
     try:
         win = win.window()
