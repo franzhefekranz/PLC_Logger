@@ -2,7 +2,11 @@
 # Copyright (C) 2026 Michael Taxis
 """Alle Bilder der Bedienungsanleitung automatisch erzeugen (Fenster im Demo-Modus öffnen und abfotografieren).
 
-Aufruf:  python tools/make_screenshots.py [--lang de|en] [--out ORDNER] [--only name1,name2]
+Aufruf:  python tools/make_screenshots.py [--lang de|en] [--out ORDNER] [--only name1,name2] [--skip name1,name2]
+                                         [--referenz DATEI.json]
+
+``--referenz``: zusätzlich den Aufbau jedes gezeigten Fensters und Dialogs (Menüs, Tastenkürzel, Reiter, Knöpfe,
+Felder, Tooltips) als JSON mitschreiben (``tools/ui_dump.py``) – Grundlage des Kapitels „Referenz“ der Anleitung.
 
 Deutsch landet in ``doc/images``, Englisch in ``doc/images/en``. Der Workflow *Screenshots* führt das Skript unter
 Windows aus (Bilder wie im echten Programm) und legt das Ergebnis im Zweig ``bilder`` ab.
@@ -33,6 +37,7 @@ import traceback
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
 
 SHOTS = []          # [(Name, Funktion)] in Aufrufreihenfolge
 JOBS = []           # Aufträge für den nächsten modalen Dialog (siehe fake_exec)
@@ -64,6 +69,9 @@ def save(name, what, crop=None):
     pm = what if hasattr(what, "copy") and not hasattr(what, "grab") else what.grab()
     if crop:
         pm = pm.copy(QRect(*crop))
+    if CTX.get("ref") and hasattr(what, "window"):
+        import ui_dump
+        ui_dump.record(what, name)
     path = os.path.join(CTX["out"], name + ".png")
     pm.save(path)
     print(f"Bild: {name}.png ({pm.width()} x {pm.height()})", flush=True)
@@ -102,6 +110,9 @@ def job(name, prep=None, over=None, size=None, result=0, margin=None):
 def fake_exec(dlg):
     """Ersatz für QDialog.exec: Auftrag ausführen (zeigen, vorbereiten, fotografieren) oder sofort zurückkehren."""
     j = JOBS.pop(0) if JOBS else None
+    if CTX.get("ref"):                                   # auch nicht fotografierte Dialoge mitschreiben
+        import ui_dump
+        ui_dump.record(dlg, j["name"] if j else "")
     if j is None:
         return 0
     if j["size"]:
@@ -1016,6 +1027,9 @@ def patch_dialogs():
             if self.isWindow() and not isinstance(self, QMessageBox) and type(self).__name__ != "QMenu":
                 self.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
             _orig(self)
+            if CTX.get("ref") and self.isWindow() and type(self).__name__ not in ("QMenu", "QMessageBox"):
+                import ui_dump
+                ui_dump.record(self)
         cls.show = show
     for kind in ("information", "warning", "critical"):
         setattr(QMessageBox, kind, staticmethod(lambda *a, **k: QMessageBox.StandardButton.Ok))
@@ -1035,6 +1049,8 @@ def main():
     ap.add_argument("--lang", default="de")
     ap.add_argument("--out", default="")
     ap.add_argument("--only", default="", help="nur diese Bildfunktionen (Namen wie in @shot, durch Komma getrennt)")
+    ap.add_argument("--skip", default="", help="diese Bildfunktionen auslassen (z. B. webseiten)")
+    ap.add_argument("--referenz", default="", help="Aufbau der Fenster als JSON in diese Datei schreiben")
     args = ap.parse_args()
     out = args.out or os.path.join(ROOT, "doc", "images", *([] if args.lang == "de" else ["en"]))
     os.makedirs(out, exist_ok=True)
@@ -1060,7 +1076,8 @@ def main():
     print(f"Bildschirm: {scr.width()} x {scr.height()}, Stil: {app.style().name()}", flush=True)
     import warnings
     warnings.filterwarnings("ignore", category=FutureWarning)
-    CTX.update(out=out, folder=folder, lang=args.lang, cfg=demo_config(folder))
+    CTX.update(out=out, folder=folder, lang=args.lang, cfg=demo_config(folder), ref=bool(args.referenz))
+    skip = {x.strip() for x in args.skip.split(",") if x.strip()}
     only = {x.strip() for x in args.only.split(",") if x.strip()}
     for name in list(only):                       # Voraussetzungen: Logger-Aufzeichnung bzw. IO-Check
         only |= NEEDS.get(name, set())
@@ -1068,7 +1085,7 @@ def main():
     import socket
     real_hostname = socket.gethostname
     for name, fn in SHOTS:
-        if only and name not in only:
+        if (only and name not in only) or name in skip:
             continue
         # neutraler Rechnername in angezeigten Adressen – nicht während der Logger mit OPC-UA-Server läuft
         socket.gethostname = (lambda: "ipc-kesselhaus") if name in ("benachrichtigungen", "config_gesamt") \
@@ -1081,6 +1098,16 @@ def main():
             print(f"FEHLER bei {name}:\n{traceback.format_exc()}", flush=True)
         socket.gethostname = real_hostname
         wait(200)
+    if args.referenz:                                    # Hauptfenster zuletzt (Menüs vollständig aufgebaut)
+        import ui_dump
+        for key in ("w", "cw", "io"):
+            if CTX.get(key) is not None:
+                ui_dump._seen.discard((type(CTX[key]).__name__, CTX[key].windowTitle()))
+                ui_dump.DATA["windows"] = [d for d in ui_dump.DATA["windows"]
+                                           if (d["class"], d["title"]) != (type(CTX[key]).__name__,
+                                                                           CTX[key].windowTitle())]
+                ui_dump.record(CTX[key], key)
+        ui_dump.write(args.referenz)
     for key in ("io", "w", "cw"):
         win = CTX.get(key)
         if win is not None:

@@ -1,0 +1,36 @@
+# Aufbau aller Fenster und Dialoge mitschreiben (Menüs, Tastenkürzel, Reiter, Knöpfe, Felder, Tooltips) – Grundlage
+# des Kapitels „Referenz“ der Bedienungsanleitung. Start von Hand; Ergebnis als Artifact „ui-referenz“
+# (referenz_de.json, referenz_en.json). Läuft wie die Screenshots unter Windows, ohne Webseiten, GIF und Grafana.
+name: UI-Referenz
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  referenz:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Abhängigkeiten
+        run: |
+          python -m pip install PySide6-Essentials pyqtgraph numpy Flask cryptography openpyxl asyncua python-snap7 pymupdf pillow
+      - name: Fenster mitschreiben
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/bilder" referenz
+          for L in de en; do
+            python tools/make_screenshots.py --lang $L --out "$RUNNER_TEMP/bilder/$L" \
+              --skip demo,web_tablet,speicherplatz --referenz referenz/referenz_$L.json 2>&1 | tee referenz/log_$L.txt
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-referenz
+          path: referenz
