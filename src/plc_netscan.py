@@ -30,6 +30,7 @@ angegeben ist; der Rundruf erreicht nur das eigene Netz. Ein Port, der nicht ant
 gesperrt sein.
 """
 import ipaddress
+import re
 import socket
 import struct
 import threading
@@ -98,16 +99,18 @@ def default_range():
     return str(ipaddress.ip_network(ip + "/24", strict=False))
 
 
+def _parts(text):
+    """Bereichsangabe in Teile zerlegen (Komma, Semikolon, Leerzeichen); „10 - 50“ gilt wie „10-50“."""
+    return [p for p in re.split(r"[,;\s]+", re.sub(r"\s*-\s*", "-", text or "")) if p]
+
+
 def parse_targets(text):
     """Bereichsangabe -> Liste von IPv4-Adressen.
 
     Erlaubt (durch Komma oder Leerzeichen getrennt): ``192.168.0.0/24``, ``192.168.0.10-50``,
     ``192.168.0.10-192.168.0.80`` und einzelne Adressen. Höchstens ``MAX_HOSTS`` Adressen; ValueError bei Fehlern."""
     out = []
-    for part in text.replace(";", ",").replace(" ", ",").split(","):
-        part = part.strip()
-        if not part:
-            continue
+    for part in _parts(text):
         try:
             if "/" in part:
                 net = ipaddress.ip_network(part, strict=False)
@@ -144,7 +147,7 @@ def parse_targets(text):
 def broadcasts(text):
     """Rundruf-Adressen der Netze im Bereich (nur Netzangaben wie /24) bzw. 255.255.255.255."""
     out = []
-    for part in text.replace(";", ",").replace(" ", ",").split(","):
+    for part in _parts(text):
         if "/" in part:
             try:
                 net = ipaddress.ip_network(part.strip(), strict=False)
@@ -334,7 +337,8 @@ def scan(range_text, ports=None, timeout=0.4, workers=128, progress=None, cancel
     enip = {}
     if identify and ENIP_PORT in ports:
         enip = enip_discover(broadcasts(range_text), timeout=1.0)
-        enip = {ip: v for ip, v in enip.items() if ip in set(hosts)}
+        wanted = set(hosts)
+        enip = {ip: v for ip, v in enip.items() if ip in wanted}
     jobs = [(h, p) for h in hosts for p in ports]
     done = 0
     with ThreadPoolExecutor(max_workers=max(1, int(workers))) as ex:
@@ -360,16 +364,24 @@ def scan(range_text, ports=None, timeout=0.4, workers=128, progress=None, cancel
     results = []
     ips = sorted(set(open_ports) | set(enip), key=lambda x: tuple(int(n) for n in x.split(".")))
     # Kennung nachlesen: EtherNet/IP ohne Rundruf-Antwort per Unicast, S7 über snap7 (parallel, mit Zeitlimit)
-    if identify:
+    def cancelled():
+        """Abbruch angefordert? (auch während der Gerätekennung prüfen – sie kann bei vielen S7-CPUs dauern)"""
+        return cancel is not None and cancel()
+    if identify and not cancelled():
         missing = [ip for ip in ips if ENIP_PORT in open_ports.get(ip, []) and ip not in enip]
         if missing:
             enip.update(enip_discover([], timeout=0.8, unicast=missing))
     s7 = {}
-    if identify:
+    if identify and not cancelled():
         s7_hosts = [ip for ip in ips if 102 in open_ports.get(ip, [])]
         with ThreadPoolExecutor(max_workers=16) as ex:
-            for ip, info in zip(s7_hosts, ex.map(s7_identity, s7_hosts)):
-                s7[ip] = info
+            futs = {ex.submit(s7_identity, ip): ip for ip in s7_hosts}
+            for fut in as_completed(futs):
+                s7[futs[fut]] = fut.result()
+                if cancelled():
+                    for f in futs:
+                        f.cancel()             # noch nicht begonnene Kennungen auslassen
+                    break
     for ip in ips:
         f = Found(ip=ip, ports=sorted(open_ports.get(ip, []), key=_prio))
         results.append(suggest(f, s7=s7.get(ip), enip=enip.get(ip)))

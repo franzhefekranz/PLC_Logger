@@ -16,6 +16,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Netzwerk durchsuchen:** Bereiche mit Leerzeichen um den Bindestrich („192.168.0.10 - 50“) werden angenommen;
+  „Abbrechen“ wirkt auch während der Gerätekennung (S7-Baugruppe, EtherNet/IP) – bisher lief sie vollständig weiter.
 * **Netzwerk-Panel:** Konfigurationen mit `%`, `$` oder `\` im Pfad starten auch als Dienst (systemd las sie bisher als
   Platzhalter bzw. Variablen). Mehrere gleichzeitige Vorgänge (z. B. WLAN-Suche und „WLAN aus“, Logger starten und
   stoppen) melden jeweils ihr Ergebnis – bisher ging das des ersten verloren.

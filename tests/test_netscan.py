@@ -83,3 +83,27 @@ def test_port_scan_and_suggestions():
     assert ns.suggest(ns.Found(ip="10.0.0.7", ports=[4840])).params == {"endpoint": "opc.tcp://10.0.0.7:4840"}
     assert ns.suggest(ns.Found(ip="10.0.0.8", ports=[48898])).params["ams_netid"] == "10.0.0.8.1.1"
     assert ns.suggest(ns.Found(ip="10.0.0.9", ports=[502])).driver == "modbus"
+
+
+def test_parse_spaces_and_cancel_during_identify(monkeypatch):
+    """„10 - 12“ mit Leerzeichen wie „10-12“; „Abbrechen“ wirkt auch während der S7-Kennung (nicht begonnene entfallen)."""
+    import threading
+    import time
+
+    import plc_netscan as ns
+    assert ns.parse_targets("192.168.0.10 - 12 ; 10.0.0.1") == ["192.168.0.10", "192.168.0.11", "192.168.0.12",
+                                                                "10.0.0.1"]
+    assert ns.broadcasts("10.1.0.0/24 ; 10.2.0.0/16") == ["10.1.0.255", "10.2.255.255"]
+    stop = threading.Event()
+    calls = []
+
+    def slow_identity(ip, timeout=1.5):
+        calls.append(ip)
+        stop.set()                                   # nach der ersten Kennung „Abbrechen“
+        time.sleep(0.2)
+        return {"device": "CPU 315-2 PN/DP", "slot": 2}
+    monkeypatch.setattr(ns, "port_open", lambda ip, port, timeout: port == 102)
+    monkeypatch.setattr(ns, "s7_identity", slow_identity)
+    t0 = time.monotonic()
+    found = ns.scan("10.9.0.1-100", ports=[102], identify=True, cancel=stop.is_set)
+    assert len(found) <= 100 and len(calls) < 40 and time.monotonic() - t0 < 5
