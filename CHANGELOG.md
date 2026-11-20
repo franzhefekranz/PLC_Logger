@@ -23,6 +23,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **PDF-Berichte:** Die Standardabweichung großer Werte mit kleiner Schwankung (z. B. Zählerstand 10 000 000 ± 0,01)
+  war durch Rundungsfehler falsch. In Wochen- und Monatsberichten über die Zeitumstellung lagen die Teilstriche danach
+  eine Stunde daneben (ein Tag doppelt beschriftet). Zeichen wie „Δ“, „≥“, „→“ oder „Ω“ erschienen als „?“ – sie
+  werden jetzt ersetzt (auch im IO-Check-Protokoll). PNG-Logos mit Transparenz werden deutlich schneller geladen und
+  nur einmal je Programmlauf.
 * **Aufzeichnung:** Ein Schreibfehler der CSV-Datei (Platte voll, USB-Stick gezogen, Netzlaufwerk weg) oder ein Fehler
   in OPC UA, MQTT oder einem Trigger hielt die ganze Aufzeichnung an – ohne Meldung, die Diagramme froren ein. Jetzt
   kommt eine Meldung, Anzeige und Datenbank laufen weiter, und nach 30 s wird eine neue CSV-Datei angelegt. Verworfene

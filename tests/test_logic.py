@@ -641,6 +641,111 @@ def test_iocheck_scan_addresses():
 
 
 # ---- Berichte, Analyse, CSV ---------------------------------------------------------------------------------------
+def test_report_stats_precise_for_large_values():
+    """Standardabweichung bleibt bei großen Werten mit kleiner Schwankung genau (add und add_many)."""
+    import statistics
+
+    from plc_report import ReportAccumulator
+    xs = [1e7 + 0.01 * ((k * 7919) % 13 - 6) for k in range(2000)]
+    a = ReportAccumulator(["z"], ["LREAL"], 0, 2000)
+    for k, x in enumerate(xs):
+        a.add(k, [x])
+    b = ReportAccumulator(["z"], ["LREAL"], 0, 2000)
+    b.add_many(np.arange(2000.0), np.array([xs]))
+    for acc in (a, b):
+        _n, _t, c, mn, mx, mean, sd, last, _s, _r = acc.stats()[0]
+        assert c == 2000 and abs(mean - statistics.fmean(xs)) < 1e-6
+        assert abs(sd - statistics.stdev(xs)) < 1e-6 * statistics.stdev(xs) * 1e3
+
+
+def test_report_time_ticks_across_dst():
+    """Teilstriche eines Wochenberichts über die Zeitumstellung liegen weiter auf 0:00 (kein Tag doppelt)."""
+    import time
+    from datetime import datetime
+
+    import plc_report
+    if not hasattr(time, "tzset"):
+        pytest.skip("Zeitzone lässt sich hier nicht umstellen")
+    old = os.environ.get("TZ")
+    os.environ["TZ"] = "Europe/Berlin"
+    time.tzset()
+    try:
+        t0 = datetime(2026, 10, 19).timestamp()
+        ticks = plc_report._time_ticks(t0, datetime(2026, 10, 26).timestamp())
+        labels = [lab for _t, lab in ticks]
+        assert len(labels) == len(set(labels)) and "25.10." in labels and "26.10." in labels
+        assert all(datetime.fromtimestamp(t).hour == 0 for t, _l in ticks)
+        hours = plc_report._time_ticks(datetime(2026, 10, 25, 0).timestamp(), datetime(2026, 10, 25, 12).timestamp())
+        assert all(datetime.fromtimestamp(t).minute == 0 and datetime.fromtimestamp(t).hour % 2 == 0
+                   for t, _l in hours)
+    finally:
+        if old is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = old
+        time.tzset()
+
+
+def test_pdf_text_substitutes_missing_characters():
+    """Zeichen außerhalb von Windows-1252 werden ersetzt statt zu „?“; Breite passt zur Ersetzung."""
+    import plc_report
+    assert plc_report._pdf_text("Δp ≥ 5 → OK") == b"Delta p >= 5 -> OK"
+    assert plc_report.text_width("Δp", 10) == plc_report.text_width("Delta p", 10)
+    assert plc_report._pdf_text("Temperatur 20 °C") == "Temperatur 20 °C".encode("cp1252")
+
+
+def _png_bytes(px, filters):
+    """PNG (RGBA, 8 Bit) aus px[h][w][4] mit den Zeilenfiltern ``filters`` (je Zeile 0 … 4)."""
+    import struct
+    import zlib
+    h, w = px.shape[:2]
+    bpp, raw, prev = 4, b"", np.zeros(w * 4, np.int32)
+    for y in range(h):
+        line = px[y].reshape(-1).astype(np.int32)
+        left = np.concatenate([np.zeros(bpp, np.int32), line[:-bpp]])
+        upleft = np.concatenate([np.zeros(bpp, np.int32), prev[:-bpp]])
+        ft = filters[y % len(filters)]
+        if ft == 0:
+            enc = line
+        elif ft == 1:
+            enc = line - left
+        elif ft == 2:
+            enc = line - prev
+        elif ft == 3:
+            enc = line - (left + prev) // 2
+        else:
+            p = left + prev - upleft
+            pa, pb, pc = abs(p - left), abs(p - prev), abs(p - upleft)
+            pred = np.where((pa <= pb) & (pa <= pc), left, np.where(pb <= pc, prev, upleft))
+            enc = line - pred
+        raw += bytes([ft]) + (enc & 255).astype(np.uint8).tobytes()
+        prev = line
+
+    def chunk(t, b):
+        return struct.pack(">I", len(b)) + t + b + struct.pack(">I", zlib.crc32(t + b))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+def test_png_with_alpha_all_filters(tmp_path):
+    """PNG mit Transparenz: alle Zeilenfilter richtig entpackt, auf Weiß gerechnet; Bilder werden zwischengespeichert."""
+    import zlib
+
+    import plc_report
+    rng = np.random.default_rng(1)
+    px = rng.integers(0, 256, (10, 7, 4), dtype=np.uint8)
+    path = tmp_path / "logo.png"
+    path.write_bytes(_png_bytes(px, [0, 1, 2, 3, 4]))
+    img = plc_report.load_image(str(path))
+    assert img is not None and (img.w, img.h) == (7, 10)
+    data = img.obj.split(b"stream\n", 1)[1].rsplit(b"\nendstream", 1)[0]
+    got = np.frombuffer(zlib.decompress(data), np.uint8).reshape(10, 7, 3)
+    a = px[..., 3:].astype(int)
+    want = (px[..., :3].astype(int) * a + 255 * (255 - a)) // 255
+    assert np.array_equal(got, want)
+    assert plc_report.load_image(str(path)) is img             # zweites Laden aus dem Zwischenspeicher
+
+
 def test_report_pdf(tmp_path):
     import plc_report
     from plc_recorder import demo_config

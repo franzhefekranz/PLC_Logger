@@ -80,8 +80,6 @@ def period_bounds(ts, kind, shifts="06:00,14:00,22:00", start="00:00"):
         return begin.timestamp(), (begin + timedelta(days=7)).timestamp()
     if kind == "monat":
         begin = day0.replace(day=1)
-        if begin > now:
-            begin = (begin - timedelta(days=1)).replace(day=1)
         nxt = (begin.replace(day=28) + timedelta(days=4)).replace(day=1)
         return begin.timestamp(), nxt.timestamp()
     return day0.timestamp(), (day0 + timedelta(days=1)).timestamp()
@@ -113,12 +111,14 @@ def period_label(kind, t0, t1, shifts="06:00,14:00,22:00"):
 # ---------------------------------------------------------------------------------------
 class ReportAccumulator:
     """Kennwerte und verdichteter Verlauf eines Zeitraums (siehe Modulbeschreibung). Nicht thread-sicher: wird nur
-    vom Sammler-Thread des Recorders gefüttert; ``freeze`` liefert eine unabhängige Kopie zum Schreiben."""
+    vom Sammler-Thread des Recorders gefüttert; für den nächsten Zeitraum legt der Recorder einen neuen an."""
 
     def __init__(self, names, dtypes, t0, t1, buckets=1500, kind="", label=""):
         """Leeren Sammler für den Zeitraum t0 … t1 anlegen.
 
-        Je Variable: Summen für Anzahl, Mittelwert und Standardabweichung (Summe und Quadratsumme), Minimum, Maximum,
+        Je Variable: Summen für Anzahl, Mittelwert und Standardabweichung (Summe und Quadratsumme der Abweichungen vom
+        ersten gültigen Wert ``ref`` – so bleibt die Standardabweichung auch bei großen Werten mit kleiner Schwankung
+        genau, z. B. Zählerstand 10 000 000 ± 0,01), Minimum, Maximum,
         letzter Wert, bei BOOL Einschaltdauer und Zahl der Einschaltvorgänge. Für den Verlauf wird der Zeitraum in
         ``buckets`` gleich lange Abschnitte geteilt, in denen jeweils Minimum, Maximum, Summe und Anzahl gesammelt
         werden – der Speicherbedarf hängt so nicht von der Zahl der Messungen ab.
@@ -132,8 +132,9 @@ class ReportAccumulator:
         self.bsum = np.zeros((n, self.nb))
         self.bcnt = np.zeros((n, self.nb))
         self.cnt = np.zeros(n)
-        self.sum = np.zeros(n)
-        self.sq = np.zeros(n)
+        self.ref = np.full(n, np.nan)                    # Bezugswert: erster gültiger Wert je Variable
+        self.sum = np.zeros(n)                           # Summe der Abweichungen vom Bezugswert
+        self.sq = np.zeros(n)                            # Quadratsumme der Abweichungen
         self.min = np.full(n, np.nan)
         self.max = np.full(n, np.nan)
         self.last = np.full(n, np.nan)
@@ -160,8 +161,11 @@ class ReportAccumulator:
         self.bsum[ok, b] += row[ok]
         self.bcnt[ok, b] += 1
         self.cnt[ok] += 1
-        self.sum[ok] += row[ok]
-        self.sq[ok] += row[ok] ** 2
+        new = ok & np.isnan(self.ref)
+        self.ref[new] = row[new]
+        d = row[ok] - self.ref[ok]
+        self.sum[ok] += d
+        self.sq[ok] += d * d
         self.min[ok] = np.fmin(self.min[ok], row[ok])
         self.max[ok] = np.fmax(self.max[ok], row[ok])
         if self._prev is not None and self.is_bool.any():
@@ -198,8 +202,11 @@ class ReportAccumulator:
             np.add.at(self.bsum[i], bi, vv)
             np.add.at(self.bcnt[i], bi, 1)
             self.cnt[i] += len(vv)
-            self.sum[i] += vv.sum()
-            self.sq[i] += (vv ** 2).sum()
+            if np.isnan(self.ref[i]):
+                self.ref[i] = vv[0]
+            d = vv - self.ref[i]
+            self.sum[i] += d.sum()
+            self.sq[i] += (d * d).sum()
             self.min[i] = np.fmin(self.min[i], vv.min())
             self.max[i] = np.fmax(self.max[i], vv.max())
             self.last[i] = vv[-1]
@@ -220,9 +227,10 @@ class ReportAccumulator:
         span = (self.last_ts - self.first_ts) if self.rows > 1 else 0.0
         for i, n in enumerate(self.names):
             c = self.cnt[i]
-            mean = self.sum[i] / c if c else math.nan
-            # Stichprobenvarianz aus Summe und Quadratsumme: (Σx² − n·x̄²) / (n − 1).
-            var = (self.sq[i] - c * mean * mean) / (c - 1) if c > 1 else math.nan
+            md = self.sum[i] / c if c else math.nan       # mittlere Abweichung vom Bezugswert
+            mean = self.ref[i] + md if c else math.nan
+            # Stichprobenvarianz der Abweichungen d = x − ref (gleich der von x): (Σd² − n·d̄²) / (n − 1).
+            var = (self.sq[i] - c * md * md) / (c - 1) if c > 1 else math.nan
             sd = math.sqrt(max(var, 0.0)) if var == var else math.nan
             share = self.on_time[i] / span if (self.is_bool[i] and span > 0) else math.nan
             out.append((n, self.dtypes[i], int(c), self.min[i], self.max[i], mean, sd, self.last[i], share,
@@ -271,11 +279,6 @@ class ReportAccumulator:
                 segs.append((a, e, frac))
         return [s_ for s_ in segs if s_[2] > 0]
 
-    def freeze(self):
-        """Unabhängige Kopie für den Schreib-Thread (der Sammler rechnet danach mit dem nächsten Zeitraum weiter)."""
-        import copy
-        return copy.deepcopy(self)
-
 
 # ---------------------------------------------------------------------------------------
 # PDF schreiben (minimal: Helvetica, Linien, Flächen, Text)
@@ -288,10 +291,17 @@ _HW = [278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278
        500, 500, 500, 334, 260, 334, 584]
 
 
+# Zeichen, die Windows-1252 (Kodierung der Standardschrift) nicht kennt, sonst stünde im PDF „?“
+_SUBST = str.maketrans({"Δ": "Delta ", "≤": "<=", "≥": ">=", "≠": "!=", "≈": "~", "→": "->", "←": "<-", "↔": "<->",
+                        "−": "-", "Ω": "Ohm", "✓": "OK", "✔": "OK", "✗": "X", "✘": "X", "⚠": "!", "▶": ">",
+                        "■": "#", "●": "*", "○": "o", "↻": "", "＋": "+"})
+
+
 def text_width(text, size, bold=False):
     """Breite eines Textes in Punkt (aus der Breitentabelle von Helvetica; fett etwa 6 % breiter) – für Ausrichtung und
     Kürzen.
     """
+    text = str(text).translate(_SUBST)
     w = sum(_HW[ord(c) - 32] if 32 <= ord(c) <= 126 else 556 for c in text)
     return w * size / 1000.0 * (1.06 if bold else 1.0)
 
@@ -310,7 +320,7 @@ def _pdf_text(text):
     """Text für einen PDF-String: Windows-1252 (Kodierung der Standardschrift), Klammern und Backslash maskiert, ohne
     Zeilenumbrüche.
     """
-    raw = str(text).encode("cp1252", "replace")
+    raw = str(text).translate(_SUBST).encode("cp1252", "replace")
     return raw.replace(b"\\", b"\\\\").replace(b"(", b"\\(").replace(b")", b"\\)").replace(b"\r", b"").replace(b"\n", b" ")
 
 
@@ -355,7 +365,10 @@ def _jpeg(data):
 
 
 def _unfilter(raw, w, h, bpp):
-    """PNG-Zeilenfilter rückgängig machen -> Bytes ohne Filterbyte je Zeile (``bpp`` Bytes je Pixel)."""
+    """PNG-Zeilenfilter rückgängig machen -> Bytes ohne Filterbyte je Zeile (``bpp`` Bytes je Pixel).
+
+    „Keiner“, „Sub“ und „Up“ rechnet numpy (Sub = laufende Summe je Farbkanal modulo 256); „Average“ und „Paeth“
+    hängen Byte für Byte vom Ergebnis davor ab und laufen zeilenweise in Python."""
     stride = w * bpp
     out = bytearray(h * stride)
     prev = bytearray(stride)
@@ -365,11 +378,11 @@ def _unfilter(raw, w, h, bpp):
         line = bytearray(raw[pos + 1:pos + 1 + stride])
         pos += 1 + stride
         if ft == 1:                                          # Sub
-            for x in range(bpp, stride):
-                line[x] = (line[x] + line[x - bpp]) & 255
+            a = np.frombuffer(bytes(line), np.uint8).reshape(w, bpp).astype(np.uint32)
+            line = bytearray((np.cumsum(a, axis=0) & 255).astype(np.uint8).tobytes())
         elif ft == 2:                                        # Up
-            for x in range(stride):
-                line[x] = (line[x] + prev[x]) & 255
+            line = bytearray(((np.frombuffer(bytes(line), np.uint8).astype(np.uint16)
+                               + np.frombuffer(bytes(prev), np.uint8)) & 255).astype(np.uint8).tobytes())
         elif ft == 3:                                        # Average
             for x in range(stride):
                 left = line[x - bpp] if x >= bpp else 0
@@ -425,30 +438,49 @@ def _png(data):
     bpp = {3: 1, 4: 2, 6: 4}.get(ctype)
     if bpp is None:
         return None
-    px = _unfilter(zlib.decompress(bytes(idat)), w, h, bpp)
-    rgb = bytearray(w * h * 3)
-    for i in range(w * h):                                   # auf weißen Hintergrund rechnen
-        if ctype == 3:
-            k = px[i]
-            r, g, b = plte[3 * k:3 * k + 3] if 3 * k + 3 <= len(plte) else (0, 0, 0)
-            a = trns[k] if k < len(trns) else 255
-        elif ctype == 4:
-            r = g = b = px[2 * i]
-            a = px[2 * i + 1]
-        else:
-            r, g, b, a = px[4 * i:4 * i + 4]
-        inv = 255 - a
-        rgb[3 * i] = (r * a + 255 * inv) // 255
-        rgb[3 * i + 1] = (g * a + 255 * inv) // 255
-        rgb[3 * i + 2] = (b * a + 255 * inv) // 255
-    comp = zlib.compress(bytes(rgb))
+    px = np.frombuffer(_unfilter(zlib.decompress(bytes(idat)), w, h, bpp), np.uint8).reshape(w * h, bpp)
+    if ctype == 3:                                           # Palette: Farbe und Deckkraft je Eintrag
+        pal = np.zeros((256, 3), np.uint8)
+        p3 = np.frombuffer(plte[:len(plte) // 3 * 3], np.uint8).reshape(-1, 3)[:256]
+        pal[:len(p3)] = p3
+        alpha = np.full(256, 255, np.uint8)
+        t = np.frombuffer(trns[:256], np.uint8)
+        alpha[:len(t)] = t
+        col, a = pal[px[:, 0]], alpha[px[:, 0]]
+    elif ctype == 4:
+        col, a = np.repeat(px[:, :1], 3, axis=1), px[:, 1]
+    else:
+        col, a = px[:, :3], px[:, 3]
+    a = a.astype(np.uint16)[:, None]                         # auf weißen Hintergrund rechnen
+    rgb = ((col.astype(np.uint16) * a + 255 * (255 - a)) // 255).astype(np.uint8)
+    comp = zlib.compress(rgb.tobytes())
     obj = (b"<< /Type /XObject /Subtype /Image /Width %d /Height %d /ColorSpace /DeviceRGB /BitsPerComponent 8 "
            b"/Filter /FlateDecode /Length %d >>\nstream\n" % (w, h, len(comp)) + comp + b"\nendstream")
     return PdfImage(w, h, obj)
 
 
+_IMG_CACHE = {}
+
+
 def load_image(path):
-    """Bilddatei (JPEG oder PNG) für das PDF laden -> PdfImage oder None (anderes Format, Lesefehler)."""
+    """Bilddatei (JPEG oder PNG) für das PDF laden -> PdfImage oder None (anderes Format, Lesefehler).
+
+    Geladene Bilder bleiben (nach Pfad, Änderungszeit und Größe) im Speicher: Logos erscheinen in jedem Bericht, und
+    PNG mit Transparenz muss entpackt werden."""
+    try:
+        st = os.stat(path)
+    except OSError:
+        return None
+    key = (os.path.abspath(path), st.st_mtime_ns, st.st_size)
+    if key not in _IMG_CACHE:
+        if len(_IMG_CACHE) >= 32:
+            _IMG_CACHE.clear()
+        _IMG_CACHE[key] = _load_image(path)
+    return _IMG_CACHE[key]
+
+
+def _load_image(path):
+    """Rumpf von load_image (ohne Zwischenspeicher)."""
     try:
         with open(path, "rb") as f:
             data = f.read()
@@ -590,10 +622,27 @@ def _time_ticks(t0, t1, target=8):
     span = t1 - t0
     steps = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400, 2 * 86400, 7 * 86400]
     step = next((s for s in steps if span / s <= target), steps[-1])
-    off = datetime.fromtimestamp(t0).astimezone().utcoffset().total_seconds()
-    t = math.ceil((t0 + off) / step) * step - off
+    if step >= 3600:
+        # Ab einer Stunde in Ortszeit (Wanduhr) weiterzählen: die Striche bleiben über eine Zeitumstellung hinweg auf
+        # vollen Stunden bzw. 0:00 (mit festem UTC-Versatz lägen sie danach eine Stunde daneben).
+        d = datetime.fromtimestamp(t0).replace(minute=0, second=0, microsecond=0)
+        if step >= 86400:
+            d = d.replace(hour=0)
+        while d.timestamp() < t0 or (step < 86400 and (d.hour * 3600) % step):
+            d += timedelta(hours=1) if step < 86400 else timedelta(days=1)
+        times = []
+        while d.timestamp() <= t1 and len(times) < 60:
+            times.append(d.timestamp())
+            d += timedelta(seconds=step)
+    else:
+        off = datetime.fromtimestamp(t0).astimezone().utcoffset().total_seconds()
+        t = math.ceil((t0 + off) / step) * step - off
+        times = []
+        while t <= t1 and len(times) < 60:
+            times.append(t)
+            t += step
     out = []
-    while t <= t1 and len(out) < 60:
+    for t in times:
         d = datetime.fromtimestamp(t)
         if step >= 86400:
             lab = d.strftime("%d.%m.")
@@ -602,7 +651,6 @@ def _time_ticks(t0, t1, target=8):
         else:
             lab = d.strftime("%H:%M")
         out.append((t, lab))
-        t += step
     return out
 
 
@@ -845,8 +893,15 @@ def write_report(path, acc, charts, variables, project="", events=(), partial=Fa
     # Kennwerte
     doc.heading(tr("Kennwerte"))
     rows = []
+    by_name = {}
+    for v in variables:
+        by_name.setdefault(v.name, v)
+
+    def var(name):
+        """Variable der Konfiguration (Farbe, Achse); unbekannt: Vorgabe-Variable."""
+        return by_name.get(name) or _var_for((), name)
     for (n, dt, c, mn, mx, mean, sd, last, share, rises) in acc.stats():
-        col = _var_for(variables, n).color
+        col = var(n).color
         if dt == "BOOL":
             on = tr("{0:.1f} % ein").format(share * 100) if share == share else ""
             rows.append([(n, col), _fmt(mn, dt), _fmt(mx, dt), on, tr("{0}× ein").format(rises), _fmt(last, dt), str(c)])
@@ -860,7 +915,7 @@ def write_report(path, acc, charts, variables, project="", events=(), partial=Fa
     for ci, ch in enumerate(charts):
         idx = [names_idx[v.name] for v in variables if v.chart == ci and v.name in names_idx and v.shown]
         if idx:
-            _chart(doc, ch, idx, acc, [_var_for(variables, n) for n in acc.names])
+            _chart(doc, ch, idx, acc, [var(n) for n in acc.names])
     # Ereignisse
     doc.heading(tr("Ereignisse und Notizen"))
     ev_rows = []
