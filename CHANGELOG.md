@@ -16,6 +16,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Benachrichtigungen:** Ein fehlgeschlagener Kanal (Netz kurz weg, Mailserver nicht erreichbar) wird nach 30 s, 2 min
+  und 10 min erneut versucht, statt die Meldung zu verlieren; die übrigen Kanäle warten nicht darauf. Slack: `<`, `>` und
+  `&` im Meldetext werden maskiert (bisher z. B. `<!channel>` als Erwähnung aller). „Testnachricht senden“ läuft im
+  Hintergrund (bisher bis zu einer Minute eingefrorenes Fenster).
 * **Netzwerk durchsuchen:** Bereiche mit Leerzeichen um den Bindestrich („192.168.0.10 - 50“) werden angenommen;
   „Abbrechen“ wirkt auch während der Gerätekennung (S7-Baugruppe, EtherNet/IP) – bisher lief sie vollständig weiter.
 * **Netzwerk-Panel:** Konfigurationen mit `%`, `$` oder `\` im Pfad starten auch als Dienst (systemd las sie bisher als

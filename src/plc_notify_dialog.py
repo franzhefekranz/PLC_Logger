@@ -3,8 +3,7 @@
 """Dialog „Benachrichtigungen“ (Konfigurationsprogramm, Reiter Trigger & Ereignisse): wann und wohin gemeldet wird."""
 import copy
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QGroupBox,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QGroupBox,
                                QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QSpinBox, QTabWidget,
                                QVBoxLayout, QWidget)
 
@@ -155,19 +154,20 @@ class NotifyDialog(QDialog):
     def send_test(self):
         """Testnachricht über alle eingeschalteten Kanäle senden und je Kanal Erfolg oder Fehler anzeigen.
 
-        Gesendet wird direkt (nicht im Hintergrund); der Sanduhr-Cursor zeigt die Wartezeit – höchstens die
-        Zeitüberschreitung je Kanal.
+        Gesendet wird im Hintergrund (Fortschrittsanzeige; je Kanal höchstens die Zeitüberschreitung) – das Fenster
+        bleibt bedienbar.
         """
         s = self.collect()
         channels = nf.active_channels(s)
         if not channels:
             QMessageBox.information(self, tr("Testnachricht"), tr("Bitte mindestens einen Kanal einschalten."))
             return
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        try:
-            res = nf.send_all(s, nf.test_message(self.project), channels)
-        finally:
-            QApplication.restoreOverrideCursor()
+        from plc_branding import run_in_background
+        run_in_background(self, tr("Testnachricht"), lambda: nf.send_all(s, nf.test_message(self.project), channels),
+                          lambda res, _ms: self._show_test(res), text=tr("Sende Testnachricht …"))
+
+    def _show_test(self, res):
+        """Ergebnis der Testnachricht je Kanal anzeigen."""
         lines = [("✓ " if not err else "✗ ") + tr(nf.CHANNELS[ch]) + ("" if not err else f": {err}") for ch, err in res]
         (QMessageBox.information if all(not e for _c, e in res) else QMessageBox.warning)(
             self, tr("Testnachricht"), "\n".join(lines))

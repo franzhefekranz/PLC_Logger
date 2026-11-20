@@ -4483,6 +4483,12 @@
 @ ({0} weitere Meldungen in der Sperrzeit unterdrückt)
 > 
 
+@ neuer Versuch in {0} s
+> 
+
+@ aufgegeben
+> 
+
 @ Benachrichtigung über {0} fehlgeschlagen: {1}
 > 
 
@@ -4576,6 +4582,9 @@
 > 
 
 @ Bitte mindestens einen Kanal einschalten.
+> 
+
+@ Sende Testnachricht …
 > 
 
 # ---------------- plc_opcua_dialog.py

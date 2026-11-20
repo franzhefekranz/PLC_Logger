@@ -430,7 +430,14 @@ def test_config_window(qt_log, demo_config):
     from plc_notify_dialog import NotifyDialog
     nd = NotifyDialog(w, {"aktiv": True, "email": {"aktiv": True}}, "Testanlage")
     assert nd.collect()["email"]["aktiv"] and nd.collect()["aktiv"]
+    shown = []
+    nd._show_test = shown.append                             # Ergebnis kommt aus dem Hintergrund
     nd.send_test()                                           # Fehlermeldung (kein Server) statt Absturz
+    for _ in range(200):
+        if shown:
+            break
+        wait(30)
+    assert shown and shown[0][0][0] == "email" and shown[0][0][1]                       # Fehler je Kanal gemeldet
     # Block mit Elementen in einem anderen Diagramm bei gewählter Achse (Fehler in 3.3.0: Auswahl überschrieben)
     from plc_common import Block
     w.blocks.append(Block(name="Ziele", address="DB9.DBD0", count=3, targets={1: (len(w.charts) - 1, 0)}))

@@ -1057,6 +1057,32 @@ def test_notify_channels_and_engine(tmp_path):
         smtp.shutdown()
 
 
+def test_notifier_retries_failed_channel(monkeypatch):
+    """Benachrichtigung: ein fehlgeschlagener Kanal wird nachgesendet (bis RETRY_S erschöpft), ein funktionierender nicht
+    doppelt; Slack maskiert <, > und &."""
+    import time
+    import plc_notify as nf
+    monkeypatch.setattr(nf, "RETRY_S", (0.05, 0.05))
+    calls, msgs = [], []
+
+    def sender(_s, m, channels=None):
+        chans = channels or ["email", "ntfy"]
+        calls.append(tuple(chans))
+        return [(c, "Netz weg" if c == "email" and len(calls) < 3 else "") for c in chans]
+    s = {"aktiv": True, "prio_min": "Info", "email": {"aktiv": True}, "ntfy": {"aktiv": True}}
+    nt = nf.Notifier({"benachrichtigung": s}, "A", emit=msgs.append, sender=sender)
+    assert nt.event("KOMMT", "T", "Alarm", "x", 1.0)
+    for _ in range(100):
+        if len(calls) >= 3:
+            break
+        time.sleep(0.02)
+    nt.stop()
+    assert calls == [("email", "ntfy"), ("email",), ("email",)] and len(msgs) == 2 and "neuer Versuch" in msgs[0]
+    m = nf.Message("KOMMT", "T", "Alarm", "Druck < 5 bar & <!channel>", 0.0)
+    text = nf.webhook_payload("slack", m)["text"]
+    assert "&lt;!channel&gt;" in text and "&lt; 5 bar &amp;" in text
+
+
 # ---- OPC-UA-Server ----------------------------------------------------------------------------------------------
 def _free_port():
     import socket

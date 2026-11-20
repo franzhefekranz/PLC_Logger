@@ -26,6 +26,7 @@ CHANNELS = {"email": N_("E-Mail"), "webhook": N_("Teams / Slack / Webhook"), "nt
 WEBHOOK_KINDS = {"teams": N_("Microsoft Teams (Workflows)"), "slack": N_("Slack"), "json": N_("Allgemein (JSON)")}
 SMTP_MODES = {"starttls": "STARTTLS", "ssl": "SSL/TLS", "keine": N_("unverschlüsselt")}
 TIMEOUT_S = 15
+RETRY_S = (30, 120, 600)        # fehlgeschlagene Kanäle nach so vielen Sekunden erneut versuchen, dann aufgeben
 
 DEFAULTS = {"aktiv": False, "prio_min": "Warnung", "trigger": "", "gehen": False, "sperre_s": 300,
             "email": {"aktiv": False, "server": "", "port": 587, "modus": "starttls", "benutzer": "", "passwort": "",
@@ -136,7 +137,10 @@ def webhook_payload(kind, msg: Message) -> dict:
                                   "color": color, "wrap": True},
                                  {"type": "TextBlock", "text": msg.body.replace("\n", "\n\n"), "wrap": True}]}}]}
     if kind == "slack":
-        return {"text": f"*{msg.title}*\n{msg.body}"}
+        # Slack liest <, > und & als Steuerzeichen (<!channel> = alle erwähnen); Meldetexte enthalten oft „< 5 bar“
+        def esc(t):
+            return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return {"text": f"*{esc(msg.title)}*\n{esc(msg.body)}"}
     return {"titel": msg.title, "text": msg.text, "trigger": msg.trigger, "prioritaet": msg.prio, "art": msg.kind,
             "zeit": datetime.fromtimestamp(msg.ts).isoformat(timespec="seconds"), "projekt": msg.project,
             "rechner": msg.host}
@@ -260,13 +264,32 @@ class Notifier:
         """Sende-Thread: Nachrichten aus der Warteschlange über alle Kanäle senden, Fehler je Kanal melden; None
         beendet.
         """
+        retry = []                                 # [(fällig (monotonic), Versuch, Kanal, Nachricht)]
         while True:
-            msg = self.q.get()
+            wait = max(0.0, min(r[0] for r in retry) - time.monotonic()) if retry else None
+            try:
+                msg = self.q.get(timeout=wait)
+            except queue.Empty:
+                msg = False                        # nur Wiederholungen fällig
             if msg is None:
                 return
-            for ch, err in self.sender(self.s, msg):
-                if err:
-                    self.emit(tr("Benachrichtigung über {0} fehlgeschlagen: {1}").format(tr(CHANNELS[ch]), err))
+            results = [(0, ch, err, msg) for ch, err in self.sender(self.s, msg)] if msg else []
+            now = time.monotonic()
+            for _due, n, ch, m in [r for r in retry if r[0] <= now]:
+                results += [(n, c, err, m) for c, err in self.sender(self.s, m, [ch])]
+            retry = [r for r in retry if r[0] > now]
+            for n, ch, err, m in results:
+                if not err:
+                    continue
+                # Netz kurz weg (LTE, WLAN, Mailserver): bis zu dreimal nachsenden – ein gestörter Kanal hält die
+                # übrigen nicht auf
+                if n < len(RETRY_S):
+                    retry.append((time.monotonic() + RETRY_S[n], n + 1, ch, m))
+                    note = tr("neuer Versuch in {0} s").format(RETRY_S[n])
+                else:
+                    note = tr("aufgegeben")
+                self.emit(tr("Benachrichtigung über {0} fehlgeschlagen: {1}").format(tr(CHANNELS[ch]), err)
+                          + f" ({note})")
 
     def stop(self, wait_s=5.0):
         """Ausstehende Meldungen noch senden (höchstens wait_s Sekunden), dann beenden."""
