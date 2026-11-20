@@ -74,7 +74,9 @@ def zip_and_remove(path, target_dir, notify):
     """CSV-Datei packen (ZIP), prüfen, in target_dir ablegen und das Original löschen.
 
     Läuft in einem eigenen Thread, damit die Aufzeichnung nicht stockt. Bei jedem Fehler bleibt die CSV-Datei
-    erhalten; Meldungen gehen über ``notify(text)`` zurück. Rückgabe: True bei Erfolg."""
+    erhalten und ein unvollständiges Archiv wird wieder entfernt; Meldungen gehen über ``notify(text)`` zurück.
+    Rückgabe: True bei Erfolg."""
+    zpath = None
     try:
         # Zielordner (Archiv/Name/Jahr/Monat/Tag) anlegen, falls er noch nicht existiert.
         os.makedirs(target_dir, exist_ok=True)
@@ -94,8 +96,26 @@ def zip_and_remove(path, target_dir, notify):
         notify(f"Archiviert: {zpath}")
         return True
     except Exception as e:
+        if zpath and os.path.exists(zpath) and os.path.exists(path):
+            try:
+                os.remove(zpath)                 # unvollständiges Archiv nicht liegen lassen
+            except OSError:
+                pass
         notify(tr("⚠ Archivierung von {0} fehlgeschlagen: {1} (CSV-Datei bleibt erhalten)").format(os.path.basename(path), e))
         return False
+
+
+def _data_path(p):
+    """Pfad der Einstellungen: relativ = ab Datenordner BASE_DIR."""
+    return p if os.path.isabs(p) else os.path.join(BASE_DIR, p)
+
+
+def _close(reader):
+    """Leser schließen; Fehler dabei (z. B. Socket schon weg) beenden den Lese-Thread nicht."""
+    try:
+        reader.close()
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------------------
@@ -268,10 +288,8 @@ class PlcSampler(threading.Thread):
         self.vars = [rec.vars[i] for i in var_idx]
 
     def _sleep(self, seconds):
-        """Wartet, bricht aber in 50-ms-Schritten ab, sobald der Recorder beendet wird."""
-        end = time.perf_counter() + seconds
-        while not self.rec.stop_evt.is_set() and time.perf_counter() < end:
-            time.sleep(min(0.05, max(0.0, end - time.perf_counter())))
+        """Wartet höchstens ``seconds``; kehrt sofort zurück, wenn der Recorder beendet wird."""
+        self.rec.stop_evt.wait(max(0.0, seconds))
 
     def run(self):
         """Thread-Hauptfunktion: simulierte Werte (Demo) oder echte Steuerung lesen, bis der Recorder stoppt."""
@@ -376,7 +394,7 @@ class PlcSampler(threading.Thread):
                     records = reader.read_rings()           # [(Positionen, Zeitstempel, Werte)] aus den Ringpuffern
             except Exception as e:
                 connected = False
-                reader.close()
+                _close(reader)
                 r.set_status(self.idx, ST_ERROR, tr("Lesefehler: {0} – neuer Verbindungsversuch").format(e))
                 self._sleep(1.0)
                 continue
@@ -403,7 +421,7 @@ class PlcSampler(threading.Thread):
                 self._sleep(delay)
             else:
                 nxt = time.perf_counter()
-        reader.close()
+        _close(reader)
         r.set_status(self.idx, ST_OFF, tr("Getrennt"))
 
 
@@ -455,6 +473,8 @@ class Recorder:
         self.samplers, self.collector = [], None
         self.running = False
         self.dropped = 0                         # verworfene Messzyklen (Warteschlange voll)
+        self._drop_t = self._err_t = float("-inf")   # letzte Meldung „verworfen“ bzw. Verarbeitungsfehler
+        self._csv_retry = 0.0                    # nach einem Schreibfehler: frühester neuer Versuch (monotonic)
         # Ringpuffer: Messzyklen so lange zurückhalten, bis die Datensätze aller Steuerungen eingetroffen sind (siehe
         # Modulbeschreibung). Etwa zwei Leseintervalle der langsamsten Steuerung mit Ringpuffer plus Reserve; 0 = sofort.
         ring_plcs = {v.plc for v in variables if v.ring is not None and not v.formula}
@@ -509,13 +529,11 @@ class Recorder:
     # ------------------------------------------------------------------ Ordner
     def csv_dir(self):
         """Ordner der CSV-Dateien (relativer Pfad bezogen auf den Datenordner BASE_DIR)."""
-        d = self.conn["csv_ordner"]
-        return d if os.path.isabs(d) else os.path.join(BASE_DIR, d)
+        return _data_path(self.conn["csv_ordner"])
 
     def archive_root(self):
         """Archiv-Ordner der Einstellungen (relativ = ab Datenordner BASE_DIR)."""
-        base = self.conn.get("archiv_ordner") or "archiv"
-        return base if os.path.isabs(base) else os.path.join(BASE_DIR, base)
+        return _data_path(self.conn.get("archiv_ordner") or "archiv")
 
     def archive_dir(self, when):
         """Archiv-Ordner: <archiv>/<Name>/<Jahr>/<Monat>/<Tag>"""
@@ -687,7 +705,9 @@ class Recorder:
             s.join(5.0)
         self.q.put(None)                         # Ende-Marke: der Sammler verarbeitet vorher noch alles Übrige
         if self.collector:
-            self.collector.join(10.0)
+            self.collector.join(60.0)
+            if self.collector.is_alive():
+                self.emit(tr("⚠ Restliche Werte konnten nicht mehr gespeichert werden (Verarbeitung reagiert nicht)"))
         if self.report_acc is not None and self.report_acc.rows:   # Teilbericht des angefangenen Zeitraums
             self._write_report(self.report_acc, partial=True)
         self.report_acc = None
@@ -750,6 +770,10 @@ class Recorder:
             self.q.put_nowait((idx, ts, values, gidx))
         except queue.Full:
             self.dropped += 1
+            now = time.monotonic()
+            if now - self._drop_t >= 60:         # höchstens eine Meldung je Minute
+                self._drop_t = now
+                self.emit(tr("⚠ {0} Messzyklen verworfen – die Verarbeitung kommt nicht nach").format(self.dropped))
 
     def _collector(self):
         """Sammler-Thread: Messzyklen zu Zeilen zusammenführen, Formeln rechnen, puffern, CSV schreiben.
@@ -770,20 +794,35 @@ class Recorder:
                 item = False
             if item is None:                     # Ende-Marke: Zurückgehaltenes noch verarbeiten
                 while heap:
-                    self._process(heapq.heappop(heap)[2], cur)
+                    self._process_safe(heapq.heappop(heap)[2], cur)
                 break
             if item is not False:
                 if delay > 0:
                     heapq.heappush(heap, (item[1], next(order), item))
                 else:
-                    self._process(item, cur)
+                    self._process_safe(item, cur)
             if delay > 0:
                 limit = time.time() - delay
                 while heap and heap[0][0] <= limit:
-                    self._process(heapq.heappop(heap)[2], cur)
+                    self._process_safe(heapq.heappop(heap)[2], cur)
             if item is False:
                 self._flush_if_due()
         self._flush_if_due(force=True)
+
+    def _process_safe(self, item, cur):
+        """``_process`` ohne den Sammler zu beenden: ein Fehler (Datei, OPC UA, MQTT, Trigger, Formel) wird gemeldet
+        (höchstens einmal je Minute), die Aufzeichnung läuft mit dem nächsten Messzyklus weiter."""
+        try:
+            self._process(item, cur)
+        except Exception as e:
+            self._error(e)
+
+    def _error(self, e):
+        """Fehler beim Verarbeiten melden (höchstens einmal je Minute)."""
+        now = time.monotonic()
+        if now - self._err_t >= 60:
+            self._err_t = now
+            self.emit(tr("⚠ Fehler bei der Verarbeitung: {0}").format(e))
 
     def _process(self, item, cur):
         """Einen Messzyklus verarbeiten: in die Gesamtzeile ``cur`` eintragen, Formeln, Trigger, Puffer, CSV,
@@ -813,10 +852,12 @@ class Recorder:
         # Anzeige-Puffer zeitlich geordnet halten (verspätete Ringpuffer-Datensätze hinten anhängen).
         self._last_ts = max(self._last_ts, ts)
         self._append(self._last_ts, row)
-        if self.opcua is not None:
-            self.opcua.update(ts, row)
-        if self.mqtt is not None:
-            self.mqtt.update(ts, row)
+        for out in (self.opcua, self.mqtt):  # ein Fehler dort darf CSV und Datenbank nicht aufhalten
+            if out is not None:
+                try:
+                    out.update(ts, row)
+                except Exception as e:
+                    self._error(e)
         acc = self.report_acc
         if acc is not None:
             if ts >= acc.t1:                 # Zeitraum vorbei: Bericht schreiben, nächsten beginnen
@@ -839,6 +880,13 @@ class Recorder:
         """Zeile in die CSV-Datei und die Datenbank schreiben (nur die aufgezeichneten Variablen)."""
         if self.store_idx is not None:
             row = row[self.store_idx]
+        if (self.csv_on and self.csv_w is None and self.csv_path and time.monotonic() >= self._csv_retry
+                and (self.gate is None or self.gate.active)):
+            try:                                 # nach einem Schreibfehler: neue Datei versuchen
+                self.open_csv()
+                self.emit(tr("CSV-Datei wieder beschreibbar → {0}").format(self.csv_path))
+            except OSError as e:
+                self._csv_failed(e)
         self._write_csv(ts, row)
         if self.db:
             self.db.put(ts, row)
@@ -957,8 +1005,12 @@ class Recorder:
         # 'Zeit' (lesbar) und 'Epoch' (Unix-Zeit) werden aus derselben ganzzahligen Millisekunde gebildet.
         ms = int(round(ts * 1000))
         stamp = datetime.fromtimestamp(ms // 1000).strftime("%Y-%m-%d %H:%M:%S") + f".{ms % 1000:03d}"
-        self.csv_w.writerow([stamp, f"{ms / 1000:.3f}"] +
-                            [fmt_csv(float(val), v.dtype) for v, val in zip(self.store_vars, row)])
+        try:
+            self.csv_w.writerow([stamp, f"{ms / 1000:.3f}"] +
+                                [fmt_csv(float(val), v.dtype) for v, val in zip(self.store_vars, row)])
+        except OSError as e:                     # Platte voll, USB-Stick gezogen, Netzlaufwerk weg
+            self._csv_failed(e)
+            return
         if self.csv_first is None:
             self.csv_first = ts
         self.csv_rows += 1
@@ -966,6 +1018,17 @@ class Recorder:
         limit = self.conn.get("max_records", 0)
         if limit > 0 and self.csv_rows >= limit:
             self._rotate_csv()
+
+    def _csv_failed(self, e):
+        """Schreibfehler der CSV-Datei: melden, Datei schließen, in 30 s eine neue Datei versuchen (``_store``)."""
+        self.emit(tr("⚠ CSV-Fehler: {0} – neuer Versuch in 30 s").format(e))
+        if self.csv_fh:
+            try:
+                self.csv_fh.close()
+            except (OSError, ValueError):
+                pass
+        self.csv_fh = self.csv_w = None
+        self._csv_retry = time.monotonic() + 30
 
     def _flush_if_due(self, force=False):
         """CSV auf den Datenträger schreiben: höchstens alle FLUSH_S Sekunden (schont die Platte)."""
@@ -979,14 +1042,21 @@ class Recorder:
     def _rotate_csv(self):
         """Maximale Datensatzzahl erreicht: Datei schließen, im Hintergrund archivieren, neue Datei beginnen."""
         path, first = self.csv_path, self.csv_first
-        self.csv_fh.close()
+        try:
+            self.csv_fh.close()
+        except OSError as e:
+            self._csv_failed(e)
+            return
         self.csv_fh = self.csv_w = None
         when = datetime.fromtimestamp(first) if first else datetime.now()
         self._csv_pending = False
         t = threading.Thread(target=zip_and_remove, args=(path, self.archive_dir(when), self.emit))
         t.start()
         self._archive_threads = [x for x in self._archive_threads if x.is_alive()] + [t]
-        self.open_csv()                          # die Aufzeichnung läuft ohne Lücke weiter
+        try:
+            self.open_csv()                      # die Aufzeichnung läuft ohne Lücke weiter
+        except OSError as e:
+            self._csv_failed(e)
 
     # ------------------------------------------------------------------ Zugriff auf die Daten
     def count(self):

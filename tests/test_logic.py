@@ -1645,6 +1645,95 @@ def test_record_flags_recorder_csv(tmp_path):
     assert not np.all(np.isnan(rec.ybuf[3, :rec.n]))
 
 
+def test_recorder_survives_write_and_processing_errors(tmp_path):
+    """Schreibfehler der CSV-Datei und Fehler beim Verarbeiten (hier MQTT) beenden den Sammler nicht: Meldung, die
+    Anzeige läuft weiter, nach der Wartezeit wird eine neue CSV-Datei angelegt."""
+    import time
+
+    from plc_common import Plc
+    from plc_recorder import Recorder, demo_config
+    charts, variables = demo_config()
+    conn = {"csv_ordner": str(tmp_path), "csv_name": "fehler", "csv_aktiv": 1}
+    rec = Recorder(conn, [Plc(name="SPS", intervall_ms=20)], charts, variables, demo=True)
+    rec.start()
+    try:
+        time.sleep(0.3)
+        first = rec.csv_path
+
+        class Bad:
+            def writerow(self, row):
+                raise OSError("Datenträger voll")
+
+        class Boom:
+            def update(self, ts, row):
+                raise RuntimeError("Broker kaputt")
+
+            def stop(self):
+                pass
+        rec.csv_w, rec.mqtt = Bad(), Boom()
+        time.sleep(0.3)
+        msgs = " ".join(rec.drain_messages())
+        assert "Datenträger voll" in msgs and "Broker kaputt" in msgs
+        n = rec.count()
+        time.sleep(0.3)
+        assert rec.count() > n and rec.collector.is_alive()
+        rec._csv_retry = 0.0
+        time.sleep(0.3)
+        assert "wieder beschreibbar" in " ".join(rec.drain_messages()) and rec.csv_path != first
+    finally:
+        rec.stop()
+    with open(rec.csv_path, encoding="utf-8") as f:
+        assert len(f.read().splitlines()) > 2
+
+
+def test_sampler_survives_failing_close(tmp_path):
+    """Wirft der Treiber beim Schließen nach einem Lesefehler, verbindet der Lese-Thread trotzdem neu."""
+    import time
+
+    from plc_common import Plc, Variable
+    from plc_recorder import Recorder
+    calls = {"connect": 0}
+
+    class Reader:
+        errors = {}
+
+        def __init__(self, plc, variables):
+            pass
+
+        def connect(self):
+            calls["connect"] += 1
+            return 1
+
+        def read(self):
+            raise OSError("Verbindung weg")
+
+        def close(self):
+            raise OSError("Socket schon zu")
+    conn = {"csv_ordner": str(tmp_path), "csv_name": "close", "csv_aktiv": 0}
+    rec = Recorder(conn, [Plc(name="SPS", driver="s7", intervall_ms=50)], [], [Variable("a", address="MW0")])
+    rec.reader_factory = Reader
+    rec.start()
+    try:
+        time.sleep(1.4)
+        assert calls["connect"] >= 2 and rec.samplers[0].is_alive()
+    finally:
+        rec.stop()
+    assert not rec.samplers[0].is_alive()
+
+
+def test_zip_and_remove_failure_leaves_no_archive(tmp_path, monkeypatch):
+    """Archivieren misslingt (Prüfung fehlgeschlagen): CSV-Datei bleibt, kein unvollständiges ZIP im Archiv."""
+    import zipfile
+
+    from plc_recorder import zip_and_remove
+    src = tmp_path / "a.csv"
+    src.write_text("Zeit;Epoch\n", encoding="utf-8")
+    monkeypatch.setattr(zipfile.ZipFile, "testzip", lambda self: "a.csv")
+    msgs = []
+    assert not zip_and_remove(str(src), str(tmp_path / "archiv"), msgs.append)
+    assert src.exists() and not list((tmp_path / "archiv").glob("*.zip")) and "fehlgeschlagen" in msgs[0]
+
+
 def test_netz_time():
     """Datum und Uhrzeit über timedatectl: Zustand lesen, Uhr stellen (schaltet NTP ab), Zeitzone, NTP."""
     import datetime

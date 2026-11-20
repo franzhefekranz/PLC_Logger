@@ -4885,6 +4885,9 @@
 @ {0} Trigger aktiv → Ereignisprotokoll {1}
 > {0} triggers active → event log {1}
 
+@ ⚠ Restliche Werte konnten nicht mehr gespeichert werden (Verarbeitung reagiert nicht)
+> ⚠ Remaining values could not be saved (processing not responding)
+
 @ Gestoppt – {0} Trigger-Aufnahmen
 > Stopped – {0} trigger captures
 
@@ -4893,6 +4896,15 @@
 
 @  – gespeichert in {0}
 >  – saved in {0}
+
+@ ⚠ {0} Messzyklen verworfen – die Verarbeitung kommt nicht nach
+> ⚠ {0} read cycles dropped – processing cannot keep up
+
+@ ⚠ Fehler bei der Verarbeitung: {0}
+> ⚠ Processing error: {0}
+
+@ CSV-Datei wieder beschreibbar → {0}
+> CSV file writable again → {0}
 
 @ ⚠ Bericht konnte nicht erstellt werden: {0}
 > ⚠ Report could not be created: {0}
@@ -4911,6 +4923,9 @@
 
 @ ○ Aufnahme {0} beendet ({1} Zeilen){2}
 > ○ Capture {0} finished ({1} rows){2}
+
+@ ⚠ CSV-Fehler: {0} – neuer Versuch in 30 s
+> ⚠ CSV error: {0} – retrying in 30 s
 
 # ---------------- plc_report.py
 

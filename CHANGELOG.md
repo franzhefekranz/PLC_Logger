@@ -23,6 +23,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Aufzeichnung:** Ein Schreibfehler der CSV-Datei (Platte voll, USB-Stick gezogen, Netzlaufwerk weg) oder ein Fehler
+  in OPC UA, MQTT oder einem Trigger hielt die ganze Aufzeichnung an – ohne Meldung, die Diagramme froren ein. Jetzt
+  kommt eine Meldung, Anzeige und Datenbank laufen weiter, und nach 30 s wird eine neue CSV-Datei angelegt. Verworfene
+  Messzyklen (Verarbeitung kommt nicht nach) werden gemeldet. Ein Fehler des Treibers beim Schließen der Verbindung
+  beendete das Lesen dieser Steuerung bis zum Neustart. Misslingt das Archivieren, bleibt kein unvollständiges ZIP im
+  Archiv liegen. Beim Beenden wartet der Logger bis zu 60 s (bisher 10 s) auf noch nicht gespeicherte Werte.
 * **PID-Optimierung:** Der Vorschlag für Soll-, Ist- und Stellwert vergleicht ganze Wörter des Variablennamens – bisher
   wurden z. B. „Spannung“ als Sollwert und „Distanz“ als Istwert vorgeschlagen.
 * **OPC-UA-Server:** Der private Schlüssel des selbstsignierten Zertifikats ist nur noch für den Benutzer des Loggers
