@@ -23,6 +23,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Startbild:** Mit einer zuletzt benutzten Konfiguration auf einem nicht erreichbaren Server (`\\Server\…`) erschien
+  das Startbild erst nach dem Zeitlimit des Netzwerks je Eintrag – die Änderungszeit wird bei Netzpfaden nicht mehr
+  gelesen („Netzlaufwerk“). „Starte …“ und „Lade …“ werden übersetzt.
 * **PDF-Berichte:** Die Standardabweichung großer Werte mit kleiner Schwankung (z. B. Zählerstand 10 000 000 ± 0,01)
   war durch Rundungsfehler falsch. In Wochen- und Monatsberichten über die Zeitumstellung lagen die Teilstriche danach
   eine Stunde daneben (ein Tag doppelt beschriftet). Zeichen wie „Δ“, „≥“, „→“ oder „Ω“ erschienen als „?“ – sie

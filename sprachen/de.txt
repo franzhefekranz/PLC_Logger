@@ -5069,6 +5069,9 @@
 @ Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
 > 
 
+@ Netzlaufwerk
+> 
+
 @ Prüfstand
 > 
 
@@ -5076,6 +5079,9 @@
 > 
 
 @ Noch keine Konfiguration benutzt – „Neue Konfiguration …“ oder „Durchsuchen …“.
+> 
+
+@ Lade …
 > 
 
 @ IO-Check oder Konfiguration (*.iocheck.json *.json);;Alle Dateien (*)
@@ -5209,9 +5215,6 @@
 > 
 
 @ Export
-> 
-
-@ Lade …
 > 
 
 @ Angezeigter Zeitbereich

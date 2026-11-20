@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog, QHBoxLayout, QL
                                QListWidgetItem, QProgressBar, QPushButton, QVBoxLayout, QWidget)
 
 from plc_branding import company_pixmap, default_pixmap, logo_pixmap
-from plc_common import APP_NAME, APP_VERSION, BASE_DIR, load_settings, recent_configs, save_settings
+from plc_common import APP_NAME, APP_VERSION, BASE_DIR, load_settings, quick_exists, recent_configs, save_settings
 from plc_i18n import tr
 import plc_filedlg
 
@@ -53,6 +53,12 @@ QProgressBar {{ background: #13233a; border: 1px solid #2c4a6e; border-radius: 3
                 text-align: center; color: transparent; }}
 QProgressBar::chunk {{ background: {C_ACCENT}; border-radius: 3px; }}
 """
+
+
+def _is_network(path):
+    """Netzpfad (\\\\Server\\…, //Server/…): nicht anfassen, ein nicht erreichbarer Server ließe das Startbild sonst
+    je Zugriff bis zum Zeitlimit warten (siehe plc_common.quick_exists)."""
+    return str(path).startswith(("\\\\", "//"))
 
 
 # ---------------------------------------------------------------------------------------
@@ -270,7 +276,7 @@ class StartWindow(QWidget):
         self.setFixedSize(820, 470)
         logo = ""
         try:                                           # Logo der zuletzt benutzten Konfiguration
-            if current_path and os.path.exists(current_path):
+            if current_path and not _is_network(current_path) and os.path.exists(current_path):
                 from plc_common import load_config
                 logo = load_config(current_path)[0].get("logo", "")
         except Exception:
@@ -353,7 +359,7 @@ class StartWindow(QWidget):
         outer.addWidget(right, 1)
 
         if not select:
-            self.set_loading("Starte …")
+            self.set_loading(tr("Starte …"))
         self._update()
         self._center()
 
@@ -362,16 +368,20 @@ class StartWindow(QWidget):
         """Liste der zuletzt benutzten Konfigurationen füllen (Name, Ordner, Änderungszeit); die aktuelle steht oben."""
         self.list.clear()
         files = recent_configs()
-        if self.current and os.path.exists(self.current) and self.current not in files:
+        if self.current and quick_exists(self.current) and self.current not in files:
             files.insert(0, self.current)
         if self.kind == "iocheck":                    # Prüfstände zuerst, dann Konfigurationen (neuer Prüfstand)
             from plc_common import recent_iochecks
-            files = recent_iochecks() + [p for p in files if p not in recent_iochecks()]
+            io = recent_iochecks()
+            files = io + [p for p in files if p not in io]
         for p in files:
-            try:
-                when = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(p)))
-            except OSError:
-                when = ""
+            if _is_network(p):                       # Änderungszeit nicht lesen (Server evtl. nicht erreichbar)
+                when = tr("Netzlaufwerk")
+            else:
+                try:
+                    when = time.strftime("%d.%m.%Y %H:%M", time.localtime(os.path.getmtime(p)))
+                except OSError:
+                    when = ""
             kind = ""
             if self.kind == "iocheck":
                 kind = tr("Prüfstand") if p.lower().endswith(".iocheck.json") else tr("Konfiguration, neuer Prüfstand")
@@ -412,7 +422,7 @@ class StartWindow(QWidget):
         """
         save_settings(startbild=not self.chk_skip.isChecked())
         self.result = {"path": path, "new": new, "demo": demo, "client": client}
-        self.set_loading("Lade …")
+        self.set_loading(tr("Lade …"))
         self.chosen.emit()
 
     def open_selected(self):
@@ -450,10 +460,10 @@ class StartWindow(QWidget):
         self._finish((it.data(Qt.ItemDataRole.UserRole) if it else "") or self.current, demo=True)
 
     def cancel(self):
-        """Abbrechen: kein Ergebnis, Fenster schließen – das Programm beendet sich danach."""
+        """Abbrechen: kein Ergebnis, Fenster schließen (``closeEvent`` sendet ``chosen``) – das Programm beendet sich
+        danach."""
         self.result = None
         self.close()
-        self.chosen.emit()
 
     # ------------------------------------------------------------------ Laden
     def set_loading(self, text, percent=None):
@@ -512,7 +522,7 @@ def choose(kind, current_path="", explicit=False):
     win.show()
     QApplication.processEvents()
     if not select:
-        return win, {"path": current_path, "new": False, "demo": False}
+        return win, {"path": current_path, "new": False, "demo": False, "client": False}
     from PySide6.QtCore import QEventLoop
     # Eigene Ereignisschleife: wartet, bis der Benutzer gewählt hat (Signal chosen), ohne app.exec() zu starten –
     # das Hauptprogramm läuft danach mit der Auswahl weiter.

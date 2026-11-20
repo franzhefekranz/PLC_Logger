@@ -5069,6 +5069,9 @@
 @ Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
 > Do not show at startup (open the last used file)
 
+@ Netzlaufwerk
+> Network drive
+
 @ Prüfstand
 > Test file
 
@@ -5077,6 +5080,9 @@
 
 @ Noch keine Konfiguration benutzt – „Neue Konfiguration …“ oder „Durchsuchen …“.
 > No configuration used yet – “New configuration …” or “Browse …”.
+
+@ Lade …
+> Loading …
 
 @ IO-Check oder Konfiguration (*.iocheck.json *.json);;Alle Dateien (*)
 > IO check or configuration (*.iocheck.json *.json);;All files (*)
@@ -5210,9 +5216,6 @@
 
 @ Export
 > Export
-
-@ Lade …
-> Loading …
 
 @ Angezeigter Zeitbereich
 > Displayed time range

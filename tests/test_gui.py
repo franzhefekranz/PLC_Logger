@@ -669,6 +669,16 @@ def test_about_help_and_dialogs(qt_log, demo_config, tmp_path, monkeypatch):
     sw.open_selected()
     assert sw.result["path"] == str(proj)
     sw.close()
+    # Netzpfad: wird ohne Zugriff aufgeführt (kein Warten auf einen nicht erreichbaren Server); Abbrechen meldet einmal
+    net = "//nichtda/freigabe/anlage.json"
+    sw = StartWindow("logger", net)
+    texts = [sw.list.item(i).text() for i in range(sw.list.count())]
+    assert texts[0].startswith("anlage.json") and "Netzlaufwerk" in texts[0], texts
+    sw.show()
+    got = []
+    sw.chosen.connect(lambda: got.append(sw.result))
+    sw.cancel()
+    assert got == [None]
 
 
 def test_language_english(qt_log, demo_config):
