@@ -1,0 +1,4482 @@
+{
+ "windows": [
+  {
+   "class": "XYDialog",
+   "title": "XY chart",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Time range",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "X axis",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Display",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Regression line and correlation",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Refresh",
+     "tip": "Fetch the data again (e.g. during a running recording)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Save image …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Save values (CSV) …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "FftDialog",
+   "title": "Frequency analysis (FFT)",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Time range",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Variable",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Window",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Preprocessing",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "X axis",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Logarithmic amplitude",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Refresh",
+     "tip": "Fetch the data again (e.g. during a running recording)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Save image …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Save values (CSV) …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "EventViewer",
+   "title": "Event log – C:\\Anlagen\\Kesselhaus\\kesselhaus_ereignisse.csv",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "open only",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "No., Raised, Cleared, Priority, Trigger, Message, Acknowledged",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Add note …",
+     "tip": "Write your own time-stamped entry to the event log",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Show in chart",
+     "tip": "Show the time range around the selected event in the logger, rulers at start and end (also right-click on a row)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Acknowledge selected",
+     "tip": "Acknowledge selected open events (also by double-clicking a row)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Acknowledge all (4)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Open folder",
+     "tip": "Open the folder of the event file in the file manager",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NoteDialog",
+   "title": "Note to the event log",
+   "shot": "notiz",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Time",
+     "tip": "Point in time the note refers to (default: now)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Note",
+     "tip": "e.g. valve V12 replaced, setpoint changed to 65 °C …",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Author",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "ExportDialog",
+   "title": "Export values",
+   "shot": "export_dialog",
+   "controls": [
+    {
+     "kind": "gruppe",
+     "text": "Time range",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Between ruler 1 and ruler 2",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Visible section",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "All data (20.11.2026 20:35:41.210 to 20.11.2026 20:37:07.404)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Only visible variables (15 of 17)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Downsampling (reduce values to a fixed time grid)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Grid",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Method",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Save …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PidTuneDialog",
+   "title": "PID controller tuning – Regelkreis",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Setpoint",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Process value",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Controller output",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Time range",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Controller type",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Control behaviour",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Identify process and calculate",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Tuning rule, Kp, Ti [s], Td [s], Ki [1/s], Kd [s], Overshoot, Settling time, Note",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Copy result",
+     "tip": "Model and all parameters as text to the clipboard",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "DbLoadDialog",
+   "title": "Load from database",
+   "shot": "datenbank",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Choose SQLite file …",
+     "tip": "Read a different SQLite file (e.g. a copy of a recording)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Database of the configuration",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Variables",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "All",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "None",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "As in configuration",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Time range",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Last hour",
+     "tip": "The last hour before the latest stored value",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Last 24 h",
+     "tip": "The last 24 hours before the latest stored value",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Today",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Yesterday",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Last 7 days",
+     "tip": "The last 7 days before the latest stored value",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Last 30 days",
+     "tip": "The last 30 days before the latest stored value",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "All",
+     "tip": "From the first to the last value of the selected variables",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Display",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Resolution",
+     "tip": "Averages are calculated by the database – much faster and more memory-efficient than raw data for long periods.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Fill missing values with the last value",
+     "tip": "Useful when the recording writes \"changes only\": a missing value then means \"unchanged\".",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Count values",
+     "tip": "Determine the number of values in the selected period",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Load and display",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "QDialog",
+   "title": "Web server",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Copy address",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PidSetupDialog",
+   "title": "PID tuning – Regelkreis",
+   "shot": "pid_einstellen",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Setpoint",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Process value (controlled variable)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Controller output (manipulated variable)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Controller type",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Control behaviour",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "BlockEditor",
+   "title": "Blocks (block read mode)",
+   "shot": "blockeditor",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Set for all elements of the selected block",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Set for all",
+     "tip": "Set record/display for all elements of the selected block",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Name, Controller, Start address / array, First index, Format, Count, Ring buffer, Chart › Y axis, Colour, Value display, Bars, Area",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Add block",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Test selected block",
+     "tip": "Reads the block once from the PLC and shows the first values and the read time",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "PLC templates …",
+     "tip": "Open the folder with the ring buffer blocks (S7-300/400, S7-1200/1500, ControlLogix)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "FormulaEditor",
+   "title": "Calculated variable",
+   "shot": "formeleditor",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Variable used, Test value",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Check / calculate",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "TriggerEditor",
+   "title": "Triggers (events)",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Active, Name, Condition, Message text, Priority, Delay, Clear, Acknowledge",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Trigger",
+     "tip": "Create new trigger",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Edit condition …",
+     "tip": "Edit the condition in the formula editor (with variable list and test values); also double-click",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Duplicate",
+     "tip": "Copy the selected trigger",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove",
+     "tip": "Delete the selected trigger",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "move up",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "move down",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "FormulaEditor",
+   "title": "Trigger condition (true = result not equal to 0)",
+   "shot": "trigger_editor",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Variable used, Test value",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Check / calculate",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "WebUsersDialog",
+   "title": "Web server – users",
+   "shot": "web_benutzer",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Add …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Change password …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "MqttDialog",
+   "title": "MQTT",
+   "shot": "mqtt",
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Send values to an MQTT broker (while recording)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Broker",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Address (host)",
+     "tip": "e.g. 192.168.0.5 or homeassistant.local",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "CA certificate (file)",
+     "tip": "empty = certificates of the system",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "User",
+     "tip": "empty = without login",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Password",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Client ID",
+     "tip": "empty = automatic",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "TLS (encrypted, usually port 8883)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Check certificate",
+     "tip": "Off: also accept self-signed certificates (only in your own network)",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Send",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Base topic",
+     "tip": "Topics: <base>/<controller>/<variable>, <base>/werte, <base>/ereignisse, <base>/status",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Send",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Interval",
+     "tip": "On change: at most this often per variable; cyclic: all values at this rate",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Format",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "QoS",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Discovery prefix",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Store values at the broker (retain)",
+     "tip": "New subscribers immediately receive the last value",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Home Assistant discovery (variables appear there as sensors)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Test connection",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "HeadlessDialog",
+   "title": "Running headless loggers",
+   "shot": "headless_beenden",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Project, Configuration, Started, Computer, PID, Web server, State",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Stop logger",
+     "tip": "Stop the selected headless logger cleanly",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PlcSettingsDialog",
+   "title": "Connection – SPS 1 (Beckhoff TwinCAT (ADS))",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "IP address",
+     "tip": "TwinCAT on this computer: 127.0.0.1 (no route needed, leave own AMS Net ID empty)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "AMS Net ID of the controller",
+     "tip": "e.g. 5.12.34.56.1.1 (empty = IP address + .1.1)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "AMS port",
+     "tip": "851 = PLC runtime 1 (TwinCAT 3), 852 … further; 801 = TwinCAT 2",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Advanced",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Own AMS Net ID",
+     "tip": "Must match the route in the controller (empty = own IP address + .1.1)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Own AMS port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "TCP port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Variables per request",
+     "tip": "Maximum number of parts per sum request (TwinCAT: 500)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Timeout",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PlcSettingsDialog",
+   "title": "Connection – SPS 1 (OPC UA (asyncua))",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Endpoint",
+     "tip": "Address of the OPC UA server, e.g. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Operating mode",
+     "tip": "Subscription: the server reports only changes (less network load with many values)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Security",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "User",
+     "tip": "Empty = anonymous",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Password",
+     "tip": "Note: it is stored in plain text in the configuration file.",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Advanced",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Client certificate",
+     "tip": "Certificate file (.der/.pem). Empty = a self-signed certificate is created automatically.",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Private key",
+     "tip": "Key file (.pem) for the client certificate",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Timeout",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Publishing interval (subscription)",
+     "tip": "How often the server sends collected changes (0 = interval of the controller)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Sampling interval (subscription)",
+     "tip": "How often the server checks the values for changes (0 = like the publishing interval)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Nodes per request",
+     "tip": "Maximum number of nodes per read request (some servers limit this, e.g. to 100)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "TagBrowser",
+   "title": "Select tags from the controller – SPS 2",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Load tag list from controller",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Program tags",
+     "tip": "Also load the tags of the programs (Program:Name.Tag) – takes longer",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Selected array as block…",
+     "tip": "Add an array of numbers with a single read request (also by double-click)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Apply selection",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NetScanDialog",
+   "title": "Scan network",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Read device identity",
+     "tip": "S7: module and station, EtherNet/IP: product name",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Search",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Take over, Address, Found, Device, Details, Driver",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Add as controller",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NetPanel",
+   "title": "PLC data logger – network",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Back",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Restart",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Shut down",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Back",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Stop",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Start (headless)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Back",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Dim now",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Back",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Internet time (NTP)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Read",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "UTC",
+     "tip": "The controller delivers its time in UTC (otherwise local time) – only relevant for S7",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Automatic",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Back",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Time zone",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Set clock",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Show",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "1",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "2",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "3",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "4",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "5",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "6",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "7",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "8",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "9",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "0",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "q",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "w",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "e",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "r",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "t",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "z",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "u",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "i",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "o",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "p",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "a",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "s",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "d",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "f",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "g",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "h",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "j",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "k",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "l",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "y",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "x",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "c",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "v",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "b",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "n",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "m",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "⇧",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "?#1",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Space",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "⌫",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Connect",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "WLAN on",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Back",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Search",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "IP settings",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "DHCP (automatic)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Fixed address",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "7",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "8",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "9",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "4",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "5",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "6",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "1",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "2",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "3",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "0",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": ".",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "/",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "⌫",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Clear",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Back",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Ethernet",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "WLAN",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Time",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Display",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Logger",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "IoCheckWindow",
+   "title": "IO check – (not saved)",
+   "shot": "",
+   "menus": [],
+   "toolbars": [
+    {
+     "text": "IO check",
+     "sub": [
+      {
+       "text": "Import IO list …",
+       "tip": "Take over the signal list from CSV, Excel or ODS (EPLAN, TIA Portal tag table, own list)"
+      },
+      {
+       "text": "Columns …",
+       "tip": "Define the column headings of the IO list; empty fields are neither read nor displayed. Arrow: show and hide columns of the signal list",
+       "sub": []
+      },
+      {
+       "text": "Open …",
+       "keys": [
+        "Ctrl+O"
+       ],
+       "tip": "Open a saved IO check"
+      },
+      {
+       "text": "Save",
+       "keys": [
+        "Ctrl+S"
+       ],
+       "tip": "Save test progress file (*.iocheck.json); arrow: save automatically on/off",
+       "sub": [
+        {
+         "text": "Save automatically",
+         "check": true,
+         "tip": "Write every change to the test progress file immediately (once it has been saved)"
+        }
+       ]
+      },
+      {
+       "text": "Save as …",
+       "tip": "Save as"
+      },
+      {
+       "text": "Export result …",
+       "tip": "Save the test result as CSV or Excel"
+      },
+      {
+       "text": "Protocol (PDF) …",
+       "tip": "Acceptance protocol with summary, fault list, all signals and signature fields; arrow: portrait or landscape, attach photos",
+       "sub": [
+        {
+         "text": "Landscape",
+         "check": true
+        },
+        {
+         "text": "Attach photos",
+         "check": true
+        },
+        {
+         "sep": true
+        },
+        {
+         "text": "Short report (PDF) …",
+         "tip": "Summary only: progress bars in total, per signal kind, group and location"
+        }
+       ]
+      },
+      {
+       "text": "Photos …",
+       "tip": "View, add or remove photos of the selected signal (also by double-click in the “Photos” column; on the phone with the camera)"
+      },
+      {
+       "text": "📱 Mobile …",
+       "tip": "IO check on smartphone/tablet: show the address of the web page (starts the web server if needed)"
+      },
+      {
+       "text": "Checked by: J. Smith",
+       "tip": "Name or initials entered as “Checked by” when signals are checked off on the PC (default: user logged in to the computer); on the phone the login name is used"
+      },
+      {
+       "text": "▶ Start reading",
+       "keys": [
+        "F5"
+       ],
+       "tip": "Read the signals cyclically from the controllers"
+      },
+      {
+       "text": "What has moved?",
+       "check": true,
+       "tip": "Show or hide the side panel with the signals that changed last"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Signal list",
+      "Matrix"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Demo",
+     "tip": "Simulated values instead of a connection to the controller",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Read displayed only",
+     "tip": "Read only the signals currently shown by search field, selection lists and column filters (less load for controller and network); reading restarts when the filter changes",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Check off signals automatically",
+     "tip": "Optional: a signal with status “open” becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and released) or an analog input has reported a wire break and is valid again (wiring opened and closed). Only signals from the list or the scan ranges are checked.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Open signals only",
+     "tip": "Do not report changes of signals with status OK, error or skipped (e.g. a constantly jumping analog value). The selected signal is always reported; to check it again, reset its status to “open”.",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Time, Signal, Change",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Scan ranges …",
+     "tip": "Read contiguous inputs/outputs without an IO list, e.g. E0.0 … E31.7",
+     "tabs": [
+      "Matrix"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "No., Status, Value, Address, Symbol, Comment, Device tag, Group, Location, Type, Controller, Checked at, Checked by, Photos, Remark",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✓ OK",
+     "tip": "✓ OK (Ctrl+1)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✗ Fault …",
+     "tip": "✗ Fault … (Ctrl+2)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "– Skipped",
+     "tip": "– Skipped (Ctrl+3)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "↻ Repeat",
+     "tip": "↻ Repeat (Ctrl+4)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Reset",
+     "tip": "Reset (Ctrl+0)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "＋ Signal …",
+     "tip": "Add a signal to the IO list by hand (right-click in the list: more commands)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "gruppe",
+     "text": "Analog value",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 0 %",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 100 %",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Measuring range from",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Measuring range to",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Raw value in the list",
+     "tip": "Display of the raw value in the column “Value” of the signal list",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Unit",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Clear test points",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    }
+   ]
+  },
+  {
+   "class": "IoCheckWindow",
+   "title": "IO check – (not saved) *",
+   "shot": "iocheck_fenster",
+   "menus": [],
+   "toolbars": [
+    {
+     "text": "IO check",
+     "sub": [
+      {
+       "text": "Import IO list …",
+       "tip": "Take over the signal list from CSV, Excel or ODS (EPLAN, TIA Portal tag table, own list)"
+      },
+      {
+       "text": "Columns …",
+       "tip": "Define the column headings of the IO list; empty fields are neither read nor displayed. Arrow: show and hide columns of the signal list",
+       "sub": []
+      },
+      {
+       "text": "Open …",
+       "keys": [
+        "Ctrl+O"
+       ],
+       "tip": "Open a saved IO check"
+      },
+      {
+       "text": "Save",
+       "keys": [
+        "Ctrl+S"
+       ],
+       "tip": "Save test progress file (*.iocheck.json); arrow: save automatically on/off",
+       "sub": [
+        {
+         "text": "Save automatically",
+         "check": true,
+         "tip": "Write every change to the test progress file immediately (once it has been saved)"
+        }
+       ]
+      },
+      {
+       "text": "Save as …",
+       "tip": "Save as"
+      },
+      {
+       "text": "Export result …",
+       "tip": "Save the test result as CSV or Excel"
+      },
+      {
+       "text": "Protocol (PDF) …",
+       "tip": "Acceptance protocol with summary, fault list, all signals and signature fields; arrow: portrait or landscape, attach photos",
+       "sub": [
+        {
+         "text": "Landscape",
+         "check": true
+        },
+        {
+         "text": "Attach photos",
+         "check": true
+        },
+        {
+         "sep": true
+        },
+        {
+         "text": "Short report (PDF) …",
+         "tip": "Summary only: progress bars in total, per signal kind, group and location"
+        }
+       ]
+      },
+      {
+       "text": "Photos …",
+       "tip": "View, add or remove photos of the selected signal (also by double-click in the “Photos” column; on the phone with the camera)"
+      },
+      {
+       "text": "📱 Mobile …",
+       "tip": "IO check on smartphone/tablet: show the address of the web page (starts the web server if needed)"
+      },
+      {
+       "text": "Checked by: J. Smith",
+       "tip": "Name or initials entered as “Checked by” when signals are checked off on the PC (default: user logged in to the computer); on the phone the login name is used"
+      },
+      {
+       "text": "■ Stop reading",
+       "keys": [
+        "F5"
+       ],
+       "tip": "Read the signals cyclically from the controllers"
+      },
+      {
+       "text": "What has moved?",
+       "check": true,
+       "tip": "Show or hide the side panel with the signals that changed last"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Signal list",
+      "Matrix"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Demo",
+     "tip": "Simulated values instead of a connection to the controller",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Read displayed only",
+     "tip": "Read only the signals currently shown by search field, selection lists and column filters (less load for controller and network); reading restarts when the filter changes",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Check off signals automatically",
+     "tip": "Optional: a signal with status “open” becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and released) or an analog input has reported a wire break and is valid again (wiring opened and closed). Only signals from the list or the scan ranges are checked.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Open signals only",
+     "tip": "Do not report changes of signals with status OK, error or skipped (e.g. a constantly jumping analog value). The selected signal is always reported; to check it again, reset its status to “open”.",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Time, Signal, Change",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Scan ranges …",
+     "tip": "Read contiguous inputs/outputs without an IO list, e.g. E0.0 … E31.7",
+     "tabs": [
+      "Matrix"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "No., Status, Value, Address, Symbol, Comment, Device tag, Group, Location, Type, Controller, Checked at, Checked by, Photos, Remark",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✓ OK",
+     "tip": "✓ OK (Ctrl+1)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✗ Fault …",
+     "tip": "✗ Fault … (Ctrl+2)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "– Skipped",
+     "tip": "– Skipped (Ctrl+3)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "↻ Repeat",
+     "tip": "↻ Repeat (Ctrl+4)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Reset",
+     "tip": "Reset (Ctrl+0)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "＋ Signal …",
+     "tip": "Add a signal to the IO list by hand (right-click in the list: more commands)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "gruppe",
+     "text": "Analog value",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 0 %",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 100 %",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Measuring range from",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Measuring range to",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Raw value in the list",
+     "tip": "Display of the raw value in the column “Value” of the signal list",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Unit",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Clear test points",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    }
+   ]
+  },
+  {
+   "class": "AddSignalDialog",
+   "title": "Add signal",
+   "shot": "iocheck_signal_neu",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Address",
+     "tip": "e.g. I12.3, IW256, Q4.0, DB10.DBX2.1",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Symbol",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Comment",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Device tag",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Location",
+     "tip": "e.g. Hall 2, +S1, boiler house",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Group",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Type",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Measuring range",
+     "tip": "analog only, e.g. 0..10 bar",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Controller",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PhotoDialog",
+   "title": "Photos – E0.1 B01",
+   "shot": "iocheck_fotos",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Add …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Open",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Close",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "ScanDialog",
+   "title": "Scan ranges",
+   "shot": "iocheck_scan",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Controller, Start address, Number of bits",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Add",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NotifyDialog",
+   "title": "Notifications",
+   "shot": "",
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "E-mail",
+      "Teams / Slack / Webhook",
+      "ntfy (push)",
+      "Telegram"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Notify on events",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "When",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Priority",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Only triggers",
+     "tip": "empty = all triggers; otherwise names separated by commas",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Lock time per trigger",
+     "tip": "If the same trigger comes again within this time, no further message is sent (the next message states how many were suppressed).",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Also notify when an event goes",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Bot token",
+     "tip": "",
+     "tabs": [
+      "Telegram"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Chat ID",
+     "tip": "123456789",
+     "tabs": [
+      "Telegram"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Use Telegram",
+     "tip": "",
+     "tabs": [
+      "Telegram"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Address with topic",
+     "tip": "https://ntfy.sh/mein-geheimes-thema",
+     "tabs": [
+      "ntfy (push)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Access token",
+     "tip": "",
+     "tabs": [
+      "ntfy (push)"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Use ntfy (push)",
+     "tip": "",
+     "tabs": [
+      "ntfy (push)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Type",
+     "tip": "",
+     "tabs": [
+      "Teams / Slack / Webhook"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Webhook address",
+     "tip": "https://…",
+     "tabs": [
+      "Teams / Slack / Webhook"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Use Teams / Slack / Webhook",
+     "tip": "",
+     "tabs": [
+      "Teams / Slack / Webhook"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "SMTP server",
+     "tip": "smtp.firma.de",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Encryption",
+     "tip": "",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "User",
+     "tip": "",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Password",
+     "tip": "",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Sender",
+     "tip": "datenlogger@firma.de",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Recipients",
+     "tip": "a@firma.de, b@firma.de",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Use E-mail",
+     "tip": "",
+     "tabs": [
+      "E-mail"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Send test message",
+     "tip": "Send a test message via all enabled channels",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "OpcUaServerDialog",
+   "title": "OPC UA server",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Address (host)",
+     "tip": "0.0.0.0 = reachable in the whole network, 127.0.0.1 = only on this computer",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Update",
+     "tip": "How often changed values are updated in the server",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Endpoint",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Start OPC UA server (while recording)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Security (endpoints)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Certificate (DER/PEM)",
+     "tip": "empty = self-signed",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Key (PEM)",
+     "tip": "empty = self-signed",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "None",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Basic256Sha256 – Sign",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Basic256Sha256 – Sign and encrypt",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Aes128Sha256RsaOaep – Sign and encrypt",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Aes256Sha256RsaPss – Sign and encrypt",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Access",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Anonymous (without login)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Login with the web server users (2 set up)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Cancel",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "StartWindow",
+   "title": "",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "✕",
+     "tip": "Exit",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Open",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Browse …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "New configuration …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Demo",
+     "tip": "Start with simulated values (without a controller)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Connect to logger …",
+     "tip": "Client mode: show the recording of another logger (e.g. headless on a Raspberry Pi) – without a configuration of your own",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Do not show at startup (open the last used file)",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "MainWindow",
+   "title": "PLC Datenlogger – Kesselhaus Linie 1  [kesselhaus.json]",
+   "shot": "w",
+   "menus": [
+    {
+     "text": "File",
+     "sub": [
+      {
+       "text": "Load config …",
+       "keys": [
+        "Ctrl+O"
+       ],
+       "tip": "Load another configuration file (any file name)"
+      },
+      {
+       "text": "Reload configuration",
+       "keys": [
+        "F5"
+       ]
+      },
+      {
+       "text": "Config editor",
+       "tip": "Open the configuration program with this configuration file"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Connect to logger (client) …",
+       "keys": [
+        "Ctrl+K"
+       ],
+       "tip": "Show the recording of another logger via its web server (without own configuration and PLC)"
+      },
+      {
+       "text": "Disconnect (own configuration)"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Load CSV"
+      },
+      {
+       "text": "Join CSV files and save …",
+       "tip": "Join several recordings by time, save them as a new CSV file and show them offline"
+      },
+      {
+       "text": "Load from database …",
+       "keys": [
+        "Ctrl+D"
+       ],
+       "tip": "Choose a period from the database and display it offline"
+      },
+      {
+       "text": "Export values (CSV/Excel) …",
+       "keys": [
+        "Ctrl+Shift+E"
+       ],
+       "tip": "Save the values of a time range as CSV or Excel file, optionally downsampled"
+      },
+      {
+       "text": "Web server address …",
+       "tip": "Web server address"
+      },
+      {
+       "text": "Process view in the browser",
+       "tip": "Open the web server's process view (tiles with values, gauges, lamps) in the browser"
+      },
+      {
+       "text": "Event log …",
+       "keys": [
+        "Ctrl+E"
+       ],
+       "tip": "Show and acknowledge trigger events"
+      },
+      {
+       "text": "Note to the event log …",
+       "keys": [
+        "Ctrl+M"
+       ],
+       "tip": "Write your own time-stamped entry to the event log (offline: time of ruler 1)"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Show start screen at program start",
+       "check": true
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Exit"
+      }
+     ]
+    },
+    {
+     "text": "Language",
+     "sub": [
+      {
+       "text": "Deutsch (de)",
+       "check": true
+      },
+      {
+       "text": "English (en)",
+       "check": true
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Open folder with language files …",
+       "tip": "Own translation: copy de.txt, rename it (e.g. fr.txt) and translate it"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Colour scheme",
+       "sub": [
+        {
+         "text": "Like the system",
+         "check": true
+        },
+        {
+         "text": "Light",
+         "check": true
+        },
+        {
+         "text": "Dark",
+         "check": true
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "text": "View",
+     "sub": [
+      {
+       "text": "Layout",
+       "sub": [
+        {
+         "text": "Stacked",
+         "check": true
+        },
+        {
+         "text": "Side by side",
+         "check": true
+        },
+        {
+         "text": "Tabs",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Charts on the page",
+       "sub": [
+        {
+         "text": "Stacked",
+         "check": true
+        },
+        {
+         "text": "Side by side",
+         "check": true
+        },
+        {
+         "text": "Grid",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Grid columns",
+       "sub": [
+        {
+         "text": "Automatic",
+         "check": true
+        },
+        {
+         "text": "1",
+         "check": true
+        },
+        {
+         "text": "2",
+         "check": true
+        },
+        {
+         "text": "3",
+         "check": true
+        },
+        {
+         "text": "4",
+         "check": true
+        },
+        {
+         "text": "5",
+         "check": true
+        },
+        {
+         "text": "6",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Pages / charts",
+       "sub": [
+        {
+         "text": "Charts",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Value display",
+       "check": true
+      },
+      {
+       "text": "Values at mouse pointer (online)",
+       "check": true,
+       "tip": "In online mode, show time and values of all curves at the mouse position"
+      },
+      {
+       "text": "Trigger marks on the time axis",
+       "check": true,
+       "tip": "Events, start of trigger captures and notes as a vertical line in the chart"
+      },
+      {
+       "text": "Bars",
+       "check": true
+      }
+     ]
+    },
+    {
+     "text": "Screenshot",
+     "sub": [
+      {
+       "text": "Prozess …",
+       "tip": "Prozess"
+      },
+      {
+       "text": "Regelkreis …",
+       "tip": "Regelkreis"
+      },
+      {
+       "text": "Zustände …",
+       "tip": "Zustände"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Light background (for reports/printing)",
+       "check": true
+      }
+     ]
+    },
+    {
+     "text": "Analysis",
+     "sub": [
+      {
+       "text": "IO check …",
+       "tip": "Commissioning: check the signal list, inputs/outputs as a matrix, detect swapped signals"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "XY chart …",
+       "tip": "Plot variables against another variable (e.g. pressure over stroke)"
+      },
+      {
+       "text": "Frequency analysis (FFT) …",
+       "tip": "Amplitude spectrum of a variable, e.g. for oscillations"
+      },
+      {
+       "text": "Create PDF report …",
+       "tip": "Report with statistics, trend and events for a time range as PDF"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "PID tuning: Regelkreis …",
+       "tip": "PID tuning: Regelkreis"
+      }
+     ]
+    },
+    {
+     "text": "Help",
+     "sub": [
+      {
+       "text": "User manual"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "About PLC Datenlogger …",
+       "tip": "About PLC Datenlogger"
+      }
+     ]
+    }
+   ],
+   "toolbars": [
+    {
+     "text": "Controller",
+     "sub": [
+      {
+       "text": "▶ Start",
+       "check": true
+      },
+      {
+       "text": "Offline",
+       "check": true
+      },
+      {
+       "text": "Load CSV"
+      },
+      {
+       "text": "Load config …",
+       "keys": [
+        "Ctrl+O"
+       ],
+       "tip": "Load another configuration file (any file name)"
+      },
+      {
+       "text": "Config editor",
+       "tip": "Open the configuration program with this configuration file"
+      },
+      {
+       "text": "Value display",
+       "check": true
+      },
+      {
+       "text": "Bars",
+       "check": true
+      },
+      {
+       "text": "Y auto",
+       "check": true,
+       "tip": "Scale all Y axes automatically (overrides fixed ranges)"
+      },
+      {
+       "text": "Bool in chart",
+       "check": true,
+       "tip": "Also draw BOOL curves in the chart (otherwise only as line/band next to the name in the legend)"
+      },
+      {
+       "text": "Reset rulers"
+      },
+      {
+       "text": "Demo",
+       "check": true,
+       "tip": "Simulated values instead of PLC connection (choose before starting)"
+      },
+      {
+       "text": "Zoom rectangle",
+       "check": true,
+       "tip": "Drag a region with the left mouse button: enlarge time and values of this chart (off: the left mouse button pans the time axis)"
+      },
+      {
+       "text": "Align time axes",
+       "tip": "Set all charts to the time range of the chart used last (mouse wheel and zoom only affect the chart under the mouse pointer)"
+      },
+      {
+       "text": "Reset zoom",
+       "tip": "Scale the Y axes as configured again and align the time axes"
+      }
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Variable, Ruler 1, Ruler 2, Δ (L2 − L1), Minimum, Maximum, Mean, Std. dev.",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "🔔 4 open",
+     "tip": "4 open (unacknowledged) events\nC:\\Anlagen\\Kesselhaus\\kesselhaus_ereignisse.csv\nClick: open the event log and acknowledge",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "ConfigWindow",
+   "title": "PLC Configuration – Kesselhaus Linie 1 – kesselhaus.json",
+   "shot": "cw",
+   "menus": [
+    {
+     "text": "File",
+     "sub": [
+      {
+       "text": "New",
+       "keys": [
+        "Ctrl+N"
+       ]
+      },
+      {
+       "text": "Open …",
+       "keys": [
+        "Ctrl+O"
+       ],
+       "tip": "Open"
+      },
+      {
+       "text": "Save",
+       "keys": [
+        "Ctrl+S"
+       ]
+      },
+      {
+       "text": "Save as …",
+       "keys": [
+        "Ctrl+Shift+S"
+       ],
+       "tip": "Save as"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Convert INI file …",
+       "tip": "Convert INI file"
+      },
+      {
+       "text": "Start logger with this configuration",
+       "keys": [
+        "Ctrl+R"
+       ]
+      },
+      {
+       "text": "Start IO check with this configuration"
+      },
+      {
+       "text": "Show/stop headless loggers …",
+       "tip": "Show/stop headless loggers"
+      },
+      {
+       "text": "Export Grafana dashboard …",
+       "tip": "Export Grafana dashboard"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Exit",
+       "keys": [
+        "Ctrl+Q"
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Driver",
+     "sub": [
+      {
+       "text": "Installed drivers …",
+       "tip": "Installed drivers"
+      },
+      {
+       "text": "Open folder for own drivers …",
+       "tip": "Open folder for own drivers"
+      }
+     ]
+    },
+    {
+     "text": "Language",
+     "sub": [
+      {
+       "text": "Deutsch (de)",
+       "check": true
+      },
+      {
+       "text": "English (en)",
+       "check": true
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Open folder with language files …",
+       "tip": "Own translation: copy de.txt, rename it (e.g. fr.txt) and translate it"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Colour scheme",
+       "sub": [
+        {
+         "text": "Like the system",
+         "check": true
+        },
+        {
+         "text": "Light",
+         "check": true
+        },
+        {
+         "text": "Dark",
+         "check": true
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Help",
+     "sub": [
+      {
+       "text": "User manual"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "About PLC Datenlogger …",
+       "tip": "About PLC Datenlogger"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Project & controllers",
+      "Recording",
+      "Display",
+      "Web server & headless",
+      "Database",
+      "Triggers & events",
+      "Reports (PDF)"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Display window (online)",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Default page layout",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Charts on one page",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Grid columns",
+     "tip": "Number of columns for the “Grid” layout (0 = automatic from the number of charts)",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Logo",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Customer logo",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Program icon",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Bar width",
+     "tip": "Width of a bar next to the chart (default 14 pixels)",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Show bars for current values",
+     "tip": "",
+     "tabs": [
+      "Display"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Database",
+     "tip": "",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Server / port",
+     "tip": "",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Database name",
+     "tip": "",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "SQLite file",
+     "tip": "",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "User / password",
+     "tip": "",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Table",
+     "tip": "Table name (letters, digits, _); created if necessary",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Delete after",
+     "tip": "Delete values that are older (0 = never). TimescaleDB: whole chunks, QuestDB: whole days. InfluxDB 3 and VictoriaMetrics: set the retention period on the server",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Use at most",
+     "tip": "SQLite only: if the values take up more space, the oldest days are deleted (0 = unlimited). The file does not shrink but stops growing",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Write changes only (at least every minute)",
+     "tip": "Saves space: a value is only written when it has changed",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Also write events and notes",
+     "tip": "Additionally write trigger events (comes, goes, acknowledged) and notes to the table <table>_ereignisse (VictoriaMetrics/Prometheus: metrics <table>_ereignisse_aktiv and _quittiert), e.g. for Grafana",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Test database",
+     "tip": "Check the connection and create the table",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Storage …",
+     "tip": "Query the storage used by the table and the database and the number of values",
+     "tabs": [
+      "Database"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Triggers",
+     "tip": "",
+     "tabs": [
+      "Triggers & events"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Event file",
+     "tip": "",
+     "tabs": [
+      "Triggers & events"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Notify",
+     "tip": "",
+     "tabs": [
+      "Triggers & events"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Edit triggers …",
+     "tip": "Define conditions that write an entry to the event log",
+     "tabs": [
+      "Triggers & events"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Show event log …",
+     "tip": "Show and acknowledge events",
+     "tabs": [
+      "Triggers & events"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Triggers & events"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Notifications …",
+     "tip": "On events send e-mail, a Teams/Slack message or a push to the phone (ntfy, Telegram)",
+     "tabs": [
+      "Triggers & events"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Period",
+     "tip": "",
+     "tabs": [
+      "Reports (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Shift starts",
+     "tip": "Start of the shifts (times, separated by commas)",
+     "tabs": [
+      "Reports (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Day start",
+     "tip": "Time at which day, week (Monday) and month start, e.g. 06:00",
+     "tabs": [
+      "Reports (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Folder",
+     "tip": "",
+     "tabs": [
+      "Reports (PDF)"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Create PDF report automatically",
+     "tip": "At the end of each period: statistics, trend of all charts and events; a partial report when stopping",
+     "tabs": [
+      "Reports (PDF)"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Reports (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "CSV folder",
+     "tip": "",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "CSV name",
+     "tip": "File name prefix and name of the archive subfolder",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Max. records per file",
+     "tip": "When the count is reached, the file is zipped, archived and a new one is started (0 = unlimited)",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Archive folder",
+     "tip": "",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Delete after",
+     "tip": "Delete this logger's CSV files and archive ZIPs whose last change is older (0 = never)",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Use at most",
+     "tip": "If this logger's CSV files and archive take up more space, the oldest are deleted (0 = unlimited)",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Recording",
+     "tip": "By trigger: the CSV file/database is written only while the start condition is met – including the values of the pre-trigger time before and the post-trigger time after. Each capture gets its own CSV file. The display always runs.",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Start condition",
+     "tip": "",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Write CSV file",
+     "tip": "Switched off: no CSV file (e.g. database only, tab “Database”)",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Archive the current CSV file when the logger is closed",
+     "tip": "",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "Edit the condition in the formula editor",
+     "tabs": [
+      "Recording"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Address (host)",
+     "tip": "0.0.0.0 = reachable in the whole network, 127.0.0.1 = only on this computer",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Access code",
+     "tip": "Access code: the page is opened with ?token=CODE",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Browser refresh",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Headless loggers",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "OPC UA server",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "MQTT",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Certificate (PEM)",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Key (PEM)",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Login",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Start web server (charts in the browser, e.g. on a tablet/smartphone)",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Headless mode: start without charts, record only",
+     "tip": "The logger runs without a window (e.g. as a service); web server and archiving remain active. With the start parameter --gui the user interface can still be opened.",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Running loggers …",
+     "tip": "Show running headless loggers and stop them cleanly",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "OPC UA …",
+     "tip": "Provide the variables via an OPC UA server in the logger (control system, MES, SCADA)",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "MQTT …",
+     "tip": "Send values to an MQTT broker (Home Assistant, Node-RED, IoT platforms)",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "HTTPS (encrypted)",
+     "tip": "Without a certificate of your own, a self-signed one is created once (folder web_tls); the browser asks for confirmation on the first visit",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Users …",
+     "tip": "Set up login with user name and password",
+     "tabs": [
+      "Web server & headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Project name",
+     "tip": "Project name: appears in window titles, in the web server and in the log file",
+     "tabs": [
+      "Project & controllers"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "Name, Driver, Connection, Interval, Active",
+     "tip": "",
+     "tabs": [
+      "Project & controllers"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "Edit connection parameters",
+     "tabs": [
+      "Project & controllers"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "Edit connection parameters",
+     "tabs": [
+      "Project & controllers"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Controller",
+     "tip": "",
+     "tabs": [
+      "Project & controllers"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove controller",
+     "tip": "",
+     "tabs": [
+      "Project & controllers"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Scan network …",
+     "tip": "Search the network for reachable controllers and add them as controllers",
+     "tabs": [
+      "Project & controllers"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "Name, Controller, Chart › Y axis, Address, Type, Colour, Record, Display, Value display, Bars, Test value, Formula",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Select from controller…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Blocks (block read mode)…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Calculated variable…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Add variable",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Test connection",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Import/Export",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Chart",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Y axis",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Remove",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Properties of the selection (chart / Y axis)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Name",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Page (tab)",
+     "tip": "Charts with the same page name are shown together in one tab/dock",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Y min",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Y max",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Controller",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Auto scaling",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "PID controller tuning",
+     "tip": "In the logger, the PID parameters for this chart can be calculated from setpoint, process value and controller output",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Settings …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Open…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Save",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Save as…",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "IoCheckWindow",
+   "title": "IO check – Kesselhaus.iocheck.json",
+   "shot": "io",
+   "menus": [],
+   "toolbars": [
+    {
+     "text": "IO check",
+     "sub": [
+      {
+       "text": "Import IO list …",
+       "tip": "Take over the signal list from CSV, Excel or ODS (EPLAN, TIA Portal tag table, own list)"
+      },
+      {
+       "text": "Columns …",
+       "tip": "Define the column headings of the IO list; empty fields are neither read nor displayed. Arrow: show and hide columns of the signal list",
+       "sub": []
+      },
+      {
+       "text": "Open …",
+       "keys": [
+        "Ctrl+O"
+       ],
+       "tip": "Open a saved IO check"
+      },
+      {
+       "text": "Save",
+       "keys": [
+        "Ctrl+S"
+       ],
+       "tip": "Save test progress file (*.iocheck.json); arrow: save automatically on/off",
+       "sub": [
+        {
+         "text": "Save automatically",
+         "check": true,
+         "tip": "Write every change to the test progress file immediately (once it has been saved)"
+        }
+       ]
+      },
+      {
+       "text": "Save as …",
+       "tip": "Save as"
+      },
+      {
+       "text": "Export result …",
+       "tip": "Save the test result as CSV or Excel"
+      },
+      {
+       "text": "Protocol (PDF) …",
+       "tip": "Acceptance protocol with summary, fault list, all signals and signature fields; arrow: portrait or landscape, attach photos",
+       "sub": [
+        {
+         "text": "Landscape",
+         "check": true
+        },
+        {
+         "text": "Attach photos",
+         "check": true
+        },
+        {
+         "sep": true
+        },
+        {
+         "text": "Short report (PDF) …",
+         "tip": "Summary only: progress bars in total, per signal kind, group and location"
+        }
+       ]
+      },
+      {
+       "text": "Photos …",
+       "tip": "View, add or remove photos of the selected signal (also by double-click in the “Photos” column; on the phone with the camera)"
+      },
+      {
+       "text": "📱 Mobile …",
+       "tip": "IO check on smartphone/tablet: show the address of the web page (starts the web server if needed)"
+      },
+      {
+       "text": "Checked by: J. Smith",
+       "tip": "Name or initials entered as “Checked by” when signals are checked off on the PC (default: user logged in to the computer); on the phone the login name is used"
+      },
+      {
+       "text": "■ Stop reading",
+       "keys": [
+        "F5"
+       ],
+       "tip": "Read the signals cyclically from the controllers"
+      },
+      {
+       "text": "What has moved?",
+       "check": true,
+       "tip": "Show or hide the side panel with the signals that changed last"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Signal list",
+      "Matrix"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Demo",
+     "tip": "Simulated values instead of a connection to the controller",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Read displayed only",
+     "tip": "Read only the signals currently shown by search field, selection lists and column filters (less load for controller and network); reading restarts when the filter changes",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Check off signals automatically",
+     "tip": "Optional: a signal with status “open” becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and released) or an analog input has reported a wire break and is valid again (wiring opened and closed). Only signals from the list or the scan ranges are checked.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Open signals only",
+     "tip": "Do not report changes of signals with status OK, error or skipped (e.g. a constantly jumping analog value). The selected signal is always reported; to check it again, reset its status to “open”.",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Time, Signal, Change",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Scan ranges …",
+     "tip": "Read contiguous inputs/outputs without an IO list, e.g. E0.0 … E31.7",
+     "tabs": [
+      "Matrix"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "No., Status, Value, Address, Symbol, Comment, Device tag, Group, Location, Type, Controller, Checked at, Checked by, Photos, Remark",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✓ OK",
+     "tip": "✓ OK (Ctrl+1)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✗ Fault …",
+     "tip": "✗ Fault … (Ctrl+2)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "– Skipped",
+     "tip": "– Skipped (Ctrl+3)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "↻ Repeat",
+     "tip": "↻ Repeat (Ctrl+4)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Reset",
+     "tip": "Reset (Ctrl+0)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "＋ Signal …",
+     "tip": "Add a signal to the IO list by hand (right-click in the list: more commands)",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "gruppe",
+     "text": "Analog value: PT1",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 0 %",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 100 %",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Measuring range from",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Measuring range to",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Raw value in the list",
+     "tip": "Display of the raw value in the column “Value” of the signal list",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Unit",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Take over",
+     "tip": "Take the current value as test point",
+     "tabs": [
+      "Signal list"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Clear test points",
+     "tip": "",
+     "tabs": [
+      "Signal list"
+     ]
+    }
+   ]
+  }
+ ]
+}

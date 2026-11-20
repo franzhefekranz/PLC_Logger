@@ -404,6 +404,8 @@ Configuration program (``plc_config.py``)
    The configuration program: tabs at the top, assignment tree on the left, variable
    table on the right.
 
+.. _konfig-projekt:
+
 Project, controllers and settings
 ----------------------------------------------------------------------
 
@@ -672,6 +674,8 @@ Details in the chapter `PDF reports <pdf-berichte_>`__.
    * - Login
      - **Users …** creates users with password (only a hash is stored). Without users
        no login is needed. See `HTTPS and login <https-anmeldung_>`__.
+
+.. _konfig-variablen:
 
 Structure: charts, Y axes and variables
 ----------------------------------------------------------------------
@@ -1186,6 +1190,8 @@ Notes:
 * Formulas, triggers, reports and triggered recording see every record – a trigger thus
   also fires on a pulse of just one cycle.
 * In demo mode, ring buffer elements deliver simulated values like normal variables.
+
+.. _tags-waehlen:
 
 Selecting variables from the controller
 ----------------------------------------------------------------------
@@ -2490,6 +2496,8 @@ variables).
 
 Logger (``plc_logger.py``)
 ======================================================================
+
+.. _bedienelemente:
 
 Controls
 ----------------------------------------------------------------------
@@ -4331,6 +4339,8 @@ with a tick; *Hide column “…”* in the right-click menu hides the clicked o
 columns* brings all of them back. This is a personal setting and does not change the import
 – hidden columns are still read and saved.
 
+.. _io-signalliste:
+
 Signal list and test status
 ----------------------------------------------------------------------
 
@@ -4865,6 +4875,8 @@ The chosen files stay unchanged.
 
 If you only want to view the files, simply choose them together in **Load CSV** – then
 without saving.
+
+.. _werte-exportieren:
 
 Exporting values (CSV/Excel)
 ----------------------------------------------------------------------
@@ -5942,10 +5954,1513 @@ developer account the script signs with ``MACOS_SIGN_ID="Developer ID Applicatio
 notarization then follows with ``xcrun notarytool``.
 
 
+.. referenz-anfang
+
+.. _referenz:
+
+Reference: all menus, windows and controls
+======================================================================
+
+This chapter lists the menus, toolbars, tabs, buttons and fields of the programs and dialogs with their meaning. Detailed explanations with examples are in the previous chapters; *More* leads there. The shortcuts apply to Windows and Linux; on the Mac, ``⌘`` replaces ``Ctrl``.
+
+Logger: menus
+----------------------------------------------------------------------
+
+Menu bar of the logger (``plc_logger.py``). The menus *Language* and *Help* are in the next section.
+
+Menu File (logger)
+~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - Load config …
+     - ``Ctrl+O``
+     - Load another configuration file (any file name)
+   * - Reload configuration
+     - ``F5``
+     - Read the configuration file again and rebuild the charts; a running recording is stopped first
+   * - Config editor
+     -  
+     - Open the configuration program with this configuration file
+   * - Connect to logger (client) …
+     - ``Ctrl+K``
+     - Show the recording of another logger via its web server (without own configuration and PLC)
+   * - Disconnect (own configuration)
+     -  
+     - Leave client mode and use the own configuration again
+   * - Load CSV
+     -  
+     - Show one or more recordings (CSV/ZIP) offline; several files are joined by time
+   * - Join CSV files and save …
+     -  
+     - Join several recordings by time, save them as a new CSV file and show them offline
+   * - Load from database …
+     - ``Ctrl+D``
+     - Choose a period from the database and display it offline
+   * - Export values (CSV/Excel) …
+     - ``Ctrl+Shift+E``
+     - Save the values of a time range as CSV or Excel file, optionally downsampled
+   * - Web server address …
+     -  
+     - Show the web server address with a QR code (to open it on a smartphone or tablet)
+   * - Process view in the browser
+     -  
+     - Open the web server's process view (tiles with values, gauges, lamps) in the browser
+   * - Event log …
+     - ``Ctrl+E``
+     - Show and acknowledge trigger events
+   * - Note to the event log …
+     - ``Ctrl+M``
+     - Write your own time-stamped entry to the event log (offline: time of ruler 1)
+   * - Show start screen at program start
+     -  
+     - Show the start screen with the recently used configurations at the next start
+   * - Exit
+     -  
+     - Close the logger; a running recording is stopped (and archived if the option is set)
+
+*More:* `Web server (charts in the browser) <webserver_>`__, `Read mode: displaying recordings from the database <db-lesen_>`__, `Exporting values (CSV/Excel) <werte-exportieren_>`__, `Notes (own entries) <notizen_>`__
+
+Menu View (logger)
+~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - Layout › Stacked / Side by side / Tabs
+     -  
+     - Arrangement of the pages in the window
+   * - Charts on the page › Stacked / Side by side / Grid
+     -  
+     - Arrangement of the charts on a page
+   * - Grid columns › Automatic / 1 / 2 / 3 / 4 / 5 / 6
+     -  
+     - Number of columns for the “Grid” arrangement (automatic from the number of charts, or fixed)
+   * - Pages / charts › Charts
+     -  
+     - Show or hide individual pages
+   * - Value display
+     -  
+     - Show or hide the value table on the right
+   * - Values at mouse pointer (online)
+     -  
+     - In online mode, show time and values of all curves at the mouse position
+   * - Trigger marks on the time axis
+     -  
+     - Events, start of trigger captures and notes as a vertical line in the chart
+   * - Bars
+     -  
+     - Show or hide the bars with the current values next to the charts
+
+*More:* `Pages, charts and layout <seiten_>`__, `Trigger marks on the time axis <trigger-marken_>`__
+
+Menu Screenshot (logger)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - *Chart* …
+     -  
+     - Save this chart as PNG or SVG
+   * - Light background (for reports/printing)
+     -  
+     - Screenshots with a white background and dark text
+
+*More:* `Screenshots of charts <screenshots_>`__
+
+Menu Analysis (logger)
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - IO check …
+     -  
+     - Commissioning: check the signal list, inputs/outputs as a matrix, detect swapped signals
+   * - XY chart …
+     -  
+     - Plot variables against another variable (e.g. pressure over stroke)
+   * - Frequency analysis (FFT) …
+     -  
+     - Amplitude spectrum of a variable, e.g. for oscillations
+   * - Create PDF report …
+     -  
+     - Report with statistics, trend and events for a time range as PDF
+   * - PID tuning: *chart* …
+     -  
+     - Calculate PID parameters for the control loop of this chart (enabled for the chart in the configuration program)
+
+*More:* `Analysis: XY chart and frequency analysis <analyse_>`__, `PID controller tuning <pid-optimierung_>`__, `PDF reports <pdf-berichte_>`__, `IO check (commissioning) <io-check_>`__
+
+Logger and configuration program: language and help
+----------------------------------------------------------------------
+
+Both programs have the menus *Language* and *Help*; the IO check takes language and colour scheme from the program it is started from.
+
+Menu Language
+~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - Deutsch (de) / English (en) / …
+     -  
+     - Language of the user interface; the program restarts for this
+   * - Open folder with language files …
+     -  
+     - Own translation: copy de.txt, rename it (e.g. fr.txt) and translate it
+   * - Colour scheme › Like the system / Light / Dark
+     -  
+     - Light, dark or like the system
+
+*More:* `Switching and translating the language <sprache_>`__
+
+Menu Help
+~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - User manual
+     -  
+     - Open this manual; **F1** opens it at the section that matches the current window
+   * - About PLC Datenlogger …
+     -  
+     - Version, copyright, licence, third-party licences and library versions
+
+Logger: toolbar and window
+----------------------------------------------------------------------
+
+Toolbar of the logger
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Button
+     - Key
+     - Function
+   * - ▶ Start / ■ Stop
+     -  
+     - Start the recording; while it runs, **■ Stop** ends it
+   * - Offline
+     -  
+     - Freeze the display and scroll back through the recording (rulers, statistics); press again to go back online
+   * - Load CSV
+     -  
+     - Show one or more recordings (CSV/ZIP) offline; several files are joined by time
+   * - Load config …
+     - ``Ctrl+O``
+     - Load another configuration file (any file name)
+   * - Config editor
+     -  
+     - Open the configuration program with this configuration file
+   * - Value display
+     -  
+     - Show or hide the value table on the right
+   * - Bars
+     -  
+     - Show or hide the bars with the current values next to the charts
+   * - Y auto
+     -  
+     - Scale all Y axes automatically (overrides fixed ranges)
+   * - Bool in chart
+     -  
+     - Also draw BOOL curves in the chart (otherwise only as line/band next to the name in the legend)
+   * - Reset rulers
+     -  
+     - Put both rulers at one and two thirds of the visible time range
+   * - Demo
+     -  
+     - Simulated values instead of PLC connection (choose before starting)
+   * - Zoom rectangle
+     -  
+     - Drag a region with the left mouse button: enlarge time and values of this chart (off: the left mouse button pans the time axis)
+   * - Align time axes
+     -  
+     - Set all charts to the time range of the chart used last (mouse wheel and zoom only affect the chart under the mouse pointer)
+   * - Reset zoom
+     -  
+     - Scale the Y axes as configured again and align the time axes
+
+*More:* `Controls <bedienelemente_>`__, `Demo mode <demo-modus_>`__, `Zooming and time axes <zoomen_>`__
+
+Window and status bar
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Table: Variable, Ruler 1, Ruler 2, Δ (L2 − L1), Minimum, Maximum, Mean, Std. dev.
+     - Value table: online the current value, offline the values at both rulers, their difference and minimum, maximum, mean and standard deviation between them
+   * - 🔔 *n* open
+     - Number of open (unacknowledged) events; click to open the event log
+   * - Window [s]
+     - Width of the visible time range in seconds (1 to 604800)
+   * - Time scroll bar
+     - Offline: scroll through the recording (moves all charts together)
+   * - Status bar
+     - One LED per PLC with the connection state (tooltip: message and cycle time), messages and path of the CSV file
+
+*More:* `Status LEDs of the connections <status-led_>`__, `Triggers and event log <ereignisse_>`__
+
+Mouse in the charts
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Mouse wheel
+     - Zoom the time axis of the chart under the mouse pointer
+   * - Drag with the left mouse button
+     - Move the time axis; with **Zoom rectangle**: drag a range and zoom in
+   * - Drag with the right mouse button
+     - Zoom (time or Y axis)
+   * - Drag a ruler (offline)
+     - Move rulers 1 and 2; the value table shows the values and the statistics between them
+   * - Right-click on a name in the legend
+     - Hide or show the curve; show all curves of the chart again
+   * - Right-click in the chart
+     - Chart menu (axes, export); with PID tuning enabled also **Tune PID controller …**
+
+*More:* `Zooming and time axes <zoomen_>`__, `Pages, charts and layout <seiten_>`__
+
+Start screen: controls
+----------------------------------------------------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - ✕
+     - Exit
+   * - Open
+     - Open the selected, recently used configuration
+   * - Browse …
+     - Choose a configuration file
+   * - New configuration …
+     - Choose a file name, create an empty configuration and open the configuration program
+   * - Demo
+     - Start with simulated values (without a controller)
+   * - Connect to logger …
+     - Client mode: show the recording of another logger (e.g. headless on a Raspberry Pi) – without a configuration of your own
+   * - Do not show at startup (open the last used file)
+     - Skip the start screen from now on (switch it on again: logger › File › Show start screen at program start)
+
+*More:* `Start screen <startbild_>`__, `Logger as client <logger-client_>`__
+
+Configuration program: menus
+----------------------------------------------------------------------
+
+Menu File (configuration program)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - New
+     - ``Ctrl+N``
+     - New, empty configuration (unsaved changes are asked about first)
+   * - Open …
+     - ``Ctrl+O``
+     - Open a configuration file
+   * - Save
+     - ``Ctrl+S``
+     - Save the configuration
+   * - Save as …
+     - ``Ctrl+Shift+S``
+     - Save under a new name
+   * - Convert INI file …
+     -  
+     - Convert a configuration of an older version (INI) to the JSON format
+   * - Start logger with this configuration
+     - ``Ctrl+R``
+     - Start the logger with the saved configuration
+   * - Start IO check with this configuration
+     -  
+     - Open the IO check with the PLCs of this configuration
+   * - Show/stop headless loggers …
+     -  
+     - Show running headless loggers and stop them cleanly
+   * - Export Grafana dashboard …
+     -  
+     - Create a Grafana dashboard (JSON) matching the charts and the database
+   * - Exit
+     - ``Ctrl+Q``
+     - Close the configuration program (unsaved changes are asked about)
+
+Menu Driver (configuration program)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menu item
+     - Key
+     - Function
+   * - Installed drivers …
+     -  
+     - List of drivers with their state (e.g. missing library)
+   * - Open folder for own drivers …
+     -  
+     - Open the folder for your own driver files
+
+The menus *Language* and *Help* are the same as in the logger.
+
+*More:* `Converting older INI files <ini-umwandeln_>`__, `Headless operation (recording only) <headless_>`__, `Controllers and drivers <treiber_>`__, `Developing drivers <treiber-entwickeln_>`__
+
+Configuration program: tabs and variables
+----------------------------------------------------------------------
+
+At the top are the tabs with the project settings, below them the variables and the tree with charts and Y axes. The connection settings of a PLC (button **…** in the table) depend on the driver, see *Dialogs of the configuration program*.
+
+Tab Project & controllers
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Project name
+     - Project name: appears in window titles, in the web server and in the log file
+   * - Table: Name, Driver, Connection, Interval, Active
+     - PLCs: name, driver, connection (**…** opens the connection settings), read interval and whether it is read
+   * - \+ Controller
+     - Add another PLC
+   * - Remove controller
+     - Delete the selected PLC
+   * - Scan network …
+     - Search the network for reachable controllers and add them as controllers
+
+*More:* `Project, controllers and settings <konfig-projekt_>`__, `Controllers and drivers <treiber_>`__
+
+Tab Recording
+~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - CSV folder
+     - Folder for the CSV files of the recording
+   * - CSV name
+     - File name prefix and name of the archive subfolder
+   * - Max. records per file
+     - When the count is reached, the file is zipped, archived and a new one is started (0 = unlimited)
+   * - Archive folder
+     - Folder for the packed (ZIP) older files
+   * - Delete after
+     - Delete this logger's CSV files and archive ZIPs whose last change is older (0 = never)
+   * - Use at most
+     - If this logger's CSV files and archive take up more space, the oldest are deleted (0 = unlimited)
+   * - Recording
+     - By trigger: the CSV file/database is written only while the start condition is met – including the values of the pre-trigger time before and the post-trigger time after. Each capture gets its own CSV file. The display always runs.
+   * - Start condition
+     - Condition for “recording by trigger” (formula; **…** opens the formula editor), plus pre- and post-trigger time
+   * - Write CSV file
+     - Switched off: no CSV file (e.g. database only, tab “Database”)
+   * - Archive the current CSV file when the logger is closed
+     - On exit, pack the current CSV file and move it to the archive
+
+*More:* `Limiting the file size and archiving <csv-archiv_>`__, `Cleaning up old recordings <aufraeumen_>`__, `Recording by trigger (pre- and post-trigger) <trigger-aufzeichnung_>`__
+
+Tab Display
+~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Display window (online)
+     - Width of the visible time range after the start, in seconds
+   * - Default page layout
+     - Stacked, side by side or as tabs (changeable in the logger via View)
+   * - Charts on one page
+     - Arrangement of the charts on a page: stacked, side by side or grid
+   * - Grid columns
+     - Number of columns for the “Grid” layout (0 = automatic from the number of charts)
+   * - Logo
+     - Own logo for reports and windows (image file)
+   * - Customer logo
+     - Second logo (e.g. of the customer) for reports
+   * - Program icon
+     - Own icon for windows and the taskbar
+   * - Bar width
+     - Width of a bar next to the chart (default 14 pixels)
+   * - Show bars for current values
+     - Show the bars next to the charts at the start
+
+*More:* `Pages, charts and layout <seiten_>`__
+
+Tab Web server & headless
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Address (host)
+     - 0.0.0.0 = reachable in the whole network, 127.0.0.1 = only on this computer
+   * - Port
+     - TCP port of the web server (e.g. 8080)
+   * - Access code
+     - Access code: the page is opened with ?token=CODE
+   * - Browser refresh
+     - How often the browser fetches new values
+   * - Headless loggers
+     - Show and stop running headless loggers
+   * - OPC UA server
+     - State and settings of the OPC UA server (button **OPC UA …**)
+   * - MQTT
+     - State and settings of MQTT (button **MQTT …**)
+   * - Certificate (PEM)
+     - Own certificate for HTTPS (empty = self-signed)
+   * - Key (PEM)
+     - Private key of the certificate
+   * - Login
+     - Users with password (button **Users …**) or access code
+   * - Start web server (charts in the browser, e.g. on a tablet/smartphone)
+     - Start the web server during the recording
+   * - Headless mode: start without charts, record only
+     - The logger runs without a window (e.g. as a service); web server and archiving remain active. With the start parameter --gui the user interface can still be opened.
+   * - Running loggers …
+     - Show running headless loggers and stop them cleanly
+   * - OPC UA …
+     - Provide the variables via an OPC UA server in the logger (control system, MES, SCADA)
+   * - MQTT …
+     - Send values to an MQTT broker (Home Assistant, Node-RED, IoT platforms)
+   * - HTTPS (encrypted)
+     - Without a certificate of your own, a self-signed one is created once (folder web_tls); the browser asks for confirmation on the first visit
+   * - Users …
+     - Set up login with user name and password
+
+*More:* `Web server (charts in the browser) <webserver_>`__, `HTTPS and login <https-anmeldung_>`__, `Headless operation (recording only) <headless_>`__, `OPC UA server <opcua-server_>`__, `MQTT <mqtt_>`__
+
+Tab Database
+~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Database
+     - Type of database (none, SQLite, MariaDB, TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics, Prometheus)
+   * - Server / port
+     - Address and port of the database server
+   * - Database name
+     - Name of the database on the server
+   * - SQLite file
+     - File of the SQLite database
+   * - User / password
+     - Login to the database server
+   * - Table
+     - Table name (letters, digits, _); created if necessary
+   * - Delete after
+     - Delete values that are older (0 = never). TimescaleDB: whole chunks, QuestDB: whole days. InfluxDB 3 and VictoriaMetrics: set the retention period on the server
+   * - Use at most
+     - SQLite only: if the values take up more space, the oldest days are deleted (0 = unlimited). The file does not shrink but stops growing
+   * - Write changes only (at least every minute)
+     - Saves space: a value is only written when it has changed
+   * - Also write events and notes
+     - Additionally write trigger events (comes, goes, acknowledged) and notes to the table <table>_ereignisse (VictoriaMetrics/Prometheus: metrics <table>_ereignisse_aktiv and _quittiert), e.g. for Grafana
+   * - Test database
+     - Check the connection and create the table
+   * - Storage …
+     - Query the storage used by the table and the database and the number of values
+
+*More:* `Database recording <datenbank_>`__
+
+Tab Triggers & events
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Triggers
+     - Number of configured triggers
+   * - Event file
+     - CSV file of the event log (empty = next to the configuration)
+   * - Notify
+     - Enabled notifications
+   * - Edit triggers …
+     - Define conditions that write an entry to the event log
+   * - Show event log …
+     - Show and acknowledge events
+   * - Notifications …
+     - On events send e-mail, a Teams/Slack message or a push to the phone (ntfy, Telegram)
+
+*More:* `Triggers and event log <ereignisse_>`__, `Notifications <benachrichtigungen_>`__
+
+Tab Reports (PDF)
+~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Period
+     - Period of an automatic report: shift, day, week or month
+   * - Shift starts
+     - Start of the shifts (times, separated by commas)
+   * - Day start
+     - Time at which day, week (Monday) and month start, e.g. 06:00
+   * - Folder
+     - Folder for the PDF reports
+   * - Create PDF report automatically
+     - At the end of each period: statistics, trend of all charts and events; a partial report when stopping
+
+*More:* `PDF reports <pdf-berichte_>`__
+
+Variables and charts
+~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Table: Name, Controller, Chart › Y axis, Address, Type, Colour, Record, Display, Value display, Bars, Test value, Formula
+     - Variables: per row name, PLC, chart and Y axis, address, data type, colour, switches for recording and display, test value and formula (calculated variable)
+   * - Select from controller…
+     - Choose variables from the PLC (symbols, tags, nodes – depending on the driver)
+   * - Blocks (block read mode)…
+     - Read contiguous areas or arrays with one request
+   * - Calculated variable…
+     - Create a variable from a formula of other variables
+   * - Add variable
+     - Empty row for a new variable
+   * - Remove
+     - Delete the selected variables
+   * - Test connection
+     - Read the selected variables once from the PLC and show them
+   * - Import/Export
+     - Import or export the variable list as CSV, Excel or ODS
+   * - \+ Chart
+     - Add a new chart
+   * - \+ Y axis
+     - Add another Y axis to the selected chart
+   * - Remove
+     - Delete the selected chart or Y axis
+   * - Name
+     - Name of the chart or Y axis
+   * - Page (tab)
+     - Charts with the same page name are shown together in one tab/dock
+   * - Y min
+     - Lower limit of the Y axis
+   * - Y max
+     - Upper limit of the Y axis
+   * - Controller
+     - Setpoint, process value and output for PID tuning
+   * - Auto scaling
+     - Scale the Y axis automatically to the values
+   * - PID controller tuning
+     - In the logger, the PID parameters for this chart can be calculated from setpoint, process value and controller output
+   * - Settings …
+     - Choose setpoint, process value, output and controller type
+   * - Open…
+     - Same as File › Open
+   * - Save
+     - Same as File › Save
+   * - Save as…
+     - Same as File › Save as
+
+IO check: window
+----------------------------------------------------------------------
+
+Toolbar of the IO check
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Button
+     - Key
+     - Function
+   * - Import IO list …
+     -  
+     - Take over the signal list from CSV, Excel or ODS (EPLAN, TIA Portal tag table, own list)
+   * - Columns …
+     -  
+     - Define the column headings of the IO list; empty fields are neither read nor displayed. Arrow: show and hide columns of the signal list
+   * - Open …
+     - ``Ctrl+O``
+     - Open a saved IO check
+   * - Save
+     - ``Ctrl+S``
+     - Save test progress file (\*.iocheck.json); arrow: save automatically on/off
+   * - Save › Save automatically
+     -  
+     - Write every change to the test progress file immediately (once it has been saved)
+   * - Save as …
+     -  
+     - Save the test under a new name
+   * - Export result …
+     -  
+     - Save the test result as CSV or Excel
+   * - Protocol (PDF) …
+     -  
+     - Acceptance protocol with summary, fault list, all signals and signature fields; arrow: portrait or landscape, attach photos
+   * - Protocol (PDF) … › Landscape
+     -  
+     - Report in landscape instead of portrait
+   * - Protocol (PDF) … › Attach photos
+     -  
+     - Attach the photos of the signals to the report
+   * - Protocol (PDF) … › Short report (PDF) …
+     -  
+     - Summary only: progress bars in total, per signal kind, group and location
+   * - Photos …
+     -  
+     - View, add or remove photos of the selected signal (also by double-click in the “Photos” column; on the phone with the camera)
+   * - 📱 Mobile …
+     -  
+     - IO check on smartphone/tablet: show the address of the web page (starts the web server if needed)
+   * - Tester: *name*
+     -  
+     - Name or initials entered as “Checked by” when signals are checked off on the PC (default: user logged in to the computer); on the phone the login name is used
+   * - ▶ Read / ■ Stop reading
+     - ``F5``
+     - Read the signals cyclically from the controllers
+   * - What has moved?
+     -  
+     - Show or hide the side panel with the signals that changed last
+
+*More:* `IO check (commissioning) <io-check_>`__, `Acceptance protocol (PDF) <io-protokoll_>`__, `Checking on a smartphone or tablet <io-mobil_>`__
+
+Tab Signal list (IO check)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Table: No., Status, Value, Address, Symbol, Comment, Device tag, Group, Location, Type, Controller, Checked at, Checked by, Photos, Remark
+     - Signal list: click a heading to sort, right-click to filter the column; double-click a row to set or undo OK
+   * - ✓ OK (``Ctrl+1``)
+     - Mark the selected signals as checked and OK
+   * - ✗ Fault … (``Ctrl+2``)
+     - Mark as faulty, with a remark
+   * - – Skipped (``Ctrl+3``)
+     - Do not check (e.g. spare)
+   * - ↻ Repeat (``Ctrl+4``)
+     - Check again; the remark is kept
+   * - Reset (``Ctrl+0``)
+     - Open again; the remark is deleted
+   * - ＋ Signal …
+     - Add a signal to the IO list by hand (right-click in the list: more commands)
+   * - Rohwert bei 0 %
+     - Raw PLC value at the start of the range (e.g. 0)
+   * - Rohwert bei 100 %
+     - Raw value at the end of the range (e.g. 27648)
+   * - Measuring range from
+     - Physical value at 0 %
+   * - Measuring range to
+     - Physical value at 100 %
+   * - Raw value in the list
+     - Display of the raw value in the column “Value” of the signal list
+   * - Unit
+     - Unit of the range (e.g. bar)
+   * - Take over
+     - Take the current value as test point 0 / 50 / 100 %
+   * - Clear test points
+     - Delete the test points of the signal
+   * - Right-click in the signal list
+     - Select all (``Ctrl+A``), set the status, add a signal, take scanned signals into the IO list, remove signals from the IO list
+   * - Right-click on a column heading
+     - Column filter: text (“contains …”) or tick individual values
+   * - Matrix: click / double-click / right-click
+     - Select the signal / set or undo OK / choose the status
+
+*More:* `Signal list and test status <io-signalliste_>`__
+
+Tab Matrix (IO check)
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Scan ranges …
+     - Read contiguous inputs/outputs without an IO list, e.g. E0.0 … E31.7
+
+*More:* `Matrix and scanning ranges <io-matrix_>`__
+
+Options and side panel
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Demo
+     - Simulated values instead of a connection to the controller
+   * - Read displayed only
+     - Read only the signals currently shown by search field, selection lists and column filters (less load for controller and network); reading restarts when the filter changes
+   * - Check off signals automatically
+     - Optional: a signal with status “open” becomes OK as soon as a digital signal has changed 0→1→0 (sensor actuated and released) or an analog input has reported a wire break and is valid again (wiring opened and closed). Only signals from the list or the scan ranges are checked.
+   * - Open signals only
+     - Do not report changes of signals with status OK, error or skipped (e.g. a constantly jumping analog value). The selected signal is always reported; to check it again, reset its status to “open”.
+   * - Table: Time, Signal, Change
+     - Side panel “What moved?”: recently changed signals, newest at the top; click to select the signal
+
+Event log window
+----------------------------------------------------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - open only
+     - Show only unacknowledged events
+   * - Table: No., Raised, Cleared, Priority, Trigger, Message, Acknowledged
+     - Events, newest at the top; double-click to acknowledge, right-click: show in chart, acknowledge
+   * - Add note …
+     - Write your own time-stamped entry to the event log
+   * - Show in chart
+     - Show the time range around the selected event in the logger, rulers at start and end (also right-click on a row)
+   * - Acknowledge selected
+     - Acknowledge selected open events (also by double-clicking a row)
+   * - Acknowledge all (*n*)
+     - Acknowledge all open events
+   * - Open folder
+     - Open the folder of the event file in the file manager
+
+*More:* `Triggers and event log <ereignisse_>`__, `Notes (own entries) <notizen_>`__
+
+Network panel (Raspberry Pi)
+----------------------------------------------------------------------
+
+Full-screen user interface for the touchscreen of the Raspberry Pi (``plc-netzwerk``). Input via the on-screen keyboard; **Back** returns to the overview on every page.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Overview
+     - Host name, version, time, Ethernet and Wi-Fi with IP addresses, state of the logger service, web server address with QR code
+   * - Ethernet / Wi-Fi
+     - DHCP or static address (IP/prefix, gateway, DNS); search for Wi-Fi networks and connect with password
+   * - Logger
+     - Choose a configuration, **Start (headless)** or **Stop** (switches the service)
+   * - Display
+     - Time until dimming, brightness in operation and dimmed; **Dim now**
+   * - Time
+     - Date and time with ▲/▼ and **Set clock**, **Time zone**, **Internet time (NTP)**; **Read** the PLC time, **Apply**, **UTC**, **Automatic**
+   * - ⏻
+     - Page *Power*: **Restart**, **Shut down** (stops the logger service properly)
+
+*More:* `Setting up a Raspberry Pi as data logger <raspberry_>`__
+
+Dialogs of the logger
+----------------------------------------------------------------------
+
+Dialog “Web server address”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Copy address
+     - Copy the address to the clipboard
+
+*More:* `Web server (charts in the browser) <webserver_>`__
+
+Dialog “Load from database”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Choose SQLite file …
+     - Read a different SQLite file (e.g. a copy of a recording)
+   * - Database of the configuration
+     - Read the database of the configuration again
+   * - All
+     - Tick all variables
+   * - None
+     - Untick all variables
+   * - As in configuration
+     - Tick the variables of the current configuration
+   * - Last hour
+     - The last hour before the latest stored value
+   * - Last 24 h
+     - The last 24 hours before the latest stored value
+   * - Today
+     - Today from midnight
+   * - Yesterday
+     - The whole of yesterday
+   * - Last 7 days
+     - The last 7 days before the latest stored value
+   * - Last 30 days
+     - The last 30 days before the latest stored value
+   * - All
+     - From the first to the last value of the selected variables
+   * - Resolution
+     - Averages are calculated by the database – much faster and more memory-efficient than raw data for long periods.
+   * - Fill missing values with the last value
+     - Useful when the recording writes "changes only": a missing value then means "unchanged".
+   * - Count values
+     - Determine the number of values in the selected period
+   * - Load and display
+     - Load the values and show them offline
+
+*More:* `Read mode: displaying recordings from the database <db-lesen_>`__
+
+Dialog “Export values”
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Between ruler 1 and ruler 2
+     - Only the range between the rulers (offline)
+   * - Visible section
+     - The displayed time range
+   * - All data (*from* to *to*)
+     - The whole loaded or recorded time
+   * - Only visible variables (*n* of *m*)
+     - Do not export hidden curves
+   * - Downsampling (reduce values to a fixed time grid)
+     - Condense the values to a fixed time grid
+   * - Grid
+     - Interval of the time grid
+   * - Method
+     - Value per interval: mean, minimum, maximum, first or last value
+   * - Save …
+     - Choose a file name (CSV or Excel) and save
+
+*More:* `Exporting values (CSV/Excel) <werte-exportieren_>`__
+
+Dialog “Note to the event log”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Time
+     - Point in time the note refers to (default: now)
+   * - Note
+     - e.g. valve V12 replaced, setpoint changed to 65 °C …
+   * - Author
+     - Name stored with the entry (default: logged-in user)
+
+*More:* `Notes (own entries) <notizen_>`__
+
+Dialog “XY chart”
+~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Time range
+     - Rulers, visible range or all data
+   * - X axis
+     - Variable for the X axis; the other selected ones are plotted against it
+   * - Display
+     - Points or line
+   * - Regression line and correlation
+     - Show the regression line and the correlation coefficient
+   * - Refresh
+     - Fetch the data again (e.g. during a running recording)
+   * - Save image …
+     - Save the chart as PNG or SVG
+   * - Save values (CSV) …
+     - Save the value pairs as a CSV file
+
+*More:* `Analysis: XY chart and frequency analysis <analyse_>`__
+
+Dialog “Frequency analysis (FFT)”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Time range
+     - Rulers, visible range or all data
+   * - Variable
+     - Variable whose spectrum is calculated
+   * - Window
+     - Window function (Hann, Hamming, Blackman, rectangle, flat-top)
+   * - Preprocessing
+     - Subtract the mean or a linear trend
+   * - X axis
+     - Frequency or period
+   * - Logarithmic amplitude
+     - Logarithmic amplitude axis
+   * - Refresh
+     - Fetch the data again (e.g. during a running recording)
+   * - Save image …
+     - Save the chart as PNG or SVG
+   * - Save values (CSV) …
+     - Save the spectrum as a CSV file
+
+*More:* `Analysis: XY chart and frequency analysis <analyse_>`__
+
+Dialog “PID controller tuning”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Setpoint
+     - Variable with the setpoint (optional)
+   * - Process value
+     - Variable with the process value
+   * - Controller output
+     - Variable with the controller output
+   * - Time range
+     - Range with a step of the output or setpoint
+   * - Controller type
+     - PI or PID
+   * - Control behaviour
+     - Fast, normal or robust
+   * - Identify process and calculate
+     - Identify the process model, calculate and simulate the parameters of all tuning rules
+   * - Table: Tuning rule, Kp, Ti [s], Td [s], Ki [1/s], Kd [s], Overshoot, Settling time, Note
+     - Result per tuning rule with overshoot and settling time from the simulation
+   * - Copy result
+     - Model and all parameters as text to the clipboard
+
+*More:* `PID controller tuning <pid-optimierung_>`__
+
+Dialogs of the configuration program
+----------------------------------------------------------------------
+
+Dialog “Connection settings (example TwinCAT ADS)”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - IP address
+     - TwinCAT on this computer: 127.0.0.1 (no route needed, leave own AMS Net ID empty)
+   * - AMS Net ID of the controller
+     - e.g. 5.12.34.56.1.1 (empty = IP address + .1.1)
+   * - AMS port
+     - 851 = PLC runtime 1 (TwinCAT 3), 852 … further; 801 = TwinCAT 2
+   * - Own AMS Net ID
+     - Must match the route in the controller (empty = own IP address + .1.1)
+   * - Own AMS port
+     - AMS port of this computer (default 32905)
+   * - TCP port
+     - TCP port of the ADS router (default 48898)
+   * - Variables per request
+     - Maximum number of parts per sum request (TwinCAT: 500)
+   * - Timeout
+     - Time to wait for an answer; after that the connection counts as faulty
+
+*More:* `Controllers and drivers <treiber_>`__
+
+Dialog “Connection settings (example OPC UA)”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Endpoint
+     - Address of the OPC UA server, e.g. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)
+   * - Operating mode
+     - Subscription: the server reports only changes (less network load with many values)
+   * - Security
+     - Security policy: none, sign, or sign and encrypt (Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss)
+   * - User
+     - Empty = anonymous
+   * - Password
+     - Note: it is stored in plain text in the configuration file.
+   * - Client certificate
+     - Certificate file (.der/.pem). Empty = a self-signed certificate is created automatically.
+   * - Private key
+     - Key file (.pem) for the client certificate
+   * - Timeout
+     - Time to wait for an answer; after that the connection counts as faulty
+   * - Publishing interval (subscription)
+     - How often the server sends collected changes (0 = interval of the controller)
+   * - Sampling interval (subscription)
+     - How often the server checks the values for changes (0 = like the publishing interval)
+   * - Nodes per request
+     - Maximum number of nodes per read request (some servers limit this, e.g. to 100)
+
+*More:* `Controllers and drivers <treiber_>`__
+
+Dialog “Scan network”
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Read device identity
+     - S7: module and station, EtherNet/IP: product name
+   * - Search
+     - Search the address range for PLCs
+   * - Table: Take over, Address, Found, Device, Details, Driver
+     - Devices found with open ports and identification
+   * - Add as controller
+     - Add the ticked devices as PLCs
+
+*More:* `Project, controllers and settings <konfig-projekt_>`__
+
+Dialog “Select tags from the controller”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Load tag list from controller
+     - Read and show the tags of the PLC
+   * - Program tags
+     - Also load the tags of the programs (Program:Name.Tag) – takes longer
+   * - Selected array as block…
+     - Add an array of numbers with a single read request (also by double-click)
+   * - Apply selection
+     - Take the selected tags as variables
+
+*More:* `Selecting variables from the controller <tags-waehlen_>`__
+
+Dialog “Blocks (block read mode)”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Set for all
+     - Set record/display for all elements of the selected block
+   * - Table: Name, Controller, Start address / array, First index, Format, Count, Ring buffer, Chart › Y axis, Colour, Value display, Bars, Area
+     - Blocks: start address or array, format and number of elements, optionally as ring buffer, target in the chart
+   * - Add block
+     - Add a new block
+   * - Remove
+     - Delete the selected block
+   * - Test selected block
+     - Reads the block once from the PLC and shows the first values and the read time
+   * - PLC templates …
+     - Open the folder with the ring buffer blocks (S7-300/400, S7-1200/1500, ControlLogix)
+
+*More:* `Block read mode <blocklesemodus_>`__, `Ring buffer (cycle-synchronous recording) <ringpuffer_>`__
+
+Dialog “Calculated variable (formula editor)”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Table: Variable used, Test value
+     - Variables of the formula with test values
+   * - Check / calculate
+     - Check the formula and calculate it with the test values
+
+*More:* `Calculated variables (formulas) <berechnete-variablen_>`__
+
+Dialog “Set up PID tuning”
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Setpoint
+     - Variable with the setpoint (optional)
+   * - Process value (controlled variable)
+     - Variable with the process value
+   * - Controller output (manipulated variable)
+     - Variable with the controller output
+   * - Controller type
+     - PI or PID
+   * - Control behaviour
+     - Fast, normal or robust
+
+*More:* `PID controller tuning <pid-optimierung_>`__
+
+Dialog “Triggers (events)”
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Table: Active, Name, Condition, Message text, Priority, Delay, Clear, Acknowledge
+     - Triggers: condition, message, priority, delay, whether “going” is logged and whether acknowledgement is required
+   * - \+ Trigger
+     - Create new trigger
+   * - Edit condition …
+     - Edit the condition in the formula editor (with variable list and test values); also double-click
+   * - Duplicate
+     - Copy the selected trigger
+   * - Remove
+     - Delete the selected trigger
+   * - ▲
+     - move up
+   * - ▼
+     - move down
+
+*More:* `Triggers and event log <ereignisse_>`__
+
+Dialog “Notifications”
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Notify on events
+     - Switch notifications on
+   * - Priority
+     - From which priority messages are sent
+   * - Only triggers
+     - empty = all triggers; otherwise names separated by commas
+   * - Lock time per trigger
+     - If the same trigger comes again within this time, no further message is sent (the next message states how many were suppressed).
+   * - Also notify when an event goes
+     - Also report when a reported event goes
+   * - *E-mail:* SMTP server
+     - Mail server for sending, e.g. smtp.company.com
+   * - *E-mail:* Port
+     - Port of the SMTP server (587, SSL usually 465)
+   * - *E-mail:* Encryption
+     - STARTTLS, SSL/TLS or unencrypted
+   * - *E-mail:* User
+     - Login to the SMTP server (empty = none)
+   * - *E-mail:* Password
+     - Password of the user
+   * - *E-mail:* Sender
+     - Sender address of the e-mails
+   * - *E-mail:* Recipients
+     - Recipient addresses, separated by commas
+   * - *E-mail:* Use E-mail
+     - Enable the channel
+   * - *Teams / Slack / Webhook:* Type
+     - Microsoft Teams (workflows), Slack or generic JSON
+   * - *Teams / Slack / Webhook:* Webhook address
+     - Address of the incoming webhook (from Teams or Slack)
+   * - *Teams / Slack / Webhook:* Use Teams / Slack / Webhook
+     - Enable the channel
+   * - *ntfy (push):* Address with topic
+     - Server and topic, e.g. https://ntfy.sh/my-secret-topic
+   * - *ntfy (push):* Access token
+     - Token for a protected ntfy topic
+   * - *ntfy (push):* Use ntfy (push)
+     - Enable the channel
+   * - *Telegram:* Bot token
+     - Token of the Telegram bot
+   * - *Telegram:* Chat ID
+     - Chat the bot writes to (e.g. 123456789)
+   * - *Telegram:* Use Telegram
+     - Enable the channel
+   * - Send test message
+     - Send a test message via all enabled channels
+
+*More:* `Notifications <benachrichtigungen_>`__
+
+Dialog “Web server – users”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Add …
+     - Add a user with password
+   * - Change password …
+     - New password for the selected user
+   * - Remove
+     - Delete the selected user
+
+*More:* `HTTPS and login <https-anmeldung_>`__
+
+Dialog “OPC UA server”
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Address (host)
+     - 0.0.0.0 = reachable in the whole network, 127.0.0.1 = only on this computer
+   * - Port
+     - TCP port (default 4840)
+   * - Update
+     - How often changed values are updated in the server
+   * - Endpoint
+     - Address at which clients reach the server
+   * - Start OPC UA server (while recording)
+     - Switch the server on
+   * - Certificate (DER/PEM)
+     - empty = self-signed
+   * - Key (PEM)
+     - empty = self-signed
+   * - None
+     - Endpoint without security
+   * - Basic256Sha256 – Sign
+     - Endpoint with signed messages
+   * - Basic256Sha256 – Sign and encrypt
+     - Endpoint with signed and encrypted messages
+   * - Aes128Sha256RsaOaep – Sign and encrypt
+     - As above, newer method
+   * - Aes256Sha256RsaPss – Sign and encrypt
+     - As above, newest method
+   * - Anonymous (without login)
+     - Allow access without login
+   * - Login with the users of the web server (*n* configured)
+     - Clients log in with user and password of the web server (configuration › Web server & headless › **Users …**)
+
+*More:* `OPC UA server <opcua-server_>`__
+
+Dialog “MQTT”
+~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Send values to an MQTT broker (while recording)
+     - Switch MQTT on
+   * - Address (host)
+     - e.g. 192.168.0.5 or homeassistant.local
+   * - Port
+     - Port of the broker (1883, with TLS usually 8883)
+   * - CA certificate (file)
+     - empty = certificates of the system
+   * - User
+     - empty = without login
+   * - Password
+     - Password of the user
+   * - Client ID
+     - empty = automatic
+   * - TLS (encrypted, usually port 8883)
+     - Encrypt the connection to the broker
+   * - Check certificate
+     - Off: also accept self-signed certificates (only in your own network)
+   * - Send
+     - On change or cyclically
+   * - Base topic
+     - Topics: <base>/<controller>/<variable>, <base>/werte, <base>/ereignisse, <base>/status
+   * - Interval
+     - On change: at most this often per variable; cyclic: all values at this rate
+   * - Format
+     - One topic per variable, one JSON message or both
+   * - QoS
+     - Quality of service 0, 1 or 2
+   * - Discovery prefix
+     - Prefix of the Home Assistant discovery (usually homeassistant)
+   * - Store values at the broker (retain)
+     - New subscribers immediately receive the last value
+   * - Home Assistant discovery (variables appear there as sensors)
+     - Create the variables automatically as sensors in Home Assistant
+   * - Test connection
+     - Check the login to the broker
+
+*More:* `MQTT <mqtt_>`__
+
+Dialog “Running headless loggers”
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Table: Project, Configuration, Started, Computer, PID, Web server, State
+     - Headless loggers running on this computer
+   * - Stop logger
+     - Stop the selected headless logger cleanly
+
+*More:* `Headless operation (recording only) <headless_>`__
+
+Dialogs of the IO check
+----------------------------------------------------------------------
+
+Dialog “Add signal”
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Address
+     - e.g. I12.3, IW256, Q4.0, DB10.DBX2.1
+   * - Symbol
+     - Symbol name
+   * - Comment
+     - Comment
+   * - Device tag
+     - Equipment identifier
+   * - Location
+     - e.g. Hall 2, +S1, boiler house
+   * - Group
+     - Group in the list (e.g. cabinet)
+   * - Type
+     - Signal type (suggested from the address)
+   * - Measuring range
+     - analog only, e.g. 0..10 bar
+   * - Controller
+     - PLC to read from
+
+*More:* `IO check (commissioning) <io-check_>`__
+
+Dialog “Photos”
+~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Add …
+     - Choose photos and store them with the signal
+   * - Open
+     - Open the selected photo in the image viewer
+   * - Remove
+     - Delete the selected photo
+
+*More:* `Acceptance protocol (PDF) <io-protokoll_>`__
+
+Dialog “Scan ranges”
+~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Function
+   * - Table: Controller, Start address, Number of bits
+     - Ranges: PLC, first address and number of bits
+   * - Add
+     - Add another range
+   * - Remove
+     - Delete the selected range
+
+*More:* `Matrix and scanning ranges <io-matrix_>`__
+
+.. referenz-ende
+
+
 Help and context help (F1)
 ======================================================================
 
-Logger and configuration program have a **Help** menu:
+Logger and configuration program have a **Help** menu. All menus, buttons and fields with their meaning are
+listed in the chapter `Reference: all menus, windows and controls <referenz_>`__.
 
 * **User manual** opens this manual (PDF or HTML) with the default program of the
   system. If the user interface is set to German, the German manual is opened, otherwise

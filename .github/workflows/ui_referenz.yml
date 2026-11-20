@@ -1,7 +1,8 @@
 # Aufbau aller Fenster und Dialoge mitschreiben (Menüs, Tastenkürzel, Reiter, Knöpfe, Felder, Tooltips) – Grundlage
 # des Kapitels „Referenz“ der Bedienungsanleitung. Start von Hand; Ergebnis (referenz_de.json, referenz_en.json) als
-# Artifact „ui-referenz“ und im Zweig „ui-referenz“ (Ordner referenz/). Übernehmen:
+# Artifact „ui-referenz“ und im Zweig „ui-referenz“ (Ordner referenz/). Übernehmen und Kapitel neu erzeugen:
 #   git fetch origin +ui-referenz:refs/remotes/origin/ui-referenz && git checkout origin/ui-referenz -- referenz
+#   mv referenz/referenz_*.json doc/referenz/ && rm -r referenz && python tools/make_referenz.py
 # Läuft wie die Screenshots unter Windows, ohne Webseiten, GIF und Grafana.
 name: UI-Referenz
 

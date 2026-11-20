@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (C) 2026 Michael Taxis
 """Tests ohne Oberfläche: IO-Check, Berichte, Analyse, CSV, Webserver, Sprachdateien, Anleitung, Version."""
+import json
 import os
 import re
 import subprocess
@@ -909,6 +910,24 @@ def test_manuals_same_structure_and_images():
         for img in re.findall(r"^\.\. (?:figure|image):: (\S+)", open(path, encoding="utf-8").read(), re.M):
             assert os.path.exists(os.path.join(ROOT, "doc", img)), f"Bild fehlt: {img}"
     assert "images/en/" in open(en, encoding="utf-8").read()
+
+
+def test_manual_reference_up_to_date():
+    """Kapitel „Referenz“ ist aus Mitschrift und referenz_texte erzeugt (tools/make_referenz.py) und vollständig."""
+    sys.path.insert(0, os.path.join(ROOT, "tools"))
+    import make_referenz
+    make_referenz.MISSING.clear()
+    data = {}
+    for lang in ("de", "en"):
+        with open(os.path.join(ROOT, "doc", "referenz", f"referenz_{lang}.json"), encoding="utf-8") as f:
+            data[lang] = json.load(f)
+    out = make_referenz.build(data)
+    assert not make_referenz.MISSING, f"ohne Beschreibung: {make_referenz.MISSING}"
+    for lang, path in make_referenz.FILES.items():
+        text = open(path, encoding="utf-8").read()
+        a = text.index(make_referenz.START)
+        b = text.index(make_referenz.END) + len(make_referenz.END)
+        assert text[a:b] == "\n".join(out[lang]).rstrip("\n"), f"Referenz veraltet: python tools/make_referenz.py ({lang})"
 
 
 def test_manual_html_builds_without_messages(tmp_path):

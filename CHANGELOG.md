@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Neu
+
+* **Anleitung:** Neues Kapitel „Referenz: alle Menüs, Fenster und Bedienelemente“ (englisch „Reference: all menus,
+  windows and controls“): je Menü, Werkzeugleiste, Reiter und Dialog eine Tabelle mit Tastenkürzel und Bedeutung und
+  Verweisen auf die ausführlichen Abschnitte. Bezeichnungen und Tooltips stammen aus dem Programm selbst (Workflow
+  *UI-Referenz*, `tools/make_referenz.py`).
+
 ### Behoben
 
 * **PID-Optimierung:** Der Vorschlag für Soll-, Ist- und Stellwert vergleicht ganze Wörter des Variablennamens – bisher

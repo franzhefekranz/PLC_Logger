@@ -1,0 +1,4482 @@
+{
+ "windows": [
+  {
+   "class": "XYDialog",
+   "title": "XY-Diagramm",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Zeitbereich",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "X-Achse",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Darstellung",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Ausgleichsgerade und Korrelation",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Aktualisieren",
+     "tip": "Daten neu holen (z. B. während einer laufenden Aufzeichnung)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Bild speichern …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Werte speichern (CSV) …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "FftDialog",
+   "title": "Frequenzanalyse (FFT)",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Zeitbereich",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Variable",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Fenster",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Vorbehandlung",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "X-Achse",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Amplitude logarithmisch",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Aktualisieren",
+     "tip": "Daten neu holen (z. B. während einer laufenden Aufzeichnung)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Bild speichern …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Werte speichern (CSV) …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "EventViewer",
+   "title": "Ereignisprotokoll – C:\\Anlagen\\Kesselhaus\\kesselhaus_ereignisse.csv",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "nur offene",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Nr., Kommt, Geht, Priorität, Trigger, Meldung, Quittiert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Notiz hinzufügen …",
+     "tip": "Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Im Diagramm zeigen",
+     "tip": "Zeitraum um das markierte Ereignis im Logger anzeigen, Lineale auf Beginn und Ende (auch Rechtsklick auf eine Zeile)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Markierte quittieren",
+     "tip": "Ausgewählte offene Ereignisse quittieren (auch Doppelklick auf eine Zeile)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Alle quittieren (4)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Ordner öffnen",
+     "tip": "Ordner der Ereignisdatei im Explorer öffnen",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NoteDialog",
+   "title": "Notiz ins Ereignisprotokoll",
+   "shot": "notiz",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Zeit",
+     "tip": "Zeitpunkt, auf den sich die Notiz bezieht (Standard: jetzt)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Notiz",
+     "tip": "z. B. Ventil V12 getauscht, Sollwert auf 65 °C geändert …",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Verfasser",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "ExportDialog",
+   "title": "Werte exportieren",
+   "shot": "export_dialog",
+   "controls": [
+    {
+     "kind": "gruppe",
+     "text": "Zeitbereich",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Zwischen Lineal 1 und Lineal 2",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Sichtbarer Ausschnitt",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Alle Daten (20.11.2026 20:33:27.720 bis 20.11.2026 20:34:53.523)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur eingeblendete Variablen (15 von 17)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Downsampling (Werte auf ein Zeitraster verdichten)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Raster",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Verfahren",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Speichern …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PidTuneDialog",
+   "title": "PID-Regler-Optimierung – Regelkreis",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Sollwert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Istwert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Stellwert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Zeitbereich",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Reglertyp",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Regelverhalten",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Strecke bestimmen und berechnen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Einstellregel, Kp, Ti [s], Td [s], Ki [1/s], Kd [s], Überschwingen, Ausregelzeit, Hinweis",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Ergebnis kopieren",
+     "tip": "Modell und alle Parameter als Text in die Zwischenablage",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "DbLoadDialog",
+   "title": "Aus Datenbank laden",
+   "shot": "datenbank",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "SQLite-Datei wählen …",
+     "tip": "Eine andere SQLite-Datei lesen (z. B. Kopie einer Aufzeichnung)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Datenbank der Konfiguration",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Variablen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Alle",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Keine",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Wie Konfiguration",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Zeitraum",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Letzte Stunde",
+     "tip": "Die letzte Stunde vor dem letzten gespeicherten Wert",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Letzte 24 h",
+     "tip": "Die letzten 24 Stunden vor dem letzten gespeicherten Wert",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Heute",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Gestern",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Letzte 7 Tage",
+     "tip": "Die letzten 7 Tage vor dem letzten gespeicherten Wert",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Letzte 30 Tage",
+     "tip": "Die letzten 30 Tage vor dem letzten gespeicherten Wert",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Alles",
+     "tip": "Vom ersten bis zum letzten Wert der gewählten Variablen",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Darstellung",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Auflösung",
+     "tip": "Mittelwerte werden von der Datenbank berechnet – für lange Zeiträume deutlich schneller und speichersparender als Rohdaten.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Fehlende Werte mit dem letzten Wert füllen",
+     "tip": "Sinnvoll, wenn die Aufzeichnung „nur Änderungen“ schreibt: ein fehlender Wert bedeutet dann „unverändert“.",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Werte zählen",
+     "tip": "Anzahl der Werte im gewählten Zeitraum ermitteln",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Laden und anzeigen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "QDialog",
+   "title": "Webserver",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Adresse kopieren",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PidSetupDialog",
+   "title": "PID-Optimierung – Regelkreis",
+   "shot": "pid_einstellen",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Sollwert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Istwert (Regelgröße)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Stellwert (Reglerausgang)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Reglertyp",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Regelverhalten",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "BlockEditor",
+   "title": "Blöcke (Blocklesemodus)",
+   "shot": "blockeditor",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Für alle Elemente des markierten Blocks setzen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Für alle setzen",
+     "tip": "Aufzeichnen/Anzeigen für alle Elemente des markierten Blocks setzen",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Name, Steuerung, Startadresse / Array, Erster Index, Format, Anzahl, Ringpuffer, Diagramm › Y-Achse, Farbe, Werteanzeige, Balken, Bereich",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Block hinzufügen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Entfernen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Markierten Block testen",
+     "tip": "Liest den Block einmal aus der SPS und zeigt die ersten Werte und die Lesezeit",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "SPS-Vorlagen …",
+     "tip": "Ordner mit den Bausteinen für Ringpuffer öffnen (S7-300/400, S7-1200/1500, ControlLogix)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "FormulaEditor",
+   "title": "Berechnete Variable",
+   "shot": "formeleditor",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Verwendete Variable, Testwert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Prüfen / Berechnen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "TriggerEditor",
+   "title": "Trigger (Ereignisse)",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Aktiv, Name, Bedingung, Meldetext, Priorität, Verzögerung, Gehen, Quittieren",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Trigger",
+     "tip": "Neuen Trigger anlegen",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Bedingung bearbeiten …",
+     "tip": "Bedingung im Formeleditor bearbeiten (mit Variablenliste und Testwerten); auch Doppelklick",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Duplizieren",
+     "tip": "Ausgewählten Trigger kopieren",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Entfernen",
+     "tip": "Ausgewählten Trigger löschen",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "nach oben",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "nach unten",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "FormulaEditor",
+   "title": "Trigger-Bedingung (wahr = Ergebnis ungleich 0)",
+   "shot": "trigger_editor",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Verwendete Variable, Testwert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Prüfen / Berechnen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "WebUsersDialog",
+   "title": "Webserver – Benutzer",
+   "shot": "web_benutzer",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Hinzufügen …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Passwort ändern …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Entfernen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "MqttDialog",
+   "title": "MQTT",
+   "shot": "mqtt",
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Werte an einen MQTT-Broker senden (während der Aufzeichnung)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Broker",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Adresse (Host)",
+     "tip": "z. B. 192.168.0.5 oder homeassistant.local",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "CA-Zertifikat (Datei)",
+     "tip": "leer = Zertifikate des Systems",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Benutzer",
+     "tip": "leer = ohne Anmeldung",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Passwort",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Client-ID",
+     "tip": "leer = automatisch",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "TLS (verschlüsselt, meist Port 8883)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Zertifikat prüfen",
+     "tip": "Aus: auch selbstsignierte Zertifikate annehmen (nur im eigenen Netz)",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Senden",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Basis-Topic",
+     "tip": "Topics: <Basis>/<Steuerung>/<Variable>, <Basis>/werte, <Basis>/ereignisse, <Basis>/status",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Senden",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Intervall",
+     "tip": "Bei Änderung: höchstens so oft je Variable; zyklisch: alle Werte in diesem Takt",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Format",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "QoS",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Discovery-Präfix",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Werte beim Broker speichern (retain)",
+     "tip": "Neue Abonnenten erhalten sofort den letzten Wert",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Home-Assistant-Discovery (Variablen erscheinen dort als Sensoren)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Verbindung testen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "HeadlessDialog",
+   "title": "Laufende Headless-Logger",
+   "shot": "headless_beenden",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Projekt, Konfiguration, Gestartet, Rechner, PID, Webserver, Zustand",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Logger beenden",
+     "tip": "Gewählten Headless-Logger sauber beenden",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PlcSettingsDialog",
+   "title": "Verbindung – SPS 1 (Beckhoff TwinCAT (ADS))",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "IP-Adresse",
+     "tip": "TwinCAT auf diesem Rechner: 127.0.0.1 (keine Route nötig, eigene AMS-Net-ID leer lassen)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "AMS-Net-ID der Steuerung",
+     "tip": "z. B. 5.12.34.56.1.1 (leer = IP-Adresse + .1.1)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "AMS-Port",
+     "tip": "851 = SPS-Laufzeit 1 (TwinCAT 3), 852 … weitere; 801 = TwinCAT 2",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Erweitert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Eigene AMS-Net-ID",
+     "tip": "Muss zur Route in der Steuerung passen (leer = eigene IP-Adresse + .1.1)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Eigener AMS-Port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "TCP-Port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Variablen je Anfrage",
+     "tip": "Höchstzahl Teile je Summenanfrage (TwinCAT: 500)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Zeitlimit",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PlcSettingsDialog",
+   "title": "Verbindung – SPS 1 (OPC UA (asyncua))",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Endpunkt",
+     "tip": "Adresse des OPC-UA-Servers, z. B. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Betriebsart",
+     "tip": "Subscription: der Server meldet nur Änderungen (weniger Netzlast bei vielen Werten)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Sicherheit",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Benutzer",
+     "tip": "Leer = anonym",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Passwort",
+     "tip": "Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Erweitert",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Client-Zertifikat",
+     "tip": "Zertifikatsdatei (.der/.pem). Leer = selbstsigniertes Zertifikat wird automatisch erzeugt.",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Privater Schlüssel",
+     "tip": "Schlüsseldatei (.pem) zum Client-Zertifikat",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Zeitlimit",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Meldeintervall (Subscription)",
+     "tip": "So oft schickt der Server gesammelte Änderungen (0 = Intervall der Steuerung)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Abtastrate (Subscription)",
+     "tip": "So oft prüft der Server die Werte auf Änderung (0 = wie das Meldeintervall)",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Knoten je Anfrage",
+     "tip": "Höchstzahl Knoten je Read-Anfrage (Server begrenzen das teilweise, z. B. auf 100)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "TagBrowser",
+   "title": "Tags aus der Steuerung wählen – SPS 2",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Tag-Liste aus Steuerung laden",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Programm-Tags",
+     "tip": "Auch die Tags der Programme (Program:Name.Tag) laden – dauert länger",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Markiertes Array als Block…",
+     "tip": "Array aus Zahlen mit einer einzigen Leseanfrage übernehmen (auch per Doppelklick)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Auswahl übernehmen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NetScanDialog",
+   "title": "Netzwerk durchsuchen",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Gerätekennung lesen",
+     "tip": "S7: Baugruppe und Station, EtherNet/IP: Produktname",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Suchen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Übernehmen, Adresse, Gefunden, Gerät, Angaben, Treiber",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Als Steuerung übernehmen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NetPanel",
+   "title": "PLC Datenlogger – Netzwerk",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Zurück",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Neu starten",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Herunterfahren",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurück",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Stoppen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Starten (headless)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurück",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Jetzt abdunkeln",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurück",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Internetzeit (NTP)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▲",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "▼",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Lesen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "UTC",
+     "tip": "Die Steuerung liefert die Uhrzeit in UTC (sonst Ortszeit) – nur bei S7 von Bedeutung",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Automatisch",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurück",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zeitzone",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Uhr stellen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zeigen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "1",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "2",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "3",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "4",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "5",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "6",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "7",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "8",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "9",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "0",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "q",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "w",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "e",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "r",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "t",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "z",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "u",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "i",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "o",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "p",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "a",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "s",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "d",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "f",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "g",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "h",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "j",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "k",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "l",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "y",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "x",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "c",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "v",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "b",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "n",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "m",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "⇧",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "?#1",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Leertaste",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "⌫",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Verbinden",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "WLAN an",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurück",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Suchen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "IP-Einstellung",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "DHCP (automatisch)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Feste Adresse",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "7",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "8",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "9",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "4",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "5",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "6",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "1",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "2",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "3",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "0",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": ".",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "/",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "⌫",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Leeren",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurück",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Ethernet",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "WLAN",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Uhrzeit",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Display",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Logger",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "IoCheckWindow",
+   "title": "IO-Check – (nicht gespeichert)",
+   "shot": "",
+   "menus": [],
+   "toolbars": [
+    {
+     "text": "IO-Check",
+     "sub": [
+      {
+       "text": "IO-Liste importieren …",
+       "tip": "Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)"
+      },
+      {
+       "text": "Spalten …",
+       "tip": "Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt. Pfeil: Spalten der Signalliste ein- und ausblenden",
+       "sub": []
+      },
+      {
+       "text": "Öffnen …",
+       "keys": [
+        "Strg+O"
+       ],
+       "tip": "Gespeicherten IO-Check öffnen"
+      },
+      {
+       "text": "Speichern",
+       "keys": [
+        "Strg+S"
+       ],
+       "tip": "Prüfstand speichern (*.iocheck.json); Pfeil: automatisch speichern ein/aus",
+       "sub": [
+        {
+         "text": "Automatisch speichern",
+         "check": true,
+         "tip": "Jede Änderung sofort in die Prüfstand-Datei schreiben (sobald der Prüfstand einmal gespeichert ist)"
+        }
+       ]
+      },
+      {
+       "text": "Speichern unter …",
+       "tip": "Speichern unter"
+      },
+      {
+       "text": "Ergebnis exportieren …",
+       "tip": "Prüfergebnis als CSV oder Excel speichern"
+      },
+      {
+       "text": "Protokoll (PDF) …",
+       "tip": "Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat, Fotos anhängen",
+       "sub": [
+        {
+         "text": "Querformat",
+         "check": true
+        },
+        {
+         "text": "Fotos anhängen",
+         "check": true
+        },
+        {
+         "sep": true
+        },
+        {
+         "text": "Kurzbericht (PDF) …",
+         "tip": "Nur die Zusammenfassung: Fortschrittsbalken gesamt, je Signalart, Gruppe und Ort"
+        }
+       ]
+      },
+      {
+       "text": "Fotos …",
+       "tip": "Fotos zum markierten Signal ansehen, hinzufügen oder entfernen (auch per Doppelklick in die Spalte „Fotos“; am Smartphone mit der Kamera)"
+      },
+      {
+       "text": "📱 Mobil …",
+       "tip": "IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)"
+      },
+      {
+       "text": "Prüfer: M. Mustermann",
+       "tip": "Name oder Kürzel, der beim Abhaken am PC als Prüfer eingetragen wird (Vorgabe: angemeldeter Benutzer des Rechners); am Smartphone gilt der Anmeldename"
+      },
+      {
+       "text": "▶ Lesen starten",
+       "keys": [
+        "F5"
+       ],
+       "tip": "Signale zyklisch aus den Steuerungen lesen"
+      },
+      {
+       "text": "Was hat sich bewegt?",
+       "check": true,
+       "tip": "Seitenleiste mit den zuletzt gewechselten Signalen ein- oder ausblenden"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Signalliste",
+      "Matrix"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Demo",
+     "tip": "Simulierte Werte statt Verbindung zur Steuerung",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur angezeigte lesen",
+     "tip": "Nur die Signale lesen, die Suchfeld, Auswahllisten und Spaltenfilter gerade anzeigen (weniger Last für Steuerung und Netz); ändert sich der Filter, wird neu gestartet",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Signale automatisch abhaken",
+     "tip": "Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen Drahtbruch gemeldet hat und wieder gültig ist (Verdrahtung geöffnet und geschlossen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur offene Signale",
+     "tip": "Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Zeit, Signal, Wechsel",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Bereiche scannen …",
+     "tip": "Zusammenhängende Ein-/Ausgänge ohne IO-Liste lesen, z. B. E0.0 … E31.7",
+     "tabs": [
+      "Matrix"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "Nr., Status, Wert, Adresse, Symbol, Kommentar, BMK, Gruppe, Ort, Typ, Steuerung, Geprüft am, Prüfer, Fotos, Bemerkung",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✓ OK",
+     "tip": "✓ OK (Ctrl+1)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✗ Fehler …",
+     "tip": "✗ Fehler … (Ctrl+2)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "– Übersprungen",
+     "tip": "– Übersprungen (Ctrl+3)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "↻ Wiederholen",
+     "tip": "↻ Wiederholen (Ctrl+4)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurücksetzen",
+     "tip": "Zurücksetzen (Ctrl+0)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "＋ Signal …",
+     "tip": "Signal von Hand zur IO-Liste hinzufügen (Rechtsklick in die Liste: weitere Befehle)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "gruppe",
+     "text": "Analogwert",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 0 %",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 100 %",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Messbereich von",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Messbereich bis",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert in der Liste",
+     "tip": "Darstellung des Rohwerts in der Spalte „Wert“ der Signalliste",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Einheit",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Messpunkte löschen",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    }
+   ]
+  },
+  {
+   "class": "IoCheckWindow",
+   "title": "IO-Check – (nicht gespeichert) *",
+   "shot": "iocheck_fenster",
+   "menus": [],
+   "toolbars": [
+    {
+     "text": "IO-Check",
+     "sub": [
+      {
+       "text": "IO-Liste importieren …",
+       "tip": "Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)"
+      },
+      {
+       "text": "Spalten …",
+       "tip": "Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt. Pfeil: Spalten der Signalliste ein- und ausblenden",
+       "sub": []
+      },
+      {
+       "text": "Öffnen …",
+       "keys": [
+        "Strg+O"
+       ],
+       "tip": "Gespeicherten IO-Check öffnen"
+      },
+      {
+       "text": "Speichern",
+       "keys": [
+        "Strg+S"
+       ],
+       "tip": "Prüfstand speichern (*.iocheck.json); Pfeil: automatisch speichern ein/aus",
+       "sub": [
+        {
+         "text": "Automatisch speichern",
+         "check": true,
+         "tip": "Jede Änderung sofort in die Prüfstand-Datei schreiben (sobald der Prüfstand einmal gespeichert ist)"
+        }
+       ]
+      },
+      {
+       "text": "Speichern unter …",
+       "tip": "Speichern unter"
+      },
+      {
+       "text": "Ergebnis exportieren …",
+       "tip": "Prüfergebnis als CSV oder Excel speichern"
+      },
+      {
+       "text": "Protokoll (PDF) …",
+       "tip": "Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat, Fotos anhängen",
+       "sub": [
+        {
+         "text": "Querformat",
+         "check": true
+        },
+        {
+         "text": "Fotos anhängen",
+         "check": true
+        },
+        {
+         "sep": true
+        },
+        {
+         "text": "Kurzbericht (PDF) …",
+         "tip": "Nur die Zusammenfassung: Fortschrittsbalken gesamt, je Signalart, Gruppe und Ort"
+        }
+       ]
+      },
+      {
+       "text": "Fotos …",
+       "tip": "Fotos zum markierten Signal ansehen, hinzufügen oder entfernen (auch per Doppelklick in die Spalte „Fotos“; am Smartphone mit der Kamera)"
+      },
+      {
+       "text": "📱 Mobil …",
+       "tip": "IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)"
+      },
+      {
+       "text": "Prüfer: M. Mustermann",
+       "tip": "Name oder Kürzel, der beim Abhaken am PC als Prüfer eingetragen wird (Vorgabe: angemeldeter Benutzer des Rechners); am Smartphone gilt der Anmeldename"
+      },
+      {
+       "text": "■ Lesen stoppen",
+       "keys": [
+        "F5"
+       ],
+       "tip": "Signale zyklisch aus den Steuerungen lesen"
+      },
+      {
+       "text": "Was hat sich bewegt?",
+       "check": true,
+       "tip": "Seitenleiste mit den zuletzt gewechselten Signalen ein- oder ausblenden"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Signalliste",
+      "Matrix"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Demo",
+     "tip": "Simulierte Werte statt Verbindung zur Steuerung",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur angezeigte lesen",
+     "tip": "Nur die Signale lesen, die Suchfeld, Auswahllisten und Spaltenfilter gerade anzeigen (weniger Last für Steuerung und Netz); ändert sich der Filter, wird neu gestartet",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Signale automatisch abhaken",
+     "tip": "Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen Drahtbruch gemeldet hat und wieder gültig ist (Verdrahtung geöffnet und geschlossen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur offene Signale",
+     "tip": "Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Zeit, Signal, Wechsel",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Bereiche scannen …",
+     "tip": "Zusammenhängende Ein-/Ausgänge ohne IO-Liste lesen, z. B. E0.0 … E31.7",
+     "tabs": [
+      "Matrix"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "Nr., Status, Wert, Adresse, Symbol, Kommentar, BMK, Gruppe, Ort, Typ, Steuerung, Geprüft am, Prüfer, Fotos, Bemerkung",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✓ OK",
+     "tip": "✓ OK (Ctrl+1)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✗ Fehler …",
+     "tip": "✗ Fehler … (Ctrl+2)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "– Übersprungen",
+     "tip": "– Übersprungen (Ctrl+3)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "↻ Wiederholen",
+     "tip": "↻ Wiederholen (Ctrl+4)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurücksetzen",
+     "tip": "Zurücksetzen (Ctrl+0)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "＋ Signal …",
+     "tip": "Signal von Hand zur IO-Liste hinzufügen (Rechtsklick in die Liste: weitere Befehle)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "gruppe",
+     "text": "Analogwert",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 0 %",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 100 %",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Messbereich von",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Messbereich bis",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert in der Liste",
+     "tip": "Darstellung des Rohwerts in der Spalte „Wert“ der Signalliste",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Einheit",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Messpunkte löschen",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    }
+   ]
+  },
+  {
+   "class": "AddSignalDialog",
+   "title": "Signal hinzufügen",
+   "shot": "iocheck_signal_neu",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Adresse",
+     "tip": "z. B. E12.3, EW256, A4.0, DB10.DBX2.1",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Symbol",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Kommentar",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "BMK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Ort",
+     "tip": "z. B. Halle 2, +S1, Kesselhaus",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Gruppe",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Typ",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Messbereich",
+     "tip": "nur Analog, z. B. 0..10 bar",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Steuerung",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "PhotoDialog",
+   "title": "Fotos – E0.1 B01",
+   "shot": "iocheck_fotos",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "Hinzufügen …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Öffnen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Entfernen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Schließen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "ScanDialog",
+   "title": "Bereiche scannen",
+   "shot": "iocheck_scan",
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Steuerung, Startadresse, Anzahl Bits",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Hinzufügen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Entfernen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "NotifyDialog",
+   "title": "Benachrichtigungen",
+   "shot": "",
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "E-Mail",
+      "Teams / Slack / Webhook",
+      "ntfy (Push)",
+      "Telegram"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Bei Ereignissen benachrichtigen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Wann",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Priorität",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Nur Trigger",
+     "tip": "leer = alle Trigger; sonst Namen, durch Komma getrennt",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Sperrzeit je Trigger",
+     "tip": "Kommt derselbe Trigger innerhalb dieser Zeit erneut, wird nicht noch einmal gemeldet (die nächste Meldung nennt die Zahl der unterdrückten).",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Auch melden, wenn ein Ereignis geht",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Bot-Token",
+     "tip": "",
+     "tabs": [
+      "Telegram"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Chat-ID",
+     "tip": "123456789",
+     "tabs": [
+      "Telegram"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Telegram verwenden",
+     "tip": "",
+     "tabs": [
+      "Telegram"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Adresse mit Thema",
+     "tip": "https://ntfy.sh/mein-geheimes-thema",
+     "tabs": [
+      "ntfy (Push)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Zugriffstoken",
+     "tip": "",
+     "tabs": [
+      "ntfy (Push)"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "ntfy (Push) verwenden",
+     "tip": "",
+     "tabs": [
+      "ntfy (Push)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Art",
+     "tip": "",
+     "tabs": [
+      "Teams / Slack / Webhook"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Webhook-Adresse",
+     "tip": "https://…",
+     "tabs": [
+      "Teams / Slack / Webhook"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Teams / Slack / Webhook verwenden",
+     "tip": "",
+     "tabs": [
+      "Teams / Slack / Webhook"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "SMTP-Server",
+     "tip": "smtp.firma.de",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Verschlüsselung",
+     "tip": "",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Benutzer",
+     "tip": "",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Passwort",
+     "tip": "",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Absender",
+     "tip": "datenlogger@firma.de",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Empfänger",
+     "tip": "a@firma.de, b@firma.de",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "E-Mail verwenden",
+     "tip": "",
+     "tabs": [
+      "E-Mail"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Testnachricht senden",
+     "tip": "Über alle eingeschalteten Kanäle eine Testnachricht senden",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "OpcUaServerDialog",
+   "title": "OPC-UA-Server",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Adresse (Host)",
+     "tip": "0.0.0.0 = erreichbar im ganzen Netzwerk, 127.0.0.1 = nur auf diesem Rechner",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Aktualisierung",
+     "tip": "So oft werden geänderte Werte im Server aktualisiert",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Endpunkt",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "OPC-UA-Server starten (während der Aufzeichnung)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Sicherheit (Endpunkte)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Zertifikat (DER/PEM)",
+     "tip": "leer = selbstsigniert",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Schlüssel (PEM)",
+     "tip": "leer = selbstsigniert",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Keine",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Basic256Sha256 – Signieren",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Basic256Sha256 – Signieren und verschlüsseln",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Aes128Sha256RsaOaep – Signieren und verschlüsseln",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Aes256Sha256RsaPss – Signieren und verschlüsseln",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Zugriff",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Anonym (ohne Anmeldung)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Anmeldung mit den Benutzern des Webservers (2 eingerichtet)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "OK",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Abbrechen",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "StartWindow",
+   "title": "",
+   "shot": "",
+   "controls": [
+    {
+     "kind": "knopf",
+     "text": "✕",
+     "tip": "Beenden",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Öffnen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Durchsuchen …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Neue Konfiguration …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Demo",
+     "tip": "Mit simulierten Werten starten (ohne Steuerung)",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Mit Logger verbinden …",
+     "tip": "Betriebsart Client: die Aufzeichnung eines anderen Loggers anzeigen (z. B. headless auf einem Raspberry Pi) – ohne eigene Konfiguration",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "MainWindow",
+   "title": "PLC Datenlogger – Kesselhaus Linie 1  [kesselhaus.json]",
+   "shot": "w",
+   "menus": [
+    {
+     "text": "Datei",
+     "sub": [
+      {
+       "text": "Config laden …",
+       "keys": [
+        "Strg+O"
+       ],
+       "tip": "Andere Konfigurationsdatei laden (beliebiger Dateiname)"
+      },
+      {
+       "text": "Konfiguration neu laden",
+       "keys": [
+        "F5"
+       ]
+      },
+      {
+       "text": "Konfig-Editor",
+       "tip": "Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Mit Logger verbinden (Client) …",
+       "keys": [
+        "Strg+K"
+       ],
+       "tip": "Aufzeichnung eines anderen Loggers über dessen Webserver anzeigen (ohne eigene Konfiguration und Steuerung)"
+      },
+      {
+       "text": "Verbindung trennen (eigene Konfiguration)"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "CSV laden"
+      },
+      {
+       "text": "CSV-Dateien aneinanderhängen und speichern …",
+       "tip": "Mehrere Aufzeichnungen nach der Zeit zusammenfügen, als neue CSV-Datei speichern und offline anzeigen"
+      },
+      {
+       "text": "Aus Datenbank laden …",
+       "keys": [
+        "Strg+D"
+       ],
+       "tip": "Zeitraum aus der Datenbank wählen und offline anzeigen"
+      },
+      {
+       "text": "Werte exportieren (CSV/Excel) …",
+       "keys": [
+        "Strg+Umschalt+E"
+       ],
+       "tip": "Messwerte eines Zeitbereichs als CSV- oder Excel-Datei speichern, optional verdichtet"
+      },
+      {
+       "text": "Webserver-Adresse …",
+       "tip": "Webserver-Adresse"
+      },
+      {
+       "text": "Prozessbild im Browser",
+       "tip": "Prozessbild (Kacheln mit Werten, Zeigern, Lampen) des Webservers im Browser öffnen"
+      },
+      {
+       "text": "Ereignisprotokoll …",
+       "keys": [
+        "Strg+E"
+       ],
+       "tip": "Ereignisse der Trigger anzeigen und quittieren"
+      },
+      {
+       "text": "Notiz ins Ereignisprotokoll …",
+       "keys": [
+        "Strg+M"
+       ],
+       "tip": "Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben (offline: Zeitpunkt von Lineal 1)"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Startbild beim Programmstart zeigen",
+       "check": true
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Beenden"
+      }
+     ]
+    },
+    {
+     "text": "Sprache",
+     "sub": [
+      {
+       "text": "Deutsch (de)",
+       "check": true
+      },
+      {
+       "text": "English (en)",
+       "check": true
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Ordner mit Sprachdateien öffnen …",
+       "tip": "Eigene Übersetzung: de.txt kopieren, umbenennen (z. B. fr.txt) und übersetzen"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Farbschema",
+       "sub": [
+        {
+         "text": "Wie das System",
+         "check": true
+        },
+        {
+         "text": "Hell",
+         "check": true
+        },
+        {
+         "text": "Dunkel",
+         "check": true
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Ansicht",
+     "sub": [
+      {
+       "text": "Anordnung",
+       "sub": [
+        {
+         "text": "Untereinander",
+         "check": true
+        },
+        {
+         "text": "Nebeneinander",
+         "check": true
+        },
+        {
+         "text": "Tabs",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Diagramme auf der Seite",
+       "sub": [
+        {
+         "text": "Untereinander",
+         "check": true
+        },
+        {
+         "text": "Nebeneinander",
+         "check": true
+        },
+        {
+         "text": "Raster (Grid)",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Raster-Spalten",
+       "sub": [
+        {
+         "text": "Automatisch",
+         "check": true
+        },
+        {
+         "text": "1",
+         "check": true
+        },
+        {
+         "text": "2",
+         "check": true
+        },
+        {
+         "text": "3",
+         "check": true
+        },
+        {
+         "text": "4",
+         "check": true
+        },
+        {
+         "text": "5",
+         "check": true
+        },
+        {
+         "text": "6",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Seiten / Diagramme",
+       "sub": [
+        {
+         "text": "Diagramme",
+         "check": true
+        }
+       ]
+      },
+      {
+       "text": "Werteanzeige",
+       "check": true
+      },
+      {
+       "text": "Werte am Mauszeiger (online)",
+       "check": true,
+       "tip": "Im Online-Modus Zeit und Werte aller Kurven an der Mausposition anzeigen"
+      },
+      {
+       "text": "Trigger-Marken an der Zeitachse",
+       "check": true,
+       "tip": "Ereignisse, Beginn von Trigger-Aufnahmen und Notizen als senkrechte Linie im Diagramm"
+      },
+      {
+       "text": "Balken",
+       "check": true
+      }
+     ]
+    },
+    {
+     "text": "Screenshot",
+     "sub": [
+      {
+       "text": "Prozess …",
+       "tip": "Prozess"
+      },
+      {
+       "text": "Regelkreis …",
+       "tip": "Regelkreis"
+      },
+      {
+       "text": "Zustände …",
+       "tip": "Zustände"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Heller Hintergrund (für Berichte/Druck)",
+       "check": true
+      }
+     ]
+    },
+    {
+     "text": "Analyse",
+     "sub": [
+      {
+       "text": "IO-Check …",
+       "tip": "Inbetriebnahme: Signalliste prüfen, Ein-/Ausgänge als Matrix, Vertauschungen erkennen"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "XY-Diagramm …",
+       "tip": "Variablen über einer anderen Variable darstellen (z. B. Druck über Hub)"
+      },
+      {
+       "text": "Frequenzanalyse (FFT) …",
+       "tip": "Amplitudenspektrum einer Variable, z. B. für Schwingungen"
+      },
+      {
+       "text": "PDF-Bericht erstellen …",
+       "tip": "Bericht mit Kennwerten, Verlauf und Ereignissen für einen Zeitbereich als PDF"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "PID-Optimierung: Regelkreis …",
+       "tip": "PID-Optimierung: Regelkreis"
+      }
+     ]
+    },
+    {
+     "text": "Hilfe",
+     "sub": [
+      {
+       "text": "Bedienungsanleitung"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Über PLC Datenlogger …",
+       "tip": "Über PLC Datenlogger"
+      }
+     ]
+    }
+   ],
+   "toolbars": [
+    {
+     "text": "Steuerung",
+     "sub": [
+      {
+       "text": "▶ Start",
+       "check": true
+      },
+      {
+       "text": "Offline",
+       "check": true
+      },
+      {
+       "text": "CSV laden"
+      },
+      {
+       "text": "Config laden …",
+       "keys": [
+        "Strg+O"
+       ],
+       "tip": "Andere Konfigurationsdatei laden (beliebiger Dateiname)"
+      },
+      {
+       "text": "Konfig-Editor",
+       "tip": "Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen"
+      },
+      {
+       "text": "Werteanzeige",
+       "check": true
+      },
+      {
+       "text": "Balken",
+       "check": true
+      },
+      {
+       "text": "Y-Auto",
+       "check": true,
+       "tip": "Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)"
+      },
+      {
+       "text": "Bool im Diagramm",
+       "check": true,
+       "tip": "BOOL-Kurven zusätzlich im Diagramm zeichnen (sonst nur als Linie/Streifen neben dem Namen in der Legende)"
+      },
+      {
+       "text": "Lineale zurücksetzen"
+      },
+      {
+       "text": "Demo",
+       "check": true,
+       "tip": "Simulierte Werte statt SPS-Verbindung (vor dem Start wählen)"
+      },
+      {
+       "text": "Zoom-Rechteck",
+       "check": true,
+       "tip": "Mit der linken Maustaste einen Bereich aufziehen: Zeit und Werte dieses Diagramms vergrößern (aus: linke Maustaste verschiebt die Zeitachse)"
+      },
+      {
+       "text": "Zeitachsen angleichen",
+       "tip": "Alle Diagramme auf den Zeitausschnitt des zuletzt bedienten Diagramms setzen (Mausrad und Zoom wirken nur auf das Diagramm unter dem Mauszeiger)"
+      },
+      {
+       "text": "Zoom zurücksetzen",
+       "tip": "Y-Achsen wieder wie konfiguriert skalieren und die Zeitachsen angleichen"
+      }
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "tabelle",
+     "text": "Variable, Lineal 1, Lineal 2, Δ (L2 − L1), Minimum, Maximum, Mittelwert, Std.-Abw.",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "🔔 4 offen",
+     "tip": "4 offene (nicht quittierte) Ereignisse\nC:\\Anlagen\\Kesselhaus\\kesselhaus_ereignisse.csv\nKlicken: Ereignisprotokoll öffnen und quittieren",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "ConfigWindow",
+   "title": "PLC Konfiguration – Kesselhaus Linie 1 – kesselhaus.json",
+   "shot": "cw",
+   "menus": [
+    {
+     "text": "Datei",
+     "sub": [
+      {
+       "text": "Neu",
+       "keys": [
+        "Strg+N"
+       ]
+      },
+      {
+       "text": "Öffnen …",
+       "keys": [
+        "Strg+O"
+       ],
+       "tip": "Öffnen"
+      },
+      {
+       "text": "Speichern",
+       "keys": [
+        "Strg+S"
+       ]
+      },
+      {
+       "text": "Speichern unter …",
+       "keys": [
+        "Strg+Umschalt+S"
+       ],
+       "tip": "Speichern unter"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "INI-Datei umwandeln …",
+       "tip": "INI-Datei umwandeln"
+      },
+      {
+       "text": "Logger mit dieser Konfiguration starten",
+       "keys": [
+        "Strg+R"
+       ]
+      },
+      {
+       "text": "IO-Check mit dieser Konfiguration starten"
+      },
+      {
+       "text": "Headless-Logger anzeigen/beenden …",
+       "tip": "Headless-Logger anzeigen/beenden"
+      },
+      {
+       "text": "Grafana-Dashboard exportieren …",
+       "tip": "Grafana-Dashboard exportieren"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Beenden",
+       "keys": [
+        "Strg+Q"
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Treiber",
+     "sub": [
+      {
+       "text": "Installierte Treiber …",
+       "tip": "Installierte Treiber"
+      },
+      {
+       "text": "Ordner für eigene Treiber öffnen …",
+       "tip": "Ordner für eigene Treiber öffnen"
+      }
+     ]
+    },
+    {
+     "text": "Sprache",
+     "sub": [
+      {
+       "text": "Deutsch (de)",
+       "check": true
+      },
+      {
+       "text": "English (en)",
+       "check": true
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Ordner mit Sprachdateien öffnen …",
+       "tip": "Eigene Übersetzung: de.txt kopieren, umbenennen (z. B. fr.txt) und übersetzen"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Farbschema",
+       "sub": [
+        {
+         "text": "Wie das System",
+         "check": true
+        },
+        {
+         "text": "Hell",
+         "check": true
+        },
+        {
+         "text": "Dunkel",
+         "check": true
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "text": "Hilfe",
+     "sub": [
+      {
+       "text": "Bedienungsanleitung"
+      },
+      {
+       "sep": true
+      },
+      {
+       "text": "Über PLC Datenlogger …",
+       "tip": "Über PLC Datenlogger"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Projekt & Steuerungen",
+      "Aufzeichnung",
+      "Anzeige",
+      "Webserver & Headless",
+      "Datenbank",
+      "Trigger & Ereignisse",
+      "Berichte (PDF)"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "feld",
+     "text": "Anzeigefenster (online)",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Standard-Anordnung der Seiten",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Diagramme auf einer Seite",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Raster-Spalten",
+     "tip": "Anzahl der Spalten bei der Anordnung „Raster“ (0 = automatisch aus der Diagrammzahl)",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Logo",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Kundenlogo",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Programm-Icon",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Balkenbreite",
+     "tip": "Breite eines Balkens neben dem Diagramm (Vorgabe 14 Pixel)",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Balken für Aktualwerte anzeigen",
+     "tip": "",
+     "tabs": [
+      "Anzeige"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Datenbank",
+     "tip": "",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Server / Port",
+     "tip": "",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Datenbankname",
+     "tip": "",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "SQLite-Datei",
+     "tip": "",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Benutzer / Passwort",
+     "tip": "",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Tabelle",
+     "tip": "Tabellenname (Buchstaben, Ziffern, _); wird bei Bedarf angelegt",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Löschen nach",
+     "tip": "Werte löschen, die älter sind (0 = nie). TimescaleDB: ganze Zeitabschnitte, QuestDB: ganze Tage. InfluxDB 3 und VictoriaMetrics: Aufbewahrungsdauer am Server einstellen",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Höchstens belegen",
+     "tip": "Nur SQLite: belegen die Werte mehr Platz, werden die ältesten Tage gelöscht (0 = unbegrenzt). Die Datei schrumpft nicht, wächst aber nicht weiter",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur Änderungen schreiben (spätestens jede Minute)",
+     "tip": "Spart Platz: ein Wert wird nur geschrieben, wenn er sich geändert hat",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Ereignisse und Notizen mitschreiben",
+     "tip": "Trigger-Ereignisse (kommt, geht, quittiert) und Notizen zusätzlich in die Tabelle <Tabelle>_ereignisse schreiben (VictoriaMetrics/Prometheus: Metriken <Tabelle>_ereignisse_aktiv und _quittiert), z. B. für Grafana",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Datenbank testen",
+     "tip": "Verbindung prüfen und die Tabelle anlegen",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Speicherplatz …",
+     "tip": "Belegten Speicherplatz der Tabelle und der Datenbank sowie die Anzahl Werte abfragen",
+     "tabs": [
+      "Datenbank"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Trigger",
+     "tip": "",
+     "tabs": [
+      "Trigger & Ereignisse"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Ereignisdatei",
+     "tip": "",
+     "tabs": [
+      "Trigger & Ereignisse"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Melden",
+     "tip": "",
+     "tabs": [
+      "Trigger & Ereignisse"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Trigger bearbeiten …",
+     "tip": "Bedingungen festlegen, bei denen ein Eintrag ins Ereignisprotokoll geschrieben wird",
+     "tabs": [
+      "Trigger & Ereignisse"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Ereignisprotokoll anzeigen …",
+     "tip": "Ereignisse anzeigen und quittieren",
+     "tabs": [
+      "Trigger & Ereignisse"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Trigger & Ereignisse"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Benachrichtigungen …",
+     "tip": "Bei Ereignissen E-Mail, Teams-/Slack-Nachricht oder Push aufs Handy (ntfy, Telegram)",
+     "tabs": [
+      "Trigger & Ereignisse"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Zeitraum",
+     "tip": "",
+     "tabs": [
+      "Berichte (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Schichtbeginne",
+     "tip": "Beginn der Schichten (Uhrzeiten, durch Komma getrennt)",
+     "tabs": [
+      "Berichte (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Tagesbeginn",
+     "tip": "Uhrzeit, zu der Tag, Woche (Montag) und Monat beginnen, z. B. 06:00",
+     "tabs": [
+      "Berichte (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Ordner",
+     "tip": "",
+     "tabs": [
+      "Berichte (PDF)"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "PDF-Bericht automatisch erstellen",
+     "tip": "Am Ende jedes Zeitraums: Kennwerte, Verlauf aller Diagramme und Ereignisse; beim Stoppen ein Teilbericht",
+     "tabs": [
+      "Berichte (PDF)"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Berichte (PDF)"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "CSV-Ordner",
+     "tip": "",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "CSV-Name",
+     "tip": "Dateiname-Präfix und Name des Archiv-Unterordners",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Max. Datensätze je Datei",
+     "tip": "Ist die Anzahl erreicht, wird die Datei gepackt, archiviert und eine neue begonnen (0 = unbegrenzt)",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Archiv-Ordner",
+     "tip": "",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Löschen nach",
+     "tip": "CSV-Dateien und Archiv-ZIPs dieses Loggers löschen, deren letzte Änderung länger zurückliegt (0 = nie)",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Höchstens belegen",
+     "tip": "Belegen CSV-Dateien und Archiv dieses Loggers mehr Platz, werden die ältesten gelöscht (0 = unbegrenzt)",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Aufzeichnung",
+     "tip": "Per Trigger: in CSV-Datei/Datenbank wird nur geschrieben, wenn die Startbedingung erfüllt ist – mit den Werten der Vorlaufzeit davor und der Nachlaufzeit danach. Jede Aufnahme bekommt eine eigene CSV-Datei. Die Anzeige läuft immer.",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Startbedingung",
+     "tip": "",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "CSV-Datei schreiben",
+     "tip": "Ausgeschaltet: keine CSV-Datei (z. B. nur Datenbank, Reiter „Datenbank“)",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Beim Beenden des Loggers die aktuelle CSV-Datei archivieren",
+     "tip": "",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "Bedingung mit dem Formeleditor bearbeiten",
+     "tabs": [
+      "Aufzeichnung"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Adresse (Host)",
+     "tip": "0.0.0.0 = erreichbar im ganzen Netzwerk, 127.0.0.1 = nur auf diesem Rechner",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Port",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Zugriffscode",
+     "tip": "Zugriffscode: die Seite wird mit ?token=CODE aufgerufen",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Aktualisierung im Browser",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Headless-Logger",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "OPC-UA-Server",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "MQTT",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Zertifikat (PEM)",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Schlüssel (PEM)",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Anmeldung",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Webserver starten (Diagramme im Browser, z. B. mit Tablet/Smartphone)",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Headless-Modus: ohne Diagramme starten, nur aufzeichnen",
+     "tip": "Der Logger läuft ohne Fenster (z. B. als Dienst); Webserver und Archivierung bleiben aktiv. Mit dem Startparameter --gui lässt sich trotzdem die Oberfläche öffnen.",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Laufende Logger …",
+     "tip": "Laufende Headless-Logger anzeigen und sauber beenden",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "OPC UA …",
+     "tip": "Variablen über einen OPC-UA-Server im Logger bereitstellen (Leitsystem, MES, SCADA)",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "MQTT …",
+     "tip": "Werte an einen MQTT-Broker senden (Home Assistant, Node-RED, IoT-Plattformen)",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "kaestchen",
+     "text": "HTTPS (verschlüsselt)",
+     "tip": "Ohne eigenes Zertifikat wird einmalig ein selbstsigniertes erzeugt (Ordner web_tls); der Browser fragt dann beim ersten Aufruf nach",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Benutzer …",
+     "tip": "Anmeldung mit Benutzer und Passwort einrichten",
+     "tabs": [
+      "Webserver & Headless"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Projektname",
+     "tip": "Projektname: erscheint in den Fenstertiteln, im Webserver und in der Logdatei",
+     "tabs": [
+      "Projekt & Steuerungen"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "Name, Treiber, Verbindung, Intervall, Aktiv",
+     "tip": "",
+     "tabs": [
+      "Projekt & Steuerungen"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "Verbindungsparameter bearbeiten",
+     "tabs": [
+      "Projekt & Steuerungen"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "…",
+     "tip": "Verbindungsparameter bearbeiten",
+     "tabs": [
+      "Projekt & Steuerungen"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Steuerung",
+     "tip": "",
+     "tabs": [
+      "Projekt & Steuerungen"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Steuerung entfernen",
+     "tip": "",
+     "tabs": [
+      "Projekt & Steuerungen"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Netzwerk durchsuchen …",
+     "tip": "Erreichbare Steuerungen im Netzwerk suchen und als Steuerung übernehmen",
+     "tabs": [
+      "Projekt & Steuerungen"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "Name, Steuerung, Diagramm › Y-Achse, Adresse, Typ, Farbe, Aufzeichnen, Anzeigen, Werteanzeige, Balken, Testwert, Formel",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Aus Steuerung wählen…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Blöcke (Blocklesemodus)…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Berechnete Variable…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Variable hinzufügen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Entfernen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Verbindung testen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Import/Export",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Diagramm",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "+ Y-Achse",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Entfernen",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "gruppe",
+     "text": "Eigenschaften der Auswahl (Diagramm / Y-Achse)",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Name",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Seite (Tab)",
+     "tip": "Diagramme mit gleichem Seitennamen werden gemeinsam in einem Tab/Dock angezeigt",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Y min",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Y max",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "feld",
+     "text": "Regler",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Auto-Skalierung",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "PID-Regler-Optimierung",
+     "tip": "Im Logger lassen sich für dieses Diagramm aus Soll-, Ist- und Stellwert die PID-Parameter berechnen",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Einstellen …",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Öffnen…",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Speichern",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Speichern unter…",
+     "tip": "",
+     "tabs": []
+    }
+   ]
+  },
+  {
+   "class": "IoCheckWindow",
+   "title": "IO-Check – Kesselhaus.iocheck.json",
+   "shot": "io",
+   "menus": [],
+   "toolbars": [
+    {
+     "text": "IO-Check",
+     "sub": [
+      {
+       "text": "IO-Liste importieren …",
+       "tip": "Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)"
+      },
+      {
+       "text": "Spalten …",
+       "tip": "Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt. Pfeil: Spalten der Signalliste ein- und ausblenden",
+       "sub": []
+      },
+      {
+       "text": "Öffnen …",
+       "keys": [
+        "Strg+O"
+       ],
+       "tip": "Gespeicherten IO-Check öffnen"
+      },
+      {
+       "text": "Speichern",
+       "keys": [
+        "Strg+S"
+       ],
+       "tip": "Prüfstand speichern (*.iocheck.json); Pfeil: automatisch speichern ein/aus",
+       "sub": [
+        {
+         "text": "Automatisch speichern",
+         "check": true,
+         "tip": "Jede Änderung sofort in die Prüfstand-Datei schreiben (sobald der Prüfstand einmal gespeichert ist)"
+        }
+       ]
+      },
+      {
+       "text": "Speichern unter …",
+       "tip": "Speichern unter"
+      },
+      {
+       "text": "Ergebnis exportieren …",
+       "tip": "Prüfergebnis als CSV oder Excel speichern"
+      },
+      {
+       "text": "Protokoll (PDF) …",
+       "tip": "Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat, Fotos anhängen",
+       "sub": [
+        {
+         "text": "Querformat",
+         "check": true
+        },
+        {
+         "text": "Fotos anhängen",
+         "check": true
+        },
+        {
+         "sep": true
+        },
+        {
+         "text": "Kurzbericht (PDF) …",
+         "tip": "Nur die Zusammenfassung: Fortschrittsbalken gesamt, je Signalart, Gruppe und Ort"
+        }
+       ]
+      },
+      {
+       "text": "Fotos …",
+       "tip": "Fotos zum markierten Signal ansehen, hinzufügen oder entfernen (auch per Doppelklick in die Spalte „Fotos“; am Smartphone mit der Kamera)"
+      },
+      {
+       "text": "📱 Mobil …",
+       "tip": "IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)"
+      },
+      {
+       "text": "Prüfer: M. Mustermann",
+       "tip": "Name oder Kürzel, der beim Abhaken am PC als Prüfer eingetragen wird (Vorgabe: angemeldeter Benutzer des Rechners); am Smartphone gilt der Anmeldename"
+      },
+      {
+       "text": "■ Lesen stoppen",
+       "keys": [
+        "F5"
+       ],
+       "tip": "Signale zyklisch aus den Steuerungen lesen"
+      },
+      {
+       "text": "Was hat sich bewegt?",
+       "check": true,
+       "tip": "Seitenleiste mit den zuletzt gewechselten Signalen ein- oder ausblenden"
+      }
+     ]
+    }
+   ],
+   "tabwidgets": [
+    {
+     "tabs": [],
+     "pages": [
+      "Signalliste",
+      "Matrix"
+     ]
+    }
+   ],
+   "controls": [
+    {
+     "kind": "kaestchen",
+     "text": "Demo",
+     "tip": "Simulierte Werte statt Verbindung zur Steuerung",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur angezeigte lesen",
+     "tip": "Nur die Signale lesen, die Suchfeld, Auswahllisten und Spaltenfilter gerade anzeigen (weniger Last für Steuerung und Netz); ändert sich der Filter, wird neu gestartet",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Signale automatisch abhaken",
+     "tip": "Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen Drahtbruch gemeldet hat und wieder gültig ist (Verdrahtung geöffnet und geschlossen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.",
+     "tabs": []
+    },
+    {
+     "kind": "kaestchen",
+     "text": "Nur offene Signale",
+     "tip": "Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.",
+     "tabs": []
+    },
+    {
+     "kind": "tabelle",
+     "text": "Zeit, Signal, Wechsel",
+     "tip": "",
+     "tabs": []
+    },
+    {
+     "kind": "knopf",
+     "text": "Bereiche scannen …",
+     "tip": "Zusammenhängende Ein-/Ausgänge ohne IO-Liste lesen, z. B. E0.0 … E31.7",
+     "tabs": [
+      "Matrix"
+     ]
+    },
+    {
+     "kind": "tabelle",
+     "text": "Nr., Status, Wert, Adresse, Symbol, Kommentar, BMK, Gruppe, Ort, Typ, Steuerung, Geprüft am, Prüfer, Fotos, Bemerkung",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✓ OK",
+     "tip": "✓ OK (Ctrl+1)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "✗ Fehler …",
+     "tip": "✗ Fehler … (Ctrl+2)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "– Übersprungen",
+     "tip": "– Übersprungen (Ctrl+3)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "↻ Wiederholen",
+     "tip": "↻ Wiederholen (Ctrl+4)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Zurücksetzen",
+     "tip": "Zurücksetzen (Ctrl+0)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "＋ Signal …",
+     "tip": "Signal von Hand zur IO-Liste hinzufügen (Rechtsklick in die Liste: weitere Befehle)",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "gruppe",
+     "text": "Analogwert: PT1",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 0 %",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert bei 100 %",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Messbereich von",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Messbereich bis",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Rohwert in der Liste",
+     "tip": "Darstellung des Rohwerts in der Spalte „Wert“ der Signalliste",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "feld",
+     "text": "Einheit",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Übernehmen",
+     "tip": "Aktuellen Wert als Messpunkt übernehmen",
+     "tabs": [
+      "Signalliste"
+     ]
+    },
+    {
+     "kind": "knopf",
+     "text": "Messpunkte löschen",
+     "tip": "",
+     "tabs": [
+      "Signalliste"
+     ]
+    }
+   ]
+  }
+ ]
+}

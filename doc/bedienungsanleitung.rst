@@ -409,6 +409,8 @@ Konfigurationsprogramm (``plc_config.py``)
 
    Das Konfigurationsprogramm: Reiter oben, Zuordnungsbaum links, Variablentabelle rechts.
 
+.. _konfig-projekt:
+
 Projekt, Steuerungen und Einstellungen
 ----------------------------------------------------------------------
 
@@ -680,6 +682,8 @@ Einzelheiten im Kapitel `PDF-Berichte <pdf-berichte_>`__.
    * - Anmeldung
      - **Benutzer …** legt Benutzer mit Passwort an (gespeichert wird nur ein Hash).
        Ohne Benutzer ist keine Anmeldung nötig. Siehe `HTTPS und Anmeldung <https-anmeldung_>`__.
+
+.. _konfig-variablen:
 
 Aufbau: Diagramme, Y-Achsen und Variablen
 ----------------------------------------------------------------------
@@ -1221,6 +1225,8 @@ Hinweise:
 * Formeln, Trigger, Berichte und die Aufzeichnung per Trigger sehen jeden Datensatz – ein
   Trigger löst also auch auf einen Impuls von nur einem Zyklus aus.
 * Im Demo-Modus liefern Ringpuffer-Elemente simulierte Werte wie normale Variablen.
+
+.. _tags-waehlen:
 
 Variablen aus der Steuerung wählen
 ----------------------------------------------------------------------
@@ -2551,6 +2557,8 @@ kopiert werden (``steuerung`` der Variablen anpassen).
 
 Logger (``plc_logger.py``)
 ======================================================================
+
+.. _bedienelemente:
 
 Bedienelemente
 ----------------------------------------------------------------------
@@ -4440,6 +4448,8 @@ angeklickte aus, *Alle Spalten anzeigen* holt alle zurück. Das ist eine persön
 Einstellung und ändert nichts am Import – ausgeblendete Spalten werden weiter eingelesen
 und gespeichert.
 
+.. _io-signalliste:
+
 Signalliste und Prüfstatus
 ----------------------------------------------------------------------
 
@@ -4987,6 +4997,8 @@ unverändert.
 
 Wer die Dateien nur ansehen will, wählt sie einfach zusammen in **CSV laden** – dann ohne
 Speichern.
+
+.. _werte-exportieren:
 
 Werte exportieren (CSV/Excel)
 ----------------------------------------------------------------------
@@ -6081,10 +6093,1513 @@ Apple-Entwicklerkonto signiert das Skript mit ``MACOS_SIGN_ID="Developer ID Appl
 die Notarisierung folgt dann mit ``xcrun notarytool``.
 
 
+.. referenz-anfang
+
+.. _referenz:
+
+Referenz: alle Menüs, Fenster und Bedienelemente
+======================================================================
+
+Dieses Kapitel listet die Menüs, Werkzeugleisten, Reiter, Knöpfe und Felder der Programme und Dialoge mit ihrer Bedeutung auf. Ausführliche Erklärungen mit Beispielen stehen in den vorigen Kapiteln; der Verweis *Mehr dazu* führt jeweils dorthin. Die Tastenkürzel gelten unter Windows und Linux; auf dem Mac steht ``⌘`` statt ``Strg``.
+
+Logger: Menüs
+----------------------------------------------------------------------
+
+Menüleiste des Loggers (``plc_logger.py``). Die Menüs *Sprache* und *Hilfe* stehen im nächsten Abschnitt.
+
+Menü Datei (Logger)
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - Config laden …
+     - ``Strg+O``
+     - Andere Konfigurationsdatei laden (beliebiger Dateiname)
+   * - Konfiguration neu laden
+     - ``F5``
+     - Konfigurationsdatei neu einlesen und die Diagramme neu aufbauen; eine laufende Aufzeichnung wird vorher beendet
+   * - Konfig-Editor
+     -  
+     - Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen
+   * - Mit Logger verbinden (Client) …
+     - ``Strg+K``
+     - Aufzeichnung eines anderen Loggers über dessen Webserver anzeigen (ohne eigene Konfiguration und Steuerung)
+   * - Verbindung trennen (eigene Konfiguration)
+     -  
+     - Betriebsart Client beenden und wieder die eigene Konfiguration verwenden
+   * - CSV laden
+     -  
+     - Eine oder mehrere Aufzeichnungen (CSV/ZIP) offline anzeigen; mehrere Dateien werden nach der Zeit aneinandergehängt
+   * - CSV-Dateien aneinanderhängen und speichern …
+     -  
+     - Mehrere Aufzeichnungen nach der Zeit zusammenfügen, als neue CSV-Datei speichern und offline anzeigen
+   * - Aus Datenbank laden …
+     - ``Strg+D``
+     - Zeitraum aus der Datenbank wählen und offline anzeigen
+   * - Werte exportieren (CSV/Excel) …
+     - ``Strg+Umschalt+E``
+     - Messwerte eines Zeitbereichs als CSV- oder Excel-Datei speichern, optional verdichtet
+   * - Webserver-Adresse …
+     -  
+     - Adresse des Webservers mit QR-Code anzeigen (zum Öffnen am Smartphone oder Tablet)
+   * - Prozessbild im Browser
+     -  
+     - Prozessbild (Kacheln mit Werten, Zeigern, Lampen) des Webservers im Browser öffnen
+   * - Ereignisprotokoll …
+     - ``Strg+E``
+     - Ereignisse der Trigger anzeigen und quittieren
+   * - Notiz ins Ereignisprotokoll …
+     - ``Strg+M``
+     - Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben (offline: Zeitpunkt von Lineal 1)
+   * - Startbild beim Programmstart zeigen
+     -  
+     - Beim nächsten Start das Startbild mit den zuletzt benutzten Konfigurationen zeigen
+   * - Beenden
+     -  
+     - Logger schließen; eine laufende Aufzeichnung wird beendet (und bei gesetzter Option archiviert)
+
+*Mehr dazu:* `Webserver (Diagramme im Browser) <webserver_>`__, `Lesemodus: Aufzeichnungen aus der Datenbank anzeigen <db-lesen_>`__, `Werte exportieren (CSV/Excel) <werte-exportieren_>`__, `Notizen (eigene Einträge) <notizen_>`__
+
+Menü Ansicht (Logger)
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - Anordnung › Untereinander / Nebeneinander / Tabs
+     -  
+     - Anordnung der Seiten im Fenster
+   * - Diagramme auf der Seite › Untereinander / Nebeneinander / Raster (Grid)
+     -  
+     - Anordnung der Diagramme innerhalb einer Seite
+   * - Raster-Spalten › Automatisch / 1 / 2 / 3 / 4 / 5 / 6
+     -  
+     - Spaltenzahl bei der Anordnung „Raster“ (automatisch aus der Zahl der Diagramme oder fest)
+   * - Seiten / Diagramme › Diagramme
+     -  
+     - Einzelne Seiten ein- oder ausblenden
+   * - Werteanzeige
+     -  
+     - Wertetabelle rechts ein- oder ausblenden
+   * - Werte am Mauszeiger (online)
+     -  
+     - Im Online-Modus Zeit und Werte aller Kurven an der Mausposition anzeigen
+   * - Trigger-Marken an der Zeitachse
+     -  
+     - Ereignisse, Beginn von Trigger-Aufnahmen und Notizen als senkrechte Linie im Diagramm
+   * - Balken
+     -  
+     - Balken für die Aktualwerte neben den Diagrammen ein- oder ausblenden
+
+*Mehr dazu:* `Seiten, Diagramme und Anordnung <seiten_>`__, `Trigger-Marken an der Zeitachse <trigger-marken_>`__
+
+Menü Screenshot (Logger)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - *Diagramm* …
+     -  
+     - Dieses Diagramm als PNG oder SVG speichern
+   * - Heller Hintergrund (für Berichte/Druck)
+     -  
+     - Screenshots mit weißem Hintergrund und dunkler Schrift
+
+*Mehr dazu:* `Screenshots von Diagrammen <screenshots_>`__
+
+Menü Analyse (Logger)
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - IO-Check …
+     -  
+     - Inbetriebnahme: Signalliste prüfen, Ein-/Ausgänge als Matrix, Vertauschungen erkennen
+   * - XY-Diagramm …
+     -  
+     - Variablen über einer anderen Variable darstellen (z. B. Druck über Hub)
+   * - Frequenzanalyse (FFT) …
+     -  
+     - Amplitudenspektrum einer Variable, z. B. für Schwingungen
+   * - PDF-Bericht erstellen …
+     -  
+     - Bericht mit Kennwerten, Verlauf und Ereignissen für einen Zeitbereich als PDF
+   * - PID-Optimierung: *Diagramm* …
+     -  
+     - PID-Parameter für den Regelkreis dieses Diagramms berechnen (im Konfigurationsprogramm beim Diagramm eingeschaltet)
+
+*Mehr dazu:* `Analyse: XY-Diagramm und Frequenzanalyse <analyse_>`__, `PID-Regler-Optimierung <pid-optimierung_>`__, `PDF-Berichte <pdf-berichte_>`__, `IO-Check (Inbetriebnahme) <io-check_>`__
+
+Logger und Konfigurationsprogramm: Sprache und Hilfe
+----------------------------------------------------------------------
+
+Beide Programme haben die Menüs *Sprache* und *Hilfe*; der IO-Check übernimmt Sprache und Farbschema vom Programm, aus dem er gestartet wird.
+
+Menü Sprache
+~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - Deutsch (de) / English (en) / …
+     -  
+     - Sprache der Oberfläche; das Programm startet dafür neu
+   * - Ordner mit Sprachdateien öffnen …
+     -  
+     - Eigene Übersetzung: de.txt kopieren, umbenennen (z. B. fr.txt) und übersetzen
+   * - Farbschema › Wie das System / Hell / Dunkel
+     -  
+     - Hell, dunkel oder wie das System
+
+*Mehr dazu:* `Sprache umschalten und übersetzen <sprache_>`__
+
+Menü Hilfe
+~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - Bedienungsanleitung
+     -  
+     - Diese Anleitung öffnen; **F1** öffnet sie an der Stelle, die zum aktuellen Fenster passt
+   * - Über PLC Datenlogger …
+     -  
+     - Version, Copyright, Lizenz, Lizenzen der Drittkomponenten und Versionen der Bibliotheken
+
+Logger: Werkzeugleiste und Fenster
+----------------------------------------------------------------------
+
+Werkzeugleiste des Loggers
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Knopf
+     - Taste
+     - Funktion
+   * - ▶ Start / ■ Stop
+     -  
+     - Aufzeichnung starten; während sie läuft: **■ Stop** beendet sie
+   * - Offline
+     -  
+     - Anzeige einfrieren und in der Aufzeichnung zurückblättern (Lineale, Kennwerte); erneut drücken: wieder online
+   * - CSV laden
+     -  
+     - Eine oder mehrere Aufzeichnungen (CSV/ZIP) offline anzeigen; mehrere Dateien werden nach der Zeit aneinandergehängt
+   * - Config laden …
+     - ``Strg+O``
+     - Andere Konfigurationsdatei laden (beliebiger Dateiname)
+   * - Konfig-Editor
+     -  
+     - Konfigurationsprogramm mit dieser Konfigurationsdatei öffnen
+   * - Werteanzeige
+     -  
+     - Wertetabelle rechts ein- oder ausblenden
+   * - Balken
+     -  
+     - Balken für die Aktualwerte neben den Diagrammen ein- oder ausblenden
+   * - Y-Auto
+     -  
+     - Alle Y-Achsen automatisch skalieren (überschreibt feste Bereiche)
+   * - Bool im Diagramm
+     -  
+     - BOOL-Kurven zusätzlich im Diagramm zeichnen (sonst nur als Linie/Streifen neben dem Namen in der Legende)
+   * - Lineale zurücksetzen
+     -  
+     - Beide Lineale auf ein und zwei Drittel des sichtbaren Zeitbereichs setzen
+   * - Demo
+     -  
+     - Simulierte Werte statt SPS-Verbindung (vor dem Start wählen)
+   * - Zoom-Rechteck
+     -  
+     - Mit der linken Maustaste einen Bereich aufziehen: Zeit und Werte dieses Diagramms vergrößern (aus: linke Maustaste verschiebt die Zeitachse)
+   * - Zeitachsen angleichen
+     -  
+     - Alle Diagramme auf den Zeitausschnitt des zuletzt bedienten Diagramms setzen (Mausrad und Zoom wirken nur auf das Diagramm unter dem Mauszeiger)
+   * - Zoom zurücksetzen
+     -  
+     - Y-Achsen wieder wie konfiguriert skalieren und die Zeitachsen angleichen
+
+*Mehr dazu:* `Bedienelemente <bedienelemente_>`__, `Demo-Modus <demo-modus_>`__, `Zoomen und Zeitachsen <zoomen_>`__
+
+Fenster und Statusleiste
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tabelle: Variable, Lineal 1, Lineal 2, Δ (L2 − L1), Minimum, Maximum, Mittelwert, Std.-Abw.
+     - Wertetabelle: online der aktuelle Wert, offline die Werte an beiden Linealen, ihre Differenz und Minimum, Maximum, Mittelwert und Standardabweichung dazwischen
+   * - 🔔 *n* offen
+     - Zahl der offenen (nicht quittierten) Ereignisse; Klicken öffnet das Ereignisprotokoll
+   * - Fenster [s]
+     - Breite des sichtbaren Zeitbereichs in Sekunden (1 bis 604800)
+   * - Zeit-Scrollleiste
+     - Offline: durch die Aufzeichnung blättern (verschiebt alle Diagramme gemeinsam)
+   * - Statusleiste
+     - Je Steuerung eine LED mit dem Verbindungszustand (Tooltip: Meldung und Zykluszeit), Meldungen und Pfad der CSV-Datei
+
+*Mehr dazu:* `Status-LEDs der Verbindungen <status-led_>`__, `Trigger und Ereignisprotokoll <ereignisse_>`__
+
+Maus in den Diagrammen
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Mausrad
+     - Zeitachse des Diagramms unter dem Mauszeiger zoomen
+   * - Linke Maustaste ziehen
+     - Zeitachse verschieben; mit **Zoom-Rechteck**: Bereich aufziehen und vergrößern
+   * - Rechte Maustaste ziehen
+     - Zoomen (Zeit- bzw. Y-Achse)
+   * - Lineal ziehen (offline)
+     - Zeitpunkt der Lineale 1 und 2 verschieben; die Wertetabelle zeigt die Werte und die Kennwerte dazwischen
+   * - Rechtsklick auf einen Namen der Legende
+     - Kurve aus- bzw. einblenden; alle Kurven des Diagramms wieder einblenden
+   * - Rechtsklick im Diagramm
+     - Menü des Diagramms (Achsen, Export); bei eingeschalteter PID-Optimierung auch **PID-Regler optimieren …**
+
+*Mehr dazu:* `Zoomen und Zeitachsen <zoomen_>`__, `Seiten, Diagramme und Anordnung <seiten_>`__
+
+Startbild: Bedienelemente
+----------------------------------------------------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - ✕
+     - Beenden
+   * - Öffnen
+     - Markierte, zuletzt benutzte Konfiguration öffnen
+   * - Durchsuchen …
+     - Konfigurationsdatei auswählen
+   * - Neue Konfiguration …
+     - Dateinamen wählen, eine leere Konfiguration anlegen und das Konfigurationsprogramm öffnen
+   * - Demo
+     - Mit simulierten Werten starten (ohne Steuerung)
+   * - Mit Logger verbinden …
+     - Betriebsart Client: die Aufzeichnung eines anderen Loggers anzeigen (z. B. headless auf einem Raspberry Pi) – ohne eigene Konfiguration
+   * - Beim Start nicht mehr anzeigen (zuletzt benutzte Datei öffnen)
+     - Startbild künftig überspringen (wieder einschalten: Logger › Datei › Startbild beim Programmstart zeigen)
+
+*Mehr dazu:* `Startbild <startbild_>`__, `Logger als Client <logger-client_>`__
+
+Konfigurationsprogramm: Menüs
+----------------------------------------------------------------------
+
+Menü Datei (Konfigurationsprogramm)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - Neu
+     - ``Strg+N``
+     - Neue, leere Konfiguration (ungespeicherte Änderungen werden vorher abgefragt)
+   * - Öffnen …
+     - ``Strg+O``
+     - Konfigurationsdatei öffnen
+   * - Speichern
+     - ``Strg+S``
+     - Konfiguration speichern
+   * - Speichern unter …
+     - ``Strg+Umschalt+S``
+     - Unter neuem Namen speichern
+   * - INI-Datei umwandeln …
+     -  
+     - Konfiguration einer älteren Version (INI) in das JSON-Format umwandeln
+   * - Logger mit dieser Konfiguration starten
+     - ``Strg+R``
+     - Logger mit der gespeicherten Konfiguration starten
+   * - IO-Check mit dieser Konfiguration starten
+     -  
+     - IO-Check mit den Steuerungen dieser Konfiguration öffnen
+   * - Headless-Logger anzeigen/beenden …
+     -  
+     - Laufende Headless-Logger anzeigen und sauber beenden
+   * - Grafana-Dashboard exportieren …
+     -  
+     - Dashboard für Grafana (JSON) passend zu Diagrammen und Datenbank erzeugen
+   * - Beenden
+     - ``Strg+Q``
+     - Konfigurationsprogramm schließen (ungespeicherte Änderungen werden abgefragt)
+
+Menü Treiber (Konfigurationsprogramm)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Menüpunkt
+     - Taste
+     - Funktion
+   * - Installierte Treiber …
+     -  
+     - Liste der Treiber mit Zustand (z. B. fehlende Bibliothek)
+   * - Ordner für eigene Treiber öffnen …
+     -  
+     - Ordner öffnen, in den eigene Treiberdateien gelegt werden
+
+Die Menüs *Sprache* und *Hilfe* sind dieselben wie im Logger.
+
+*Mehr dazu:* `Ältere INI-Dateien umwandeln <ini-umwandeln_>`__, `Headless-Betrieb (nur Aufzeichnung) <headless_>`__, `Steuerungen und Treiber <treiber_>`__, `Treiber entwickeln <treiber-entwickeln_>`__
+
+Konfigurationsprogramm: Reiter und Variablen
+----------------------------------------------------------------------
+
+Oben stehen die Reiter mit den Einstellungen des Projekts, darunter die Variablen und der Baum mit Diagrammen und Y-Achsen. Die Verbindungseinstellungen einer Steuerung (Knopf **…** in der Tabelle) hängen vom Treiber ab, siehe *Dialoge des Konfigurationsprogramms*.
+
+Reiter Projekt & Steuerungen
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Projektname
+     - Projektname: erscheint in den Fenstertiteln, im Webserver und in der Logdatei
+   * - Tabelle: Name, Treiber, Verbindung, Intervall, Aktiv
+     - Steuerungen: Name, Treiber, Verbindung (**…** öffnet die Verbindungseinstellungen), Leseintervall und ob sie gelesen wird
+   * - \+ Steuerung
+     - Weitere Steuerung anlegen
+   * - Steuerung entfernen
+     - Markierte Steuerung löschen
+   * - Netzwerk durchsuchen …
+     - Erreichbare Steuerungen im Netzwerk suchen und als Steuerung übernehmen
+
+*Mehr dazu:* `Projekt, Steuerungen und Einstellungen <konfig-projekt_>`__, `Steuerungen und Treiber <treiber_>`__
+
+Reiter Aufzeichnung
+~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - CSV-Ordner
+     - Ordner für die CSV-Dateien der Aufzeichnung
+   * - CSV-Name
+     - Dateiname-Präfix und Name des Archiv-Unterordners
+   * - Max. Datensätze je Datei
+     - Ist die Anzahl erreicht, wird die Datei gepackt, archiviert und eine neue begonnen (0 = unbegrenzt)
+   * - Archiv-Ordner
+     - Ordner für die gepackten (ZIP) älteren Dateien
+   * - Löschen nach
+     - CSV-Dateien und Archiv-ZIPs dieses Loggers löschen, deren letzte Änderung länger zurückliegt (0 = nie)
+   * - Höchstens belegen
+     - Belegen CSV-Dateien und Archiv dieses Loggers mehr Platz, werden die ältesten gelöscht (0 = unbegrenzt)
+   * - Aufzeichnung
+     - Per Trigger: in CSV-Datei/Datenbank wird nur geschrieben, wenn die Startbedingung erfüllt ist – mit den Werten der Vorlaufzeit davor und der Nachlaufzeit danach. Jede Aufnahme bekommt eine eigene CSV-Datei. Die Anzeige läuft immer.
+   * - Startbedingung
+     - Bedingung für „Aufzeichnung per Trigger“ (Formel; **…** öffnet den Formeleditor), dazu Vor- und Nachlaufzeit
+   * - CSV-Datei schreiben
+     - Ausgeschaltet: keine CSV-Datei (z. B. nur Datenbank, Reiter „Datenbank“)
+   * - Beim Beenden des Loggers die aktuelle CSV-Datei archivieren
+     - Beim Beenden die laufende CSV-Datei packen und ins Archiv verschieben
+
+*Mehr dazu:* `Dateigröße begrenzen und archivieren <csv-archiv_>`__, `Alte Aufzeichnungen aufräumen <aufraeumen_>`__, `Aufzeichnung per Trigger (Vor- und Nachlauf) <trigger-aufzeichnung_>`__
+
+Reiter Anzeige
+~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Anzeigefenster (online)
+     - Breite des sichtbaren Zeitbereichs nach dem Start in Sekunden
+   * - Standard-Anordnung der Seiten
+     - Untereinander, nebeneinander oder als Tabs (im Logger über Ansicht änderbar)
+   * - Diagramme auf einer Seite
+     - Anordnung der Diagramme einer Seite: untereinander, nebeneinander oder Raster
+   * - Raster-Spalten
+     - Anzahl der Spalten bei der Anordnung „Raster“ (0 = automatisch aus der Diagrammzahl)
+   * - Logo
+     - Eigenes Logo für Berichte und Fenster (Bilddatei)
+   * - Kundenlogo
+     - Zweites Logo (z. B. des Kunden) für Berichte
+   * - Programm-Icon
+     - Eigenes Symbol für Fenster und Taskleiste
+   * - Balkenbreite
+     - Breite eines Balkens neben dem Diagramm (Vorgabe 14 Pixel)
+   * - Balken für Aktualwerte anzeigen
+     - Balken neben den Diagrammen beim Start einblenden
+
+*Mehr dazu:* `Seiten, Diagramme und Anordnung <seiten_>`__
+
+Reiter Webserver & Headless
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Adresse (Host)
+     - 0.0.0.0 = erreichbar im ganzen Netzwerk, 127.0.0.1 = nur auf diesem Rechner
+   * - Port
+     - TCP-Port des Webservers (z. B. 8080)
+   * - Zugriffscode
+     - Zugriffscode: die Seite wird mit ?token=CODE aufgerufen
+   * - Aktualisierung im Browser
+     - Wie oft der Browser neue Werte holt
+   * - Headless-Logger
+     - Laufende Headless-Logger anzeigen und beenden
+   * - OPC-UA-Server
+     - Zustand und Einstellungen des OPC-UA-Servers (Knopf **OPC UA …**)
+   * - MQTT
+     - Zustand und Einstellungen von MQTT (Knopf **MQTT …**)
+   * - Zertifikat (PEM)
+     - Eigenes Zertifikat für HTTPS (leer = selbstsigniert)
+   * - Schlüssel (PEM)
+     - Privater Schlüssel zum Zertifikat
+   * - Anmeldung
+     - Benutzer mit Passwort (Knopf **Benutzer …**) oder Zugriffscode
+   * - Webserver starten (Diagramme im Browser, z. B. mit Tablet/Smartphone)
+     - Webserver während der Aufzeichnung starten
+   * - Headless-Modus: ohne Diagramme starten, nur aufzeichnen
+     - Der Logger läuft ohne Fenster (z. B. als Dienst); Webserver und Archivierung bleiben aktiv. Mit dem Startparameter --gui lässt sich trotzdem die Oberfläche öffnen.
+   * - Laufende Logger …
+     - Laufende Headless-Logger anzeigen und sauber beenden
+   * - OPC UA …
+     - Variablen über einen OPC-UA-Server im Logger bereitstellen (Leitsystem, MES, SCADA)
+   * - MQTT …
+     - Werte an einen MQTT-Broker senden (Home Assistant, Node-RED, IoT-Plattformen)
+   * - HTTPS (verschlüsselt)
+     - Ohne eigenes Zertifikat wird einmalig ein selbstsigniertes erzeugt (Ordner web_tls); der Browser fragt dann beim ersten Aufruf nach
+   * - Benutzer …
+     - Anmeldung mit Benutzer und Passwort einrichten
+
+*Mehr dazu:* `Webserver (Diagramme im Browser) <webserver_>`__, `HTTPS und Anmeldung <https-anmeldung_>`__, `Headless-Betrieb (nur Aufzeichnung) <headless_>`__, `OPC-UA-Server <opcua-server_>`__, `MQTT <mqtt_>`__
+
+Reiter Datenbank
+~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Datenbank
+     - Art der Datenbank (keine, SQLite, MariaDB, TimescaleDB, QuestDB, InfluxDB 3, VictoriaMetrics, Prometheus)
+   * - Server / Port
+     - Adresse und Port des Datenbankservers
+   * - Datenbankname
+     - Name der Datenbank auf dem Server
+   * - SQLite-Datei
+     - Datei der SQLite-Datenbank
+   * - Benutzer / Passwort
+     - Anmeldung am Datenbankserver
+   * - Tabelle
+     - Tabellenname (Buchstaben, Ziffern, _); wird bei Bedarf angelegt
+   * - Löschen nach
+     - Werte löschen, die älter sind (0 = nie). TimescaleDB: ganze Zeitabschnitte, QuestDB: ganze Tage. InfluxDB 3 und VictoriaMetrics: Aufbewahrungsdauer am Server einstellen
+   * - Höchstens belegen
+     - Nur SQLite: belegen die Werte mehr Platz, werden die ältesten Tage gelöscht (0 = unbegrenzt). Die Datei schrumpft nicht, wächst aber nicht weiter
+   * - Nur Änderungen schreiben (spätestens jede Minute)
+     - Spart Platz: ein Wert wird nur geschrieben, wenn er sich geändert hat
+   * - Ereignisse und Notizen mitschreiben
+     - Trigger-Ereignisse (kommt, geht, quittiert) und Notizen zusätzlich in die Tabelle <Tabelle>_ereignisse schreiben (VictoriaMetrics/Prometheus: Metriken <Tabelle>_ereignisse_aktiv und _quittiert), z. B. für Grafana
+   * - Datenbank testen
+     - Verbindung prüfen und die Tabelle anlegen
+   * - Speicherplatz …
+     - Belegten Speicherplatz der Tabelle und der Datenbank sowie die Anzahl Werte abfragen
+
+*Mehr dazu:* `Datenbank-Aufzeichnung <datenbank_>`__
+
+Reiter Trigger & Ereignisse
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Trigger
+     - Zahl der eingerichteten Trigger
+   * - Ereignisdatei
+     - CSV-Datei des Ereignisprotokolls (leer = neben der Konfiguration)
+   * - Melden
+     - Eingeschaltete Benachrichtigungen
+   * - Trigger bearbeiten …
+     - Bedingungen festlegen, bei denen ein Eintrag ins Ereignisprotokoll geschrieben wird
+   * - Ereignisprotokoll anzeigen …
+     - Ereignisse anzeigen und quittieren
+   * - Benachrichtigungen …
+     - Bei Ereignissen E-Mail, Teams-/Slack-Nachricht oder Push aufs Handy (ntfy, Telegram)
+
+*Mehr dazu:* `Trigger und Ereignisprotokoll <ereignisse_>`__, `Benachrichtigungen <benachrichtigungen_>`__
+
+Reiter Berichte (PDF)
+~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Zeitraum
+     - Zeitraum eines automatischen Berichts: Schicht, Tag, Woche oder Monat
+   * - Schichtbeginne
+     - Beginn der Schichten (Uhrzeiten, durch Komma getrennt)
+   * - Tagesbeginn
+     - Uhrzeit, zu der Tag, Woche (Montag) und Monat beginnen, z. B. 06:00
+   * - Ordner
+     - Ordner für die PDF-Berichte
+   * - PDF-Bericht automatisch erstellen
+     - Am Ende jedes Zeitraums: Kennwerte, Verlauf aller Diagramme und Ereignisse; beim Stoppen ein Teilbericht
+
+*Mehr dazu:* `PDF-Berichte <pdf-berichte_>`__
+
+Variablen und Diagramme
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tabelle: Name, Steuerung, Diagramm › Y-Achse, Adresse, Typ, Farbe, Aufzeichnen, Anzeigen, Werteanzeige, Balken, Testwert, Formel
+     - Variablen: je Zeile Name, Steuerung, Diagramm und Y-Achse, Adresse, Datentyp, Farbe, Schalter für Aufzeichnung und Anzeige, Testwert und Formel (berechnete Variable)
+   * - Aus Steuerung wählen…
+     - Variablen aus der Steuerung auswählen (Symbole, Tags, Knoten – je nach Treiber)
+   * - Blöcke (Blocklesemodus)…
+     - Zusammenhängende Bereiche bzw. Arrays mit einer Anfrage lesen
+   * - Berechnete Variable…
+     - Variable aus einer Formel anderer Variablen anlegen
+   * - Variable hinzufügen
+     - Leere Zeile für eine neue Variable
+   * - Entfernen
+     - Markierte Variablen löschen
+   * - Verbindung testen
+     - Markierte Variablen einmal aus der Steuerung lesen und anzeigen
+   * - Import/Export
+     - Variablenliste als CSV, Excel oder ODS importieren bzw. exportieren
+   * - \+ Diagramm
+     - Neues Diagramm anlegen
+   * - \+ Y-Achse
+     - Weitere Y-Achse im markierten Diagramm
+   * - Entfernen
+     - Markiertes Diagramm bzw. markierte Y-Achse löschen
+   * - Name
+     - Name von Diagramm bzw. Y-Achse
+   * - Seite (Tab)
+     - Diagramme mit gleichem Seitennamen werden gemeinsam in einem Tab/Dock angezeigt
+   * - Y min
+     - Untere Grenze der Y-Achse
+   * - Y max
+     - Obere Grenze der Y-Achse
+   * - Regler
+     - Soll-, Ist- und Stellwert für die PID-Optimierung
+   * - Auto-Skalierung
+     - Y-Achse automatisch an die Werte anpassen
+   * - PID-Regler-Optimierung
+     - Im Logger lassen sich für dieses Diagramm aus Soll-, Ist- und Stellwert die PID-Parameter berechnen
+   * - Einstellen …
+     - Soll-, Ist- und Stellwert und Reglertyp wählen
+   * - Öffnen…
+     - Wie Menü Datei › Öffnen
+   * - Speichern
+     - Wie Menü Datei › Speichern
+   * - Speichern unter…
+     - Wie Menü Datei › Speichern unter
+
+IO-Check: Fenster
+----------------------------------------------------------------------
+
+Werkzeugleiste des IO-Checks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 32 16 52
+
+   * - Knopf
+     - Taste
+     - Funktion
+   * - IO-Liste importieren …
+     -  
+     - Signalliste aus CSV, Excel oder ODS übernehmen (EPLAN, TIA-Portal-Variablentabelle, eigene Liste)
+   * - Spalten …
+     -  
+     - Spaltenüberschriften der IO-Liste festlegen; leere Felder werden nicht eingelesen und nicht angezeigt. Pfeil: Spalten der Signalliste ein- und ausblenden
+   * - Öffnen …
+     - ``Strg+O``
+     - Gespeicherten IO-Check öffnen
+   * - Speichern
+     - ``Strg+S``
+     - Prüfstand speichern (\*.iocheck.json); Pfeil: automatisch speichern ein/aus
+   * - Speichern › Automatisch speichern
+     -  
+     - Jede Änderung sofort in die Prüfstand-Datei schreiben (sobald der Prüfstand einmal gespeichert ist)
+   * - Speichern unter …
+     -  
+     - Prüfstand unter neuem Namen speichern
+   * - Ergebnis exportieren …
+     -  
+     - Prüfergebnis als CSV oder Excel speichern
+   * - Protokoll (PDF) …
+     -  
+     - Abnahmeprotokoll mit Zusammenfassung, Fehlerliste, allen Signalen und Unterschriftsfeldern; Pfeil: Hoch- oder Querformat, Fotos anhängen
+   * - Protokoll (PDF) … › Querformat
+     -  
+     - Protokoll im Querformat statt Hochformat
+   * - Protokoll (PDF) … › Fotos anhängen
+     -  
+     - Fotos der Signale ans Protokoll anhängen
+   * - Protokoll (PDF) … › Kurzbericht (PDF) …
+     -  
+     - Nur die Zusammenfassung: Fortschrittsbalken gesamt, je Signalart, Gruppe und Ort
+   * - Fotos …
+     -  
+     - Fotos zum markierten Signal ansehen, hinzufügen oder entfernen (auch per Doppelklick in die Spalte „Fotos“; am Smartphone mit der Kamera)
+   * - 📱 Mobil …
+     -  
+     - IO-Check auf Smartphone/Tablet: Adresse der Webseite anzeigen (startet bei Bedarf den Webserver)
+   * - Prüfer: *Name*
+     -  
+     - Name oder Kürzel, der beim Abhaken am PC als Prüfer eingetragen wird (Vorgabe: angemeldeter Benutzer des Rechners); am Smartphone gilt der Anmeldename
+   * - ▶ Lesen / ■ Lesen stoppen
+     - ``F5``
+     - Signale zyklisch aus den Steuerungen lesen
+   * - Was hat sich bewegt?
+     -  
+     - Seitenleiste mit den zuletzt gewechselten Signalen ein- oder ausblenden
+
+*Mehr dazu:* `IO-Check (Inbetriebnahme) <io-check_>`__, `Abnahmeprotokoll (PDF) <io-protokoll_>`__, `Auf Smartphone oder Tablet prüfen <io-mobil_>`__
+
+Reiter Signalliste (IO-Check)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tabelle: Nr., Status, Wert, Adresse, Symbol, Kommentar, BMK, Gruppe, Ort, Typ, Steuerung, Geprüft am, Prüfer, Fotos, Bemerkung
+     - Signalliste: Klick auf eine Überschrift sortiert, Rechtsklick filtert die Spalte; Doppelklick auf eine Zeile setzt OK bzw. nimmt es zurück
+   * - ✓ OK (``Strg+1``)
+     - Markierte Signale als geprüft und in Ordnung eintragen
+   * - ✗ Fehler … (``Strg+2``)
+     - Als fehlerhaft eintragen, mit Bemerkung
+   * - – Übersprungen (``Strg+3``)
+     - Nicht prüfen (z. B. Reserve)
+   * - ↻ Wiederholen (``Strg+4``)
+     - Erneut prüfen; die Bemerkung bleibt
+   * - Zurücksetzen (``Strg+0``)
+     - Wieder offen; die Bemerkung wird gelöscht
+   * - ＋ Signal …
+     - Signal von Hand zur IO-Liste hinzufügen (Rechtsklick in die Liste: weitere Befehle)
+   * - Rohwert bei 0 %
+     - Rohwert der Steuerung am Messbereichsanfang (z. B. 0)
+   * - Rohwert bei 100 %
+     - Rohwert am Messbereichsende (z. B. 27648)
+   * - Messbereich von
+     - Physikalischer Wert bei 0 %
+   * - Messbereich bis
+     - Physikalischer Wert bei 100 %
+   * - Rohwert in der Liste
+     - Darstellung des Rohwerts in der Spalte „Wert“ der Signalliste
+   * - Einheit
+     - Einheit des Messbereichs (z. B. bar)
+   * - Übernehmen
+     - Aktuellen Wert als Prüfpunkt 0 / 50 / 100 % übernehmen
+   * - Messpunkte löschen
+     - Eingetragene Prüfpunkte des Signals löschen
+   * - Rechtsklick in die Signalliste
+     - Alle markieren (``Strg+A``), Status setzen, Signal hinzufügen, gescannte Signale in die IO-Liste übernehmen, Signale aus der IO-Liste entfernen
+   * - Rechtsklick auf eine Spaltenüberschrift
+     - Filter der Spalte: Text („enthält …“) oder einzelne Werte ankreuzen
+   * - Matrix: Klick / Doppelklick / Rechtsklick
+     - Signal wählen / OK setzen bzw. zurücknehmen / Status wählen
+
+*Mehr dazu:* `Signalliste und Prüfstatus <io-signalliste_>`__
+
+Reiter Matrix (IO-Check)
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Bereiche scannen …
+     - Zusammenhängende Ein-/Ausgänge ohne IO-Liste lesen, z. B. E0.0 … E31.7
+
+*Mehr dazu:* `Matrix und Bereiche scannen <io-matrix_>`__
+
+Optionen und Seitenleiste
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Demo
+     - Simulierte Werte statt Verbindung zur Steuerung
+   * - Nur angezeigte lesen
+     - Nur die Signale lesen, die Suchfeld, Auswahllisten und Spaltenfilter gerade anzeigen (weniger Last für Steuerung und Netz); ändert sich der Filter, wird neu gestartet
+   * - Signale automatisch abhaken
+     - Optional: Ein Signal mit Status „offen“ wird OK, sobald ein Digitalsignal 0→1→0 gewechselt hat (Sensor betätigt und losgelassen) bzw. ein Analogeingang einen Drahtbruch gemeldet hat und wieder gültig ist (Verdrahtung geöffnet und geschlossen). Geprüft werden nur Signale aus der Liste bzw. den Scan-Bereichen.
+   * - Nur offene Signale
+     - Wechsel von Signalen mit Status OK, Fehler oder übersprungen nicht melden (z. B. ein ständig springender Analogwert). Das gewählte Signal wird immer gemeldet; zum erneuten Prüfen den Status auf „offen“ zurücksetzen.
+   * - Tabelle: Zeit, Signal, Wechsel
+     - Seitenleiste „Was hat sich bewegt?“: zuletzt gewechselte Signale, neueste oben; Klicken wählt das Signal
+
+Fenster Ereignisprotokoll
+----------------------------------------------------------------------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - nur offene
+     - Nur nicht quittierte Ereignisse zeigen
+   * - Tabelle: Nr., Kommt, Geht, Priorität, Trigger, Meldung, Quittiert
+     - Ereignisse, neueste oben; Doppelklick quittiert, Rechtsklick: Im Diagramm zeigen, Quittieren
+   * - Notiz hinzufügen …
+     - Eigenen Eintrag mit Zeitstempel ins Ereignisprotokoll schreiben
+   * - Im Diagramm zeigen
+     - Zeitraum um das markierte Ereignis im Logger anzeigen, Lineale auf Beginn und Ende (auch Rechtsklick auf eine Zeile)
+   * - Markierte quittieren
+     - Ausgewählte offene Ereignisse quittieren (auch Doppelklick auf eine Zeile)
+   * - Alle quittieren (*n*)
+     - Alle offenen Ereignisse quittieren
+   * - Ordner öffnen
+     - Ordner der Ereignisdatei im Explorer öffnen
+
+*Mehr dazu:* `Trigger und Ereignisprotokoll <ereignisse_>`__, `Notizen (eigene Einträge) <notizen_>`__
+
+Netzwerk-Panel (Raspberry Pi)
+----------------------------------------------------------------------
+
+Bildschirmfüllende Oberfläche für den Touchscreen am Raspberry Pi (``plc-netzwerk``). Eingaben über die Bildschirmtastatur; **Zurück** führt auf jeder Seite zur Übersicht.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Übersicht
+     - Rechnername, Version, Uhrzeit, Ethernet und WLAN mit IP-Adressen, Zustand des Logger-Dienstes, Adresse des Webservers mit QR-Code
+   * - Ethernet / WLAN
+     - DHCP oder feste Adresse (IP/Präfix, Gateway, DNS); WLAN suchen und mit Passwort verbinden
+   * - Logger
+     - Konfiguration wählen, **Starten (headless)** bzw. **Stoppen** (stellt den Dienst um)
+   * - Display
+     - Zeit bis zum Abdunkeln, Helligkeit im Betrieb und abgedunkelt; **Jetzt abdunkeln**
+   * - Uhrzeit
+     - Datum und Uhrzeit mit ▲/▼ und **Uhr stellen**, **Zeitzone**, **Internetzeit (NTP)**; Uhrzeit der Steuerung **Lesen**, **Übernehmen**, **UTC**, **Automatisch**
+   * - ⏻
+     - Seite *Ausschalten*: **Neu starten**, **Herunterfahren** (beendet den Logger-Dienst ordnungsgemäß)
+
+*Mehr dazu:* `Raspberry Pi als Datenlogger einrichten <raspberry_>`__
+
+Dialoge des Loggers
+----------------------------------------------------------------------
+
+Dialog „Webserver-Adresse“
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Adresse kopieren
+     - Adresse in die Zwischenablage kopieren
+
+*Mehr dazu:* `Webserver (Diagramme im Browser) <webserver_>`__
+
+Dialog „Aus Datenbank laden“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - SQLite-Datei wählen …
+     - Eine andere SQLite-Datei lesen (z. B. Kopie einer Aufzeichnung)
+   * - Datenbank der Konfiguration
+     - Wieder die Datenbank der Konfiguration lesen
+   * - Alle
+     - Alle Variablen ankreuzen
+   * - Keine
+     - Keine Variable ankreuzen
+   * - Wie Konfiguration
+     - Die Variablen der aktuellen Konfiguration ankreuzen
+   * - Letzte Stunde
+     - Die letzte Stunde vor dem letzten gespeicherten Wert
+   * - Letzte 24 h
+     - Die letzten 24 Stunden vor dem letzten gespeicherten Wert
+   * - Heute
+     - Heute ab 0 Uhr
+   * - Gestern
+     - Der ganze gestrige Tag
+   * - Letzte 7 Tage
+     - Die letzten 7 Tage vor dem letzten gespeicherten Wert
+   * - Letzte 30 Tage
+     - Die letzten 30 Tage vor dem letzten gespeicherten Wert
+   * - Alles
+     - Vom ersten bis zum letzten Wert der gewählten Variablen
+   * - Auflösung
+     - Mittelwerte werden von der Datenbank berechnet – für lange Zeiträume deutlich schneller und speichersparender als Rohdaten.
+   * - Fehlende Werte mit dem letzten Wert füllen
+     - Sinnvoll, wenn die Aufzeichnung „nur Änderungen“ schreibt: ein fehlender Wert bedeutet dann „unverändert“.
+   * - Werte zählen
+     - Anzahl der Werte im gewählten Zeitraum ermitteln
+   * - Laden und anzeigen
+     - Werte laden und offline anzeigen
+
+*Mehr dazu:* `Lesemodus: Aufzeichnungen aus der Datenbank anzeigen <db-lesen_>`__
+
+Dialog „Werte exportieren“
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Zwischen Lineal 1 und Lineal 2
+     - Nur den Bereich zwischen den Linealen (offline)
+   * - Sichtbarer Ausschnitt
+     - Den angezeigten Zeitbereich
+   * - Alle Daten (*von* bis *bis*)
+     - Die ganze geladene bzw. aufgezeichnete Zeit
+   * - Nur eingeblendete Variablen (*n* von *m*)
+     - Ausgeblendete Kurven nicht exportieren
+   * - Downsampling (Werte auf ein Zeitraster verdichten)
+     - Werte auf ein festes Zeitraster verdichten
+   * - Raster
+     - Abstand des Zeitrasters
+   * - Verfahren
+     - Wert je Intervall: Mittelwert, Minimum, Maximum, erster oder letzter Wert
+   * - Speichern …
+     - Dateinamen wählen (CSV oder Excel) und speichern
+
+*Mehr dazu:* `Werte exportieren (CSV/Excel) <werte-exportieren_>`__
+
+Dialog „Notiz ins Ereignisprotokoll“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Zeit
+     - Zeitpunkt, auf den sich die Notiz bezieht (Standard: jetzt)
+   * - Notiz
+     - z. B. Ventil V12 getauscht, Sollwert auf 65 °C geändert …
+   * - Verfasser
+     - Name, der beim Eintrag gespeichert wird (Vorgabe: angemeldeter Benutzer)
+
+*Mehr dazu:* `Notizen (eigene Einträge) <notizen_>`__
+
+Dialog „XY-Diagramm“
+~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Zeitbereich
+     - Lineale, sichtbarer Ausschnitt oder alle Daten
+   * - X-Achse
+     - Variable für die X-Achse; die übrigen gewählten werden darüber gezeichnet
+   * - Darstellung
+     - Punkte oder Linie
+   * - Ausgleichsgerade und Korrelation
+     - Ausgleichsgerade und Korrelationskoeffizient zeigen
+   * - Aktualisieren
+     - Daten neu holen (z. B. während einer laufenden Aufzeichnung)
+   * - Bild speichern …
+     - Diagramm als PNG oder SVG speichern
+   * - Werte speichern (CSV) …
+     - Wertepaare als CSV-Datei speichern
+
+*Mehr dazu:* `Analyse: XY-Diagramm und Frequenzanalyse <analyse_>`__
+
+Dialog „Frequenzanalyse (FFT)“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Zeitbereich
+     - Lineale, sichtbarer Ausschnitt oder alle Daten
+   * - Variable
+     - Variable, deren Spektrum berechnet wird
+   * - Fenster
+     - Fensterfunktion (Hann, Hamming, Blackman, Rechteck, Flat-Top)
+   * - Vorbehandlung
+     - Mittelwert oder linearen Trend abziehen
+   * - X-Achse
+     - Frequenz oder Periodendauer
+   * - Amplitude logarithmisch
+     - Amplitudenachse logarithmisch
+   * - Aktualisieren
+     - Daten neu holen (z. B. während einer laufenden Aufzeichnung)
+   * - Bild speichern …
+     - Diagramm als PNG oder SVG speichern
+   * - Werte speichern (CSV) …
+     - Spektrum als CSV-Datei speichern
+
+*Mehr dazu:* `Analyse: XY-Diagramm und Frequenzanalyse <analyse_>`__
+
+Dialog „PID-Regler-Optimierung“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Sollwert
+     - Variable mit dem Sollwert (optional)
+   * - Istwert
+     - Variable mit dem Istwert (Regelgröße)
+   * - Stellwert
+     - Variable mit dem Stellwert (Reglerausgang)
+   * - Zeitbereich
+     - Bereich mit Stellwert- oder Sollwertsprung
+   * - Reglertyp
+     - PI oder PID
+   * - Regelverhalten
+     - Schnell, normal oder robust
+   * - Strecke bestimmen und berechnen
+     - Streckenmodell bestimmen, Parameter aller Einstellregeln berechnen und simulieren
+   * - Tabelle: Einstellregel, Kp, Ti [s], Td [s], Ki [1/s], Kd [s], Überschwingen, Ausregelzeit, Hinweis
+     - Ergebnis je Einstellregel mit Überschwingen und Ausregelzeit aus der Simulation
+   * - Ergebnis kopieren
+     - Modell und alle Parameter als Text in die Zwischenablage
+
+*Mehr dazu:* `PID-Regler-Optimierung <pid-optimierung_>`__
+
+Dialoge des Konfigurationsprogramms
+----------------------------------------------------------------------
+
+Dialog „Verbindungseinstellungen (Beispiel TwinCAT ADS)“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - IP-Adresse
+     - TwinCAT auf diesem Rechner: 127.0.0.1 (keine Route nötig, eigene AMS-Net-ID leer lassen)
+   * - AMS-Net-ID der Steuerung
+     - z. B. 5.12.34.56.1.1 (leer = IP-Adresse + .1.1)
+   * - AMS-Port
+     - 851 = SPS-Laufzeit 1 (TwinCAT 3), 852 … weitere; 801 = TwinCAT 2
+   * - Eigene AMS-Net-ID
+     - Muss zur Route in der Steuerung passen (leer = eigene IP-Adresse + .1.1)
+   * - Eigener AMS-Port
+     - AMS-Port dieses Rechners (Vorgabe 32905)
+   * - TCP-Port
+     - TCP-Port des ADS-Routers (Vorgabe 48898)
+   * - Variablen je Anfrage
+     - Höchstzahl Teile je Summenanfrage (TwinCAT: 500)
+   * - Zeitlimit
+     - Wartezeit auf eine Antwort, danach gilt die Verbindung als gestört
+
+*Mehr dazu:* `Steuerungen und Treiber <treiber_>`__
+
+Dialog „Verbindungseinstellungen (Beispiel OPC UA)“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Endpunkt
+     - Adresse des OPC-UA-Servers, z. B. opc.tcp://192.168.0.10:4840 (Codesys/TwinCAT: 4840, S7-1500: 4840, Kepware: 49320)
+   * - Betriebsart
+     - Subscription: der Server meldet nur Änderungen (weniger Netzlast bei vielen Werten)
+   * - Sicherheit
+     - Sicherheitsrichtlinie: keine, signieren oder signieren und verschlüsseln (Basic256Sha256, Aes128Sha256RsaOaep, Aes256Sha256RsaPss)
+   * - Benutzer
+     - Leer = anonym
+   * - Passwort
+     - Hinweis: Es wird im Klartext in der Konfigurationsdatei gespeichert.
+   * - Client-Zertifikat
+     - Zertifikatsdatei (.der/.pem). Leer = selbstsigniertes Zertifikat wird automatisch erzeugt.
+   * - Privater Schlüssel
+     - Schlüsseldatei (.pem) zum Client-Zertifikat
+   * - Zeitlimit
+     - Wartezeit auf eine Antwort, danach gilt die Verbindung als gestört
+   * - Meldeintervall (Subscription)
+     - So oft schickt der Server gesammelte Änderungen (0 = Intervall der Steuerung)
+   * - Abtastrate (Subscription)
+     - So oft prüft der Server die Werte auf Änderung (0 = wie das Meldeintervall)
+   * - Knoten je Anfrage
+     - Höchstzahl Knoten je Read-Anfrage (Server begrenzen das teilweise, z. B. auf 100)
+
+*Mehr dazu:* `Steuerungen und Treiber <treiber_>`__
+
+Dialog „Netzwerk durchsuchen“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Gerätekennung lesen
+     - S7: Baugruppe und Station, EtherNet/IP: Produktname
+   * - Suchen
+     - Adressbereich nach Steuerungen durchsuchen
+   * - Tabelle: Übernehmen, Adresse, Gefunden, Gerät, Angaben, Treiber
+     - Gefundene Geräte mit offenen Ports und Kennung
+   * - Als Steuerung übernehmen
+     - Angekreuzte Geräte als Steuerungen anlegen
+
+*Mehr dazu:* `Projekt, Steuerungen und Einstellungen <konfig-projekt_>`__
+
+Dialog „Tags aus der Steuerung wählen“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tag-Liste aus Steuerung laden
+     - Tags der Steuerung lesen und anzeigen
+   * - Programm-Tags
+     - Auch die Tags der Programme (Program:Name.Tag) laden – dauert länger
+   * - Markiertes Array als Block…
+     - Array aus Zahlen mit einer einzigen Leseanfrage übernehmen (auch per Doppelklick)
+   * - Auswahl übernehmen
+     - Markierte Tags als Variablen übernehmen
+
+*Mehr dazu:* `Variablen aus der Steuerung wählen <tags-waehlen_>`__
+
+Dialog „Blöcke (Blocklesemodus)“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Für alle setzen
+     - Aufzeichnen/Anzeigen für alle Elemente des markierten Blocks setzen
+   * - Tabelle: Name, Steuerung, Startadresse / Array, Erster Index, Format, Anzahl, Ringpuffer, Diagramm › Y-Achse, Farbe, Werteanzeige, Balken, Bereich
+     - Blöcke: Startadresse bzw. Array, Format und Anzahl der Elemente, optional als Ringpuffer, Ziel im Diagramm
+   * - Block hinzufügen
+     - Neuen Block anlegen
+   * - Entfernen
+     - Markierten Block löschen
+   * - Markierten Block testen
+     - Liest den Block einmal aus der SPS und zeigt die ersten Werte und die Lesezeit
+   * - SPS-Vorlagen …
+     - Ordner mit den Bausteinen für Ringpuffer öffnen (S7-300/400, S7-1200/1500, ControlLogix)
+
+*Mehr dazu:* `Blocklesemodus <blocklesemodus_>`__, `Ringpuffer (zyklussynchrone Aufzeichnung) <ringpuffer_>`__
+
+Dialog „Berechnete Variable (Formeleditor)“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tabelle: Verwendete Variable, Testwert
+     - Variablen der Formel mit Testwerten für die Probe
+   * - Prüfen / Berechnen
+     - Formel prüfen und mit den Testwerten berechnen
+
+*Mehr dazu:* `Berechnete Variablen (Formeln) <berechnete-variablen_>`__
+
+Dialog „PID-Optimierung einstellen“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Sollwert
+     - Variable mit dem Sollwert (optional)
+   * - Istwert (Regelgröße)
+     - Variable mit dem Istwert
+   * - Stellwert (Reglerausgang)
+     - Variable mit dem Stellwert
+   * - Reglertyp
+     - PI oder PID
+   * - Regelverhalten
+     - Schnell, normal oder robust
+
+*Mehr dazu:* `PID-Regler-Optimierung <pid-optimierung_>`__
+
+Dialog „Trigger (Ereignisse)“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tabelle: Aktiv, Name, Bedingung, Meldetext, Priorität, Verzögerung, Gehen, Quittieren
+     - Trigger: Bedingung, Meldetext, Priorität, Verzögerung, ob „Gehen“ gemeldet und ob quittiert werden muss
+   * - \+ Trigger
+     - Neuen Trigger anlegen
+   * - Bedingung bearbeiten …
+     - Bedingung im Formeleditor bearbeiten (mit Variablenliste und Testwerten); auch Doppelklick
+   * - Duplizieren
+     - Ausgewählten Trigger kopieren
+   * - Entfernen
+     - Ausgewählten Trigger löschen
+   * - ▲
+     - nach oben
+   * - ▼
+     - nach unten
+
+*Mehr dazu:* `Trigger und Ereignisprotokoll <ereignisse_>`__
+
+Dialog „Benachrichtigungen“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Bei Ereignissen benachrichtigen
+     - Benachrichtigungen einschalten
+   * - Priorität
+     - Ab welcher Priorität gemeldet wird
+   * - Nur Trigger
+     - leer = alle Trigger; sonst Namen, durch Komma getrennt
+   * - Sperrzeit je Trigger
+     - Kommt derselbe Trigger innerhalb dieser Zeit erneut, wird nicht noch einmal gemeldet (die nächste Meldung nennt die Zahl der unterdrückten).
+   * - Auch melden, wenn ein Ereignis geht
+     - Auch das Gehen eines gemeldeten Ereignisses melden
+   * - *E-Mail:* SMTP-Server
+     - Mailserver für den Versand, z. B. smtp.firma.de
+   * - *E-Mail:* Port
+     - Port des SMTP-Servers (587, SSL meist 465)
+   * - *E-Mail:* Verschlüsselung
+     - STARTTLS, SSL/TLS oder unverschlüsselt
+   * - *E-Mail:* Benutzer
+     - Anmeldung am SMTP-Server (leer = ohne)
+   * - *E-Mail:* Passwort
+     - Passwort zum Benutzer
+   * - *E-Mail:* Absender
+     - Absenderadresse der E-Mails
+   * - *E-Mail:* Empfänger
+     - Empfängeradressen, durch Komma getrennt
+   * - *E-Mail:* E-Mail verwenden
+     - Kanal einschalten
+   * - *Teams / Slack / Webhook:* Art
+     - Microsoft Teams (Workflows), Slack oder allgemeines JSON
+   * - *Teams / Slack / Webhook:* Webhook-Adresse
+     - Adresse des eingehenden Webhooks (aus Teams bzw. Slack)
+   * - *Teams / Slack / Webhook:* Teams / Slack / Webhook verwenden
+     - Kanal einschalten
+   * - *ntfy (Push):* Adresse mit Thema
+     - Server und Thema, z. B. https://ntfy.sh/mein-geheimes-thema
+   * - *ntfy (Push):* Zugriffstoken
+     - Token für ein geschütztes ntfy-Thema
+   * - *ntfy (Push):* ntfy (Push) verwenden
+     - Kanal einschalten
+   * - *Telegram:* Bot-Token
+     - Token des Telegram-Bots
+   * - *Telegram:* Chat-ID
+     - Chat, in den der Bot schreibt (z. B. 123456789)
+   * - *Telegram:* Telegram verwenden
+     - Kanal einschalten
+   * - Testnachricht senden
+     - Über alle eingeschalteten Kanäle eine Testnachricht senden
+
+*Mehr dazu:* `Benachrichtigungen <benachrichtigungen_>`__
+
+Dialog „Webserver – Benutzer“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Hinzufügen …
+     - Benutzer mit Passwort anlegen
+   * - Passwort ändern …
+     - Neues Passwort für den markierten Benutzer
+   * - Entfernen
+     - Markierten Benutzer löschen
+
+*Mehr dazu:* `HTTPS und Anmeldung <https-anmeldung_>`__
+
+Dialog „OPC-UA-Server“
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Adresse (Host)
+     - 0.0.0.0 = erreichbar im ganzen Netzwerk, 127.0.0.1 = nur auf diesem Rechner
+   * - Port
+     - TCP-Port (Standard 4840)
+   * - Aktualisierung
+     - So oft werden geänderte Werte im Server aktualisiert
+   * - Endpunkt
+     - Adresse, unter der Clients den Server erreichen
+   * - OPC-UA-Server starten (während der Aufzeichnung)
+     - Server einschalten
+   * - Zertifikat (DER/PEM)
+     - leer = selbstsigniert
+   * - Schlüssel (PEM)
+     - leer = selbstsigniert
+   * - Keine
+     - Endpunkt ohne Sicherheit
+   * - Basic256Sha256 – Signieren
+     - Endpunkt mit signierten Nachrichten
+   * - Basic256Sha256 – Signieren und verschlüsseln
+     - Endpunkt mit signierten und verschlüsselten Nachrichten
+   * - Aes128Sha256RsaOaep – Signieren und verschlüsseln
+     - Wie oben, neueres Verfahren
+   * - Aes256Sha256RsaPss – Signieren und verschlüsseln
+     - Wie oben, neuestes Verfahren
+   * - Anonym (ohne Anmeldung)
+     - Zugriff ohne Anmeldung erlauben
+   * - Anmeldung mit den Benutzern des Webservers (*n* eingerichtet)
+     - Clients melden sich mit Benutzer und Passwort des Webservers an (Konfigurationsprogramm › Webserver & Headless › **Benutzer …**)
+
+*Mehr dazu:* `OPC-UA-Server <opcua-server_>`__
+
+Dialog „MQTT“
+~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Werte an einen MQTT-Broker senden (während der Aufzeichnung)
+     - MQTT einschalten
+   * - Adresse (Host)
+     - z. B. 192.168.0.5 oder homeassistant.local
+   * - Port
+     - Port des Brokers (1883, mit TLS meist 8883)
+   * - CA-Zertifikat (Datei)
+     - leer = Zertifikate des Systems
+   * - Benutzer
+     - leer = ohne Anmeldung
+   * - Passwort
+     - Passwort zum Benutzer
+   * - Client-ID
+     - leer = automatisch
+   * - TLS (verschlüsselt, meist Port 8883)
+     - Verbindung zum Broker verschlüsseln
+   * - Zertifikat prüfen
+     - Aus: auch selbstsignierte Zertifikate annehmen (nur im eigenen Netz)
+   * - Senden
+     - Bei Änderung oder zyklisch
+   * - Basis-Topic
+     - Topics: <Basis>/<Steuerung>/<Variable>, <Basis>/werte, <Basis>/ereignisse, <Basis>/status
+   * - Intervall
+     - Bei Änderung: höchstens so oft je Variable; zyklisch: alle Werte in diesem Takt
+   * - Format
+     - Ein Topic je Variable, eine JSON-Nachricht oder beides
+   * - QoS
+     - Dienstgüte 0, 1 oder 2
+   * - Discovery-Präfix
+     - Präfix der Home-Assistant-Discovery (meist homeassistant)
+   * - Werte beim Broker speichern (retain)
+     - Neue Abonnenten erhalten sofort den letzten Wert
+   * - Home-Assistant-Discovery (Variablen erscheinen dort als Sensoren)
+     - Variablen in Home Assistant automatisch als Sensoren anlegen
+   * - Verbindung testen
+     - Anmeldung am Broker prüfen
+
+*Mehr dazu:* `MQTT <mqtt_>`__
+
+Dialog „Laufende Headless-Logger“
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tabelle: Projekt, Konfiguration, Gestartet, Rechner, PID, Webserver, Zustand
+     - Laufende Headless-Logger auf diesem Rechner
+   * - Logger beenden
+     - Gewählten Headless-Logger sauber beenden
+
+*Mehr dazu:* `Headless-Betrieb (nur Aufzeichnung) <headless_>`__
+
+Dialoge des IO-Checks
+----------------------------------------------------------------------
+
+Dialog „Signal hinzufügen“
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Adresse
+     - z. B. E12.3, EW256, A4.0, DB10.DBX2.1
+   * - Symbol
+     - Symbolname
+   * - Kommentar
+     - Kommentar
+   * - BMK
+     - Betriebsmittelkennzeichen
+   * - Ort
+     - z. B. Halle 2, +S1, Kesselhaus
+   * - Gruppe
+     - Gruppe in der Liste (z. B. Schrank)
+   * - Typ
+     - Signalart (wird aus der Adresse vorgeschlagen)
+   * - Messbereich
+     - nur Analog, z. B. 0..10 bar
+   * - Steuerung
+     - Steuerung, von der gelesen wird
+
+*Mehr dazu:* `IO-Check (Inbetriebnahme) <io-check_>`__
+
+Dialog „Fotos“
+~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Hinzufügen …
+     - Fotos auswählen und zum Signal ablegen
+   * - Öffnen
+     - Markiertes Foto mit dem Bildbetrachter öffnen
+   * - Entfernen
+     - Markiertes Foto löschen
+
+*Mehr dazu:* `Abnahmeprotokoll (PDF) <io-protokoll_>`__
+
+Dialog „Bereiche scannen“
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Element
+     - Funktion
+   * - Tabelle: Steuerung, Startadresse, Anzahl Bits
+     - Bereiche: Steuerung, erste Adresse und Anzahl Bits
+   * - Hinzufügen
+     - Weiteren Bereich anlegen
+   * - Entfernen
+     - Markierten Bereich löschen
+
+*Mehr dazu:* `Matrix und Bereiche scannen <io-matrix_>`__
+
+.. referenz-ende
+
+
 Hilfe und Kontexthilfe (F1)
 ======================================================================
 
-Logger und Konfigurationsprogramm haben ein Menü **Hilfe**:
+Logger und Konfigurationsprogramm haben ein Menü **Hilfe**. Alle Menüs, Knöpfe und Felder mit ihrer Bedeutung
+listet das Kapitel `Referenz: alle Menüs, Fenster und Bedienelemente <referenz_>`__ auf.
 
 * **Bedienungsanleitung** öffnet diese Anleitung (PDF bzw. HTML) mit dem
   Standardprogramm des Systems. Ist die Oberfläche nicht auf Deutsch eingestellt, öffnet
