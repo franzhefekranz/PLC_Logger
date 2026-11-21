@@ -23,6 +23,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber slmp:** Zu große Gerätenummern (z. B. `D99999999`) und ein Ziel-Modul über `FFFF` bestanden die Prüfung
+  und führten in jedem Zyklus zu einer Neuverbindung, bei der auch alle übrigen Variablen ausfielen – sie werden jetzt
+  bei der Prüfung abgewiesen.
 * **Treiber fins, slmp, toyopuc, kvhostlink:** Lag ein nicht vorhandener oder geschützter Bereich in der Lücke
   zwischen zusammengefassten Variablen, meldeten alle Variablen der Anfrage dauerhaft den Fehler – jetzt werden sie
   einzeln gelesen, nur die wirklich fehlende meldet ihn. Eine zu kurze Antwort führte in jedem Zyklus zu einer

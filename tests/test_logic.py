@@ -2699,3 +2699,13 @@ def test_word_reader_gap_and_short_answer():
     R.cap = 1
     out = r.read()
     assert np.isnan(out[3]) and "zu kurz" in r.errors["D10"] and out[0] == 1.0
+
+
+def test_slmp_address_and_module_limits():
+    """SLMP: zu große Gerätenummern und Ziel-Module über FFFF werden bei der Prüfung abgewiesen (sonst OverflowError
+    beim Senden in jedem Zyklus)."""
+    from plc_common import get_driver
+    d = get_driver("slmp")
+    assert d.check_address("D99999999", "INT") and not d.check_address("ZR4000000", "INT")
+    assert d.check_params({"ip": "10.0.0.1", "modul_io": "1FFFF"}) and d.check_params({"ip": "1.2.3.4", "modul_io": "x"})
+    assert not d.check_params({"ip": "10.0.0.1", "modul_io": "03E0"})

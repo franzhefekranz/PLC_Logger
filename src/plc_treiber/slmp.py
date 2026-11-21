@@ -35,6 +35,8 @@ DEVICES = {
     "SB": (0xA1, 16, True), "SW": (0xB5, 16, False), "DX": (0xA2, 16, True), "DY": (0xA3, 16, True),
     "Z": (0xCC, 10, False), "R": (0xAF, 10, False), "ZR": (0xB0, 10, False),
 }
+# Höchste Gerätenummer: 3 Byte im Q/L-Format (reicht auch für iQ-R; ZR geht dort nur bis etwa 4,2 Mio.)
+MAX_DEVICE = 0xFFFFFF
 # Längere Gerätenamen zuerst prüfen, sonst würde z. B. „SM400“ als Gerät „S“ + „M400“ erkannt bzw. „ZR“ als „Z“
 _NAMES = sorted(DEVICES, key=len, reverse=True)
 # Gerät, Nummer (dezimal oder hex, je nach Gerät) und optional „.Bit“ (hex 0…F)
@@ -62,6 +64,8 @@ def parse(address):
     except ValueError:
         raise ValueError(tr("„{0}“: {1} wird {2} gezählt").format(address, dev,
                                                                 tr("dezimal") if radix == 10 else tr("hexadezimal"))) from None
+    if n > MAX_DEVICE:                      # sonst OverflowError beim Senden in jedem Zyklus
+        raise ValueError(tr("„{0}“: Gerätenummer zu groß").format(address))
     # „M10.3“ ist unsinnig: ein Bitgerät ist schon ein einzelnes Bit
     if bit is not None and is_bit:
         raise ValueError(tr("Bitgeräte haben keine Bitnummer: {0}").format(address))
@@ -248,9 +252,11 @@ class SlmpDriver(Driver):
         if err:
             return err
         try:
-            int(str(params.get("modul_io", "03FF")), 16)
+            io = int(str(params.get("modul_io", "03FF")), 16)
         except ValueError:
-            return tr("Ziel-Modul: hexadezimale Zahl erwartet, z. B. 03FF")
+            io = -1
+        if not 0 <= io <= 0xFFFF:
+            return tr("Ziel-Modul: hexadezimale Zahl 0000 … FFFF erwartet, z. B. 03FF")
         return ""
 
     def check_address(self, address, dtype):

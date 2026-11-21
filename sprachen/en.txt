@@ -6934,6 +6934,9 @@
 @ „{0}“: {1} wird {2} gezählt
 > "{0}": {1} is numbered in {2}
 
+@ „{0}“: Gerätenummer zu groß
+> “{0}”: device number too large
+
 @ Bitgeräte haben keine Bitnummer: {0}
 > Bit devices have no bit number: {0}
 
@@ -6988,8 +6991,8 @@
 @ Startgerät, z. B. D100 (Elemente folgen lückenlos)
 > Start device, e.g. D100 (elements follow without gaps)
 
-@ Ziel-Modul: hexadezimale Zahl erwartet, z. B. 03FF
-> Target module: hexadecimal number expected, e.g. 03FF
+@ Ziel-Modul: hexadezimale Zahl 0000 … FFFF erwartet, z. B. 03FF
+> Target module: hexadecimal number 0000 … FFFF expected, e.g. 03FF
 
 # ---------------- plc_treiber/tia.py
 
