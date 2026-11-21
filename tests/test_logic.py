@@ -2739,3 +2739,47 @@ def test_logo_split_range_and_vm_end():
     assert out[0] == 123.0 and np.isnan(out[1]) and out[2] == -5.0 and list(r.errors) == ["VW20"]
     assert len(r.ranges) == 3
     assert drv.check_address("VD1468", "DINT") and not drv.check_address("VW1468", "INT")
+
+
+def test_mqtt_reader_reports_denied_subscription(monkeypatch):
+    """MQTT: lehnt der Broker ein Abonnement ab (SUBACK 0x80, z. B. ACL), meldet die Variable den Grund statt still
+    ohne Wert zu bleiben; connect() schließt eine alte Verbindung selbst."""
+    from types import SimpleNamespace
+
+    import plc_mqtt
+    from plc_common import Plc, Variable, get_driver
+    from plc_treiber.mqtt import MqttReader
+    made = []
+
+    class Client:
+        def __init__(self):
+            self.stopped = False
+            made.append(self)
+
+        def connect(self, host, port, keepalive=30):
+            pass
+
+        def subscribe(self, subs):
+            self.subs = subs
+
+        def loop_start(self):
+            self.on_connect(self, None, {}, 0)
+            codes = [SimpleNamespace(value=0x87) if t == "geheim/wert" else 0 for t, _q in self.subs]
+            self.on_subscribe(self, None, 1, codes, None)
+            self.on_message(self, None, SimpleNamespace(topic="halle/temp", payload=b"21.5"))
+
+        def disconnect(self):
+            pass
+
+        def loop_stop(self):
+            self.stopped = True
+    monkeypatch.setattr(plc_mqtt, "make_client", lambda *a, **k: Client())
+    drv = get_driver("mqtt")
+    plc = Plc(name="Broker", driver="mqtt", params=drv.normalize_params({"host": "broker"}))
+    r = MqttReader(drv, plc, [Variable("t", "halle/temp", "REAL"), Variable("g", "geheim/wert", "REAL")])
+    assert r.connect() == 1
+    assert "verweigert" in r.errors["geheim/wert"] and "halle/temp" not in r.errors
+    assert r.read()[0] == 21.5
+    r.connect()                                                  # zweites connect: alte Verbindung beendet
+    assert made[0].stopped and len(made) == 2
+    r.close()

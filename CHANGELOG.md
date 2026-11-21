@@ -23,6 +23,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber mqtt:** Verweigerte der Broker das Abonnement eines Topics (z. B. fehlende Zugriffsrechte), blieb die
+  Variable ohne Wert und ohne Meldung – jetzt meldet sie „Broker verweigert das Abonnement“.
 * **Treiber logo:** Lehnte die LOGO! einen zusammengefassten VM-Bereich ab (Zugriffsrechte, Speicherende), meldeten
   alle Variablen darin dauerhaft den Fehler – jetzt werden sie einzeln gelesen. Variablen, die über das Ende des
   Variablenspeichers reichen (z. B. `VD1468`), werden bei der Prüfung abgewiesen.

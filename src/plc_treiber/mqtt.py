@@ -96,6 +96,7 @@ class MqttReader(Reader):
         bestätigt hat (sonst gingen Nachrichten direkt nach dem Verbinden verloren). Rückgabe: Zahl der gültigen
         Variablen; Fehler -> ConnectionError."""
         from plc_mqtt import make_client, reason_ok, reason_text
+        self.close()                            # eine alte Verbindung (samt paho-Thread) nie stehen lassen
         p = self.plc.params
         self.items = []
         topics = {}
@@ -117,12 +118,14 @@ class MqttReader(Reader):
         client = make_client(p.get("client_id", ""), p.get("benutzer", ""), p.get("passwort", ""),
                              bool(p.get("tls")), bool(p.get("tls_pruefen", True)), p.get("ca", ""))
         qos = int(p.get("qos", 0) or 0)
+        order = list(topics)                    # Reihenfolge wie im subscribe-Aufruf (für die Antwortcodes)
+        denied = set()
 
         def on_connect(c, userdata, flags, rc, *rest):
             """Antwort des Brokers auf die Anmeldung (paho-Netzwerk-Thread): bei Erfolg abonnieren, sonst Ablehnung merken."""
             if reason_ok(rc):
                 if topics:                  # verbunden erst nach der Bestätigung des Abonnements (SUBACK)
-                    c.subscribe([(t, qos) for t in topics])
+                    c.subscribe([(t, qos) for t in order])
                 else:
                     self.connected.set()
                     self.answer.set()
@@ -131,7 +134,13 @@ class MqttReader(Reader):
                 self.answer.set()
 
         def on_subscribe(c, userdata, *args):
-            """Abonnement bestätigt (SUBACK): erst jetzt gilt die Verbindung als bereit."""
+            """Abonnement bestätigt (SUBACK): erst jetzt gilt die Verbindung als bereit. Abgelehnte Topics (Code ab 0x80,
+            z. B. fehlende Zugriffsrechte) merken – paho 1.x liefert die gewährte QoS als Zahl, 2.x ReasonCode-Objekte."""
+            codes = args[1] if len(args) > 1 else []
+            for topic, rc in zip(order, codes or []):
+                value = getattr(rc, "value", rc)
+                if isinstance(value, int) and value >= 0x80:
+                    denied.add(topic)
             self.connected.set()
             self.answer.set()
 
@@ -159,7 +168,10 @@ class MqttReader(Reader):
             self.close()
             raise ConnectionError(tr("Broker lehnt die Anmeldung ab: {0}").format(self.refused) if self.refused
                                   else tr("Keine Antwort vom Broker {0}").format(self.driver.summary(self.plc)))
-        return sum(1 for it in self.items if it)
+        for it in self.items:
+            if it and it[0] in denied:
+                self.errors[it[2]] = tr("Broker verweigert das Abonnement (Zugriffsrechte des Benutzers?)")
+        return sum(1 for it in self.items if it and it[0] not in denied)
 
     def read(self):
         """Je Variable den zuletzt empfangenen Wert liefern (NaN: noch nichts empfangen, zu alt oder nicht lesbar). Nicht
