@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.25.0] – 2026-11-21
+
 ### Neu
 
 * **Anleitung:** Neues Kapitel „Referenz: alle Menüs, Fenster und Bedienelemente“ (englisch „Reference: all menus,
@@ -979,7 +981,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.24.0...HEAD
+[Unveröffentlicht]: ../../compare/v3.25.0...HEAD
+[3.25.0]: ../../releases/tag/v3.25.0
 [3.24.0]: ../../releases/tag/v3.24.0
 [3.23.0]: ../../releases/tag/v3.23.0
 [3.22.0]: ../../releases/tag/v3.22.0
