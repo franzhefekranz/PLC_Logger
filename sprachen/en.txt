@@ -6143,6 +6143,9 @@
 @ TSAP als hh.hh (z. B. 02.00) oder Zahl angeben
 > Enter TSAP as hh.hh (e.g. 02.00) or a number
 
+@ Adresse reicht über das Ende des Variablenspeichers (V1469): {0}
+> Address extends beyond the end of the variable memory (V1469): {0}
+
 # ---------------- plc_treiber/modbus.py
 
 @ Funktion nicht unterstützt

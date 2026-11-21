@@ -14,7 +14,8 @@ den VM abbildet:
     NI1   NQ1                                     Netzwerkeingänge/-ausgänge (BOOL)
     AI1 … AI8   AQ1 … AQ8   AM1 … AM64   NAI1     Analogwerte (INT, 16 Bit)
 
-Werte im VM sind wie bei S7 „Big Endian“. Benachbarte Adressen werden zu einer Anfrage zusammengefasst.
+Werte im VM sind wie bei S7 „Big Endian“. Benachbarte Adressen werden zu einer Anfrage zusammengefasst; lehnt die
+LOGO! einen solchen Bereich ab, werden seine Variablen einzeln gelesen (im selben Zyklus und für den Rest der Sitzung).
 """
 import re
 import struct
@@ -22,6 +23,7 @@ import struct
 from plc_i18n import tr
 from plc_treiber.base import NAN, Driver, Param, Reader
 
+VM_END = 1470                       # Variablenspeicher V0 … V1469
 LOGO_TYPES = {"BOOL": (1, None), "BYTE": (1, ">B"), "USINT": (1, ">B"), "SINT": (1, ">b"), "WORD": (2, ">H"),
               "UINT": (2, ">H"), "INT": (2, ">h"), "DWORD": (4, ">I"), "UDINT": (4, ">I"), "DINT": (4, ">i"),
               "REAL": (4, ">f")}
@@ -137,35 +139,59 @@ class LogoReader(Reader):
         self.read()
         return max(0, len(self.vars) - len(self.errors))
 
+    def _fetch(self, start, n):
+        """``n`` Bytes ab VM-Byte ``start`` lesen; Fehler bei stehender Verbindung -> RuntimeError (nur diese Anfrage),
+        Verbindung weg -> ConnectionError."""
+        try:
+            return bytes(self.client.db_read(1, start, n))
+        except Exception as e:
+            try:
+                alive = bool(self.client.get_connected())
+            except Exception:
+                alive = False
+            if not alive:
+                raise ConnectionError(str(e)) from None
+            raise RuntimeError(str(e)) from None
+
     def read(self):
-        """Ein Messzyklus: jeden VM-Bereich mit einer Anfrage lesen (DB 1) und die Variablen dekodieren (Big Endian)."""
+        """Ein Messzyklus: jeden VM-Bereich mit einer Anfrage lesen (DB 1) und die Variablen dekodieren (Big Endian).
+        Lehnt die LOGO! einen Bereich mit mehreren Variablen ab, werden diese einzeln gelesen und künftig einzeln
+        angefragt."""
         if self.client is None:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
-        for start, end, items in self.ranges:
+        split = []
+        for k, (start, end, items) in enumerate(self.ranges):
             try:
-                raw = bytes(self.client.db_read(1, start, end - start))
-            except Exception as e:
-                try:
-                    alive = bool(self.client.get_connected())
-                except Exception:
-                    alive = False
-                if not alive:
-                    raise ConnectionError(str(e)) from None
-                for it in items:
-                    self.errors[it.address] = str(e)
+                raw = self._fetch(start, end - start)
+            except RuntimeError as e:
+                if len(items) > 1:
+                    split.append(k)
+                    for it in items:
+                        try:
+                            self._decode(self._fetch(it.byte, LOGO_TYPES[it.dtype][0]), it.byte, it, out)
+                        except RuntimeError as e1:
+                            self.errors[it.address] = str(e1)
+                else:
+                    self.errors[items[0].address] = str(e)
                 continue
             for it in items:
-                off = it.byte - start
-                try:
-                    if it.dtype == "BOOL":
-                        out[it.pos] = float((raw[off] >> it.bit) & 1)
-                    else:
-                        out[it.pos] = float(struct.unpack_from(LOGO_TYPES[it.dtype][1], raw, off)[0])
-                    self.errors.pop(it.address, None)
-                except (IndexError, struct.error):
-                    self.errors[it.address] = tr("Antwort zu kurz")
+                self._decode(raw, start, it, out)
+        for k in reversed(split):
+            self.ranges[k:k + 1] = [[it.byte, it.byte + LOGO_TYPES[it.dtype][0], [it]] for it in self.ranges[k][2]]
         return out
+
+    def _decode(self, raw, start, it, out):
+        """Wert der Variable ``it`` aus den Bytes eines Bereichs ab ``start`` in ``out`` eintragen."""
+        off = it.byte - start
+        try:
+            if it.dtype == "BOOL":
+                out[it.pos] = float((raw[off] >> it.bit) & 1)
+            else:
+                out[it.pos] = float(struct.unpack_from(LOGO_TYPES[it.dtype][1], raw, off)[0])
+            self.errors.pop(it.address, None)
+        except (IndexError, struct.error):
+            self.errors[it.address] = tr("Antwort zu kurz")
 
     def close(self):
         """Verbindung trennen."""
@@ -222,11 +248,13 @@ class LogoDriver(Driver):
     def check_address(self, address, dtype):
         """Adresse gültig, Typ unterstützt, Bitadresse nur mit BOOL?"""
         try:
-            _byte, bit, _t = vm_address(address)
+            byte, bit, _t = vm_address(address)
         except ValueError as e:
             return str(e)
         if dtype not in LOGO_TYPES:
             return tr("Typ {0} wird nicht unterstützt").format(dtype)
+        if byte + LOGO_TYPES[dtype][0] > VM_END:
+            return tr("Adresse reicht über das Ende des Variablenspeichers (V1469): {0}").format(address)
         if bit is not None and dtype != "BOOL":
             return tr("Bitadresse nur mit Typ BOOL")
         return ""

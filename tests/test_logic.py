@@ -2709,3 +2709,33 @@ def test_slmp_address_and_module_limits():
     assert d.check_address("D99999999", "INT") and not d.check_address("ZR4000000", "INT")
     assert d.check_params({"ip": "10.0.0.1", "modul_io": "1FFFF"}) and d.check_params({"ip": "1.2.3.4", "modul_io": "x"})
     assert not d.check_params({"ip": "10.0.0.1", "modul_io": "03E0"})
+
+
+def test_logo_split_range_and_vm_end():
+    """LOGO!: lehnt das Gerät einen zusammengefassten Bereich ab, werden die Variablen einzeln gelesen; eine Variable,
+    die über das Ende des Variablenspeichers reicht, wird bei der Prüfung abgewiesen."""
+    import struct
+
+    from plc_common import Plc, Variable, get_driver
+    from plc_treiber.logo import LogoReader
+    mem = bytearray(1470)
+    struct.pack_into(">h", mem, 10, 123)
+    struct.pack_into(">h", mem, 30, -5)
+
+    class Client:
+        def db_read(self, db, start, n):
+            if start <= 20 < start + n:                         # V20 gesperrt
+                raise RuntimeError("Adresse außerhalb des Bereichs")
+            return bytearray(mem[start:start + n])
+
+        def get_connected(self):
+            return True
+    drv = get_driver("logo")
+    plc = Plc(name="LOGO", driver="logo", params=drv.normalize_params({"ip": "10.0.0.4"}))
+    r = LogoReader(drv, plc, [Variable("a", "VW10", "INT"), Variable("b", "VW20", "INT"),
+                              Variable("c", "VW30", "INT")])
+    r.client = Client()
+    out = r.read()
+    assert out[0] == 123.0 and np.isnan(out[1]) and out[2] == -5.0 and list(r.errors) == ["VW20"]
+    assert len(r.ranges) == 3
+    assert drv.check_address("VD1468", "DINT") and not drv.check_address("VW1468", "INT")
