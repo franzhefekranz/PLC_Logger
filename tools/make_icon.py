@@ -15,7 +15,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 os.chdir(ROOT)
 
-from PySide6.QtCore import QSize  # noqa: E402
+from PySide6.QtCore import QSize, Qt  # noqa: E402
 from PySide6.QtGui import QGuiApplication, QIcon  # noqa: E402
 
 from plc_branding import default_pixmap  # noqa: E402
@@ -28,7 +28,8 @@ if os.path.exists("app.ico"):
     sizes = icon.availableSizes() or [QSize(256, 256)]
     pixmap = icon.pixmap(max(sizes, key=lambda s: s.width()))
     if pixmap.width() < 256:                          # kleines Icon: für das AppImage-Symbol vergrößern
-        pixmap = pixmap.scaled(256, 256)
+        pixmap = pixmap.scaled(256, 256, Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.SmoothTransformation)
 else:
     pixmap = default_pixmap(256)          # dasselbe Symbol, das das Programm ohne eigenes Icon zeichnet
     if not pixmap.save("app.ico", "ICO"):

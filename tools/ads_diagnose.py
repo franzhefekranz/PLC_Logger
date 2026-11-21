@@ -54,7 +54,12 @@ def main():
     ams_port = int(sys.argv[2]) if len(sys.argv) > 2 else 851
     host = sys.argv[3] if len(sys.argv) > 3 else "127.0.0.1"
     print(f"Python {sys.version.split()[0]}, Ziel {host}:{AMS_TCP_PORT}, AMS-Port {ams_port}")
-    s = socket.create_connection((host, AMS_TCP_PORT), timeout=5)
+    try:
+        s = socket.create_connection((host, AMS_TCP_PORT), timeout=5)
+    except OSError as e:
+        raise SystemExit(f"1. KEINE TCP-Verbindung zu {host}:{AMS_TCP_PORT}: {e}\n"
+                         "   -> Läuft TwinCAT (System-Dienst)? Firewall: Port 48898/TCP freigeben? "
+                         "Richtige IP-Adresse?")
     s.settimeout(5)
     print(f"1. TCP verbunden: lokal {s.getsockname()}, Gegenstelle {s.getpeername()}")
     if host in ("127.0.0.1", "localhost", "::1"):
@@ -103,7 +108,11 @@ def main():
         struct.pack("<HHIII", 2, 0x0004, len(req), 0, 2)
     s.sendall(struct.pack("<HI", 0, len(hdr) + len(req)) + hdr + req)
     while True:
-        cmd, body = recv_frame(s)
+        try:
+            cmd, body = recv_frame(s)
+        except (OSError, ConnectionError) as e:
+            raise SystemExit(f"   KEINE Antwort: {e}  -> Symboltabelle auf der Steuerung vorhanden "
+                             "(Projekt mit Symbolen geladen)?")
         if cmd == 0 and len(body) >= 32:
             break
     res = struct.unpack_from("<I", body, 32)[0]
