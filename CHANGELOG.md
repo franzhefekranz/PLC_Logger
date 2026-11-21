@@ -23,6 +23,9 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Ringpuffer:** War der Puffer in der Steuerung dauerhaft zu klein, entstand bei jeder Abholung eine eigene
+  Meldung „… Datensätze verloren“ (bei 250 ms Abholintervall vier je Sekunde). Jetzt kommt die erste Meldung sofort,
+  danach höchstens eine je Minute mit der Summe.
 * **Treiber pccc:** Lag ein Element hinter dem Dateiende (z. B. `N7:12` bei einer Datei mit 10 Elementen), meldeten
   alle Elemente seiner Gruppe dauerhaft „Lesefehler“ – jetzt werden sie einzeln gelesen, nur das fehlende meldet ihn.
 * **Treiber mqtt:** Verweigerte der Broker das Abonnement eines Topics (z. B. fehlende Zugriffsrechte), blieb die

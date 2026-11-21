@@ -475,3 +475,43 @@ def test_clx_reader_retries_failed_tags():
         r.read()
     r.close()
     assert not lib.tags
+
+
+def test_ring_loss_notes_are_aggregated():
+    """Dauerhafter Verlust (Puffer zu klein): erste Meldung sofort, danach höchstens eine je Minute mit der Summe."""
+    import struct
+    from types import SimpleNamespace
+
+    from plc_treiber.ringbuffer import Ring, RingSupport
+    blk = SimpleNamespace(name="R1", address="DB1.DBX0.0", dtype="INT", count=1, ring=4)
+
+    class Reader(RingSupport):
+        def __init__(self):
+            self.errors, self.rings, self.ring_notes = {}, [Ring(blk, [0])], []
+            self.counter = 0
+
+        def _ring_counter(self, ring):
+            return self.counter
+
+        def _ring_bytes(self, ring, slot, n):
+            out = b""
+            for k in range(n):
+                seq = self.counter - ((self.counter - (slot + k)) % ring.records)   # Platz = Nummer MOD N
+                out += struct.pack(">iih", seq, seq * 10, seq) + b"\0" * (ring.record_size - 10)
+            return out
+    r = Reader()
+    r.counter = 4
+    r.read_rings(now=1000.0)
+    t = 1000.0
+    notes = []
+    for _ in range(40):                                   # 40 Abholungen in 10 s, je 6 Datensätze verloren
+        t += 0.25
+        r.counter += 10
+        r.read_rings(now=t)
+        notes += r.take_ring_notes()
+    assert len(notes) == 1 and " 6 " in notes[0]
+    t += 60
+    r.counter += 10
+    r.read_rings(now=t)
+    notes = r.take_ring_notes()
+    assert len(notes) == 1 and f" {39 * 6 + 6} " in notes[0] and r.rings[0].lost == 40 * 6 + 6

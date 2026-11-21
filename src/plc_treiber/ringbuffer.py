@@ -53,6 +53,7 @@ MS_WRAPS = (86_400_000, 2 ** 31, 2 ** 32)   # Überlauf der SPS-Zeit: Mitternach
 MAX_STEP_MS = 3_600_000             # größter plausibler Abstand zweier aufeinanderfolgender Datensätze
 MAX_RECORDS = 100_000
 MAX_COUNTER = 2 ** 31 - 1
+NOTE_EVERY_S = 60.0                 # Verluste je Puffer höchstens so oft melden (die erste Meldung sofort)
 
 
 class Ring:
@@ -72,6 +73,8 @@ class Ring:
         self.value_size = RING_TYPES.get(self.dtype, 4)
         self.tracker = RingTracker(self.records)
         self.lost = 0                                  # verlorene Datensätze seit dem Start
+        self.lost_pending = 0                          # noch nicht gemeldete Verluste
+        self.lost_noted = float("-inf")                # Zeit (PC, s) der letzten Verlustmeldung
         self.error = ""                                # fester Fehler (z. B. ungültige Adresse)
 
     @property
@@ -275,6 +278,7 @@ class RingSupport:
     def read_rings(self, now=None):
         """Alle Ringpuffer abholen -> [(Positionen, Zeitstempel, Werte)], nach Zeit geordnet je Puffer."""
         import time
+        now_s = time.time() if now is None else now
         out = []
         for ring in getattr(self, "rings", []):
             if ring.error:
@@ -293,12 +297,17 @@ class RingSupport:
                 continue
             self.errors.pop(ring.label, None)
             restarts = ring.tracker.restarts
-            rows, lost = ring.tracker.accept(recs, lo, hi, c2, time.time() if now is None else now)
+            rows, lost = ring.tracker.accept(recs, lo, hi, c2, now_s)
             lost += skipped
             if lost:
                 ring.lost += lost
+                ring.lost_pending += lost
+            # Verluste sammeln: erste Meldung sofort, danach höchstens eine je NOTE_EVERY_S mit der Summe (sonst bei
+            # dauerhaft zu kleinem Puffer eine Meldung je Abholung)
+            if ring.lost_pending and now_s - ring.lost_noted >= NOTE_EVERY_S:
                 self.ring_notes.append(tr("Ringpuffer {0}: {1} Datensätze verloren (Puffer vergrößern oder Leseintervall "
-                                          "verkleinern)").format(ring.name, lost))
+                                          "verkleinern)").format(ring.name, ring.lost_pending))
+                ring.lost_pending, ring.lost_noted = 0, now_s
             if restarts:
                 ring.tracker.restarts = 0
                 self.ring_notes.append(tr("Ringpuffer {0}: Zähler zurückgesetzt (Neustart der Steuerung?)").format(ring.name))
