@@ -2613,3 +2613,49 @@ def test_opcua_truncated_read_reports_missing_nodes(tmp_path, monkeypatch):
         monkeypatch.setattr(plc_common, "BASE_DIR", str(tmp_path))
         _cert, key = opcua.client_certificate({})
         assert os.stat(key).st_mode & 0o077 == 0
+
+
+def test_modbus_gap_short_answer_and_range():
+    """Modbus: Lücke in der Registerbelegung -> Variablen einzeln gelesen (nur die fehlende meldet Fehler); zu kurze
+    Antwort ist ein Fehler der Anfrage statt einer Neuverbindung; Adressen über 65535 werden abgewiesen."""
+    from plc_common import Plc, Variable, get_driver
+    from plc_treiber.modbus import ModbusError, ModbusReader
+    regs = {0: 11, 1: 12, 4: 15, 5: 16, 20: 0x4120, 21: 0x0000}       # 40003/40004 fehlen; 40021 = REAL 10.0
+    calls = []
+
+    class Client:
+        cap = None
+
+        def connect(self):
+            pass
+
+        def close(self):
+            pass
+
+        def request(self, fc, start, count):
+            calls.append((start, count))
+            if any(a not in regs for a in range(start, start + count)):
+                raise ModbusError("Modbus-Ausnahme 2 (ungültige Adresse)")
+            n = min(count, Client.cap or count)
+            return b"".join(regs[a].to_bytes(2, "big") for a in range(start, start + n))
+
+    class R(ModbusReader):
+        def make_client(self):
+            return Client()
+    drv = get_driver("modbus")
+    plc = Plc(name="Zähler", driver="modbus", params=drv.normalize_params({"ip": "10.0.0.7"}))
+    vs = [Variable("a", "40001", "INT"), Variable("b", "40005", "INT"), Variable("c", "40003", "INT"),
+          Variable("r", "40021", "REAL")]
+    r = R(drv, plc, vs)
+    assert r.connect() == 3
+    out = r.read()
+    assert out[:2] == [11.0, 15.0] and np.isnan(out[2]) and out[3] == 10.0
+    assert list(r.errors) == ["40003"]
+    calls.clear()
+    r.read()
+    assert (0, 6) not in calls and len(calls) == 4             # künftig einzeln
+    Client.cap = 1                                              # Gerät liefert nur 1 Register
+    out = r.read()
+    assert np.isnan(out[3]) and "zu kurz" in r.errors["40021"] and out[0] == 11.0
+    assert drv.check_address("HR70000", "INT") and drv.check_address("HR65534", "LREAL")
+    assert not drv.check_address("HR65535", "INT")

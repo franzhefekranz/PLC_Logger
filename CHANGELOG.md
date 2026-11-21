@@ -23,6 +23,12 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber modbus / modbus_rtu:** Lag eine nicht belegte Adresse in der Lücke zwischen zusammengefassten Variablen,
+  lehnte das Gerät die ganze Anfrage ab und alle Variablen darin meldeten dauerhaft „ungültige Adresse“ – jetzt werden
+  sie einzeln gelesen, und nur die wirklich fehlende meldet den Fehler. Eine zu kurze Antwort (Gerät liefert weniger
+  Register als angefragt) führte in jedem Zyklus zu einer Neuverbindung; jetzt ist sie ein Fehler dieser Anfrage mit
+  Hinweis auf „Register je Anfrage“. Adressen jenseits von 65535 werden bei der Prüfung abgewiesen (bisher endloses
+  Neuverbinden).
 * **Treiber opcua:** Der private Schlüssel des selbst erzeugten Client-Zertifikats ist nur noch für den Benutzer des
   Loggers lesbar (0600). Kürzt ein Server die Antwort einer Leseanfrage, statt einen Fehler zu melden, werden die
   fehlenden Knoten mit dem Hinweis gemeldet, „Knoten je Anfrage“ zu verkleinern (bisher still NaN). Bei einem

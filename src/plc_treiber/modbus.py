@@ -13,6 +13,9 @@ Adressen werden automatisch zu möglichst wenigen Anfragen zusammengefasst. Adre
 
 Typen über mehrere Register (DINT, REAL, LREAL …) belegen 2 bzw. 4 aufeinanderfolgende Register; die Reihenfolge
 der Wörter/Bytes stellt der Parameter „Byte-/Wortfolge“ ein (Standard ABCD = Big Endian).
+
+Lehnt das Gerät eine zusammengefasste Anfrage ab (z. B. Lücke in der Registerbelegung) oder antwortet zu kurz, werden
+deren Variablen einzeln gelesen – im selben Zyklus und für den Rest der Sitzung.
 """
 import re
 import socket
@@ -222,34 +225,63 @@ class ModbusReader(Reader):
         self.read()
         return max(0, len(self.vars) - len(self.errors))
 
+    def _fetch(self, table, start, count):
+        """Eine Anfrage -> Antwortdaten; zu kurze Antwort -> ModbusError (Fehler dieser Anfrage, keine Neuverbindung);
+        Verbindungsfehler -> ConnectionError."""
+        try:
+            data = self.client.request(FUNCTION[table], start, count)
+        except ModbusError:
+            raise
+        except (OSError, ConnectionError, struct.error, IndexError) as e:
+            raise ConnectionError(str(e)) from None
+        need = (count + 7) // 8 if table in (CO, DI) else 2 * count
+        if len(data) < need:
+            raise ModbusError(tr("Antwort zu kurz ({0} statt {1} Bytes) – „Register je Anfrage“ verkleinern")
+                              .format(len(data), need))
+        return data
+
     def read(self):
         """Ein Messzyklus: alle Anfragen senden; Bits aus Coils/Discrete Inputs bzw. Registern holen, Mehrregisterwerte
-        in die eingestellte Byte-/Wortfolge bringen und dekodieren.
+        in die eingestellte Byte-/Wortfolge bringen und dekodieren. Lehnt das Gerät eine Anfrage mit mehreren Variablen
+        ab, werden diese einzeln gelesen und künftig einzeln angefragt.
         """
         out = [NAN] * len(self.vars)
         order = self.plc.params.get("wortfolge", "ABCD")
-        for table, start, count, items in self.requests:
+        split = []
+        for k, (table, start, count, items) in enumerate(self.requests):
             try:
-                data = self.client.request(FUNCTION[table], start, count)
+                data = self._fetch(table, start, count)
             except ModbusError as e:
-                for it in items:
-                    self.errors[it.address] = str(e)
-                continue
-            except (OSError, ConnectionError, struct.error, IndexError) as e:
-                raise ConnectionError(str(e)) from None
-            for it in items:
-                self.errors.pop(it.address, None)
-                rel = it.offset - start
-                if table in (CO, DI):
-                    out[it.pos] = float((data[rel // 8] >> (rel % 8)) & 1)
-                    continue
-                raw = data[rel * 2: (rel + it.regs) * 2]
-                if it.dtype == "BOOL":
-                    reg = struct.unpack(">H", reorder(raw, order) if order in ("BADC", "DCBA") else raw)[0]
-                    out[it.pos] = float((reg >> (it.bit or 0)) & 1)
+                if len(items) > 1:                  # Lücke im Gerät? einzeln lesen, künftig einzeln anfragen
+                    split.append(k)
+                    for it in items:
+                        try:
+                            self._decode(self._fetch(table, it.offset, it.regs), it.offset, it, order, out)
+                        except ModbusError as e1:
+                            self.errors[it.address] = str(e1)
                 else:
-                    out[it.pos] = float(struct.unpack(REG_TYPES[it.dtype][1], reorder(raw, order))[0])
+                    self.errors[items[0].address] = str(e)
+                continue
+            for it in items:
+                self._decode(data, start, it, order, out)
+        for k in reversed(split):
+            table, _s, _c, items = self.requests[k]
+            self.requests[k:k + 1] = [[table, it.offset, it.regs, [it]] for it in items]
         return out
+
+    def _decode(self, data, start, it, order, out):
+        """Wert der Variable ``it`` aus den Antwortdaten einer Anfrage ab ``start`` holen und in ``out`` eintragen."""
+        self.errors.pop(it.address, None)
+        rel = it.offset - start
+        if it.table in (CO, DI):
+            out[it.pos] = float((data[rel // 8] >> (rel % 8)) & 1)
+            return
+        raw = data[rel * 2: (rel + it.regs) * 2]
+        if it.dtype == "BOOL":
+            reg = struct.unpack(">H", reorder(raw, order) if order in ("BADC", "DCBA") else raw)[0]
+            out[it.pos] = float((reg >> (it.bit or 0)) & 1)
+        else:
+            out[it.pos] = float(struct.unpack(REG_TYPES[it.dtype][1], reorder(raw, order))[0])
 
     def close(self):
         """Verbindung schließen."""
@@ -294,9 +326,12 @@ class ModbusDriver(Driver):
         0–15.
         """
         try:
-            table, _off, bit, _m = parse(address)
+            table, off, bit, _m = parse(address)
         except ValueError as e:
             return str(e)
+        regs = 1 if (table in (CO, DI) or dtype == "BOOL") else REG_TYPES.get(dtype, (1,))[0]
+        if off + regs > 65536:
+            return tr("Adresse außerhalb des Modbus-Bereichs (höchstens 65536 Register bzw. Bits je Tabelle)")
         if table in (CO, DI):
             if dtype != "BOOL":
                 return tr("Coils und Discrete Inputs haben den Typ BOOL")

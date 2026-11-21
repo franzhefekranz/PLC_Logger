@@ -6181,6 +6181,9 @@
 @ Modbus-Ausnahme {0} ({1})
 > Modbus exception {0} ({1})
 
+@ Antwort zu kurz ({0} statt {1} Bytes) – „Register je Anfrage“ verkleinern
+> Answer too short ({0} instead of {1} bytes) – reduce “Registers per request”
+
 @ Modbus TCP
 > Modbus TCP
 
@@ -6225,6 +6228,9 @@
 
 @ Startadresse, z. B. 40001 oder HR0 (Elemente folgen lückenlos)
 > Start address, e.g. 40001 or HR0 (elements follow without gaps)
+
+@ Adresse außerhalb des Modbus-Bereichs (höchstens 65536 Register bzw. Bits je Tabelle)
+> Address outside the Modbus range (at most 65536 registers or bits per table)
 
 @ Coils und Discrete Inputs haben den Typ BOOL
 > Coils and discrete inputs have the type BOOL

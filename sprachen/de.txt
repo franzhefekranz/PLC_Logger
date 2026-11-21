@@ -6181,6 +6181,9 @@
 @ Modbus-Ausnahme {0} ({1})
 > 
 
+@ Antwort zu kurz ({0} statt {1} Bytes) – „Register je Anfrage“ verkleinern
+> 
+
 @ Modbus TCP
 > 
 
@@ -6224,6 +6227,9 @@
 > 
 
 @ Startadresse, z. B. 40001 oder HR0 (Elemente folgen lückenlos)
+> 
+
+@ Adresse außerhalb des Modbus-Bereichs (höchstens 65536 Register bzw. Bits je Tabelle)
 > 
 
 @ Coils und Discrete Inputs haben den Typ BOOL
