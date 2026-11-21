@@ -23,6 +23,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber pccc:** Lag ein Element hinter dem Dateiende (z. B. `N7:12` bei einer Datei mit 10 Elementen), meldeten
+  alle Elemente seiner Gruppe dauerhaft „Lesefehler“ – jetzt werden sie einzeln gelesen, nur das fehlende meldet ihn.
 * **Treiber mqtt:** Verweigerte der Broker das Abonnement eines Topics (z. B. fehlende Zugriffsrechte), blieb die
   Variable ohne Wert und ohne Meldung – jetzt meldet sie „Broker verweigert das Abonnement“.
 * **Treiber logo:** Lehnte die LOGO! einen zusammengefassten VM-Bereich ab (Zugriffsrechte, Speicherende), meldeten

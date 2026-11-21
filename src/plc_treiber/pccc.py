@@ -13,7 +13,9 @@ Adressen in RSLogix-500-Schreibweise:
     I:0/1   O:0/2   S:1/5   Eingänge, Ausgänge, Status
 
 Elemente derselben Datei (N, F, L, B), die nah beieinander liegen, werden mit EINER Anfrage gelesen
-(Datei-Lesebefehl mit Elementanzahl); Timer/Zähler, E/A und Status je Adresse.
+(Datei-Lesebefehl mit Elementanzahl); Timer/Zähler, E/A und Status je Adresse. Lehnt die Steuerung eine Gruppe ab
+(z. B. ein Element hinter dem Dateiende), werden ihre Elemente einzeln gelesen – im selben Zyklus und für den Rest der
+Sitzung.
 """
 import re
 
@@ -47,6 +49,17 @@ def parse(address):
 class _Group:
     """Eine Datei-Anfrage: Dateityp und -nummer, erstes Element, Anzahl und die Variablen darin."""
     __slots__ = ("ftype", "fnum", "start", "count", "items")
+
+
+def _by_element(g):
+    """Gruppe ``g`` in Gruppen je Element zerlegen (Bits desselben Elements bleiben zusammen)."""
+    parts = []
+    for elem in dict.fromkeys(it[0] for it in g.items):
+        sub = _Group()
+        sub.ftype, sub.fnum, sub.start, sub.count = g.ftype, g.fnum, elem, 1
+        sub.items = [it for it in g.items if it[0] == elem]
+        parts.append(sub)
+    return parts
 
 
 class PcccReader(Reader):
@@ -114,27 +127,46 @@ class PcccReader(Reader):
             raise ConnectionError(f"{type(e).__name__}: {e}") from None
         return tag.value, tag.error
 
+    def _read_group(self, g, out):
+        """Eine Datei-Anfrage lesen und ihre Elemente in ``out`` eintragen -> Fehlertext der Steuerung oder ""."""
+        addr = f"{g.ftype}{g.fnum}:{g.start}" + (f"{{{g.count}}}" if g.count > 1 else "")
+        value, err = self._read(addr)
+        if err or value is None:
+            return tr("Lesefehler: {0}").format(err or tr("kein Wert"))
+        vals = value if isinstance(value, (list, tuple)) else [value]
+        for elem, bit, pos, a in g.items:
+            k = elem - g.start
+            if k >= len(vals) or vals[k] is None:
+                self.errors[a] = tr("Antwort zu kurz")
+                continue
+            v = vals[k]
+            out[pos] = float((int(v) >> bit) & 1) if bit is not None else float(v)
+            self.errors.pop(a, None)
+        return ""
+
     def read(self):
-        """Ein Messzyklus: Gruppen (ein Wert je Element, Bits ausmaskiert), dann die Einzeladressen."""
+        """Ein Messzyklus: Gruppen (ein Wert je Element, Bits ausmaskiert), dann die Einzeladressen. Lehnt die Steuerung
+        eine Gruppe mit mehreren Elementen ab, werden diese einzeln gelesen und künftig einzeln angefragt."""
         if self.plc_conn is None:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
-        for g in self.groups:
-            addr = f"{g.ftype}{g.fnum}:{g.start}" + (f"{{{g.count}}}" if g.count > 1 else "")
-            value, err = self._read(addr)
-            if err or value is None:
-                for _e, _b, _p, a in g.items:
-                    self.errors[a] = tr("Lesefehler: {0}").format(err or tr("kein Wert"))
+        split = []
+        for k, g in enumerate(self.groups):
+            err = self._read_group(g, out)
+            if not err:
                 continue
-            vals = value if isinstance(value, (list, tuple)) else [value]
-            for elem, bit, pos, a in g.items:
-                k = elem - g.start
-                if k >= len(vals) or vals[k] is None:
-                    self.errors[a] = tr("Antwort zu kurz")
-                    continue
-                v = vals[k]
-                out[pos] = float((int(v) >> bit) & 1) if bit is not None else float(v)
-                self.errors.pop(a, None)
+            parts = _by_element(g)
+            if len(parts) > 1:                          # z. B. ein Element hinter dem Dateiende: einzeln lesen
+                split.append((k, parts))
+                for sub in parts:
+                    e1 = self._read_group(sub, out)
+                    for it in sub.items if e1 else []:
+                        self.errors[it[3]] = e1
+            else:
+                for it in g.items:
+                    self.errors[it[3]] = err
+        for k, parts in reversed(split):                # künftig einzeln anfragen
+            self.groups[k:k + 1] = parts
         for pos, address, label in self.singles:
             value, err = self._read(address)
             if err or value is None:

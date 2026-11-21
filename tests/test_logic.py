@@ -2783,3 +2783,35 @@ def test_mqtt_reader_reports_denied_subscription(monkeypatch):
     r.connect()                                                  # zweites connect: alte Verbindung beendet
     assert made[0].stopped and len(made) == 2
     r.close()
+
+
+def test_pccc_group_split():
+    """PCCC: Gruppe über das Dateiende hinaus abgelehnt -> Elemente einzeln gelesen, nur das fehlende meldet Fehler;
+    Bits desselben Elements bleiben zusammen."""
+    from types import SimpleNamespace
+
+    from plc_common import Plc, Variable, get_driver
+    from plc_treiber.pccc import PcccReader
+    n7 = [10 * k for k in range(10)]                         # N7 hat 10 Elemente
+    n7[3] = 0b1000
+    calls = []
+
+    class Conn:
+        def read(self, address):
+            calls.append(address)
+            start, _sep, cnt = address[3:].partition("{")
+            start, cnt = int(start), int(cnt.rstrip("}") or 1)
+            if start + cnt > len(n7):
+                return SimpleNamespace(value=None, error="Adresse außerhalb der Datei")
+            vals = n7[start:start + cnt]
+            return SimpleNamespace(value=vals if cnt > 1 else vals[0], error=None)
+    drv = get_driver("pccc")
+    plc = Plc(name="ML1400", driver="pccc", params=drv.normalize_params({"ip": "10.0.0.8"}))
+    r = PcccReader(drv, plc, [Variable("a", "N7:1", "INT"), Variable("b", "N7:3/3", "BOOL"),
+                              Variable("c", "N7:3/2", "BOOL"), Variable("x", "N7:12", "INT")])
+    r.plc_conn = Conn()
+    out = r.read()
+    assert out[:3] == [10.0, 1.0, 0.0] and np.isnan(out[3]) and list(r.errors) == ["N7:12"]
+    calls.clear()
+    r.read()
+    assert sorted(calls) == ["N7:1", "N7:12", "N7:3"]          # künftig je Element eine Anfrage
