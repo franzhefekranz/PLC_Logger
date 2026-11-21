@@ -24,7 +24,7 @@ import threading
 
 from plc_i18n import N_, tr
 from plc_treiber.base import Driver, Param
-from plc_treiber.word_common import TYPES, DeviceError, WordReader, recv_exact
+from plc_treiber.word_common import TYPES, DeviceError, WordReader, recv_exact, short_answer
 
 # Bereich -> FINS-Bereichscode für Wortzugriff (CS/CJ/CP/NJ)
 AREAS = {"CIO": 0xB0, "W": 0xB1, "H": 0xB2, "A": 0xB3, "D": 0x82, "T": 0x89, "C": 0x89}
@@ -193,7 +193,7 @@ class FinsClient:
         # Big Endian
         data = self.exchange(b"\x01\x01", struct.pack(">BHBH", area_code(area), start, 0, count))
         if len(data) < 2 * count:
-            raise ConnectionError(tr("FINS-Antwort zu kurz"))
+            raise short_answer(len(data) // 2, count)
         return list(struct.unpack_from(f">{count}H", data))
 
 

@@ -5974,9 +5974,6 @@
 @ FINS-Fehler 0x{0:04X}: {1}
 > 
 
-@ FINS-Antwort zu kurz
-> 
-
 @ Omron (FINS)
 > 
 
@@ -6061,9 +6058,6 @@
 > 
 
 @ KV-Fehler {0}: {1} ({2})
-> 
-
-@ KV-Antwort zu kurz: {0}
 > 
 
 @ Bitgeräte haben den Typ BOOL: {0}
@@ -6949,9 +6943,6 @@
 @ SLMP-Fehler 0x{0:04X}: {1}
 > 
 
-@ SLMP-Antwort zu kurz
-> 
-
 @ Wortzugriff auf Bitgeräte nur ab einem Vielfachen von 16, z. B. M0, M16, X10
 > 
 
@@ -7228,9 +7219,6 @@
 @ TOYOPUC-Fehler 0x{0:02X}: {1}
 > 
 
-@ TOYOPUC-Antwort zu kurz
-> 
-
 @ Einzelne Relais haben den Typ BOOL (16 Relais als Wort: z. B. M010W)
 > 
 
@@ -7261,6 +7249,11 @@
 > 
 
 @ Bibliothek fehlt: {0}
+> 
+
+# ---------------- plc_treiber/word_common.py
+
+@ Antwort zu kurz ({0} statt {1} Wörter) – „Wörter je Anfrage“ verkleinern
 > 
 
 # ---------------- plc_i18n.py

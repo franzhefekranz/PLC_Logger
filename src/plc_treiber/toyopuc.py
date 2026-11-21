@@ -22,7 +22,7 @@ import threading
 
 from plc_i18n import N_, tr
 from plc_treiber.base import Driver, Param
-from plc_treiber.word_common import TYPES, WORD_TYPES, DeviceError, WordReader, recv_exact
+from plc_treiber.word_common import TYPES, WORD_TYPES, DeviceError, WordReader, recv_exact, short_answer
 
 # Grundbereich (Befehl 1C): Wortadresse = Basis + Nummer (Register) bzw. Basis + Nummer // 16 (Relais)
 # Register: Bereich -> (Wortadresse von Nummer 0, höchste Nummer). Relais (BASIC_BIT): (Wortadresse des ersten
@@ -204,7 +204,7 @@ class ComputerLinkClient:
             # 94: Wörter lesen im erweiterten bzw. Programmbereich – zusätzlich die Bereichsnummer vorweg
             data = self.exchange(0x94, bytes([no]) + struct.pack("<HH", addr, count))
         if len(data) < 2 * count:
-            raise ConnectionError(tr("TOYOPUC-Antwort zu kurz"))
+            raise short_answer(len(data) // 2, count)
         return list(struct.unpack_from(f"<{count}H", data))
 
 

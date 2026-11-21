@@ -2659,3 +2659,43 @@ def test_modbus_gap_short_answer_and_range():
     assert np.isnan(out[3]) and "zu kurz" in r.errors["40021"] and out[0] == 11.0
     assert drv.check_address("HR70000", "INT") and drv.check_address("HR65534", "LREAL")
     assert not drv.check_address("HR65535", "INT")
+
+
+def test_word_reader_gap_and_short_answer():
+    """Wortorientierte Treiber (FINS, SLMP, TOYOPUC, KV): Fehlerantwort für eine zusammengefasste Anfrage -> Variablen
+    einzeln gelesen (nur die fehlende meldet Fehler); zu kurze Antwort ist ein Gerätefehler, keine Neuverbindung."""
+    from plc_common import Plc, Variable, get_driver
+    from plc_treiber.word_common import DeviceError, WordReader, short_answer
+    mem = {0: 1, 1: 2, 6: 7, 10: 0x0000, 11: 0x4120}            # D2 … D5 gibt es nicht; D10 = REAL 10.0
+    calls = []
+
+    class R(WordReader):
+        cap = None
+
+        def parse(self, address, dtype):
+            return "D", int(address[1:]), None
+
+        def open(self):
+            pass
+
+        def read_words(self, area, start, count):
+            calls.append((start, count))
+            if any(a not in mem for a in range(start, start + count)):
+                raise DeviceError("Adresse außerhalb des Bereichs")
+            n = min(count, R.cap or count)
+            if n < count:
+                raise short_answer(n, count)
+            return [mem[a] for a in range(start, start + count)]
+    plc = Plc(name="CP1E", driver="fins", params=get_driver("fins").normalize_params({"ip": "10.0.0.3"}))
+    vs = [Variable("a", "D0", "INT"), Variable("b", "D6", "INT"), Variable("c", "D3", "INT"),
+          Variable("r", "D10", "REAL")]
+    r = R(get_driver("fins"), plc, vs)
+    assert r.connect() == 3
+    out = r.read()
+    assert out[:2] == [1.0, 7.0] and np.isnan(out[2]) and out[3] == 10.0 and list(r.errors) == ["D3"]
+    calls.clear()
+    r.read()
+    assert len(calls) == 4                                       # künftig einzeln
+    R.cap = 1
+    out = r.read()
+    assert np.isnan(out[3]) and "zu kurz" in r.errors["D10"] and out[0] == 1.0

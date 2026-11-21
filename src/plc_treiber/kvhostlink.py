@@ -21,7 +21,7 @@ import threading
 
 from plc_i18n import N_, tr
 from plc_treiber.base import Driver, Param
-from plc_treiber.word_common import TYPES, WORD_TYPES, DeviceError, WordReader
+from plc_treiber.word_common import TYPES, WORD_TYPES, DeviceError, WordReader, short_answer
 
 # Gerät -> Zahlenbasis der Gerätenummer (16 = hexadezimal). Wortgeräte: 16 Bit je Gerät
 WORD_DEVICES = {"DM": 10, "EM": 10, "FM": 10, "ZF": 10, "W": 16, "TM": 10, "CM": 10, "VM": 10, "Z": 10}
@@ -129,7 +129,7 @@ class HostLinkClient:
         # Antwort: Werte durch Leerzeichen getrennt (ältere Modelle auch durch Komma)
         tokens = [t for t in re.split(r"[ ,]+", resp) if t]
         if len(tokens) < count:
-            raise ConnectionError(tr("KV-Antwort zu kurz: {0}").format(resp[:60]))
+            raise short_answer(len(tokens), count)
         return [int(t, 10) for t in tokens[:count]]
 
 

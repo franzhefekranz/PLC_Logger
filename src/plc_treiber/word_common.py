@@ -9,6 +9,10 @@ zuerst (übliche Ablage bei MELSEC, KEYENCE und TOYOPUC), Wörter selbst als vor
 Ein Treiber leitet ``WordReader`` ab und implementiert ``parse()`` (Adresse -> Bereich, Wortnummer, Bit), ``open()``,
 ``close_transport()`` und ``read_words(Bereich, Start, Anzahl)``. Gerätefehler (z. B. Adresse außerhalb des Bereichs)
 als ``DeviceError`` melden – sie betreffen nur die Variablen dieser Anfrage; Verbindungsfehler als ConnectionError/OSError.
+Eine zu kurze Antwort (Rahmen in Ordnung, weniger Wörter als angefragt) ist ein Gerätefehler: ``short_answer()``.
+
+Lehnt die Steuerung eine zusammengefasste Anfrage ab (Lücke oder geschützter Bereich dazwischen, zu kurze Antwort),
+werden deren Variablen einzeln gelesen – im selben Zyklus und für den Rest der Sitzung.
 """
 import struct
 
@@ -26,6 +30,12 @@ TYPES = list(WORD_TYPES)
 
 class DeviceError(Exception):
     """Fehlerantwort der Steuerung für eine Anfrage (Verbindung besteht weiter)."""
+
+
+def short_answer(got_words, count):
+    """DeviceError „Antwort zu kurz“ (die Steuerung lieferte ``got_words`` statt ``count`` Wörter)."""
+    return DeviceError(tr("Antwort zu kurz ({0} statt {1} Wörter) – „Wörter je Anfrage“ verkleinern")
+                       .format(got_words, count))
 
 
 def decode(words, offset, dtype, bit=None):
@@ -142,25 +152,47 @@ class WordReader(Reader):
         if not self._open:
             raise ConnectionError(tr("nicht verbunden"))
         out = [NAN] * len(self.vars)
-        for area, start, count, items in self.requests:
+        split = []
+        for k, (area, start, count, items) in enumerate(self.requests):
             try:
-                words = self.read_words(area, start, count)
+                words = self._fetch(area, start, count)
             # Fehlerantwort der Steuerung (z. B. Adresse gibt es nicht): nur diese Variablen ohne Wert, die Verbindung
-            # bleibt
+            # bleibt. Mehrere Variablen: vielleicht nur eine Lücke dazwischen – einzeln lesen, künftig einzeln anfragen
             except DeviceError as e:
-                for it in items:
-                    self.errors[it.address] = str(e)
+                if len(items) > 1:
+                    split.append(k)
+                    for it in items:
+                        try:
+                            self._decode_into(self._fetch(area, it.word, it.words), it.word, it, out)
+                        except DeviceError as e1:
+                            self.errors[it.address] = str(e1)
+                else:
+                    self.errors[items[0].address] = str(e)
                 continue
-            # Übertragungsfehler oder kaputte Antwort: als Verbindungsabbruch melden, der Logger verbindet neu
-            except (OSError, ConnectionError, struct.error, IndexError, ValueError) as e:
-                raise ConnectionError(str(e) or type(e).__name__) from None
             for it in items:
-                try:
-                    out[it.pos] = decode(words, it.word - start, it.dtype, it.bit)
-                    self.errors.pop(it.address, None)
-                except (IndexError, struct.error):
-                    self.errors[it.address] = tr("Antwort zu kurz")
+                self._decode_into(words, start, it, out)
+        for k in reversed(split):
+            area, _s, _c, items = self.requests[k]
+            self.requests[k:k + 1] = [[area, it.word, it.words, [it]] for it in items]
         return out
+
+    def _fetch(self, area, start, count):
+        """``read_words`` mit einheitlicher Fehlerbehandlung: DeviceError bleibt (Fehler der Anfrage), Übertragungsfehler
+        oder kaputte Antwort -> ConnectionError (der Logger verbindet neu)."""
+        try:
+            return self.read_words(area, start, count)
+        except DeviceError:
+            raise
+        except (OSError, ConnectionError, struct.error, IndexError, ValueError) as e:
+            raise ConnectionError(str(e) or type(e).__name__) from None
+
+    def _decode_into(self, words, start, it, out):
+        """Wert der Variable ``it`` aus den Wörtern einer Anfrage ab ``start`` in ``out`` eintragen."""
+        try:
+            out[it.pos] = decode(words, it.word - start, it.dtype, it.bit)
+            self.errors.pop(it.address, None)
+        except (IndexError, struct.error):
+            self.errors[it.address] = tr("Antwort zu kurz")
 
     def close(self):
         """Verbindung schließen (Fehler beim Schließen werden ignoriert)."""

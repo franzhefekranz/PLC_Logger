@@ -22,7 +22,7 @@ import threading
 
 from plc_i18n import N_, tr
 from plc_treiber.base import Driver, Param
-from plc_treiber.word_common import TYPES, DeviceError, WordReader, recv_exact
+from plc_treiber.word_common import TYPES, DeviceError, WordReader, recv_exact, short_answer
 
 # Gerät -> (Gerätecode, Zahlenbasis, Bitgerät)   (Quelle: SLMP-Handbuch SH080956, binärer Gerätecode)
 DEVICES = {
@@ -158,7 +158,7 @@ class SlmpClient:
             sub = 0x0000
         data = self.exchange(self.frame(0x0401, sub, spec + struct.pack("<H", count)))
         if len(data) < 2 * count:
-            raise ConnectionError(tr("SLMP-Antwort zu kurz"))
+            raise short_answer(len(data) // 2, count)
         return list(struct.unpack_from(f"<{count}H", data))
 
 

@@ -23,6 +23,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber fins, slmp, toyopuc, kvhostlink:** Lag ein nicht vorhandener oder geschützter Bereich in der Lücke
+  zwischen zusammengefassten Variablen, meldeten alle Variablen der Anfrage dauerhaft den Fehler – jetzt werden sie
+  einzeln gelesen, nur die wirklich fehlende meldet ihn. Eine zu kurze Antwort führte in jedem Zyklus zu einer
+  Neuverbindung; jetzt ist sie ein Fehler dieser Anfrage mit Hinweis auf „Wörter je Anfrage“.
 * **Treiber modbus / modbus_rtu:** Lag eine nicht belegte Adresse in der Lücke zwischen zusammengefassten Variablen,
   lehnte das Gerät die ganze Anfrage ab und alle Variablen darin meldeten dauerhaft „ungültige Adresse“ – jetzt werden
   sie einzeln gelesen, und nur die wirklich fehlende meldet den Fehler. Eine zu kurze Antwort (Gerät liefert weniger

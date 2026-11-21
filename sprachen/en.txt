@@ -5974,9 +5974,6 @@
 @ FINS-Fehler 0x{0:04X}: {1}
 > FINS error 0x{0:04X}: {1}
 
-@ FINS-Antwort zu kurz
-> FINS response too short
-
 @ Omron (FINS)
 > Omron (FINS)
 
@@ -6062,9 +6059,6 @@
 
 @ KV-Fehler {0}: {1} ({2})
 > KV error {0}: {1} ({2})
-
-@ KV-Antwort zu kurz: {0}
-> KV response too short: {0}
 
 @ Bitgeräte haben den Typ BOOL: {0}
 > Bit devices have the type BOOL: {0}
@@ -6949,9 +6943,6 @@
 @ SLMP-Fehler 0x{0:04X}: {1}
 > SLMP error 0x{0:04X}: {1}
 
-@ SLMP-Antwort zu kurz
-> SLMP response too short
-
 @ Wortzugriff auf Bitgeräte nur ab einem Vielfachen von 16, z. B. M0, M16, X10
 > Word access to bit devices only from a multiple of 16, e.g. M0, M16, X10
 
@@ -7228,9 +7219,6 @@
 @ TOYOPUC-Fehler 0x{0:02X}: {1}
 > TOYOPUC error 0x{0:02X}: {1}
 
-@ TOYOPUC-Antwort zu kurz
-> TOYOPUC response too short
-
 @ Einzelne Relais haben den Typ BOOL (16 Relais als Wort: z. B. M010W)
 > Single relays have the type BOOL (16 relays as a word: e.g. M010W)
 
@@ -7262,6 +7250,11 @@
 
 @ Bibliothek fehlt: {0}
 > Library missing: {0}
+
+# ---------------- plc_treiber/word_common.py
+
+@ Antwort zu kurz ({0} statt {1} Wörter) – „Wörter je Anfrage“ verkleinern
+> Answer too short ({0} instead of {1} words) – reduce “Words per request”
 
 # ---------------- plc_i18n.py
 
