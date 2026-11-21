@@ -408,6 +408,9 @@ class PlcSampler(threading.Thread):
                     self._put(rts, vals, [self.var_idx[p] for p in positions])
                 for note in reader.take_ring_notes():
                     r.emit(f"⚠ [{plc.name}] {note}")
+            take = getattr(reader, "take_notes", None)       # Hinweise des Treibers (z. B. Leseplan neu gebildet)
+            for note in (take() if take else []):
+                r.emit(f"⚠ [{plc.name}] {note}")
             # Takt: das nächste Ziel wird um das Intervall weitergeschoben (konstante Abtastrate trotz schwankender
             # Lesezeit). Ist das Lesen langsamer als das Intervall, wird der Takt neu gestartet.
             nxt += interval

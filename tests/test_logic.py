@@ -2815,3 +2815,40 @@ def test_pccc_group_split():
     calls.clear()
     r.read()
     assert sorted(calls) == ["N7:1", "N7:12", "N7:3"]          # künftig je Element eine Anfrage
+
+
+def test_s5_follows_moved_data_block(monkeypatch):
+    """S5: verschiebt sich ein DB (Nachladen/Komprimieren), wird das bei der nächsten Prüfung erkannt, der Leseplan
+    neu gebildet und ein Hinweis abgelegt; ein DB, der beim Verbinden fehlte, wird danach gefunden."""
+    import struct
+
+    import plc_treiber.s5as511 as s5
+    from plc_common import Plc, Variable, get_driver
+    mem = bytearray(0x10000)
+    state = {"db10": 0x2000, "db11": None}
+
+    class Fake:
+        def db_address(self, db):
+            addr = state["db10"] if db == 10 else state["db11"]
+            if addr is None:
+                raise s5.AS511Error(f"DB{db} nicht vorhanden")
+            return addr, 20
+
+        def read_memory(self, start, count):
+            return bytes(mem[start:start + count])
+    drv = get_driver("s5as511")
+    plc = Plc(name="S5", driver="s5as511", params=drv.normalize_params({"schnittstelle": "COM1"}))
+    r = s5.S5Reader(drv, plc, [Variable("a", "DB10.DW2", "INT"), Variable("b", "DB11.DW0", "INT")])
+    r.as511, r.lock, r.bases = Fake(), s5._port_lock("test"), {}
+    r.plan = r._requests()
+    r._db_check_at = 1e18                                       # erst einmal keine Prüfung
+    struct.pack_into(">h", mem, 0x2000 + 4, 111)
+    assert r.read()[0] == 111.0 and "DB11.DW0" in r.errors
+    state["db10"], state["db11"] = 0x3000, 0x4000               # nachgeladen bzw. neu übertragen
+    struct.pack_into(">h", mem, 0x3000 + 4, 222)
+    struct.pack_into(">h", mem, 0x4000, 7)
+    assert r.read()[0] == 111.0                                 # alte Kopie, bis geprüft wird
+    r._db_check_at = 0.0
+    out = r.read()
+    assert out == [222.0, 7.0] and not r.errors and "neu gebildet" in r.take_notes()[0]
+    assert r.take_notes() == []

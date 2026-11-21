@@ -18,6 +18,8 @@ S5-Daten liegen im Motorola-Format (höherwertiges Byte zuerst); ein Datenwort D
 
 Ablauf (wie libnodave): beim Verbinden die Systemdaten (Funktion 18h: Lage von PAE, PAA, Merkern, Timern, Zählern)
 lesen, Datenbaustein-Adressen bei Bedarf mit Funktion 1Ah erfragen, dann Speicherbereiche mit Funktion 04h lesen.
+Datenbausteine verschieben sich im Betrieb (Nachladen aus dem PG: neue Kopie hinten, Komprimieren: alles rückt nach
+vorn) – deshalb werden ihre Adressen alle ``DB_CHECK_S`` Sekunden neu erfragt und der Leseplan bei Bedarf neu gebildet.
 Bibliothek: pyserial.
 """
 import re
@@ -32,6 +34,7 @@ from plc_treiber.base import NAN, Driver, Param, Reader
 # Ablehnung
 STX, ETX, EOT, ACK, DLE, NAK = 0x02, 0x03, 0x04, 0x06, 0x10, 0x15
 TYPES = ["BOOL", "BYTE", "WORD", "INT", "DWORD", "DINT", "REAL", "S5TIME"]
+DB_CHECK_S = 30.0          # Adressen der Datenbausteine so oft neu erfragen
 SIZE = {"BOOL": 1, "BYTE": 1, "WORD": 2, "INT": 2, "S5TIME": 2, "DWORD": 4, "DINT": 4, "REAL": 4}
 _AREA_LETTER = {"E": "E", "I": "E", "A": "A", "Q": "A", "M": "M", "F": "M"}
 # S5-Datenwörter: DW (Wort), DL/DR (linkes/rechtes Byte), DD (Doppelwort), D4.3 (Bit 3 im Datenwort 4)
@@ -278,6 +281,7 @@ class S5Reader(Reader):
             it.pos, it.area, it.db, it.off, it.bit, it.dtype, it.address = pos, area, db, off, bit, v.dtype, v.address
             it.size = SIZE[v.dtype]
             self.items.append(it)
+        self._db_check_at = 0.0          # nächste Prüfung der DB-Adressen (time.monotonic)
         self.max_bytes = max(2, int(plc.params.get("max_bytes", 64)))
         self.gap = max(0, int(plc.params.get("luecke", 8)))
 
@@ -336,6 +340,7 @@ class S5Reader(Reader):
                 self.bases = self.as511.system_data()
                 self.dbs = {}
                 self.plan = self._requests()
+                self._db_check_at = time.monotonic() + DB_CHECK_S
         except (AS511Error, OSError) as e:
             self.close()
             raise ConnectionError(f"{port}: {e}") from None
@@ -348,6 +353,19 @@ class S5Reader(Reader):
         """
         if self.as511 is None:
             raise ConnectionError(tr("nicht verbunden"))
+        if self.dbs and time.monotonic() >= self._db_check_at:
+            self._db_check_at = time.monotonic() + DB_CHECK_S
+            try:
+                with self.lock:
+                    if self._check_dbs():
+                        # Fehler der DB-Variablen neu bewerten (z. B. DB inzwischen übertragen), Leseplan neu bilden
+                        db_addrs = {it.address for it in self.items if it.area == "DB"}
+                        self.errors = {k: v for k, v in self.errors.items() if k not in db_addrs}
+                        self.plan = self._requests()
+                        self.notes.append(tr("S5: Lage der Datenbausteine geändert (nachgeladen/komprimiert) – "
+                                             "Leseplan neu gebildet"))
+            except OSError as e:
+                raise ConnectionError(str(e)) from None
         out = [NAN] * len(self.vars)
         for start, end, entries in self.plan:
             try:
@@ -364,6 +382,19 @@ class S5Reader(Reader):
                 out[it.pos] = decode(raw[addr - start: addr - start + it.size], it.dtype, it.bit)
                 self.errors.pop(it.address, None)
         return out
+
+    def _check_dbs(self):
+        """Adressen der verwendeten Datenbausteine neu erfragen -> True, wenn sich eine Adresse oder Länge geändert hat
+        (bzw. ein DB hinzugekommen oder verschwunden ist)."""
+        changed = False
+        for db in list(self.dbs):
+            try:
+                info = self.as511.db_address(db)
+            except AS511Error as e:
+                info = (None, str(e))
+            if info != self.dbs[db]:
+                self.dbs[db], changed = info, True
+        return changed
 
     def close(self):
         """Schnittstelle schließen."""

@@ -102,14 +102,22 @@ class Reader:
     variables: Liste von Variablen (ohne berechnete) mit ``address``, ``dtype``, ``block``, ``block_idx``, ``name``.
     ``read()`` liefert die Werte in derselben Reihenfolge (float, NaN = nicht lesbar). Fehler einzelner Variablen
     stehen in ``errors`` ({Adresse: Text}) und stören die übrigen nicht. Ist die Verbindung gestört, lösen
-    ``connect()``/``read()`` eine Ausnahme aus (z. B. ConnectionError); der Lese-Thread verbindet dann neu."""
+    ``connect()``/``read()`` eine Ausnahme aus (z. B. ConnectionError); der Lese-Thread verbindet dann neu.
+    Einmalige Hinweise (z. B. „Leseplan neu gebildet“) legt ein Treiber in ``notes`` ab; der Lese-Thread holt sie mit
+    ``take_notes()`` ab und zeigt sie als Meldung."""
 
     def __init__(self, driver, plc, variables):
         """Leser für die Steuerung ``plc`` und ihre Variablen anlegen (noch ohne Verbindung). ``errors`` sammelt Fehler
-        einzelner Variablen.
+        einzelner Variablen, ``notes`` einmalige Hinweise.
         """
         self.driver, self.plc, self.vars = driver, plc, list(variables)
         self.errors = {}
+        self.notes = []
+
+    def take_notes(self):
+        """Gesammelte Hinweise abholen (und löschen)."""
+        notes, self.notes = getattr(self, "notes", []), []
+        return notes
 
     def connect(self) -> int:
         """Verbindung aufbauen und prüfen. Rückgabe: Anzahl der lesbaren Variablen."""

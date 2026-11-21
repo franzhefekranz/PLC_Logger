@@ -23,6 +23,10 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Treiber s5as511:** Nach dem Nachladen eines Datenbausteins aus dem PG las der Logger unbemerkt die alte, ungültige
+  Kopie weiter (Werte eingefroren), nach dem Komprimieren fremden Speicher (Unsinnswerte). Die Adressen der
+  Datenbausteine werden jetzt alle 30 s neu erfragt; ändern sie sich, wird der Leseplan neu gebildet und eine Meldung
+  ausgegeben. Ein DB, der beim Verbinden fehlte, wird so auch später gefunden.
 * **Ringpuffer:** War der Puffer in der Steuerung dauerhaft zu klein, entstand bei jeder Abholung eine eigene
   Meldung „… Datensätze verloren“ (bei 250 ms Abholintervall vier je Sekunde). Jetzt kommt die erste Meldung sofort,
   danach höchstens eine je Minute mit der Summe.

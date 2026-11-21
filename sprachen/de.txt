@@ -6680,6 +6680,9 @@
 @ {0}: Schnittstelle lässt sich nicht öffnen: {1}
 > 
 
+@ S5: Lage der Datenbausteine geändert (nachgeladen/komprimiert) – Leseplan neu gebildet
+> 
+
 @ Siemens S5 (PG-Schnittstelle AS511)
 > 
 
