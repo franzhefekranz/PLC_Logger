@@ -99,7 +99,8 @@ def server_certificate(s):
         host = socket.gethostname()
         asyncio.run(setup_self_signed_certificate(
             Path(key), Path(cert), APP_URI, host, [ExtendedKeyUsageOID.SERVER_AUTH],
-            {"countryName": "DE", "organizationName": "PLC Datenlogger", "commonName": f"PLC Datenlogger@{host}"}))
+            {"countryName": "DE", "organizationName": "PLC Datenlogger",
+             "commonName": f"PLC Datenlogger@{host}"[:64]}))       # X.509: höchstens 64 Zeichen
     try:
         os.chmod(key, 0o600)                       # privater Schlüssel: nur für den Benutzer des Loggers
     except OSError:
