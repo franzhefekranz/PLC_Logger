@@ -23,6 +23,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Wiki:** Verweise auf eine Sprungmarke vor einem Absatz (z. B. „Zoomen und Zeitachsen“) führten von anderen
+  Wiki-Seiten ins Leere – sie zeigen jetzt auf die Seite des Kapitels mit dem passenden Anker.
 * **Übersetzung:** Ersatztexte für unbekannte Fehlercodes der Treiber („siehe Handbuch“, „unbekannt“ …) erschienen
   auch in der englischen Oberfläche auf Deutsch. `tools/extract_tr.py` erfasst jetzt Ersatztexte in
   `tr(TABELLE.get(code, "…"))` und warnt bei `tr(f"…")`, das sich nicht übersetzen lässt.

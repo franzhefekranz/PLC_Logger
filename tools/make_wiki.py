@@ -40,15 +40,23 @@ def page_name(title):
 
 
 def labels(rst):
-    """Sprungmarken der Anleitung -> Überschrift, vor der sie stehen."""
-    lines, out = rst.split("\n"), {}
+    """Sprungmarken der Anleitung -> (Überschrift, vor der sie stehen, oder None bei einem Absatz; Titel des Kapitels,
+    in dem sie stehen)."""
+    lines, out, chapter = rst.split("\n"), {}, None
+
+    def underline(k, chars):
+        return k < len(lines) and re.fullmatch(rf"[{chars}]{{3,}}", lines[k]) is not None
     for i, line in enumerate(lines):
+        if underline(i + 1, "=") and line.strip() and not underline(i, "="):
+            chapter = line.strip()
         m = re.match(r"^\.\. _([\w-]+):$", line)
         if m:
             j = i + 1
             while j < len(lines) and (not lines[j].strip() or lines[j].startswith(".. _")):
                 j += 1
-            out[m.group(1)] = lines[j].strip()
+            heading = j < len(lines) and underline(j + 1, "=\\-~^")
+            out[m.group(1)] = (lines[j].strip() if heading else None,
+                               lines[j].strip() if heading and underline(j + 1, "=") else chapter)
     return out
 
 
@@ -77,10 +85,14 @@ def write_manual(target, repo, source, prefix):
         for h in re.findall(r"(?m)^#{3,6} (.+)$", body):
             where.setdefault(slug(h), (name, slug(h)))
     label_to = {}
-    for lab, head in labels(rst).items():
-        s = slug(head.replace("``", "`"))
+    pages = {slug(head): name for head, name, _b in chapters}
+    for lab, (head, chapter) in labels(rst).items():
+        s = slug(head.replace("``", "`")) if head else None
         if s in where:
             label_to[lab] = where[s]
+        elif chapter and slug(chapter.replace("``", "`")) in pages:
+            # Marke vor einem Absatz: Seite des Kapitels, Anker = Marke (pandoc setzt dort id="marke")
+            label_to[lab] = (pages[slug(chapter.replace("``", "`"))], lab)
 
     def fix_links(text, own):
         """Interne Verweise [Text](#marke) auf die Wiki-Seite des Kapitels umbiegen, in dem die Marke steht."""
