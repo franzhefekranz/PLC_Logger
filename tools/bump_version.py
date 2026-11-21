@@ -115,6 +115,8 @@ def main(argv):
         print(notes or f"Version {version}")
         return 0
     if "--check-tag" in argv:
+        if len(argv) <= argv.index("--check-tag") + 1:
+            sys.exit("FEHLER: --check-tag braucht einen Tag, z. B. --check-tag v3.25.0")
         tag = argv[argv.index("--check-tag") + 1]
         tag = tag.rsplit("/", 1)[-1]                          # auch refs/tags/v3.0.0
         version = fmt(current_version())
@@ -145,7 +147,8 @@ def main(argv):
     print("[OK] src/plc_common.py und CHANGELOG.md aktualisiert")
     if "--tag" in argv:
         git("add", COMMON, CHANGELOG)
-        git("commit", "-q", "-m", f"Version {new_s}")
+        # nur diese beiden Dateien – sonst landete alles schon Vorgemerkte unbemerkt im Versionscommit
+        git("commit", "-q", "-m", f"Version {new_s}", "--", COMMON, CHANGELOG)
         git("tag", "-a", f"v{new_s}", "-m", f"PLC Datenlogger {new_s}")
         print(f"[OK] Commit und Tag v{new_s} angelegt. Hochladen (startet die Release-Workflows):\n"
               f"     git push && git push origin v{new_s}")

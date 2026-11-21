@@ -23,6 +23,11 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ### Behoben
 
+* **Übersetzung:** Ersatztexte für unbekannte Fehlercodes der Treiber („siehe Handbuch“, „unbekannt“ …) erschienen
+  auch in der englischen Oberfläche auf Deutsch. `tools/extract_tr.py` erfasst jetzt Ersatztexte in
+  `tr(TABELLE.get(code, "…"))` und warnt bei `tr(f"…")`, das sich nicht übersetzen lässt.
+* **Versionswechsel:** `bump_version.py --tag` committet nur noch `plc_common.py` und `CHANGELOG.md` (bisher auch alles
+  andere schon Vorgemerkte); `--check-tag` ohne Tag gibt eine klare Meldung.
 * **Treiber s5as511:** Nach dem Nachladen eines Datenbausteins aus dem PG las der Logger unbemerkt die alte, ungültige
   Kopie weiter (Werte eingefroren), nach dem Komprimieren fremden Speicher (Unsinnswerte). Die Adressen der
   Datenbausteine werden jetzt alle 30 s neu erfragt; ändern sie sich, wird der Leseplan neu gebildet und eine Meldung

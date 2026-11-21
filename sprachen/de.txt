@@ -5546,6 +5546,9 @@
 @ ADS-Fehler 0x{0:X}: {1}
 > 
 
+@ siehe Beckhoff-Infosys ADS Return Codes
+> 
+
 @ AMS-Net-ID mit 6 Zahlen erwartet, z. B. 5.12.34.56.1.1
 > 
 
@@ -5974,6 +5977,9 @@
 @ FINS-Fehler 0x{0:04X}: {1}
 > 
 
+@ siehe Handbuch W342
+> 
+
 @ Omron (FINS)
 > 
 
@@ -6058,6 +6064,9 @@
 > 
 
 @ KV-Fehler {0}: {1} ({2})
+> 
+
+@ unbekannt
 > 
 
 @ Bitgeräte haben den Typ BOOL: {0}
@@ -6953,6 +6962,9 @@
 > 
 
 @ SLMP-Fehler 0x{0:04X}: {1}
+> 
+
+@ siehe Handbuch
 > 
 
 @ Wortzugriff auf Bitgeräte nur ab einem Vielfachen von 16, z. B. M0, M16, X10

@@ -21,6 +21,19 @@ def escape(s):
     """Text für die Sprachdatei: Rückstrich verdoppeln, Zeilenumbruch als \n."""
     return s.replace("\\", "\\\\").replace("\n", "\\n")
 
+def _fallbacks(arg):
+    """Feste Ersatztexte im Argument von tr(): tr(X.get(k, "Text")), tr(a or "Text"), tr(a if b else "Text")."""
+    if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute) and arg.func.attr == "get" \
+            and len(arg.args) == 2:
+        arg = arg.args[1]
+    if isinstance(arg, ast.BoolOp):
+        cands = arg.values
+    elif isinstance(arg, ast.IfExp):
+        cands = [arg.body, arg.orelse]
+    else:
+        cands = [arg]
+    return [c.value for c in cands if isinstance(c, ast.Constant) and isinstance(c.value, str) and c.value.strip()]
+
 def collect(pfx, folder):
     """Alle Texte aus tr("…")/N_("…") der Programmdateien <pfx>_*.py und der Treiber in Reihenfolge des Auftretens.
 
@@ -36,12 +49,19 @@ def collect(pfx, folder):
         tree = ast.parse(open(path, encoding="utf-8").read())
         nodes = sorted((n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name)
                         and n.func.id in ("tr", "N_") and n.args), key=lambda n: (n.lineno, n.col_offset))
+        rel = os.path.relpath(path, folder).replace(os.sep, "/")
         for n in nodes:
             a = n.args[0]
-            if isinstance(a, ast.Constant) and isinstance(a.value, str) and a.value.strip():
-                if a.value not in where:
-                    where[a.value] = os.path.relpath(path, folder).replace(os.sep, "/")
-                    keys.append(a.value)
+            if isinstance(a, (ast.JoinedStr, ast.BinOp)):     # f"…" bzw. "a" + b: so nie übersetzbar
+                print(f"WARNUNG {rel}:{n.lineno}: tr() mit zusammengesetztem Text wird nicht übersetzt "
+                      f"(Platzhalter {{0}} und .format() verwenden)", file=sys.stderr)
+                continue
+            # fester Text; bei tr(TABELLE.get(code, "Ersatz")) u. Ä. der Ersatztext (die Tabelle ist mit N_ markiert)
+            texts = [a.value] if isinstance(a, ast.Constant) and isinstance(a.value, str) else _fallbacks(a)
+            for t in texts:
+                if t.strip() and t not in where:
+                    where[t] = rel
+                    keys.append(t)
         # Texte der Webseiten: Markierungen {{T:…}} / {{J:…}} in Zeichenketten (siehe plc_web.localize)
         for n in ast.walk(tree):
             if isinstance(n, ast.Constant) and isinstance(n.value, str) and "{{" in n.value:
