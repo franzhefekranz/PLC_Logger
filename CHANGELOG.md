@@ -14,6 +14,8 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+## [3.25.2] – 2026-11-25
+
 ### Behoben
 
 - Import von IO-Listen und Variablen aus Excel/ODS mit mehreren Tabellenblättern: Statt stur das erste Blatt zu lesen,
@@ -1004,7 +1006,8 @@ Das Skript setzt `APP_VERSION`, macht aus dem Abschnitt *Unveröffentlicht* dies
 Version (mit Datum) und legt einen neuen, leeren Abschnitt *Unveröffentlicht* an. Die Workflows brechen ab, wenn der
 Tag nicht zu `APP_VERSION` passt; der Text des Release kommt aus dem Abschnitt der Version in dieser Datei.
 
-[Unveröffentlicht]: ../../compare/v3.25.1...HEAD
+[Unveröffentlicht]: ../../compare/v3.25.2...HEAD
+[3.25.2]: ../../releases/tag/v3.25.2
 [3.25.1]: ../../releases/tag/v3.25.1
 [3.25.0]: ../../releases/tag/v3.25.0
 [3.24.0]: ../../releases/tag/v3.24.0
