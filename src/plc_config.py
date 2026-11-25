@@ -152,8 +152,10 @@ class AssignTree(QTreeWidget):
 # Hauptfenster des Konfigurationsprogramms.
 class ConfigWindow(QMainWindow):
     """Konfigurationsfenster: bearbeitet die Konfigurationsdatei von plc_logger.py."""
-    def __init__(self, path=None):
-        """Fenster aufbauen und die Konfiguration ``path`` (sonst die zuletzt benutzte) laden.
+    def __init__(self, path=None, new=False):
+        """Fenster aufbauen und die Konfiguration ``path`` (sonst die zuletzt benutzte) laden; ``new``: mit einer neuen,
+        leeren Konfiguration beginnen (keine Datei lesen). Lässt sich die Datei nicht lesen (z. B. keine Konfiguration
+        des Loggers), erscheint eine Meldung und das Fenster beginnt ebenfalls leer – statt beim Start abzustürzen.
 
         Aufbau von oben nach unten: Reiter mit den Einstellungen (Projekt & Steuerungen, Aufzeichnung, Anzeige,
         Webserver & Headless, Datenbank, Trigger & Ereignisse, Berichte), darunter links der Zuordnungsbaum mit den
@@ -165,7 +167,7 @@ class ConfigWindow(QMainWindow):
         self.menuBar().setNativeMenuBar(sys.platform == "darwin")
         self.resize(1300, 820)
         # Pfad der aktuell bearbeiteten Konfigurationsdatei: Startparameter, sonst die zuletzt benutzte Datei ('' = neu, ungespeichert).
-        self.path = os.path.abspath(path) if path else last_config_path()
+        self.path = "" if new else (os.path.abspath(path) if path else last_config_path())
         # Zähler für Variablen-IDs (stabil, auch wenn sich Tabellenzeilen verschieben).
         self._uid = 0
         # Während Eigenschaften programmatisch in die Felder geschrieben werden, sollen die Felder keine Änderungen melden.
@@ -473,7 +475,16 @@ class ConfigWindow(QMainWindow):
         self.table.setHorizontalHeaderLabels(VAR_COLS)
         self.table.horizontalHeaderItem(C_REC).setToolTip(REC_TIP)
         self.table.horizontalHeaderItem(C_DISP).setToolTip(DISP_TIP)
-        self.table.horizontalHeader().setSectionResizeMode(C_NAME, QHeaderView.ResizeMode.Stretch)
+        # Spalten: alle von Hand verbreiterbar (bisher füllte „Name“ fest den Rest und ließ sich nicht ziehen), die letzte
+        # (Formel) füllt den Rest; breiter als das Fenster -> waagrechter Rollbalken. Lange Namen wie
+        # „Anlage.Motor[12].Strom“ werden in der Mitte gekürzt, Anfang und Ende bleiben lesbar. Die Breiten merkt sich
+        # das Programm (Einstellung „konfig_spalten“).
+        hh = self.table.horizontalHeader()
+        hh.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        hh.setStretchLastSection(True)
+        self.table.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+        self.table.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self._columns_restored = self._restore_var_columns()
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         # Änderung des Namens -> Baum aktualisieren; Doppelklick auf die Formelspalte -> Formeleditor.
         self.table.itemChanged.connect(self.on_var_item_changed)
@@ -548,14 +559,51 @@ class ConfigWindow(QMainWindow):
 
         # Beim Start die vorhandene Konfigurationsdatei laden (Verbindung, Diagramme, Variablen, Blöcke) und das Fenster-Icon setzen.
         self.build_menu()
-        self.fill(*load_config(self.path, alle=True), blocks=load_blocks(self.path), plcs=load_plcs(self.path))
-        self.triggers = load_triggers(self.path)
-        self._update_trigger_summary()
+        try:
+            self.fill(*load_config(self.path, alle=True), blocks=load_blocks(self.path), plcs=load_plcs(self.path))
+            self.triggers = load_triggers(self.path)
+            self._update_trigger_summary()
+        except Exception as e:                # Datei unlesbar: leer beginnen, die Datei bleibt unverändert
+            msg = tr("{0}\n\nDie Datei konnte nicht gelesen werden:\n{1}\n\nEs wird eine neue, leere Konfiguration "
+                     "angezeigt; die Datei bleibt unverändert.").format(self.path, e)
+            self.new_config()
+            QTimer.singleShot(0, lambda: QMessageBox.warning(self, tr("Konfiguration laden"), msg))
         if load_errors():
             QTimer.singleShot(800, lambda: self.statusBar().showMessage(
                 tr("Nicht alle Treiber konnten geladen werden – Menü Treiber › Installierte Treiber"), 15000))
         self.setWindowIcon(app_icon(program="konfiguration"))  # eigenes Icon (das konfigurierte gilt dem Logger)
         self.update_title()
+        if not self._columns_restored:
+            self._fit_var_columns()
+
+    # ---------------------------------------------------------------------------------------
+    # Spaltenbreiten der Variablentabelle
+    # ---------------------------------------------------------------------------------------
+    VAR_COL_MAX = 360                         # Höchstbreite beim automatischen Anpassen (von Hand beliebig)
+
+    def _fit_var_columns(self):
+        """Spalten nach dem Inhalt bemessen (höchstens VAR_COL_MAX Pixel); danach von Hand änderbar."""
+        self.table.resizeColumnsToContents()
+        for c in range(self.table.columnCount() - 1):
+            if self.table.columnWidth(c) > self.VAR_COL_MAX:
+                self.table.setColumnWidth(c, self.VAR_COL_MAX)
+
+    def _restore_var_columns(self):
+        """Gespeicherte Spaltenbreiten übernehmen -> True, wenn vorhanden und passend (gleiche Spaltenzahl)."""
+        from plc_common import load_settings
+        widths = load_settings().get("konfig_spalten")
+        if not isinstance(widths, list) or len(widths) != self.table.columnCount():
+            return False
+        for c, w in enumerate(widths[:-1]):
+            if isinstance(w, int) and 20 <= w <= 2000:
+                self.table.setColumnWidth(c, w)
+        return True
+
+    def closeEvent(self, ev):
+        """Beim Schließen die Spaltenbreiten der Variablentabelle merken."""
+        from plc_common import save_settings
+        save_settings(konfig_spalten=[self.table.columnWidth(c) for c in range(self.table.columnCount())])
+        super().closeEvent(ev)
 
     # ---------------------------------------------------------------------------------------
     # Menü und Fenstertitel
@@ -2737,9 +2785,8 @@ def main(argv=None):
     splash, res = choose("config", current, explicit=bool(explicit))
     if res is None:
         return 0
-    w = ConfigWindow(res["path"] or None)
-    if res["new"]:
-        w.new_config()
+    # „Neu“: keine Datei lesen (bisher wurde erst die zuletzt benutzte geladen – war sie unlesbar, brach der Start ab)
+    w = ConfigWindow(res["path"] or None, new=res["new"])
     app.setWindowIcon(w.windowIcon())
     w.show()
     splash.close()

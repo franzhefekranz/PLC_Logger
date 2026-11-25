@@ -131,7 +131,8 @@ def recent_configs(limit: int = 10) -> list:
     """Zuletzt benutzte Konfigurationsdateien (neueste zuerst, nur vorhandene)."""
     out = []
     for p in load_settings().get("zuletzt", []):
-        if isinstance(p, str) and p.lower().endswith(".json") and p not in out and quick_exists(p):
+        if isinstance(p, str) and p.lower().endswith(".json") and not p.lower().endswith(".iocheck.json") \
+                and p not in out and quick_exists(p):
             out.append(p)
         if len(out) >= limit:
             break
@@ -706,7 +707,11 @@ def read_config_store(path):
                 "bitte einmalig umwandeln: Konfigurationsprogramm › Datei › INI-Datei umwandeln … "
                 "(oder tools/ini2json.py).") from None
         raise ConfigFormatError(f"„{os.path.basename(path)}“ ist keine gültige JSON-Datei: {e}") from None
-    return json_to_cp(doc)
+    try:
+        return json_to_cp(doc)
+    except ConfigFormatError as e:            # Dateiname dazu: welche Datei ist gemeint?
+        raise ConfigFormatError(f"„{os.path.basename(path)}“: {e} – keine Konfiguration des PLC Datenloggers "
+                                "(z. B. IO-Check-Projekt oder andere JSON-Datei)?") from None
 
 
 def write_config_store(cp, path):
@@ -933,8 +938,24 @@ def last_config_path() -> str:
     return CONFIG_FILE
 
 
+def is_config_file(path: str) -> bool:
+    """True, wenn ``path`` eine lesbare Konfiguration des Loggers ist (oder noch nicht existiert bzw. leer ist –
+    dann entsteht sie beim Speichern). IO-Check-Projekte und andere JSON-Dateien -> False."""
+    if str(path).lower().endswith(".iocheck.json"):
+        return False
+    try:
+        read_config_store(path)
+        return True
+    except (ConfigFormatError, OSError, UnicodeDecodeError):
+        return False
+
+
 def remember_config_path(path: str):
-    """Merkt sich die Konfigurationsdatei für den nächsten Start (Fehler beim Schreiben sind unkritisch)."""
+    """Merkt sich die Konfigurationsdatei für den nächsten Start (Fehler beim Schreiben sind unkritisch). Dateien, die
+    keine Konfiguration sind (z. B. ein IO-Check-Projekt, per Doppelklick mit dem Logger geöffnet), werden nicht
+    gemerkt – sonst stünden sie im Startbild und das Konfigurationsprogramm öffnete sie beim nächsten Start."""
+    if os.path.exists(path) and not is_config_file(path):
+        return
     try:
         with open(LAST_FILE, "w", encoding="utf-8") as f:
             f.write(os.path.abspath(path))

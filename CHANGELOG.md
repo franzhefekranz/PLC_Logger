@@ -14,6 +14,20 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+* **Konfigurationsprogramm:** War die zuletzt benutzte Datei keine Konfiguration des Loggers (z. B. eine leere oder
+  andere JSON-Datei), brach das Programm beim Start mit „Unbekannter Aufbau der Konfigurationsdatei“ ab – auch bei
+  „Neue Konfiguration“, weil vorher die zuletzt benutzte Datei geladen wurde. Jetzt liest „Neu“ keine Datei, eine
+  unlesbare Datei führt zu einer Meldung (mit Dateiname) und das Programm startet leer; die Datei bleibt unverändert.
+  Ursache solcher Einträge: Wurde z. B. ein IO-Check-Projekt oder eine andere JSON-Datei mit dem Logger geöffnet
+  (Doppelklick), stand sie danach als „zuletzt benutzte Konfiguration“ im Startbild. Gemerkt werden jetzt nur noch
+  echte Konfigurationen; IO-Check-Projekte erscheinen nicht mehr in der Liste. Das Dateiformat hat sich nicht geändert.
+* **Konfigurationsprogramm:** Die Spalten der Variablentabelle ließen sich nicht verbreitern („Name“ füllte fest den
+  Rest), lange Variablen- und Strukturnamen sowie ähnliche Achsennamen waren nicht zu unterscheiden. Jetzt lässt sich
+  jede Spalte ziehen, beim ersten Start richten sie sich nach dem Inhalt, lange Namen werden in der Mitte gekürzt
+  (Anfang und Ende bleiben lesbar), und die Breiten bleiben für den nächsten Start erhalten.
+
 ## [3.25.0] – 2026-11-21
 
 ### Neu

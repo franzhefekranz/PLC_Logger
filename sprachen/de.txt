@@ -998,6 +998,12 @@
 @ Speichern unter…
 > 
 
+@ {0}\n\nDie Datei konnte nicht gelesen werden:\n{1}\n\nEs wird eine neue, leere Konfiguration angezeigt; die Datei bleibt unverändert.
+> 
+
+@ Konfiguration laden
+> 
+
 @ Nicht alle Treiber konnten geladen werden – Menü Treiber › Installierte Treiber
 > 
 
@@ -1506,9 +1512,6 @@
 > 
 
 @ Konfiguration speichern unter
-> 
-
-@ Konfiguration laden
 > 
 
 @ {0}\n\nDie Datei konnte nicht gelesen werden:\n{1}

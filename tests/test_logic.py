@@ -2852,3 +2852,20 @@ def test_s5_follows_moved_data_block(monkeypatch):
     out = r.read()
     assert out == [222.0, 7.0] and not r.errors and "neu gebildet" in r.take_notes()[0]
     assert r.take_notes() == []
+
+
+def test_remember_only_real_configs(tmp_path, monkeypatch):
+    """Nur echte Konfigurationen werden gemerkt (Startbild, nächster Start); IO-Check-Projekte und fremde JSON-Dateien
+    nicht. Eine unlesbare Datei nennt im Fehler ihren Namen."""
+    import plc_common
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    monkeypatch.setattr(plc_common, "LAST_FILE", str(tmp_path / "zuletzt.txt"))
+    good, other, io = tmp_path / "anlage.json", tmp_path / "grafana.json", tmp_path / "pruefung.iocheck.json"
+    plc_common.save_config(plc_common.default_connection(), [plc_common.Chart()], [], str(good))
+    other.write_text('{"dashboard": {}}', encoding="utf-8")
+    io.write_text('{"signale": []}', encoding="utf-8")
+    for p in (good, other, io):
+        plc_common.remember_config_path(str(p))
+    assert plc_common.recent_configs() == [str(good)] and plc_common.last_config_path() == str(good)
+    with pytest.raises(plc_common.ConfigFormatError, match="grafana.json"):
+        plc_common.read_config_store(str(other))

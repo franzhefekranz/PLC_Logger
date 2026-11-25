@@ -397,6 +397,41 @@ def plc_netz_fake(fake):
     return plc_netz.Netz(run=fake)
 
 
+def test_config_window_survives_unreadable_file(qt_log, tmp_path, monkeypatch):
+    """Konfigurationsprogramm: ist die zuletzt benutzte Datei keine Konfiguration (z. B. „{}“), startet es leer mit
+    Meldung statt abzustürzen; „Neu“ liest gar keine Datei (Forum, Version 3.23.0). Spalten der Variablentabelle
+    lassen sich verbreitern, die Breiten werden gemerkt."""
+    from PySide6.QtWidgets import QApplication
+
+    import plc_common
+    import plc_config
+    monkeypatch.setattr(plc_common, "SETTINGS_FILE", str(tmp_path / "einstellungen.json"))
+    bad = tmp_path / "kaputt.json"
+    bad.write_text("{}", encoding="utf-8")
+    shown = []
+    monkeypatch.setattr(plc_config.QMessageBox, "warning", lambda *a, **k: shown.append(a[2]))
+    monkeypatch.setattr(plc_config, "last_config_path", lambda: str(bad))
+    w = plc_config.ConfigWindow(str(bad))
+    QApplication.processEvents()
+    assert w.path == "" and shown and "kaputt.json" in shown[0]
+    assert bad.read_text(encoding="utf-8") == "{}"           # Datei unverändert
+    w.close()
+    shown.clear()
+    w = plc_config.ConfigWindow(None, new=True)               # „Neu“ im Startbild
+    QApplication.processEvents()
+    assert w.path == "" and not shown
+    # Spalten der Variablentabelle: alle von Hand verbreiterbar, Breiten werden gemerkt
+    from PySide6.QtWidgets import QHeaderView
+    hh = w.table.horizontalHeader()
+    assert all(hh.sectionResizeMode(c) == QHeaderView.ResizeMode.Interactive for c in range(w.table.columnCount()))
+    w.table.setColumnWidth(plc_config.C_NAME, 333)
+    w.close()
+    assert plc_common.load_settings()["konfig_spalten"][plc_config.C_NAME] == 333
+    w = plc_config.ConfigWindow(None, new=True)
+    assert w.table.columnWidth(plc_config.C_NAME) == 333
+    w.close()
+
+
 def test_config_window(qt_log, demo_config):
     """Konfigurationsprogramm: Variablentabelle und Filter, alle Unterdialoge öffnen, Dialoge für OPC-UA-Server und
     Benachrichtigungen auswerten, Konfiguration speichern.

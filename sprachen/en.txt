@@ -998,6 +998,12 @@
 @ Speichern unter…
 > Save as…
 
+@ {0}\n\nDie Datei konnte nicht gelesen werden:\n{1}\n\nEs wird eine neue, leere Konfiguration angezeigt; die Datei bleibt unverändert.
+> {0}\n\nThe file could not be read:\n{1}\n\nA new, empty configuration is shown; the file remains unchanged.
+
+@ Konfiguration laden
+> Load configuration
+
 @ Nicht alle Treiber konnten geladen werden – Menü Treiber › Installierte Treiber
 > Not all drivers could be loaded – menu Driver › Installed drivers
 
@@ -1507,9 +1513,6 @@
 
 @ Konfiguration speichern unter
 > Save configuration as
-
-@ Konfiguration laden
-> Load configuration
 
 @ {0}\n\nDie Datei konnte nicht gelesen werden:\n{1}
 > {0}\n\nThe file could not be read:\n{1}
