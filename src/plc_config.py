@@ -2201,7 +2201,10 @@ class ConfigWindow(QMainWindow):
         if not path:
             return
         try:
-            header, rows = read_table(path)
+            # mehrere Tabellenblätter: das mit „Name“ und den meisten bekannten Spalten
+            known = {c.casefold() for c in VAR_IO_COLS}
+            header, rows = read_table(path, score=lambda h: 100 * ("name" in {x.casefold() for x in h})
+                                      + sum(x.casefold() in known for x in h))
         except Exception as e:
             QMessageBox.warning(self, tr("Variablen importieren"), tr("Die Datei konnte nicht gelesen werden:\n{0}").format(e))
             return

@@ -116,7 +116,13 @@ def _ods_text(el):
 
 
 def read_ods(path):
-    """Erstes Tabellenblatt einer .ods-Datei -> Liste der Zeilen (Zahlen als float, sonst Text).
+    """Erstes Tabellenblatt einer .ods-Datei -> Liste der Zeilen (Zahlen als float, sonst Text)."""
+    sheets = read_ods_sheets(path)
+    return sheets[0][1] if sheets else []
+
+
+def read_ods_sheets(path):
+    """Alle Tabellenblätter einer .ods-Datei -> [(Name, Zeilen)].
 
     Ohne Zusatzbibliothek: Die Datei ist ein ZIP-Archiv, die Tabelle steht in ``content.xml``. Wiederholte Zeilen und
     Spalten (``number-rows-/columns-repeated``) werden ausgeschrieben, leere Bereiche am Blattende entfallen."""
@@ -124,10 +130,13 @@ def read_ods(path):
     import zipfile
     with zipfile.ZipFile(path) as z:
         root = ET.fromstring(z.read("content.xml"))
+    tbl = "{%s}" % _ODS_NS["table"]
+    return [(sheet.get(tbl + "name", ""), _ods_rows(sheet)) for sheet in root.iterfind(".//table:table", _ODS_NS)]
+
+
+def _ods_rows(sheet):
+    """Zeilen eines ODS-Tabellenblatts (Element ``table:table``)."""
     tbl, off = "{%s}" % _ODS_NS["table"], "{%s}" % _ODS_NS["office"]
-    sheet = root.find(".//table:table", _ODS_NS)
-    if sheet is None:
-        return []
     rows = []
     for row in sheet.iter(tbl + "table-row"):
         cells = []
@@ -155,17 +164,43 @@ def read_ods(path):
     return rows
 
 
-def read_table(path):
+def _clean(data):
+    """Leere Zeilen entfernen."""
+    return [r for r in data if any(c not in (None, "") for c in r)]
+
+
+def _header(data):
+    """Kopfzeile (erste nicht leere Zeile) als Text."""
+    return ["" if c is None else str(c).strip() for c in data[0]] if data else []
+
+
+def read_table(path, score=None, info=None):
     """CSV-, Excel- oder ODS-Datei lesen -> (Kopfzeile, Zeilen). Leere Zeilen entfallen; Zellen sind Text (Excel/ODS:
-    Werte)."""
+    Werte).
+
+    Excel/ODS mit mehreren Tabellenblättern: ohne ``score`` gilt das erste Blatt; mit ``score(Kopfzeile) -> Zahl`` das
+    Blatt mit der höchsten Bewertung (bei Gleichstand das vordere) – z. B. die meisten erkannten Spalten, wenn das
+    erste Blatt eine Rohdaten-Abfrage ist und die bearbeitete Liste weiter hinten steht. ``info`` (dict) erhält
+    ``sheet`` (Name des verwendeten Blatts) und ``sheets`` (Zahl der Blätter)."""
+    sheets = None
     if is_ods(path):
-        data = read_ods(path)
+        sheets = read_ods_sheets(path)
     elif is_excel(path):
         wb = _openpyxl().load_workbook(path, read_only=True, data_only=True)
         try:
-            data = [list(r) for r in wb.worksheets[0].iter_rows(values_only=True)]
+            sheets = [(ws.title, [list(r) for r in ws.iter_rows(values_only=True)])
+                      for ws in (wb.worksheets if score else wb.worksheets[:1])]
         finally:
             wb.close()
+    if sheets is not None:
+        sheets = [(name, _clean(rows)) for name, rows in sheets] or [("", [])]
+        best = 0
+        if score and len(sheets) > 1:
+            points = [score(_header(rows)) if rows else -1 for _n, rows in sheets]
+            best = points.index(max(points))
+        if info is not None:
+            info["sheet"], info["sheets"] = sheets[best][0], len(sheets)
+        data = sheets[best][1]
     else:
         with open(path, "rb") as f:
             raw = f.read()
@@ -179,12 +214,10 @@ def read_table(path):
         except csv.Error:
             delim = ";"
         # StringIO statt splitlines: Felder mit Zeilenumbruch (in Anführungszeichen) bleiben ganz
-        data = list(csv.reader(io.StringIO(text, newline=""), delimiter=delim))
-    data = [r for r in data if any(c not in (None, "") for c in r)]
+        data = _clean(list(csv.reader(io.StringIO(text, newline=""), delimiter=delim)))
     if not data:
         return [], []
-    header = ["" if c is None else str(c).strip() for c in data[0]]
-    return header, data[1:]
+    return _header(data), data[1:]
 
 
 # ---- Messwerte ---------------------------------------------------------------------------------------------------

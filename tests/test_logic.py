@@ -2869,3 +2869,29 @@ def test_remember_only_real_configs(tmp_path, monkeypatch):
     assert plc_common.recent_configs() == [str(good)] and plc_common.last_config_path() == str(good)
     with pytest.raises(plc_common.ConfigFormatError, match="grafana.json"):
         plc_common.read_config_store(str(other))
+
+
+def test_import_picks_best_sheet(tmp_path):
+    """Excel/ODS mit mehreren Blättern: die IO-Liste wird aus dem Blatt mit Adresse/Symbol/Kommentar gelesen, nicht
+    stur aus dem ersten (dort z. B. eine breite Rohdaten-Abfrage)."""
+    openpyxl = pytest.importorskip("openpyxl")
+    import plc_iocheck
+    import plc_export
+    wb = openpyxl.Workbook()
+    q = wb.active
+    q.title = "Query"
+    q.append(["Funktion Beschreibung", "Symb. Adresse", "Adresse", "Signalart", "SPS", "Bemerkung", "Unit"]
+             + ["cnt_%d" % i for i in range(20)])
+    q.append(["x", "y", "E1.0", "DI", "CPU1", "", ""])
+    wb.create_sheet("Tabelle1").append(["31079-S11.H11", "A10.0", "BOOL", "Nip"])
+    b = wb.create_sheet("bearbeitet")
+    b.append(["Symbol", "Adresse", "Typ", "Kommentar", "Bemerkung"])
+    b.append(["31079-H13.H13", "A10.2", "BOOL", "Störung Kalander Anzeige", None])
+    wb.save(tmp_path / "s.xlsx")
+    header, rows, notes = plc_iocheck.read_list_ex(tmp_path / "s.xlsx")
+    assert header[:4] == ["Symbol", "Adresse", "Typ", "Kommentar"] and rows[0][0] == "31079-H13.H13"
+    assert any("bearbeitet" in n for n in notes)
+    assert plc_export.read_table(tmp_path / "s.xlsx")[0][0] == "Funktion Beschreibung"   # ohne Bewertung: erstes Blatt
+    info = {}
+    plc_export.read_table(tmp_path / "s.xlsx", score=lambda h: "Name" in h, info=info)    # Gleichstand: vorderes
+    assert info == {"sheet": "Query", "sheets": 3}

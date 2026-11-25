@@ -14,6 +14,13 @@ eine Nummer), siehe [Versionen und Releases](#versionen-und-releases).
 
 ## [Unveröffentlicht]
 
+### Behoben
+
+- Import von IO-Listen und Variablen aus Excel/ODS mit mehreren Tabellenblättern: Statt stur das erste Blatt zu lesen,
+  wird das Blatt mit den erkannten Spalten gewählt (IO-Check: Adresse, Symbol, Kommentar; Variablen: Name). Bisher
+  wurden Symbol und Kommentar nicht erkannt, wenn z. B. eine Rohdaten-Abfrage vorne lag; die Importmeldung nennt
+  jetzt das verwendete Blatt.
+
 ## [3.25.1] – 2026-11-25
 
 ### Behoben

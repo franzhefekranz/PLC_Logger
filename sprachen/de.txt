@@ -3059,6 +3059,12 @@
 @ {0} Aliase auf Diagnose (z. B. .Fault) übergangen.
 > 
 
+@ Tabellenblatt „{0}“ übernommen (Adresse, Symbol und Kommentar erkannt).
+> 
+
+@ Tabellenblatt „{0}“ übernommen.
+> 
+
 @ Eingänge
 > 
 

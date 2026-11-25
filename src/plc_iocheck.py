@@ -552,6 +552,14 @@ def adopt_scanned(project, sigs) -> int:
     return n
 
 
+def _sheet_score(header):
+    """Bewertung eines Tabellenblatts für die Auswahl beim Import: zuerst Adresse (doppelt), Symbol und Kommentar,
+    dann der Anteil erkannter Spalten (eine bearbeitete Liste schlägt eine breite Rohdaten-Abfrage)."""
+    found = map_columns(header)
+    core = 2 * ("address" in found) + ("symbol" in found) + ("comment" in found)
+    return core + len(found) / max(1, len([h for h in header if h]))
+
+
 def read_list(path):
     """Tabelle einer IO-Liste lesen -> (Kopfzeile, Zeilen); leere Datei: ValueError."""
     return read_list_ex(path)[:2]
@@ -578,10 +586,17 @@ def read_list_ex(path):
                 notes.append(tr("{0} Aliase auf Diagnose (z. B. .Fault) übergangen.").format(skipped))
             return header, rows, notes
     from plc_export import read_table
-    header, rows = read_table(path)
+    info = {}
+    # Mehrere Tabellenblätter: oft ist das erste eine Rohdaten-Abfrage und die bearbeitete IO-Liste steht weiter hinten.
+    header, rows = read_table(path, score=_sheet_score, info=info)
     if not header:
         raise ValueError(tr("Die Datei enthält keine Daten."))
-    return header, rows, []
+    notes = []
+    if info.get("sheets", 1) > 1:
+        notes.append(tr("Tabellenblatt „{0}“ übernommen (Adresse, Symbol und Kommentar erkannt).").format(info["sheet"])
+                     if {"address", "symbol", "comment"} <= set(map_columns(header))
+                     else tr("Tabellenblatt „{0}“ übernommen.").format(info["sheet"]))
+    return header, rows, notes
 
 
 _RE_CLX_DATA = re.compile(r"^([A-Za-z_]\w*:\d+):[IO]\.(Data\.\d{1,2}|Pt\d+\.?Data|Ch\[?\d+\]?\.?Data)$", re.I)

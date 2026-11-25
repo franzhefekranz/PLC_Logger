@@ -1322,7 +1322,7 @@ Importing and exporting variables
 The **Import/Export** button below the variable table exchanges the variable list with
 an **Excel** (``.xlsx``) or **CSV file** – useful for editing long lists in Excel or for
 taking over an address list of the controller. **ODS files** (LibreOffice/OpenOffice
-Calc, ``.ods``) can be read as well.
+Calc, ``.ods``) can be read as well. With several sheets, the one with the column ``Name`` is used.
 
 * **Export variables (CSV/Excel) …** writes all variables of the table (without block
   elements, see `Block read mode <blocklesemodus_>`__) with the columns ``Name``,
@@ -4253,7 +4253,9 @@ Importing the IO list
 ----------------------------------------------------------------------
 
 **Import IO list …** reads a CSV, Excel or ODS table (LibreOffice), e.g. from EPLAN, the TIA Portal tag
-table (export to Excel) or an own list. The columns are recognized by their heading
+table (export to Excel) or an own list. If the workbook has several sheets, the one with the
+recognized columns (address, symbol, comment) is read; the message after the import names it.
+The columns are recognized by their heading
 (case does not matter):
 
 .. list-table::

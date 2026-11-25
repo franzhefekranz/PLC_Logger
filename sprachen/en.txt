@@ -3059,6 +3059,12 @@
 @ {0} Aliase auf Diagnose (z. B. .Fault) übergangen.
 > {0} aliases on diagnostics (e.g. .Fault) skipped.
 
+@ Tabellenblatt „{0}“ übernommen (Adresse, Symbol und Kommentar erkannt).
+> Sheet “{0}” imported (address, symbol and comment recognized).
+
+@ Tabellenblatt „{0}“ übernommen.
+> Sheet “{0}” imported.
+
 @ Eingänge
 > Inputs
 
